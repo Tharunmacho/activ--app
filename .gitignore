@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+**/.env
+
+# Android Build Outputs & Caches
+**/android/app/build/
+**/android/app/.cxx/
+**/android/build/
+**/android/.gradle/
+**/android/prefab-cache/
+**/.gradle/
+**/.cxx/
+*.apk
+*.aab
+*.so
+
+# iOS Build Outputs
+**/ios/Pods/
+**/ios/build/
+
+# Logs & Temp files
+logs/
+*.log
+hs_err_*.log
+replay_*.log
+.claude/
+
+# Uploads & Cache
+**/uploads/*
+!**/uploads/.gitkeep
+**/coverage/
+.nyc_output
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

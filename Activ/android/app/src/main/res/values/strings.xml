@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Activ</string>
+    <string name="catalyst_loading_from_url">Loading from %1$s...</string>
+    <string name="catalyst_remotedbg_connecting">Connecting to remote debugger...</string>
+    <string name="catalyst_remotedbg_error">Remote debugger error</string>
+    <string name="catalyst_jsload_error">Unable to load script.</string>
+</resources>
