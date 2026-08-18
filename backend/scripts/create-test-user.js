@@ -1,7 +1,7 @@
 // Create test user in database
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const config = require('./src/config');
+const config = require('../src/config');
 
 async function createTestUser() {
     try {

@@ -4,16 +4,16 @@
 
 | Path | What it is |
 |---|---|
-| `Activ/` | The React Native app (RN 0.7x, TypeScript). **This is the mobile codebase.** |
-| `activ-backend/` | Node/Express + MongoDB API (`/api/v1`) |
-| `activ-native/` | Empty placeholder — ignore |
+| `frontend/` | The React Native app (RN 0.8x, TypeScript). **This is the mobile codebase.** |
+| `backend/` | Node/Express + MongoDB API (`/api/v1`) |
+| `docs/` | Specifications, workflow and API documentation |
 
-App entry: `Activ/App.tsx` → root `NativeStackNavigator`. Member area is
-`Activ/src/navigation/MemberBottomTabs.tsx`. All HTTP goes through the single
-axios instance in `Activ/src/services/api.ts` (timeout from
-`Activ/src/config/api.config.ts`).
+App entry: `frontend/App.tsx` → root `NativeStackNavigator`. Member area is
+`frontend/src/navigation/MemberBottomTabs.tsx`. All HTTP goes through the single
+axios instance in `frontend/src/services/api.ts` (timeout from
+`frontend/src/config/api.config.ts`).
 
-Verify with `cd Activ && npx tsc --noEmit` — this must return **0 errors**.
+Verify with `cd frontend && npx tsc --noEmit` — this must return **0 errors**.
 
 ---
 
@@ -109,7 +109,7 @@ submit ─► Pending-Block ─approve─► Pending-District ─approve─► P
 ```
 
 `Approved` and `Rejected` are terminal. The legal transitions live in
-`ALLOWED_TRANSITIONS` in `activ-backend/src/modules/applications/application.service.js`
+`ALLOWED_TRANSITIONS` in `backend/src/modules/applications/application.service.js`
 — update that table, never bypass it. `PENDING` is a legacy synonym for
 `Pending-Block` and must be handled everywhere `Pending-Block` is.
 
@@ -202,7 +202,7 @@ All three admin dashboards render `src/components/ApprovalQueue.tsx` (shared,
 ## Tests
 
 ```bash
-cd activ-backend
+cd backend
 npm run test:workflow                                   # 24 pure unit tests, no DB
 PORT=5055 node src/server.js                            # spare port; 5000 is often taken
 BASE_URL=http://localhost:5055 npm run test:e2e         # 41 tests against a live DB
@@ -222,4 +222,4 @@ end — if that assertion ever fails, clean up before re-running.
 - [ ] No `!` non-null assertions
 - [ ] All native/API calls inside `try…catch`
 - [ ] No raw transparent `<Modal>` nested in a sub-tab
-- [ ] `cd Activ && npx tsc --noEmit` returns 0 errors
+- [ ] `cd frontend && npx tsc --noEmit` returns 0 errors

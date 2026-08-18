@@ -1,6 +1,6 @@
 // Check database for existing user
 const mongoose = require('mongoose');
-const config = require('./src/config');
+const config = require('../src/config');
 
 async function checkDatabase() {
     try {

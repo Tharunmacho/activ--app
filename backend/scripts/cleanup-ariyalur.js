@@ -1,5 +1,5 @@
-const connectDB = require('./src/config/db');
-const Application = require('./src/modules/applications/application.model');
+const connectDB = require('../src/config/db');
+const Application = require('../src/modules/applications/application.model');
 
 async function cleanup() {
   await connectDB();

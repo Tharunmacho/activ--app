@@ -1,6 +1,6 @@
 // Check companies collection in database
 const mongoose = require('mongoose');
-const config = require('./src/config');
+const config = require('../src/config');
 
 async function checkCompanies() {
     try {

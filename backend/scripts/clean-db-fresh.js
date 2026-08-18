@@ -1,8 +1,8 @@
-const connectDB = require('./src/config/db');
-const Application = require('./src/modules/applications/application.model');
-const MemberDetails = require('./src/modules/members/memberdetails.model');
-const MemberAuth = require('./src/modules/auth/auth.model');
-const Company = require('./src/modules/members/company.model');
+const connectDB = require('../src/config/db');
+const Application = require('../src/modules/applications/application.model');
+const MemberDetails = require('../src/modules/members/memberdetails.model');
+const MemberAuth = require('../src/modules/auth/auth.model');
+const Company = require('../src/modules/members/company.model');
 
 async function cleanDbFreshExceptKaran() {
   console.log('--- STARTING FRESH DB CLEANUP (PRESERVING KARAN & ADMINS) ---');

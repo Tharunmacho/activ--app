@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const dotenv = require('dotenv');
-dotenv.config();
+dotenv.config({ path: require('path').join(__dirname, '..', '.env') });
 
 const OFFICIAL_ADMINS = [
   // Super Admin

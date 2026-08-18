@@ -1,4 +1,4 @@
-const connectDB = require('./src/config/db');
+const connectDB = require('../src/config/db');
 const mongoose = require('mongoose');
 
 async function inspectAndPurgeAllCollections() {
