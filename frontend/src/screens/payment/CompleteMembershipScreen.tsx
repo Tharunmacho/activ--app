@@ -340,23 +340,14 @@ const CompleteMembershipScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
       
-      {/* Clean Single Top Navbar */}
+      {/* Seamless Top Header */}
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.headerTitle}>Complete Membership</Text>
-          <Text style={styles.headerSubtitle}>
-            {isCompany ? 'Company Membership Plan' : 'Aspirant Student Membership Plan'}
-          </Text>
-        </View>
-        <View style={styles.lockBadge}>
-          <Icon name="lock" size={14} color="#10B981" />
-          <Text style={styles.lockBadgeText}>Secure Checkout</Text>
-        </View>
+        <Text style={styles.headerTitle}>Complete Membership</Text>
       </View>
 
       {/* Main Content */}
@@ -578,37 +569,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginLeft: 12,
   },
   backButton: {
     padding: 6,
     borderRadius: 8,
     backgroundColor: '#F1F5F9',
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  headerSubtitle: {
-    fontSize: 11,
-    color: '#64748B',
-  },
-  lockBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  lockBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#059669',
   },
   scrollView: {
     flex: 1,

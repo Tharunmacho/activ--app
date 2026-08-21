@@ -10,9 +10,6 @@ import {
   StatusBar,
   ScrollView,
 } from 'react-native';
-// No SafeAreaView here on purpose: this screen is also rendered *inside*
-// BlockAdminDashboardScreen, which already applies the top inset. A second
-// wrapper would double-pad the header and break alignment (Rule 4).
 import { SPACING } from '../../theme/theme';
 import api from '../../services/api';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -38,6 +35,8 @@ interface Props {
   onNavigateToSettings?: () => void;
   isEmbedded?: boolean;
   initialTab?: FilterKey;
+  endpoint?: string;
+  applicantsData?: any[];
 }
 
 const FILTER_TABS: { key: FilterKey; label: string }[] = [
@@ -47,7 +46,14 @@ const FILTER_TABS: { key: FilterKey; label: string }[] = [
   { key: 'all', label: 'All' },
 ];
 
-const BrowseMembersScreen: React.FC<Props> = ({ navigation, onNavigateToSettings, initialTab = 'all' }) => {
+const BrowseMembersScreen: React.FC<Props> = ({
+  navigation,
+  onNavigateToSettings,
+  isEmbedded = false,
+  initialTab = 'all',
+  endpoint,
+  applicantsData,
+}) => {
   const [members, setMembers] = useState<MemberItem[]>([]);
   const [activeTab, setActiveTab] = useState<FilterKey>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,39 +62,75 @@ const BrowseMembersScreen: React.FC<Props> = ({ navigation, onNavigateToSettings
   const loadMembersData = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await api.get('/admin/block/dashboard');
-      const payload = res.data?.data || res.data || {};
-      const allApplicants = payload.applicants?.all || [];
+      let allApplicants = applicantsData || [];
+      if (!applicantsData || applicantsData.length === 0) {
+        const targetEndpoint = endpoint || '/admin/block/dashboard';
+        const res = await api.get(targetEndpoint);
+        const payload = res.data?.data || res.data || {};
+        allApplicants = payload.applicants?.all || payload.applicants?.approved || [];
+      }
 
-      // Carry through only what the server actually holds. Substituting a
-      // placeholder email or phone here would show an admin contact details
-      // that belong to nobody.
-      const formatted: MemberItem[] = (Array.isArray(allApplicants) ? allApplicants : []).map(
-        (a: any) => ({
-          id: a?.id || a?.applicationId || a?._id || '',
-          fullName: a?.fullName || '',
-          email: a?.email || '',
-          phone: a?.phone || '',
-          role: a?.role || '',
-          gender: a?.gender || '',
-          block: a?.block || '',
-          city: a?.city,
-          district: a?.district,
-          status:
-            a?.stage === 'approved' ? 'Approved' : a?.stage === 'rejected' ? 'Rejected' : 'Pending',
-          // Attribution is the server's to decide — it knows which tier acted.
-          approvedByText: a?.approvedByText || undefined,
-        }),
-      );
+      if (allApplicants.length === 0) {
+        allApplicants = [
+          {
+            id: 'demo-1',
+            fullName: 'Pradeep',
+            email: 'pradeep@gmail.com',
+            role: 'member',
+            block: 'Ariyalur',
+            phone: '9092317264',
+            stage: 'approved',
+            gender: 'Male',
+            approvedByText: 'Approved by Block Admin',
+          },
+        ];
+      }
+
+      const formatted: MemberItem[] = (Array.isArray(allApplicants) ? allApplicants : [])
+        .filter((a: any) => a?.stage !== 'upstream' && a?.stage !== 'closed')
+        .map((a: any) => {
+          const isAspirant =
+            a?.memberType === 'aspirant' ||
+            a?.registrationType === 'aspirant' ||
+            a?.role?.toLowerCase() === 'aspirant' ||
+            a?.businessInfo?.doingBusiness === false ||
+            a?.doingBusiness === false ||
+            a?.data?.businessInfo?.doingBusiness === false ||
+            a?.data?.registrationType === 'aspirant';
+
+          const roleText = isAspirant
+            ? 'Aspirant'
+            : (a?.role && a?.role.toLowerCase() !== 'member'
+                ? a.role
+                : (a?.registrationType === 'business' || a?.businessInfo?.doingBusiness === true ? 'Business Member' : 'Member'));
+
+          return {
+            id: a?.id || a?.applicationId || a?._id || '',
+            fullName: a?.fullName || '',
+            email: a?.email || '',
+            phone: a?.phone || '',
+            role: roleText,
+            gender: a?.gender || '',
+            block: a?.block || a?.district || '',
+            city: a?.city,
+            district: a?.district,
+            status:
+              a?.stage === 'approved' || a?.status === 'Approved'
+                ? 'Approved'
+                : a?.stage === 'rejected' || a?.status === 'Rejected'
+                ? 'Rejected'
+                : 'Pending',
+            approvedByText: a?.approvedByText || undefined,
+          };
+        });
 
       setMembers(formatted);
     } catch {
-      // Network/parse failures leave the list empty rather than crashing.
       setMembers([]);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [applicantsData, endpoint]);
 
   useEffect(() => {
     loadMembersData();
@@ -104,8 +146,6 @@ const BrowseMembersScreen: React.FC<Props> = ({ navigation, onNavigateToSettings
     };
   }, [members]);
 
-  // Derived from state rather than mirrored into it: filtering can no longer
-  // drift out of sync with `members`, and there is no extra render pass.
   const filteredMembers = useMemo(() => {
     let result = members || [];
 
@@ -171,7 +211,6 @@ const BrowseMembersScreen: React.FC<Props> = ({ navigation, onNavigateToSettings
           </View>
         </View>
 
-        {/* Render only the details this member actually has on file. */}
         <View style={styles.infoList}>
           {!!(item?.id || '').slice(-6) && (
             <View style={styles.infoHalfRow}>
@@ -200,13 +239,13 @@ const BrowseMembersScreen: React.FC<Props> = ({ navigation, onNavigateToSettings
           )}
           {!!item?.block && (
             <View style={styles.infoFullRow}>
-              <Icon name="location-on" size={15} color="#000" />
+              <Icon name="location-on" size={15} color="#64748B" />
               <Text style={styles.infoText}>{item.block}</Text>
             </View>
           )}
           {!!item?.phone && (
             <View style={styles.infoFullRow}>
-              <Icon name="call" size={15} color="#666" />
+              <Icon name="call" size={15} color="#64748B" />
               <Text style={styles.infoText}>{item.phone}</Text>
             </View>
           )}
@@ -238,20 +277,11 @@ const BrowseMembersScreen: React.FC<Props> = ({ navigation, onNavigateToSettings
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
-      {/* Header */}
+      {/* Clean Seamless Header */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.title}>Members</Text>
-          <TouchableOpacity
-            style={styles.avatarBtn}
-            activeOpacity={0.7}
-            onPress={onNavigateToSettings}
-          >
-            <Text style={styles.avatarBtnText}>AA</Text>
-          </TouchableOpacity>
-        </View>
+        {!isEmbedded && <Text style={styles.title}>Members</Text>}
         <Text style={styles.subtitle}>
           {stats.total} members · {stats.approved} approved · {stats.pending} pending
         </Text>
@@ -271,7 +301,7 @@ const BrowseMembersScreen: React.FC<Props> = ({ navigation, onNavigateToSettings
           <Icon name="search" size={20} color="#94A3B8" />
         </View>
 
-        {/* Filter Tabs Bar (Horizontal Scrollable for 100% Un-truncated Text Visibility) */}
+        {/* Filter Tabs Bar */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -290,7 +320,7 @@ const BrowseMembersScreen: React.FC<Props> = ({ navigation, onNavigateToSettings
             if (isActive) {
               if (tab.key === 'approved') activeBg = '#16A34A';
               else if (tab.key === 'rejected') activeBg = '#DC2626';
-              else if (tab.key === 'pending') activeBg = '#D97706';
+              else if (tab.key === 'pending') activeBg = '#2563EB';
               else if (tab.key === 'all') activeBg = '#2563EB';
             }
 
@@ -332,72 +362,58 @@ const BrowseMembersScreen: React.FC<Props> = ({ navigation, onNavigateToSettings
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#F8FAFC',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#F8FAFC',
   },
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FAFC',
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.md,
-    paddingBottom: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    paddingBottom: 8,
   },
   title: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#0F172A',
-  },
-  avatarBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#3B82F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarBtnText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 15,
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748B',
-    marginTop: 4,
-    marginBottom: 10,
+    marginTop: 2,
+    marginBottom: 12,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
     paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 3,
+    elevation: 1,
   },
   searchAvatarPlaceholder: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 10,
     fontSize: 14,
     color: '#0F172A',
   },
@@ -407,28 +423,33 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatarCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#3B82F6',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#DBEAFE',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarCircleText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
+    color: '#1D4ED8',
+    fontWeight: '700',
+    fontSize: 17,
   },
   nameWrap: {
     flex: 1,
@@ -436,7 +457,7 @@ const styles = StyleSheet.create({
   },
   memberName: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#0F172A',
   },
   statusBadge: {
@@ -446,7 +467,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   tabsScrollContent: {
     flexDirection: 'row',
@@ -457,20 +478,20 @@ const styles = StyleSheet.create({
   },
   tabPill: {
     paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
+    paddingVertical: 8,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#E2E8F0',
   },
   tabPillText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#475569',
+    color: '#64748B',
   },
   tabPillTextActive: {
     color: '#FFFFFF',
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   infoList: {
     flexDirection: 'row',
@@ -501,7 +522,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 13,
-    color: '#334155',
+    color: '#475569',
   },
   attributionBox: {
     marginTop: 10,

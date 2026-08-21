@@ -110,21 +110,14 @@ const PaymentGatewayScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
-      {/* Header */}
+      {/* Seamless Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.headerTitle}>Secure Payment Gateway</Text>
-          <Text style={styles.headerSubtitle}>Complete your payment safely</Text>
-        </View>
-        <View style={styles.securityBadge}>
-          <Icon name="lock" size={14} color="#059669" />
-          <Text style={styles.securityText}>256-Bit SSL</Text>
-        </View>
+        <Text style={styles.headerTitle}>Secure Payment Gateway</Text>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -356,9 +349,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
   },
   backButton: {
     padding: 6,
@@ -366,27 +357,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: '#0F172A',
-  },
-  headerSubtitle: {
-    fontSize: 11,
-    color: '#64748B',
-  },
-  securityBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  securityText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#059669',
+    marginLeft: 12,
   },
   content: {
     flex: 1,

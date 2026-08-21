@@ -21,11 +21,11 @@ import api from '../../services/api';
 type FinancialComplianceFormScreenProps = NativeStackScreenProps<RootStackParamList, 'FinancialComplianceForm'>;
 
 const TURNOVER_RANGES = [
-  'Below 5 Lakh',
-  '5-10 Lakh',
-  '10-25 Lakh',
-  '25-50 Lakh',
-  '50 Lakh - 1 Crore',
+  'Below 1 Lakh',
+  '1-5 Lakhs',
+  '5-10 Lakhs',
+  '10-50 Lakhs',
+  '50 Lakhs - 1 Crore',
   'Above 1 Crore',
 ];
 
@@ -65,11 +65,14 @@ const FinancialComplianceFormScreen: React.FC<FinancialComplianceFormScreenProps
         setFormData({
           panNumber: data.panNumber || '',
           gstNumber: data.gstNumber || '',
-          lastYearTurnover: data.lastYearTurnover || data.turnoverRange || '',
+          lastYearTurnover: data.turnoverRange || data.lastYearTurnover || '',
         });
-        if (data.itrFiled !== undefined) setItrFiled(data.itrFiled);
-        setSelectedGovtSchemes(data.govtSchemes || []);
-        setSchemeDetails(data.schemeDetails || '');
+        if (data.filedITR !== undefined) setItrFiled(data.filedITR);
+        else if (data.itrFiled !== undefined) setItrFiled(data.itrFiled);
+        
+        if (data.govtSchemeBenefit) {
+           setSelectedGovtSchemes(['Yes']);
+        }
       }
     } catch (error: any) {
       console.log('Notice loading financial info:', error?.message);
@@ -117,14 +120,21 @@ const FinancialComplianceFormScreen: React.FC<FinancialComplianceFormScreenProps
 
     setIsSaving(true);
     try {
-      const financialData = {
+      const isGovtBeneficiary = selectedGovtSchemes.length > 0 && !selectedGovtSchemes.includes('None');
+      const financialData: any = {
         panNumber: formData.panNumber,
         gstNumber: formData.gstNumber,
+        filedITR: itrFiled,
+        govtSchemeBenefit: isGovtBeneficiary,
+        // Legacy keys
         itrFiled,
-        lastYearTurnover: formData.lastYearTurnover,
         govtSchemes: selectedGovtSchemes,
         schemeDetails: selectedGovtSchemes.includes('Others') ? schemeDetails : undefined,
       };
+      if (formData.lastYearTurnover) {
+        financialData.turnoverRange = formData.lastYearTurnover;
+        financialData.lastYearTurnover = formData.lastYearTurnover;
+      }
 
       await api.put('/members/profile', financialData);
 

@@ -8,8 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
-  Alert,
   StatusBar,
   Keyboard,
   TouchableWithoutFeedback,
@@ -17,8 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList, UserRole } from '../../types';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../../theme/theme';
+import { RootStackParamList } from '../../types';
 import {
   validateEmail,
   validatePassword,
@@ -26,8 +23,6 @@ import {
   validatePhone,
   validateRequired,
 } from '../../utils/validators';
-import api from '../../services/api';
-import { ENDPOINTS } from '../../config/api.config';
 
 type RegistrationStep1Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'RegistrationStep1'>;
@@ -65,8 +60,7 @@ const RegistrationStep1Screen: React.FC<RegistrationStep1Props> = ({ navigation 
       email: validateEmail(formData.email) || '',
       phoneNumber: validatePhone(formData.phoneNumber) || '',
       password: validatePassword(formData.password) || '',
-      confirmPassword:
-        validatePasswordMatch(formData.password, formData.confirmPassword) || '',
+      confirmPassword: validatePasswordMatch(formData.password, formData.confirmPassword) || '',
     };
 
     setErrors(newErrors);
@@ -75,8 +69,6 @@ const RegistrationStep1Screen: React.FC<RegistrationStep1Props> = ({ navigation 
 
   const handleRegister = () => {
     if (!validateForm()) return;
-
-    // Navigate to Step 2 with form data (no API call yet)
     navigation.navigate('RegistrationStep2', {
       fullName: formData.fullName.trim(),
       email: formData.email.toLowerCase().trim(),
@@ -87,26 +79,29 @@ const RegistrationStep1Screen: React.FC<RegistrationStep1Props> = ({ navigation 
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#E8F0FE" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F9FAFC" />
+
+      {/* Header */}
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color={COLORS.textPrimary} />
+          <Icon name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Member Registration</Text>
         <View style={styles.placeholder} />
       </View>
 
+      {/* Tabs */}
       <View style={styles.tabContainer}>
         <View style={styles.activeTab}>
           <Text style={styles.activeTabText}>Personal Info</Text>
         </View>
-        <View style={styles.inactiveTab}>
+        <TouchableOpacity style={styles.inactiveTab} onPress={() => {}} activeOpacity={1}>
           <Text style={styles.inactiveTabText}>Location</Text>
-        </View>
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView
-        style={styles.container}
+        style={styles.keyboardContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
@@ -115,55 +110,65 @@ const RegistrationStep1Screen: React.FC<RegistrationStep1Props> = ({ navigation 
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            bounces={false}
           >
-          <View style={styles.formCard}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Personal Information</Text>
+            {/* Hero Text */}
+            <View style={styles.heroSection}>
+              <Text style={styles.heroSubText}>Let's get started 👋</Text>
+              <Text style={styles.heroTitle}>Create Your Account</Text>
+              <Text style={styles.heroDesc}>
+                Fill in your details to create{'\n'}your member account
+              </Text>
             </View>
 
-            <View style={styles.form}>
+            {/* Form Card */}
+            <View style={styles.formCard}>
+              
               {/* Full Name */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Full Name</Text>
+                <View style={styles.labelRow}>
+                  <Icon name="person-outline" size={20} color="#2563EB" style={styles.labelIcon} />
+                  <Text style={styles.label}>Full Name</Text>
+                </View>
                 <TextInput
                   style={[styles.input, errors.fullName && styles.inputError]}
                   placeholder="Enter your full name"
-                  placeholderTextColor="#C7C7CD"
+                  placeholderTextColor="#9CA3AF"
                   value={formData.fullName}
                   onChangeText={(text) => handleChange('fullName', text)}
                   editable={!isLoading}
                 />
-                {errors.fullName ? (
-                  <Text style={styles.errorText}>{errors.fullName}</Text>
-                ) : null}
+                {errors.fullName ? <Text style={styles.errorText}>{errors.fullName}</Text> : null}
               </View>
 
               {/* Phone Number */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Phone Number</Text>
+                <View style={styles.labelRow}>
+                  <Icon name="phone" size={20} color="#2563EB" style={styles.labelIcon} />
+                  <Text style={styles.label}>Phone Number</Text>
+                </View>
                 <TextInput
                   style={[styles.input, errors.phoneNumber && styles.inputError]}
                   placeholder="+91 XXXXX XXXXX"
-                  placeholderTextColor="#C7C7CD"
+                  placeholderTextColor="#9CA3AF"
                   value={formData.phoneNumber}
                   onChangeText={(text) => handleChange('phoneNumber', text)}
                   keyboardType="phone-pad"
                   maxLength={10}
                   editable={!isLoading}
                 />
-                {errors.phoneNumber ? (
-                  <Text style={styles.errorText}>{errors.phoneNumber}</Text>
-                ) : null}
+                {errors.phoneNumber ? <Text style={styles.errorText}>{errors.phoneNumber}</Text> : null}
               </View>
 
               {/* Email */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Email Address</Text>
+                <View style={styles.labelRow}>
+                  <Icon name="email" size={20} color="#2563EB" style={styles.labelIcon} />
+                  <Text style={styles.label}>Email Address</Text>
+                </View>
                 <TextInput
                   style={[styles.input, errors.email && styles.inputError]}
                   placeholder="your.email@example.com"
-                  placeholderTextColor="#C7C7CD"
+                  placeholderTextColor="#9CA3AF"
                   value={formData.email}
                   onChangeText={(text) => handleChange('email', text)}
                   keyboardType="email-address"
@@ -171,23 +176,20 @@ const RegistrationStep1Screen: React.FC<RegistrationStep1Props> = ({ navigation 
                   autoCorrect={false}
                   editable={!isLoading}
                 />
-                {errors.email ? (
-                  <Text style={styles.errorText}>{errors.email}</Text>
-                ) : null}
+                {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
               </View>
 
               {/* Password */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Password</Text>
+                <View style={styles.labelRow}>
+                  <Icon name="lock-outline" size={20} color="#2563EB" style={styles.labelIcon} />
+                  <Text style={styles.label}>Password</Text>
+                </View>
                 <View style={styles.passwordContainer}>
                   <TextInput
-                    style={[
-                      styles.input,
-                      styles.passwordInput,
-                      errors.password && styles.inputError,
-                    ]}
+                    style={[styles.input, styles.passwordInput, errors.password && styles.inputError]}
                     placeholder="Enter Password"
-                    placeholderTextColor="#C7C7CD"
+                    placeholderTextColor="#9CA3AF"
                     value={formData.password}
                     onChangeText={(text) => handleChange('password', text)}
                     secureTextEntry={!showPassword}
@@ -198,30 +200,23 @@ const RegistrationStep1Screen: React.FC<RegistrationStep1Props> = ({ navigation 
                     style={styles.eyeButton}
                     onPress={() => setShowPassword(!showPassword)}
                   >
-                    <Icon
-                      name={showPassword ? 'visibility' : 'visibility-off'}
-                      size={20}
-                      color="#999"
-                    />
+                    <Icon name={showPassword ? 'visibility' : 'visibility-off'} size={20} color="#9CA3AF" />
                   </TouchableOpacity>
                 </View>
-                {errors.password ? (
-                  <Text style={styles.errorText}>{errors.password}</Text>
-                ) : null}
+                {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
               </View>
 
               {/* Confirm Password */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Confirm Password</Text>
+                <View style={styles.labelRow}>
+                  <Icon name="lock-outline" size={20} color="#2563EB" style={styles.labelIcon} />
+                  <Text style={styles.label}>Confirm Password</Text>
+                </View>
                 <View style={styles.passwordContainer}>
                   <TextInput
-                    style={[
-                      styles.input,
-                      styles.passwordInput,
-                      errors.confirmPassword && styles.inputError,
-                    ]}
+                    style={[styles.input, styles.passwordInput, errors.confirmPassword && styles.inputError]}
                     placeholder="Confirm Password"
-                    placeholderTextColor="#C7C7CD"
+                    placeholderTextColor="#9CA3AF"
                     value={formData.confirmPassword}
                     onChangeText={(text) => handleChange('confirmPassword', text)}
                     secureTextEntry={!showConfirmPassword}
@@ -232,29 +227,32 @@ const RegistrationStep1Screen: React.FC<RegistrationStep1Props> = ({ navigation 
                     style={styles.eyeButton}
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
-                    <Icon
-                      name={showConfirmPassword ? 'visibility' : 'visibility-off'}
-                      size={20}
-                      color="#999"
-                    />
+                    <Icon name={showConfirmPassword ? 'visibility' : 'visibility-off'} size={20} color="#9CA3AF" />
                   </TouchableOpacity>
                 </View>
-                {errors.confirmPassword ? (
-                  <Text style={styles.errorText}>{errors.confirmPassword}</Text>
-                ) : null}
+                {errors.confirmPassword ? <Text style={styles.errorText}>{errors.confirmPassword}</Text> : null}
               </View>
 
-              {/* Register Button */}
+              {/* Next Button */}
               <TouchableOpacity
                 style={styles.nextButton}
                 onPress={handleRegister}
-                activeOpacity={0.8}
+                activeOpacity={0.85}
               >
                 <Text style={styles.nextButtonText}>Next</Text>
+                <Icon name="arrow-forward" size={20} color="#FFFFFF" />
               </TouchableOpacity>
+
+              {/* Sign In Footer */}
+              <View style={styles.footerContainer}>
+                <Text style={styles.footerText}>Already have an account? </Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Login' as any)}>
+                  <Text style={styles.footerLink}>Sign In</Text>
+                </TouchableOpacity>
+              </View>
+
             </View>
-          </View>
-        </ScrollView>
+          </ScrollView>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -264,160 +262,189 @@ const RegistrationStep1Screen: React.FC<RegistrationStep1Props> = ({ navigation 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#E8F0FE',
+    backgroundColor: '#F9FAFC',
   },
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    backgroundColor: '#E8F0FE',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    zIndex: 1,
   },
   backButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   headerTitle: {
-    fontSize: FONTS.sizes.lg,
-    fontWeight: FONTS.weights.bold,
-    color: COLORS.textPrimary,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
   },
   placeholder: {
     width: 40,
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#E8F0FE',
-    paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.sm,
+    paddingHorizontal: 20,
+    marginTop: 10,
+    zIndex: 1,
   },
   activeTab: {
     flex: 1,
-    paddingVertical: SPACING.sm,
-    borderBottomWidth: 3,
-    borderBottomColor: '#4A90E2',
-    marginRight: SPACING.sm,
+    paddingVertical: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: '#2563EB',
+    marginRight: 8,
   },
   activeTabText: {
-    fontSize: FONTS.sizes.base,
-    fontWeight: FONTS.weights.bold,
-    color: '#4A90E2',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#2563EB',
     textAlign: 'center',
   },
   inactiveTab: {
     flex: 1,
-    paddingVertical: SPACING.sm,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#CCC',
-    marginLeft: SPACING.sm,
+    borderBottomColor: '#E5E7EB',
+    marginLeft: 8,
   },
   inactiveTabText: {
-    fontSize: FONTS.sizes.base,
-    color: '#999',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
     textAlign: 'center',
   },
-  container: {
+  keyboardContainer: {
     flex: 1,
-    backgroundColor: '#E8F0FE',
   },
   scrollContent: {
     flexGrow: 1,
-    padding: SPACING.md,
+    paddingTop: 16,
+  },
+  heroSection: {
+    paddingHorizontal: 24,
+    marginBottom: 16,
+    zIndex: 1,
+  },
+  heroSubText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2563EB',
+    marginBottom: 4,
+  },
+  heroTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  heroDesc: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
   },
   formCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
+    paddingTop: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  formTitle: {
-    fontSize: FONTS.sizes.xl,
-    fontWeight: FONTS.weights.bold,
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.lg,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.lg,
-  },
-  bulletPoint: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#4A90E2',
-    marginRight: SPACING.sm,
-  },
-  sectionTitle: {
-    fontSize: FONTS.sizes.lg,
-    fontWeight: FONTS.weights.bold,
-    color: COLORS.textPrimary,
-  },
-  form: {
-    width: '100%',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 5,
   },
   inputContainer: {
-    marginBottom: SPACING.md,
+    marginBottom: 14,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  labelIcon: {
+    marginRight: 6,
   },
   label: {
-    fontSize: FONTS.sizes.base,
-    fontWeight: FONTS.weights.semiBold,
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.xs,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: BORDER_RADIUS.md,
-    paddingHorizontal: SPACING.md,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: FONTS.sizes.base,
-    color: COLORS.textPrimary,
-    backgroundColor: COLORS.white,
+    fontSize: 15,
+    color: '#111827',
+    backgroundColor: '#FFFFFF',
   },
   inputError: {
-    borderColor: COLORS.error,
+    borderColor: '#EF4444',
   },
   passwordContainer: {
     position: 'relative',
+    justifyContent: 'center',
   },
   passwordInput: {
-    paddingRight: 45,
+    paddingRight: 50,
   },
   eyeButton: {
     position: 'absolute',
-    right: SPACING.md,
-    top: 0,
-    bottom: 0,
+    right: 0,
+    height: '100%',
+    paddingHorizontal: 16,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   errorText: {
-    color: COLORS.error,
-    fontSize: FONTS.sizes.sm,
-    marginTop: SPACING.xs,
+    color: '#EF4444',
+    fontSize: 12,
+    marginTop: 6,
+    marginLeft: 4,
   },
   nextButton: {
-    backgroundColor: '#4A90E2',
-    paddingVertical: 14,
-    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: '#2563EB',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: SPACING.lg,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 8,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   nextButtonText: {
-    color: COLORS.white,
-    fontSize: FONTS.sizes.lg,
-    fontWeight: FONTS.weights.bold,
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    marginRight: 8,
+  },
+  footerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 10,
+  },
+  footerText: {
+    color: '#6B7280',
+    fontSize: 14,
+  },
+  footerLink: {
+    color: '#2563EB',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
 

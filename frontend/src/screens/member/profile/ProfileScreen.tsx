@@ -12,12 +12,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../types';
-import { useAuthStore } from '../../stores/exampleStore';
-import { useMemberStore } from '../../stores/memberStore';
+import { RootStackParamList } from '../../../types';
+import { useAuthStore } from '../../../stores/exampleStore';
+import { useMemberStore } from '../../../stores/memberStore';
 import { launchImageLibrary } from 'react-native-image-picker';
-import api, { removeAuthToken } from '../../services/api';
-import { ENDPOINTS } from '../../config/api.config';
+import api, { removeAuthToken } from '../../../services/api';
+import { ENDPOINTS } from '../../../config/api.config';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 type ProfileScreenProps = {
@@ -562,5 +562,6 @@ const styles = StyleSheet.create({
 });
 
 export default ProfileScreen;
+
 
 

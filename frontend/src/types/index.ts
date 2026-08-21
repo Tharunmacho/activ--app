@@ -16,12 +16,16 @@ export type RootStackParamList = {
   MemberMain: undefined;
   ProfileDetail: { memberId: string };
   EditProfile: undefined;
+  EditBusiness: undefined;
+  EditFinancial: undefined;
+  EditDeclaration: undefined;
   PersonalDetailsForm: { userData: any };
   BusinessInformationForm: { userData: any };
   FinancialComplianceForm: { userData: any };
   DeclarationForm: { userData: any };
   Dashboard: undefined;
   PaidDashboard: undefined;
+  PaidProfile: undefined;
   ApplicationStatus: undefined;
   ApplicationSubmitted: undefined;
   BusinessProfile: undefined;

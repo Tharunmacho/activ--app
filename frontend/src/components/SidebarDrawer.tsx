@@ -68,12 +68,7 @@ const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
   const currentPhoto = member?.profilePhoto || (user as any)?.profilePhoto;
 
   return (
-    <Modal
-      visible={isOpen}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <View style={styles.absoluteContainer}>
       <View style={styles.overlay}>
         {/* Backdrop Tap Area */}
         <TouchableOpacity
@@ -183,11 +178,20 @@ const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
           </View>
         </SafeAreaView>
       </View>
-    </Modal>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  absoluteContainer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 9999,
+    elevation: 9999,
+  },
   overlay: {
     flex: 1,
     flexDirection: 'row',

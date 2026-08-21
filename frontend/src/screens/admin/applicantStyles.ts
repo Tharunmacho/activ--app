@@ -29,8 +29,15 @@ const STAGE_ACCENTS: Record<ApplicantStage, { tint: string; solid: string }> = {
   closed: ACCENTS.slate,
 };
 
-export const getStageStyle = (stage?: ApplicantStage | null) =>
-  STAGE_ACCENTS[stage as ApplicantStage] || ACCENTS.slate;
+export const getStageStyle = (stage?: string | null) => {
+  if (!stage) return ACCENTS.slate;
+  const s = String(stage).toLowerCase();
+  if (s.includes('approved')) return ACCENTS.green;
+  if (s.includes('reject')) return ACCENTS.red;
+  if (s.includes('pending')) return ACCENTS.amber;
+  if (s.includes('upstream')) return ACCENTS.indigo;
+  return STAGE_ACCENTS[stage as ApplicantStage] || ACCENTS.slate;
+};
 
 export const getInitials = (fullName?: string | null): string => {
   // A default parameter only guards `undefined`; API fields arrive as `null`.

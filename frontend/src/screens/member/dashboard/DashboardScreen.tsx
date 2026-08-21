@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,17 +14,18 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList, ApplicationStatus } from '../../types';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '../../theme/theme';
-import api, { getUserData } from '../../services/api';
-import { ENDPOINTS } from '../../config/api.config';
-import { useAuthStore } from '../../stores/exampleStore';
-import { useMemberStore } from '../../stores/memberStore';
-import PaidDashboardScreen from './PaidDashboardScreen';
+import { RootStackParamList, ApplicationStatus } from '../../../types';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '../../../theme/theme';
+import api, { getUserData } from '../../../services/api';
+import { ENDPOINTS } from '../../../config/api.config';
+import { useAuthStore } from '../../../stores/exampleStore';
+import { useMemberStore } from '../../../stores/memberStore';
+import PaidDashboardScreen from '../paidDashboard/PaidDashboardScreen';
 
-import SidebarDrawer from './SidebarDrawer';
-import { removeAuthToken } from '../../services/api';
+import SidebarDrawer from '../SidebarDrawer';
+import { removeAuthToken } from '../../../services/api';
 
 type DashboardScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'MemberMain'>;
@@ -62,10 +63,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   const [profileData, setProfileData] = useState<any>(null);
   const [applicationData, setApplicationData] = useState<any>(null);
 
-  useEffect(() => {
-    loadDashboardData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboardData();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+  );
 
   const loadDashboardData = async (isRefresh = false) => {
     if (isRefresh) setIsRefreshing(true);
@@ -150,24 +153,41 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   };
 
   const calculateProfileCompletion = () => {
-    if (!profileData) return 0;
+    // If application has been submitted or approved, completion is 100%
+    const hasSubmitted = !!(applicationData && (applicationData._id || applicationData.id || applicationData.status));
+    if (hasSubmitted || profileData?.membershipStatus === 'approved' || profileData?.membershipStatus === 'active') {
+      return 100;
+    }
+
+    const mergedData = {
+      ...(profileData || {}),
+      ...(applicationData?.personalDetails || {}),
+      ...(applicationData?.businessInfo || {}),
+      ...(applicationData || {}),
+    };
+
+    if (!mergedData || Object.keys(mergedData).length === 0) return 0;
 
     const fields = [
-      profileData.fullName,
-      profileData.email,
-      profileData.phoneNumber,
-      profileData.state,
-      profileData.district,
-      profileData.block,
-      profileData.city,
-      profileData.aadhaarNumber,
-      profileData.educationalQualification,
-      profileData.religion,
-      profileData.socialCategory,
+      mergedData.fullName,
+      mergedData.email,
+      mergedData.phoneNumber,
+      mergedData.state,
+      mergedData.district,
+      mergedData.block,
+      mergedData.city,
+      mergedData.aadhaarNumber || mergedData.idNumber,
+      mergedData.educationalQualification,
+      mergedData.religion,
+      mergedData.socialCategory,
     ];
 
-    const filledFields = fields.filter(field => field && field.toString().trim() !== '').length;
-    return Math.round((filledFields / fields.length) * 100);
+    const filledFields = fields.filter(
+      field => field !== undefined && field !== null && field.toString().trim() !== ''
+    ).length;
+
+    const percentage = Math.round((filledFields / fields.length) * 100);
+    return Math.min(100, Math.max(0, percentage));
   };
 
   if (isLoading) {
@@ -317,7 +337,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
             {/* Right side 3D Clipboard Image */}
             <View style={styles.clipboardBadgeContainer}>
               <Image
-                source={require('../../assets/images/clipboard_3d_final-removebg-preview.png')}
+                source={require('../../../assets/images/clipboard_3d_final-removebg-preview.png')}
                 style={styles.graphicImageClipboard}
                 resizeMode="contain"
               />
@@ -369,7 +389,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
             {/* Right side 3D Briefcase Image */}
             <View style={styles.briefcaseContainer}>
               <Image
-                source={require('../../assets/images/briefcase_3d_final-removebg-preview.png')}
+                source={require('../../../assets/images/briefcase_3d_final-removebg-preview.png')}
                 style={styles.graphicImageBriefcase}
                 resizeMode="contain"
               />

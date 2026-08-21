@@ -157,20 +157,34 @@ const ApprovalQueue: React.FC<Props> = ({
         {/* Only what the applicant actually submitted. An admin deciding on a
             membership must never see a fabricated phone number or location. */}
         <View style={styles.metaGrid}>
-          {!!reference && (
-            <View style={styles.metaHalf}>
-              <Text style={styles.metaLabel}>ID: </Text>
-              <Text style={styles.metaValue}>{reference}</Text>
-            </View>
-          )}
-          {!!applicant?.role && (
-            <View style={styles.metaHalf}>
-              <Text style={styles.metaLabel}>Role: </Text>
-              <Text style={styles.metaValue} numberOfLines={1}>
-                {applicant.role}
-              </Text>
-            </View>
-          )}
+
+          {(() => {
+            const isAsp =
+              applicant?.doingBusiness === false ||
+              applicant?.businessInfo?.doingBusiness === false ||
+              String(applicant?.registrationType || applicant?.memberType || applicant?.role || '').toLowerCase().includes('aspirant');
+
+            const displayRole = isAsp
+              ? 'Aspirant'
+              : (applicant?.doingBusiness === true || applicant?.businessInfo?.doingBusiness === true || applicant?.organizationName
+                  ? 'Business Member'
+                  : (applicant?.role && applicant.role.toLowerCase() !== 'member' ? applicant.role : 'Business Member'));
+
+            return (
+              <View style={styles.metaHalf}>
+                <Text style={styles.metaLabel}>Role: </Text>
+                <Text
+                  style={[
+                    styles.metaValue,
+                    isAsp ? { color: '#059669', fontWeight: '700' } : { color: '#2563EB', fontWeight: '700' },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {displayRole}
+                </Text>
+              </View>
+            );
+          })()}
           {!!location && (
             <View style={styles.metaFull}>
               <Icon name="location-on" size={14} color="#64748B" />
@@ -289,7 +303,7 @@ const ApprovalQueue: React.FC<Props> = ({
           let activeBg = '#2563EB';
           if (tab.key === 'approved') activeBg = '#16A34A';
           else if (tab.key === 'rejected') activeBg = '#DC2626';
-          else if (tab.key === 'pending') activeBg = '#D97706';
+          else if (tab.key === 'pending') activeBg = '#2563EB';
 
           return (
             <TouchableOpacity
@@ -374,17 +388,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#3B82F6',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#DBEAFE',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    color: COLORS.white,
-    fontWeight: FONTS.weights.bold,
-    fontSize: FONTS.sizes.base,
+    color: '#1D4ED8',
+    fontWeight: '700',
+    fontSize: 17,
   },
   headerText: {
     flex: 1,

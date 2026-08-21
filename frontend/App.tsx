@@ -8,8 +8,10 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { StatusBar, useColorScheme } from 'react-native';
+import { LogBox, StatusBar, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+LogBox.ignoreAllLogs();
 
 // Auth Screens
 import OnboardingScreen from './src/screens/auth/OnboardingScreen';
@@ -22,8 +24,16 @@ import RegistrationStep2Screen from './src/screens/registration/RegistrationStep
 
 // Member Screens
 import MemberBottomTabs from './src/navigation/MemberBottomTabs';
-import EditProfileScreen from './src/screens/member/EditProfileScreen';
-import PaidDashboardScreen from './src/screens/member/PaidDashboardScreen';
+import BlockAdminBottomTabs from './src/navigation/BlockAdminBottomTabs';
+import DistrictAdminBottomTabs from './src/navigation/DistrictAdminBottomTabs';
+import StateAdminBottomTabs from './src/navigation/StateAdminBottomTabs';
+import EditProfileScreen from './src/screens/member/profile/EditProfileScreen';
+import PaidDashboardScreen from './src/screens/member/paidDashboard/PaidDashboardScreen';
+import PaidProfileScreen from './src/screens/member/paidDashboard/PaidProfileScreen';
+import PaidSettingsScreen from './src/screens/member/paidDashboard/PaidSettingsScreen';
+import EditBusinessScreen from './src/screens/member/profile/EditBusinessScreen';
+import EditFinancialScreen from './src/screens/member/profile/EditFinancialScreen';
+import EditDeclarationScreen from './src/screens/member/profile/EditDeclarationScreen';
 
 // Profile Completion Forms
 import PersonalDetailsFormScreen from './src/screens/profile/PersonalDetailsFormScreen';
@@ -51,21 +61,6 @@ import BusinessProfileViewScreen from './src/screens/business/BusinessProfileVie
 
 // Admin Screens
 import {
-  BlockDashboardScreen,
-  BlockApprovalsScreen,
-  BlockMembersScreen,
-  BlockAnalyticsScreen,
-  BlockSettingsScreen,
-  DistrictDashboardScreen,
-  DistrictApprovalsScreen,
-  DistrictMembersScreen,
-  DistrictAnalyticsScreen,
-  DistrictSettingsScreen,
-  StateDashboardScreen,
-  StateApprovalsScreen,
-  StateMembersScreen,
-  StateAnalyticsScreen,
-  StateSettingsScreen,
   ApplicantDetailScreen,
 } from './src/screens/admin';
 
@@ -144,8 +139,28 @@ function App() {
             options={{ headerShown: false }}
           />
           <Stack.Screen 
+            name="EditBusiness" 
+            component={EditBusinessScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="EditFinancial" 
+            component={EditFinancialScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="EditDeclaration" 
+            component={EditDeclarationScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
             name="PaidDashboard" 
             component={PaidDashboardScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="PaidProfile" 
+            component={PaidProfileScreen}
             options={{ headerShown: false }}
           />
           
@@ -225,9 +240,14 @@ function App() {
             options={{ headerShown: false }}
           />
           <Stack.Screen 
+            name="PaidSettings" 
+            component={PaidSettingsScreen}
+            options={{ headerShown: false }} 
+          />
+          <Stack.Screen 
             name="Settings" 
             component={SettingsScreen}
-            options={{ headerShown: false }}
+            options={{ headerShown: false }} 
           />
           <Stack.Screen 
             name="EditCompany" 
@@ -253,25 +273,13 @@ function App() {
           />
 
           {/* Block Admin Screens */}
-          <Stack.Screen name="BlockDashboard" component={BlockDashboardScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="BlockApprovals" component={BlockApprovalsScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="BlockMembers" component={BlockMembersScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="BlockAnalytics" component={BlockAnalyticsScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="BlockSettings" component={BlockSettingsScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="BlockDashboard" component={BlockAdminBottomTabs} options={{ headerShown: false }} />
 
           {/* District Admin Screens */}
-          <Stack.Screen name="DistrictDashboard" component={DistrictDashboardScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="DistrictApprovals" component={DistrictApprovalsScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="DistrictMembers" component={DistrictMembersScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="DistrictAnalytics" component={DistrictAnalyticsScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="DistrictSettings" component={DistrictSettingsScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="DistrictDashboard" component={DistrictAdminBottomTabs} options={{ headerShown: false }} />
 
           {/* State Admin Screens */}
-          <Stack.Screen name="StateDashboard" component={StateDashboardScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="StateApprovals" component={StateApprovalsScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="StateMembers" component={StateMembersScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="StateAnalytics" component={StateAnalyticsScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="StateSettings" component={StateSettingsScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="StateDashboard" component={StateAdminBottomTabs} options={{ headerShown: false }} />
 
           {/* Payment Screens */}
           <Stack.Screen 

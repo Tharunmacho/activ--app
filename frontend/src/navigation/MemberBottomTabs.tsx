@@ -1,10 +1,10 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MemberBottomTabParamList } from '../types';
-import DashboardScreen from '../screens/member/DashboardScreen';
+import DashboardScreen from '../screens/member/dashboard/DashboardScreen';
 import BrowseMembersScreen from '../screens/member/BrowseMembersScreen';
 import NotificationScreen from '../screens/member/NotificationScreen';
-import ProfileScreen from '../screens/member/ProfileScreen';
+import ProfileScreen from '../screens/member/profile/ProfileScreen';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { COLORS } from '../theme/theme';
 

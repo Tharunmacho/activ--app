@@ -70,117 +70,158 @@ Thank you for joining ACTIV!
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
-      {/* Top Bar */}
+      {/* Seamless Top Bar Header */}
       <View style={styles.topBar}>
-        <Text style={styles.topBarTitle}>Payment Confirmation</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Icon name="arrow-back" size={24} color="#1F2937" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Payment Confirmation</Text>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Celebration Banner */}
-        <View style={styles.successHero}>
-          <View style={styles.iconBadgeCircle}>
-            <Icon name="check-circle" size={60} color="#10B981" />
+        {/* Dribbble Style Hero Celebration Header */}
+        <View style={styles.successHeroCard}>
+          <View style={styles.heroGlowCircle}>
+            <View style={styles.heroIconCircle}>
+              <Icon name="check-circle" size={54} color="#10B981" />
+            </View>
           </View>
+
+          <View style={styles.verifiedBadge}>
+            <Icon name="verified" size={14} color="#059669" />
+            <Text style={styles.verifiedBadgeText}>PAYMENT CONFIRMED</Text>
+          </View>
+
           <Text style={styles.successTitle}>Payment Successful!</Text>
           <Text style={styles.successSubtitle}>
-            Welcome to ACTIV – Your membership is now active
+            Welcome to ACTIV! Your membership is officially active.
           </Text>
+
+          {/* Amount Callout Pill */}
+          <View style={styles.heroAmountCard}>
+            <Text style={styles.heroAmountLabel}>Total Paid</Text>
+            <Text style={styles.heroAmountValue}>₹{totalAmount.toLocaleString()}</Text>
+          </View>
         </View>
 
-        {/* Membership Details Card */}
-        <View style={styles.card}>
+        {/* Dribbble Membership Receipt Card */}
+        <View style={styles.detailsCard}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardHeaderTitle}>Membership Details</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Icon name="card-membership" size={20} color="#2563EB" />
+              <Text style={styles.cardHeaderTitle}>Membership Details</Text>
+            </View>
             <View style={styles.activePill}>
-              <Icon name="check" size={12} color="#FFFFFF" />
+              <View style={styles.activeDot} />
               <Text style={styles.activePillText}>Active</Text>
             </View>
           </View>
 
           <View style={styles.cardBody}>
+            {/* Grid Row 1 */}
             <View style={styles.gridRow}>
-              <View style={styles.gridCell}>
-                <Text style={styles.gridLabel}>MEMBERSHIP ID</Text>
-                <Text style={styles.gridValue}>{membershipId}</Text>
+              <View style={styles.metricBox}>
+                <View style={[styles.metricIconCircle, { backgroundColor: '#EFF6FF' }]}>
+                  <Icon name="badge" size={16} color="#2563EB" />
+                </View>
+                <Text style={styles.metricLabel}>MEMBERSHIP ID</Text>
+                <Text style={styles.metricValue}>{membershipId}</Text>
               </View>
 
-              <View style={styles.gridCell}>
-                <Text style={styles.gridLabel}>MEMBER NAME</Text>
-                <Text style={styles.gridValue}>{memberName}</Text>
+              <View style={styles.metricBox}>
+                <View style={[styles.metricIconCircle, { backgroundColor: '#F0FDF4' }]}>
+                  <Icon name="person" size={16} color="#10B981" />
+                </View>
+                <Text style={styles.metricLabel}>MEMBER NAME</Text>
+                <Text style={styles.metricValue}>{memberName}</Text>
               </View>
             </View>
 
+            {/* Grid Row 2 */}
             <View style={styles.gridRow}>
-              <View style={styles.gridCell}>
-                <Text style={styles.gridLabel}>PLAN TYPE</Text>
-                <Text style={styles.gridValue}>{planType}</Text>
+              <View style={styles.metricBox}>
+                <View style={[styles.metricIconCircle, { backgroundColor: '#F3E8FF' }]}>
+                  <Icon name="workspace-premium" size={16} color="#8B5CF6" />
+                </View>
+                <Text style={styles.metricLabel}>PLAN TYPE</Text>
+                <Text style={styles.metricValue}>{planType}</Text>
               </View>
 
-              <View style={[styles.gridCell, styles.amountHighlightBox]}>
-                <Text style={styles.amountLabel}>AMOUNT PAID</Text>
-                <Text style={styles.amountValue}>₹{totalAmount.toLocaleString()}</Text>
+              <View style={styles.metricBox}>
+                <View style={[styles.metricIconCircle, { backgroundColor: '#FEF3C7' }]}>
+                  <Icon name="event-available" size={16} color="#D97706" />
+                </View>
+                <Text style={styles.metricLabel}>VALIDITY</Text>
+                <Text style={styles.metricValue}>1 Year</Text>
               </View>
             </View>
 
-            <View style={styles.gridRow}>
-              <View style={styles.gridCell}>
-                <Text style={styles.gridLabel}>VALIDITY</Text>
-                <Text style={styles.gridValue}>1 Year</Text>
+            {/* Transaction Ref Box */}
+            <View style={styles.txnBox}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <Icon name="receipt" size={14} color="#64748B" />
+                <Text style={styles.txnLabel}>TRANSACTION REFERENCE</Text>
               </View>
-
-              <View style={styles.gridCell}>
-                <Text style={styles.gridLabel}>PAYMENT DATE</Text>
-                <Text style={styles.gridValue}>{paymentDate}</Text>
-              </View>
-            </View>
-
-            <View style={styles.refBox}>
-              <Text style={styles.refLabel}>TRANSACTION REFERENCE</Text>
-              <Text style={styles.refValue}>{transactionId}</Text>
+              <Text style={styles.txnValue}>{transactionId}</Text>
+              <Text style={styles.txnDate}>Paid on {paymentDate}</Text>
             </View>
           </View>
         </View>
 
-        {/* Document Download Section */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardHeaderTitle}>Download Documents</Text>
-          </View>
-
+        {/* Downloads Section */}
+        <View style={styles.downloadsSection}>
+          <Text style={styles.sectionHeading}>Member Documents</Text>
           <View style={styles.downloadGrid}>
-            <TouchableOpacity style={styles.docBtn} onPress={handleDownloadCertificate}>
-              <Icon name="description" size={32} color="#2563EB" />
-              <Text style={styles.docBtnText}>Download Certificate</Text>
+            <TouchableOpacity
+              style={styles.docCard}
+              onPress={handleDownloadCertificate}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.docIconBox, { backgroundColor: '#EEF2FF' }]}>
+                <Icon name="workspace-premium" size={26} color="#4F46E5" />
+              </View>
+              <Text style={styles.docTitle}>Membership Certificate</Text>
+              <Text style={styles.docSubtext}>Digital PDF</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.docBtn} onPress={handleDownloadReceipt}>
-              <Icon name="file-download" size={32} color="#059669" />
-              <Text style={styles.docBtnText}>Download Receipt</Text>
+            <TouchableOpacity
+              style={styles.docCard}
+              onPress={handleDownloadReceipt}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.docIconBox, { backgroundColor: '#ECFDF5' }]}>
+                <Icon name="receipt-long" size={26} color="#059669" />
+              </View>
+              <Text style={styles.docTitle}>Payment Receipt</Text>
+              <Text style={styles.docSubtext}>Tax Invoice</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Confirmation Info Box */}
+        {/* Confirmation Info Note */}
         <View style={styles.infoCard}>
-          <Icon name="info" size={24} color="#0284C7" />
-          <View style={{ flex: 1, marginLeft: 12 }}>
+          <View style={styles.infoIconBox}>
+            <Icon name="mark-email-read" size={20} color="#0284C7" />
+          </View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.infoTitle}>Confirmation Sent</Text>
             <Text style={styles.infoText}>
-              Confirmation details have been sent to your registered Email and WhatsApp number.
+              Receipt & login credentials sent to your Email & WhatsApp.
             </Text>
           </View>
         </View>
 
-        {/* Go to Dashboard Button */}
+        {/* Dashboard CTA Button */}
         <TouchableOpacity
           style={styles.dashboardBtn}
           onPress={() => navigation.replace('PaidDashboard')}
           activeOpacity={0.85}
         >
-          <Icon name="home" size={22} color="#FFFFFF" style={{ marginRight: 8 }} />
-          <Text style={styles.dashboardBtnText}>Go to Dashboard</Text>
+          <Icon name="dashboard" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+          <Text style={styles.dashboardBtnText}>Go to Member Dashboard</Text>
+          <Icon name="arrow-forward" size={20} color="#FFFFFF" style={{ marginLeft: 6 }} />
         </TouchableOpacity>
 
         <View style={{ height: SPACING.xl * 2 }} />
@@ -195,50 +236,112 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   topBar: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#F8FAFC',
   },
-  topBarTitle: {
+  backButton: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+  },
+  headerTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0F172A',
+    marginLeft: 12,
   },
   content: {
     flex: 1,
     paddingHorizontal: 18,
   },
-  successHero: {
+  successHeroCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
     alignItems: 'center',
-    marginTop: 24,
-    marginBottom: 20,
+    marginTop: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...SHADOWS.md,
   },
-  iconBadgeCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  heroGlowCircle: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: '#D1FAE5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  heroIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: '#ECFDF5',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
-    ...SHADOWS.sm,
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    gap: 6,
+    marginBottom: 10,
+  },
+  verifiedBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#059669',
+    letterSpacing: 0.5,
   },
   successTitle: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '800',
     color: '#0F172A',
-    marginBottom: 4,
+    marginBottom: 6,
+    textAlign: 'center',
   },
   successSubtitle: {
     fontSize: 13,
     color: '#64748B',
     textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 16,
   },
-  card: {
+  heroAmountCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    width: '100%',
+  },
+  heroAmountLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  heroAmountValue: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#059669',
+  },
+  detailsCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     marginBottom: 16,
@@ -249,9 +352,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
   cardHeaderTitle: {
     fontSize: 15,
@@ -261,16 +366,24 @@ const styles = StyleSheet.create({
   activePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10B981',
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+    borderWidth: 1,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    gap: 4,
+    gap: 6,
+  },
+  activeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
   },
   activePillText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#059669',
   },
   cardBody: {
     padding: 16,
@@ -280,81 +393,99 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
-  gridCell: {
+  metricBox: {
     flex: 1,
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#F1F5F9',
   },
-  amountHighlightBox: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
+  metricIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  gridLabel: {
+  metricLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#64748B',
-    marginBottom: 4,
+    color: '#94A3B8',
+    marginBottom: 2,
     letterSpacing: 0.5,
   },
-  gridValue: {
-    fontSize: 14,
+  metricValue: {
+    fontSize: 13,
     fontWeight: '700',
     color: '#0F172A',
   },
-  amountLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#2563EB',
-    marginBottom: 4,
-  },
-  amountValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#1D4ED8',
-  },
-  refBox: {
+  txnBox: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 14,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#F1F5F9',
   },
-  refLabel: {
+  txnLabel: {
     fontSize: 10,
     fontWeight: '700',
     color: '#64748B',
-    marginBottom: 4,
+    letterSpacing: 0.5,
   },
-  refValue: {
-    fontSize: 12,
+  txnValue: {
+    fontSize: 13,
     fontWeight: '600',
-    color: '#334155',
+    color: '#1E293B',
     fontFamily: 'monospace',
+    marginBottom: 2,
+  },
+  txnDate: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  downloadsSection: {
+    marginBottom: 16,
+  },
+  sectionHeading: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 12,
   },
   downloadGrid: {
     flexDirection: 'row',
     gap: 12,
-    padding: 16,
   },
-  docBtn: {
+  docCard: {
     flex: 1,
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    gap: 8,
+    borderColor: '#E2E8F0',
+    borderRadius: 18,
+    padding: 16,
+    alignItems: 'center',
+    ...SHADOWS.sm,
   },
-  docBtnText: {
+  docIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  docTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#0F172A',
     textAlign: 'center',
+    marginBottom: 2,
+  },
+  docSubtext: {
+    fontSize: 11,
+    color: '#64748B',
   },
   infoCard: {
     flexDirection: 'row',
@@ -363,11 +494,20 @@ const styles = StyleSheet.create({
     borderColor: '#BAE6FD',
     borderWidth: 1,
     borderRadius: 16,
-    padding: 16,
+    padding: 14,
     marginBottom: 20,
+    gap: 12,
+  },
+  infoIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#E0F2FE',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   infoTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: '#0369A1',
   },
@@ -383,12 +523,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#2563EB',
     paddingVertical: 16,
-    borderRadius: 14,
+    borderRadius: 16,
     marginBottom: 16,
     ...SHADOWS.md,
   },
   dashboardBtnText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
   },
