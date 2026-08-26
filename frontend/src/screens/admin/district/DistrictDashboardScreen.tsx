@@ -38,11 +38,13 @@ const DistrictDashboardScreen = ({ navigation }: any) => {
         <Text style={[styles.statValue, { color }]}>{value}</Text>
       </View>
       <Text style={styles.statLabel}>{label}</Text>
-      <View style={styles.statFooterRow}>
-        <Icon name="arrow-upward" size={12} color={color} />
-        <Text style={[styles.statSubText, { color }]}>0%</Text>
-        <Text style={styles.statSubTextLight}> vs last 30 days</Text>
-      </View>
+      {/*
+        A trend footer used to sit here: an upward arrow, a literal "0%", and
+        " vs last 30 days" - on every tile, for every admin, always. It was not
+        computed from anything; no endpoint returns a period-over-period figure.
+        An arrow pointing up beside a hard-coded zero reads as a real metric,
+        so it is removed rather than left to be believed.
+      */}
       <View style={[styles.waveDecoration, { backgroundColor: lightColor, opacity: 0.5 }]} />
     </View>
   );

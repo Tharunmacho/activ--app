@@ -317,11 +317,11 @@ const SuperAdminActionHubScreen = ({ navigation }: any) => {
         <Text style={[superStyles.statValue, { color }]}>{Number(value || 0)}</Text>
       </View>
       <Text style={superStyles.statLabel}>{label}</Text>
-      <View style={superStyles.statFooterRow}>
-        <Icon name="arrow-upward" size={12} color={color} />
-        <Text style={[superStyles.statSubText, { color }]}>0%</Text>
-        <Text style={superStyles.statSubTextLight}> vs last 30 days</Text>
-      </View>
+      {/*
+        The same fabricated trend footer the tier dashboards carried - an upward
+        arrow next to a literal "0%" and " vs last 30 days", computed from
+        nothing. Removed for the same reason: it reads as a real metric.
+      */}
       <View style={[superStyles.waveDecoration, { backgroundColor: light, opacity: 0.5 }]} />
     </View>
   );

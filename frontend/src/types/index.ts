@@ -50,6 +50,12 @@ export type RootStackParamList = {
   BusinessProfileView: { companyId: string };
   PaymentWebView: { orderId: string; amount: number };
   PaymentGateway: {
+    /**
+     * The plan key the server prices from ('basic' | 'intermediate' | 'ideal' |
+     * 'aspirant'). It is what decides the amount; `planAmount` and
+     * `totalAmount` below are for display only, and the server ignores both.
+     */
+    planId: string;
     planType: string;
     planAmount: number;
     totalAmount: number;

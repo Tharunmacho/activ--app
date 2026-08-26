@@ -20,7 +20,7 @@ import api from '../../services/api';
 type Props = NativeStackScreenProps<RootStackParamList, 'PaymentGateway'>;
 
 const PaymentGatewayScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { planType = 'Membership Plan', planAmount = 2000, totalAmount = 2000, applicationId } = route.params || {};
+  const { planId = 'aspirant', planType = 'Membership Plan', planAmount = 2000, totalAmount = 2000, applicationId } = route.params || {};
 
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi' | 'netbanking'>('card');
   const [cardNumber, setCardNumber] = useState('');
@@ -68,26 +68,41 @@ const PaymentGatewayScreen: React.FC<Props> = ({ navigation, route }) => {
 
     setIsProcessing(true);
     try {
-      const generatedTxnId = `TXN_${Date.now()}`;
-      const generatedPaymentId = `PAY_${Date.now()}`;
+      /**
+       * Order, authorise, verify.
+       *
+       * This screen used to generate its own `PAY_<epoch>` and `TXN_<epoch>` and
+       * post them to `/payment/complete`, which checked none of it — an
+       * authenticated request with an empty body activated a membership just as
+       * well. Any member who could sign in could grant themselves one.
+       *
+       * The server now issues the order, prices the plan, signs the
+       * authorisation and verifies that signature before activating anything.
+       * The middle call is the interim stand-in for a real gateway and the only
+       * one that changes when a provider is connected.
+       */
+      const orderRes = await api.post('/payment/order', { planId, applicationId });
+      const order = orderRes.data?.data || orderRes.data || {};
+      if (!order.orderId) throw new Error('The payment could not be started');
 
-      // Call backend to record payment completion
-      try {
-        await api.post('/payment/complete', {
-          paymentId: generatedPaymentId,
-          paymentMethod,
-          transactionId: generatedTxnId,
-          status: 'completed',
-          applicationId,
-        });
-      } catch (backendError) {
-        console.log('Backend sync warning:', backendError);
-      }
+      const authRes = await api.post('/payment/mock-authorize', { orderId: order.orderId });
+      const authorized = authRes.data?.data || authRes.data || {};
+      if (!authorized.signature) throw new Error('The payment was not authorised');
+
+      await api.post('/payment/complete', {
+        orderId: order.orderId,
+        gatewayPaymentId: authorized.gatewayPaymentId,
+        signature: authorized.signature,
+        paymentMethod,
+      });
+
+      const generatedPaymentId = authorized.gatewayPaymentId;
 
       // Navigate to Mock payment test simulator or success screen
       navigation.navigate('MockPayment', {
         paymentRequestId: generatedPaymentId,
-        amount: totalAmount,
+        // The amount the server charged, not the one this screen displayed.
+        amount: order.amount,
         planType,
         applicationId,
       });

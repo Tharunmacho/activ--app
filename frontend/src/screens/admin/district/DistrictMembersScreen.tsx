@@ -6,15 +6,29 @@ import { useDistrictAdminData } from './context/DistrictAdminContext';
 import { Applicant } from '../../../types';
 import { getInitials } from '../applicantStyles';
 
-const isInactiveMember = (index: number) => index % 4 === 3;
+/**
+ * Active / inactive is resolved by the server, not recomputed here.
+ *
+ * This was `(index) => index % 4 === 3` — every fourth row was labelled
+ * "Inactive" regardless of who they were. It was then corrected to
+ * `member.isActive === false`, which was truthful but could never fire: the
+ * list was built from `applicants.approved` alone and every approved applicant
+ * defaults to active, so the Inactive tab stayed empty and the filter looked
+ * broken. The dashboard now returns a `members` array holding the approved and
+ * the rejected applicants with `memberStatus` already decided — a rejected
+ * applicant is Inactive — so the two clients cannot disagree about it.
+ */
+const isInactiveMember = (member: any) =>
+  member?.memberStatus === 'Inactive' || member?.isActive === false;
 
 const DistrictMembersScreen = ({ navigation }: any) => {
-  const { applicants, refreshing, fetchDashboardData } = useDistrictAdminData();
+  const { applicants, members, memberAction, pendingActionId, refreshing, fetchDashboardData } = useDistrictAdminData();
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
-  const allMembers = useMemo(() => applicants.approved || [], [applicants.approved]);
-  const activeMembers = useMemo(() => allMembers.filter((_, i) => !isInactiveMember(i)), [allMembers]);
-  const inactiveMembers = useMemo(() => allMembers.filter((_, i) => isInactiveMember(i)), [allMembers]);
+  // The server's directory: approved members plus rejected applicants.
+  const allMembers = useMemo(() => members || [], [members]);
+  const activeMembers = useMemo(() => allMembers.filter((m) => !isInactiveMember(m)), [allMembers]);
+  const inactiveMembers = useMemo(() => allMembers.filter((m) => isInactiveMember(m)), [allMembers]);
 
   const visibleMembers = useMemo(() => {
     if (activeFilter === 'active') return activeMembers;
@@ -44,8 +58,48 @@ const DistrictMembersScreen = ({ navigation }: any) => {
     </View>
   );
 
+  /**
+   * Suspend / reactivate, and delete.
+   *
+   * `Alert.alert` rather than a `<Modal>`: a transparent modal opened from
+   * inside a bottom-tab screen throws WindowManager BadTokenException on
+   * Android and kills the process (crash-proof directive, Rule 2).
+   *
+   * Delete is confirmed because it cascades on the server and cannot be undone.
+   */
+  const confirmToggle = (member: any) => {
+    const inactive = isInactiveMember(member);
+    const name = member?.fullName || 'this member';
+    Alert.alert(
+      inactive ? 'Reactivate member' : 'Suspend member',
+      inactive
+        ? `Reactivate ${name}? They will be able to sign in again.`
+        : `Suspend ${name}? They will be blocked from signing in.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: inactive ? 'Reactivate' : 'Suspend',
+          onPress: () => memberAction(member, inactive ? 'activate' : 'suspend'),
+        },
+      ],
+    );
+  };
+
+  const confirmDelete = (member: any) => {
+    const name = member?.fullName || 'this member';
+    Alert.alert(
+      'Delete permanently',
+      `Permanently delete ${name}?\n\nThis removes their application, login, member record, business, financial and declaration forms. It cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => memberAction(member, 'delete') },
+      ],
+    );
+  };
+
   const renderMemberItem = (member: Applicant, originalIndex: number) => {
-    const inactive = isInactiveMember(originalIndex);
+    const inactive = isInactiveMember(member);
+    const busy = !!pendingActionId && pendingActionId === String(member?.applicationId || member?.id || '');
     return (
       <View key={member.id} style={styles.memberRow}>
         <View style={styles.avatarCircle}>
@@ -54,17 +108,47 @@ const DistrictMembersScreen = ({ navigation }: any) => {
         <View style={styles.memberInfo}>
           <Text style={styles.memberName}>{member.fullName}</Text>
           <Text style={styles.memberEmail}>{member.email || 'No email'}</Text>
+          {/* Only when there is one: an active member has no reason to show. */}
+          {inactive && !!(member as any).inactiveReason && (
+            <Text style={styles.memberReason} numberOfLines={1}>{(member as any).inactiveReason}</Text>
+          )}
         </View>
         <Text style={[styles.statusText, inactive ? styles.statusInactive : styles.statusActive]}>
           {inactive ? 'Inactive' : 'Active'}
         </Text>
-        <TouchableOpacity
-          style={styles.moreBtn}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('ApplicantDetail', { applicant: member })}
-        >
-          <Icon name="chevron-right" size={24} color="#6366F1" />
-        </TouchableOpacity>
+        <View style={styles.rowActions}>
+          <TouchableOpacity
+            style={styles.moreBtn}
+            activeOpacity={0.7}
+            disabled={busy}
+            accessibilityLabel="View full application"
+            onPress={() => navigation.navigate('ApplicantDetail', { applicant: member })}
+          >
+            <Icon name="visibility" size={20} color="#6366F1" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.moreBtn}
+            activeOpacity={0.7}
+            disabled={busy}
+            accessibilityLabel={inactive ? 'Reactivate member' : 'Suspend member'}
+            onPress={() => confirmToggle(member)}
+          >
+            <Icon
+              name={inactive ? 'person-add' : 'person-off'}
+              size={20}
+              color={busy ? '#CBD5E1' : inactive ? '#10B981' : '#F59E0B'}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.moreBtn}
+            activeOpacity={0.7}
+            disabled={busy}
+            accessibilityLabel="Delete member"
+            onPress={() => confirmDelete(member)}
+          >
+            <Icon name="delete-outline" size={20} color={busy ? '#CBD5E1' : '#EF4444'} />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -115,10 +199,12 @@ const styles = StyleSheet.create({
   memberInfo: { flex: 1 },
   memberName: { fontSize: 14, fontWeight: '600', color: '#1E293B', marginBottom: 2 },
   memberEmail: { fontSize: 12, color: '#64748B' },
+  memberReason: { fontSize: 11, color: '#EF4444', marginTop: 2 },
   statusText: { fontSize: 12, fontWeight: '600', marginRight: 12 },
   statusActive: { color: '#10B981' },
   statusInactive: { color: '#EF4444' },
-  moreBtn: { padding: 4 },
+  moreBtn: { padding: 6 },
+  rowActions: { flexDirection: 'row', alignItems: 'center', gap: 2 },
 });
 
 export default DistrictMembersScreen;

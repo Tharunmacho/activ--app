@@ -12,8 +12,8 @@ const API_CONFIG = {
     timeout: 12000,
   },
   production: {
-    baseURL: 'https://actv-project.onrender.com/api/v1',
-    timeout: 75000, // Cold start handling for Render
+    baseURL: 'https://activ-activbackend-8xwlvv-df073b-178-16-137-247.sslip.io/api/v1',
+    timeout: 75000, // Cold start handling
   },
 };
 

@@ -227,7 +227,14 @@ const CompleteMembershipScreen: React.FC = () => {
   const handlePayment = async () => {
     setIsProcessing(true);
     try {
+      /*
+       * `planId` carries through now, and it is the only thing that decides the
+       * price. The server prices the plan from its own table; `planAmount` below
+       * is what this screen displays, not what will be charged, and nothing sent
+       * from here can change the amount.
+       */
       navigation.navigate('PaymentGateway', {
+        planId: activePlan.id,
         planType: activePlan.title,
         planAmount: activePlan.rawPrice,
         totalAmount: activePlan.rawPrice,

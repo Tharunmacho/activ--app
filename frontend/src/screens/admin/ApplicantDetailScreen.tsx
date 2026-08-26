@@ -217,7 +217,10 @@ const ApplicantDetailScreen: React.FC<Props> = ({ navigation, route }) => {
             accent: { tint: '#EFF6FF', solid: '#2563EB' },
             rows: buildRows([
               { label: 'Member Type / Role', raw: userRole, icon: 'card-membership' },
-              { label: 'Doing Business', raw: 'Yes', icon: 'storefront' },
+              // Read the declared value. This was the literal 'Yes' - which is
+              // true of every applicant in this branch by construction, but
+              // printed as though it had been looked up.
+              { label: 'Doing Business', raw: business.doingBusiness !== undefined ? (business.doingBusiness ? 'Yes' : 'No') : (appData.doingBusiness !== undefined ? (appData.doingBusiness ? 'Yes' : 'No') : undefined), icon: 'storefront' },
               { label: 'Organization Name', raw: business.organizationName || business.businessName || appData.organizationName || appData.businessName, icon: 'corporate-fare' },
               { label: 'Constitution Type', raw: business.constitutionType || appData.constitutionType, icon: 'gavel' },
               { label: 'Business Type', raw: business.businessTypes || business.businessType || appData.businessTypes || appData.businessType, icon: 'domain' },
@@ -259,7 +262,7 @@ const ApplicantDetailScreen: React.FC<Props> = ({ navigation, route }) => {
               { label: 'Company Names', raw: declaration.companyNames || appData.companyNames, icon: 'business' },
             ]
           : []),
-        { label: 'Agreed to Terms', raw: declaration.agreeToDeclaration !== undefined ? (declaration.agreeToDeclaration ? 'Yes (Confirmed)' : 'No') : (appData.agreeToTerms !== undefined ? (appData.agreeToTerms ? 'Yes (Confirmed)' : 'No') : 'Yes (Confirmed)'), icon: 'rule' },
+        { label: 'Agreed to Terms', raw: declaration.agreeToDeclaration !== undefined ? (declaration.agreeToDeclaration ? 'Yes (Confirmed)' : 'No') : (appData.agreeToTerms !== undefined ? (appData.agreeToTerms ? 'Yes (Confirmed)' : 'No') : undefined), icon: 'rule' },
         { label: 'Submitted Date', raw: formatDate(appData.submittedAt || fullApp.createdAt || fullApp.updatedAt), icon: 'today' },
       ]),
     },

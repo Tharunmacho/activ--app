@@ -23,6 +23,20 @@ export interface ApplicantBuckets {
   all: Applicant[];
 }
 
+/**
+ * A row of the Members directory.
+ *
+ * `memberStatus` is resolved by the server, not here: the Inactive tab used to
+ * be built from `applicants.approved` filtered by `isActive === false`, and
+ * since every approved applicant defaults to active it could never hold
+ * anyone. The server's `members` array is the approved list plus the rejected
+ * one — a rejected applicant is Inactive — so both clients show the same split.
+ */
+export interface AdminMember extends Applicant {
+  memberStatus: 'Active' | 'Inactive';
+  inactiveReason: string;
+}
+
 const EMPTY_BUCKETS: ApplicantBuckets = {
   pending: [],
   approved: [],
@@ -35,6 +49,9 @@ interface BlockAdminContextType {
   refreshing: boolean;
   stats: BlockStats | null;
   applicants: ApplicantBuckets;
+  /** Approved + rejected applicants, Active/Inactive resolved by the server. */
+  members: AdminMember[];
+  memberAction: (member: AdminMember, action: 'activate' | 'suspend' | 'delete') => Promise<void>;
   adminName: string;
   adminEmail: string;
   adminPhone: string;
@@ -56,6 +73,7 @@ export const BlockAdminProvider: React.FC<{ children: ReactNode }> = ({ children
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<BlockStats | null>(null);
   const [applicants, setApplicants] = useState<ApplicantBuckets>(EMPTY_BUCKETS);
+  const [members, setMembers] = useState<AdminMember[]>([]);
   const [adminName, setAdminName] = useState<string>('Block Admin');
   const [adminEmail, setAdminEmail] = useState<string>('');
   const [adminPhone, setAdminPhone] = useState<string>('');
@@ -79,6 +97,7 @@ export const BlockAdminProvider: React.FC<{ children: ReactNode }> = ({ children
 
       setStats(payload.stats || null);
       setApplicants({ ...EMPTY_BUCKETS, ...(payload.applicants || {}) });
+      setMembers(Array.isArray(payload.members) ? payload.members : []);
     } catch (error: any) {
       Alert.alert(
         'Error',
@@ -217,11 +236,39 @@ export const BlockAdminProvider: React.FC<{ children: ReactNode }> = ({ children
 
 
 
+  /**
+   * Suspend, reactivate or permanently delete a member.
+   *
+   * The id sent is the application id the row carries. `memberId` on the same
+   * payload is the auth id whenever the applicant has a login — a different
+   * collection from the one the endpoint searched — so passing it returned
+   * "User not found" for a member plainly on screen.
+   *
+   * `delete` cascades on the server: application, credential, member record and
+   * all four additional forms. It cannot be undone, so the caller confirms.
+   */
+  const memberAction = async (member: AdminMember, action: 'activate' | 'suspend' | 'delete') => {
+    const id = member?.applicationId || member?.id;
+    if (!id) return;
+
+    setPendingActionId(String(id));
+    try {
+      await api.post(`/admin/users/${id}/${action}`, {});
+      await fetchDashboardData(true);
+    } catch (error: any) {
+      Alert.alert('Error', error?.response?.data?.message || `Failed to ${action} this member`);
+    } finally {
+      setPendingActionId(null);
+    }
+  };
+
   const value: BlockAdminContextType = {
     loading,
     refreshing,
     stats,
     applicants,
+    members,
+    memberAction,
     adminName: adminName && adminName !== 'Block Admin' ? adminName : dynamicRoleTitle,
     adminEmail,
     adminPhone,
