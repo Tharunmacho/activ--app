@@ -70,21 +70,10 @@ const BrowseMembersScreen: React.FC<Props> = ({
         allApplicants = payload.applicants?.all || payload.applicants?.approved || [];
       }
 
-      if (allApplicants.length === 0) {
-        allApplicants = [
-          {
-            id: 'demo-1',
-            fullName: 'Pradeep',
-            email: 'pradeep@gmail.com',
-            role: 'member',
-            block: 'Ariyalur',
-            phone: '9092317264',
-            stage: 'approved',
-            gender: 'Male',
-            approvedByText: 'Approved by Block Admin',
-          },
-        ];
-      }
+      // An empty region renders the empty state. This used to substitute a
+      // fabricated member — name, phone number, block and all — which is
+      // indistinguishable from a real record on screen and hardcodes a region
+      // into the bargain.
 
       const formatted: MemberItem[] = (Array.isArray(allApplicants) ? allApplicants : [])
         .filter((a: any) => a?.stage !== 'upstream' && a?.stage !== 'closed')

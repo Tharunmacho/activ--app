@@ -70,16 +70,20 @@ const AdminSidebarDrawer: React.FC<AdminSidebarDrawerProps> = ({
   navigation,
   activeNav,
   onNavSelect,
-  adminName = 'Ariyalur Admin',
-  blockName = 'Ariyalur',
+  adminName = '',
+  blockName = '',
   onLogout,
 }) => {
   const insets = useSafeAreaInsets();
 
   if (!isOpen) return null;
 
-  const displayedBlockName = blockName || 'Ariyalur';
-  const displayedTitle = adminName && adminName !== 'Block Admin' ? adminName : `${displayedBlockName} Admin`;
+  // The region comes from the signed-in admin's own record. Naming one here as
+  // a default would put a real region's name above somebody else's queue.
+  const displayedBlockName = blockName || '';
+  const displayedTitle = adminName && adminName !== 'Block Admin'
+    ? adminName
+    : (displayedBlockName ? `${displayedBlockName} Admin` : 'Block Admin');
   const initials = getInitials(displayedTitle) || 'AA';
 
   const handleSupportPress = () => {

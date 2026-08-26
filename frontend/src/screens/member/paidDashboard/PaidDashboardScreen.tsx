@@ -102,7 +102,7 @@ const PaidDashboardScreen: React.FC<PaidDashboardProps> = ({ navigation }) => {
             }
           }
         } else {
-          console.log('Error loading application data:', appResResult.reason);
+          console.log('Error loading application data:', appResResult.status === 'rejected' ? appResResult.reason : 'empty response');
         }
 
         if (profileResResult.status === 'fulfilled' && profileResResult.value) {
@@ -114,7 +114,7 @@ const PaidDashboardScreen: React.FC<PaidDashboardProps> = ({ navigation }) => {
             if (prof.profilePhoto) profilePhoto = prof.profilePhoto;
           }
         } else {
-          console.log('Error loading profile:', profileResResult.reason);
+          console.log('Error loading profile:', profileResResult.status === 'rejected' ? profileResResult.reason : 'empty response');
         }
       }
 
@@ -215,11 +215,17 @@ Issue Date: ${new Date().toLocaleDateString()}
               </View>
               <View style={styles.welcomeTextWrap}>
                 <Text style={styles.welcomeText}>
-                  Welcome back, {userData?.name?.split(' ')[0] || 'Sarah'}
+                  Welcome back, {(userData?.name || '').split(' ')[0] || 'Member'}
                 </Text>
-                <Text style={styles.companyText}>
-                  {userData?.planType || 'TechCorp Solution'}
-                </Text>
+                {/*
+                  `planType` is a membership tier — starter, lifetime — and it
+                  was falling back to "TechCorp Solution", a company name, for
+                  anyone whose tier had not loaded. Two unrelated things in one
+                  slot, one of them invented. An unset tier renders nothing.
+                */}
+                {!!userData?.planType && (
+                  <Text style={styles.companyText}>{userData.planType}</Text>
+                )}
               </View>
             </TouchableOpacity>
             

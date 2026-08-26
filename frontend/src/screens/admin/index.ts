@@ -16,5 +16,11 @@ export { default as StateApprovalsScreen } from './state/StateApprovalsScreen';
 export { default as StateMembersScreen } from './state/StateMembersScreen';
 export { default as StateSettingsScreen } from './state/StateSettingsScreen';
 
+// Super Admin Screens
+export { default as SuperAdminActionHubScreen } from './super/SuperAdminActionHubScreen';
+export { default as ManageAdminsScreen } from './super/ManageAdminsScreen';
+export { default as ManageEventsScreen } from './super/ManageEventsScreen';
+export { default as SystemScreen } from './super/SystemScreen';
+
 // Common Admin Screens
 export { default as ApplicantDetailScreen } from './ApplicantDetailScreen';

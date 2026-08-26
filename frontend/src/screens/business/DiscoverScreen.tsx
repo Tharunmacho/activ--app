@@ -300,12 +300,12 @@ const DiscoverScreen: React.FC<Props> = ({ navigation }) => {
           )}
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={styles.companyName}>{item.businessName || 'Business'}</Text>
-            <Text style={styles.companyType}>{item.businessType || 'Manufacturing'}</Text>
+            <Text style={styles.companyType}>{item.businessType || '—'}</Text>
 
             <View style={styles.locationRow}>
               <Icon name="location-on" size={14} color="#6B7280" style={{ marginRight: 2 }} />
               <Text style={styles.locationText}>
-                {item.location || 'Tamil Nadu'}
+                {item.location || 'Location not set'}
                 {item.area ? `, ${item.area}` : ''}
               </Text>
             </View>

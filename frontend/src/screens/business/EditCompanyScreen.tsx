@@ -424,7 +424,7 @@ const EditCompanyScreen: React.FC<Props> = ({ navigation }) => {
                   style={styles.textInput}
                   value={formData.location}
                   onChangeText={(value) => handleInputChange('location', value)}
-                  placeholder="e.g. Chennai, Tamil Nadu"
+                  placeholder="City, State"
                   placeholderTextColor="#94A3B8"
                 />
               </View>

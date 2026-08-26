@@ -1,5 +1,5 @@
 // Onboarding Screen - Conditional Single Title Rendering for Non-Duplicated Graphics
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootStackParamList } from '../../types';
 import { COLORS, SPACING } from '../../theme/theme';
 
@@ -57,7 +58,44 @@ const RAW_SLIDES: OnboardingSlide[] = [
 
 const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const flatListRef = useRef<FlatList>(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const token = await AsyncStorage.getItem('@activ_auth_token');
+        const role = await AsyncStorage.getItem('@activ_user_role');
+        
+        if (token && role) {
+          // Auto-navigate based on role
+          switch (role) {
+            case 'super_admin':
+              navigation.replace('SuperAdminDashboard');
+              break;
+            case 'state_admin':
+              navigation.replace('StateDashboard');
+              break;
+            case 'district_admin':
+              navigation.replace('DistrictDashboard');
+              break;
+            case 'block_admin':
+              navigation.replace('BlockDashboard');
+              break;
+            case 'member':
+            default:
+              navigation.replace('MemberMain');
+              break;
+          }
+        } else {
+          setIsCheckingAuth(false);
+        }
+      } catch (err) {
+        setIsCheckingAuth(false);
+      }
+    };
+    checkAuth();
+  }, [navigation]);
 
   const slides = useMemo(() => {
     const seenTitles = new Set<string>();
@@ -125,6 +163,15 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
       ))}
     </View>
   );
+
+  if (isCheckingAuth) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <Text style={{ fontSize: 16, color: '#475569' }}>Loading...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>

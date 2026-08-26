@@ -438,7 +438,7 @@ const BusinessProfileScreen: React.FC<BusinessProfileProps> = ({ navigation }) =
                     setLocation(text);
                     validateField('location', text);
                   }}
-                  placeholder="e.g. Chennai, Tamil Nadu"
+                  placeholder="City, State"
                   placeholderTextColor="#94A3B8"
                 />
               </View>

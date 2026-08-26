@@ -1,6 +1,8 @@
 import { Platform } from 'react-native';
 
 // Host for dev:
+// Host for dev:
+// Host for dev:
 // - Machine LAN IP e.g. '10.249.189.174' works for Wi-Fi & USB Physical Devices, Android Emulator & iOS
 const DEV_HOST = 'localhost';
 
@@ -67,6 +69,12 @@ export const ENDPOINTS = {
     LOGOUT: '/auth/logout',
     PROFILE: '/auth/me',
     VALIDATE_TOKEN: '/auth/validate-token',
+    // The reset flow. The server answers /forgot-password identically whether
+    // or not the address exists, so neither this app nor the website can be
+    // used to find out which emails have accounts.
+    FORGOT_PASSWORD: '/auth/forgot-password',
+    RESET_PASSWORD: '/auth/reset-password',
+    VERIFY_RESET_TOKEN: '/auth/reset-password/verify',
   },
 
   // Members
@@ -104,8 +112,12 @@ export const ENDPOINTS = {
     GET_BY_MEMBER: (memberId: string) => `/business-profiles/${memberId}`,
     UPDATE: (id: string) => `/business-profiles/${id}`,
     DELETE: (id: string) => `/business-profiles/${id}`,
-    GET_STATS: (companyId: string) => `/business/stats/${companyId}`,
-    GET_ACTIVITIES: (companyId: string) => `/business/activities/${companyId}`,
+    // `GET_STATS` and `GET_ACTIVITIES` used to be declared here, pointing at
+    // `/business/stats/:id` and `/business/activities/:id`. Neither route is
+    // mounted in `backend/src/routes.js` and nothing ever called them — the
+    // catalog figures come from PRODUCTS.STATS and PRODUCTS.ACTIVITIES below.
+    // They were removed so this map cannot be mistaken for a list of endpoints
+    // that exist.
   },
 
   // Companies

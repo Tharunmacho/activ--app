@@ -1,5 +1,12 @@
 // Navigation Types
 export type RootStackParamList = {
+  ForgotPassword: undefined;
+  /**
+   * `token` is optional because there is no deep-link handler yet: the member
+   * pastes the code from the email. The param is declared so the screen works
+   * unchanged the moment a link handler is registered.
+   */
+  ResetPassword: { token?: string } | undefined;
   // Auth Stack
   Onboarding: undefined;
   Welcome: undefined;
@@ -26,6 +33,7 @@ export type RootStackParamList = {
   Dashboard: undefined;
   PaidDashboard: undefined;
   PaidProfile: undefined;
+  PaidSettings: undefined;
   ApplicationStatus: undefined;
   ApplicationSubmitted: undefined;
   BusinessProfile: undefined;
@@ -221,6 +229,8 @@ export interface Applicant {
   _id?: string;
   applicationId: string;
   memberId: string;
+  /** The auth-user id, present on rows loaded straight from an application. */
+  userId?: string;
   memberCode: string;
   fullName: string;
   memberName?: string;
@@ -228,6 +238,10 @@ export interface Applicant {
   email: string;
   phone: string;
   role: string;
+  /** Mirrors businessInfo.doingBusiness; the backend flattens it to the top level too. */
+  doingBusiness?: boolean;
+  registrationType?: string;
+  organizationName?: string;
   gender: string;
   block: string;
   district: string;
@@ -238,6 +252,19 @@ export interface Applicant {
   level?: AdminLevel;
   statusLabel: string;
   approvedByText?: string;
+  /**
+   * Orphan fallback. True when the tier that formally owns this application has
+   * no active admin, so it has escalated to the tier reading it now. The stored
+   * status is unchanged — ownership is derived from live staffing, so the file
+   * returns to its own tier the moment one is staffed again.
+   */
+  orphaned?: boolean;
+  /** The tier the status names. */
+  owningTier?: string;
+  /** The tier that can actually act, once staffing is taken into account. */
+  effectiveTier?: string;
+  /** One line explaining the escalation, empty when there is none. */
+  fallbackReason?: string;
   submittedAt: string | null;
   blockApprovedAt: string | null;
   districtApprovedAt?: string | null;

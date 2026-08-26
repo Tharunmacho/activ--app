@@ -10,7 +10,7 @@ import { getInitials } from '../applicantStyles';
 const isInactiveMember = (index: number) => index % 4 === 3;
 
 const BlockMembersScreen = ({ navigation }: any) => {
-  const { applicants, refreshing, fetchDashboardData, deleteCandidate } = useBlockAdminData();
+  const { applicants, refreshing, fetchDashboardData } = useBlockAdminData();
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
   // All approved applicants are the "members"
@@ -75,30 +75,9 @@ const BlockMembersScreen = ({ navigation }: any) => {
         <TouchableOpacity
           style={styles.moreBtn}
           activeOpacity={0.7}
-          onPress={() => {
-            Alert.alert(
-              'Options',
-              member.fullName,
-              [
-                {
-                  text: '🗑️ Delete',
-                  style: 'destructive',
-                  onPress: () =>
-                    Alert.alert(
-                      'Confirm Delete',
-                      `Are you sure you want to permanently delete ${member.fullName}?`,
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        { text: 'Delete', style: 'destructive', onPress: () => deleteCandidate(member.id) },
-                      ]
-                    ),
-                },
-                { text: 'Cancel', style: 'cancel' },
-              ]
-            );
-          }}
+          onPress={() => navigation.navigate('ApplicantDetail', { applicant: member })}
         >
-          <Icon name="more-vert" size={20} color="#94A3B8" />
+          <Icon name="chevron-right" size={24} color="#6366F1" />
         </TouchableOpacity>
       </View>
     );

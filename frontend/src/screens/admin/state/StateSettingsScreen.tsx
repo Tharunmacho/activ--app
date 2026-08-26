@@ -9,12 +9,13 @@ import { useStateAdminData } from './context/StateAdminContext';
 import { getInitials } from '../applicantStyles';
 
 const StateSettingsScreen = ({ navigation }: any) => {
-  const { adminName, adminEmail, currentState, updateAdminProfile, profileImageUri, setProfileImageUri } = useStateAdminData();
+  const { adminName, adminEmail, adminPhone, currentState, updateAdminProfile, profileImageUri, setProfileImageUri } = useStateAdminData();
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [nameInput, setNameInput] = useState(adminName);
   const [emailInput, setEmailInput] = useState(adminEmail);
+  const [phoneInput, setPhoneInput] = useState(adminPhone);
   const [stateInput, setStateInput] = useState(currentState);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -22,8 +23,9 @@ const StateSettingsScreen = ({ navigation }: any) => {
   useEffect(() => {
     setNameInput(adminName);
     setEmailInput(adminEmail);
+    setPhoneInput(adminPhone);
     setStateInput(currentState);
-  }, [adminName, adminEmail, currentState]);
+  }, [adminName, adminEmail, adminPhone, currentState]);
 
   const handleLogout = async () => {
     try {
@@ -49,9 +51,9 @@ const StateSettingsScreen = ({ navigation }: any) => {
     setIsSaving(true);
     let successCount = 0;
     try {
-      if (nameInput !== adminName || emailInput !== adminEmail || stateInput !== currentState) {
-        await api.put('/admin/profile', { fullName: nameInput, email: emailInput, state: stateInput });
-        updateAdminProfile(nameInput, emailInput);
+      if (nameInput !== adminName || emailInput !== adminEmail || phoneInput !== adminPhone || stateInput !== currentState) {
+        await api.put('/admin/profile', { fullName: nameInput, email: emailInput, phoneNumber: (phoneInput || '').trim(), state: stateInput });
+        updateAdminProfile(nameInput, emailInput, (phoneInput || '').trim());
         successCount++;
       }
       if (newPassword) {
@@ -70,12 +72,46 @@ const StateSettingsScreen = ({ navigation }: any) => {
     }
   };
 
-  const renderInput = (label: string, value: string, onChangeText: (t: string) => void, placeholder: string, secure = false) => (
-    <View style={styles.inputContainer}>
-      <Text style={styles.inputLabel}>{label}</Text>
-      <TextInput style={styles.inputField} value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#94A3B8" secureTextEntry={secure} editable={isEditing} />
-    </View>
-  );
+  /**
+   * Which password fields are currently revealed, keyed by label.
+   *
+   * Keyed rather than a single flag so revealing one field does not reveal the
+   * others beside it. SystemScreen carries the same map; this is the renderer
+   * its comment says the tier screens share, which they did not until now.
+   */
+  const [revealed, setRevealed] = useState<Record<string, boolean>>({});
+
+  const renderInput = (label: string, value: string, onChangeText: (t: string) => void, placeholder: string, secure = false, keyboardType: 'default' | 'phone-pad' | 'email-address' = 'default') => {
+    const shown = secure && !!revealed[label];
+    return (
+      <View style={styles.inputContainer}>
+        <Text style={styles.inputLabel}>{label}</Text>
+        <View style={styles.inputRow}>
+          <TextInput
+            style={[styles.inputField, styles.inputFlex, secure && styles.inputWithIcon]}
+            value={value}
+            onChangeText={onChangeText}
+            placeholder={placeholder}
+            placeholderTextColor="#94A3B8"
+            secureTextEntry={secure && !shown}
+            editable={isEditing}
+            keyboardType={keyboardType}
+            autoCorrect={false}
+          />
+          {secure ? (
+            <TouchableOpacity
+              style={styles.revealBtn}
+              onPress={() => setRevealed(prev => ({ ...prev, [label]: !prev[label] }))}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel={shown ? 'Hide password' : 'Show password'}
+            >
+              <Icon name={shown ? 'visibility-off' : 'visibility'} size={20} color="#94A3B8" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -115,6 +151,7 @@ const StateSettingsScreen = ({ navigation }: any) => {
           <Text style={styles.menuSectionTitle}>Profile Information</Text>
           {renderInput('Full Name', nameInput, setNameInput, 'Enter your name')}
           {renderInput('Email Address', emailInput, setEmailInput, 'Enter your email')}
+          {renderInput('Mobile Number', phoneInput, setPhoneInput, 'Enter your mobile number', false, 'phone-pad')}
           {renderInput('State Name', stateInput, setStateInput, 'Enter state name')}
           {isEditing && (
             <>
@@ -159,6 +196,10 @@ const styles = StyleSheet.create({
   changePhotoText: { fontSize: 12, color: '#6366F1', fontWeight: '600' },
   formCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 1 },
   menuSectionTitle: { fontSize: 14, fontWeight: '600', color: '#6366F1', marginBottom: 16 },
+  inputRow: { flexDirection: 'row', alignItems: 'center' },
+  inputFlex: { flex: 1 },
+  inputWithIcon: { paddingRight: 44 },
+  revealBtn: { position: 'absolute', right: 4, padding: 8 },
   inputContainer: { marginBottom: 16 },
   inputLabel: { fontSize: 12, fontWeight: '600', color: '#64748B', marginBottom: 6 },
   inputField: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#1E293B' },

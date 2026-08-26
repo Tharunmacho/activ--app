@@ -118,7 +118,7 @@ const AnalyticsScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={styles.selectorLabel}>ANALYTICS FOR</Text>
               <Text style={styles.companySelectorTitle}>{activeCompany.businessName || 'Company'}</Text>
               <Text style={styles.companySelectorSub}>
-                {activeCompany.businessType || 'Manufacturing'}
+                {activeCompany.businessType || '—'}
                 {activeCompany.location ? ` · ${activeCompany.location}` : ''}
               </Text>
             </View>

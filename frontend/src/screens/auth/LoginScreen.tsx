@@ -97,7 +97,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             break;
           case UserRole.SUPER_ADMIN:
           case 'super_admin':
-            navigation.replace('StateDashboard');
+            navigation.replace('SuperAdminDashboard');
             break;
           default:
             navigation.replace('MemberMain');
@@ -133,11 +133,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   };
 
   const handleForgotPassword = () => {
-    Alert.alert(
-      'Reset Password',
-      'Please enter your registered email address to receive a password reset link.',
-      [{ text: 'OK' }]
-    );
+    // Was an Alert telling the member to enter their email, with nowhere to
+    // enter it. The screen it should always have opened now exists.
+    navigation.navigate('ForgotPassword');
   };
 
   return (

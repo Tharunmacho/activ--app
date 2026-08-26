@@ -201,6 +201,18 @@ const ApprovalQueue: React.FC<Props> = ({
           )}
         </View>
 
+        {/* An escalated file arrived here because the tier below has no admin.
+            Deciding on another tier's application without being told why is how
+            an admin loses trust in the queue, so the reason is always shown. */}
+        {!!applicant?.orphaned && !!applicant?.fallbackReason && (
+          <View style={styles.escalation}>
+            <Icon name="trending-up" size={14} color="#B45309" />
+            <Text style={styles.escalationText} numberOfLines={2}>
+              {applicant.fallbackReason}
+            </Text>
+          </View>
+        )}
+
         {!!applicant?.approvedByText && (
           <Text
             style={[
@@ -458,6 +470,24 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm,
     fontSize: FONTS.sizes.xs,
     color: '#2563EB',
+    fontWeight: FONTS.weights.medium,
+  },
+  escalation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: SPACING.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  escalationText: {
+    flex: 1,
+    fontSize: FONTS.sizes.xs,
+    color: '#B45309',
     fontWeight: FONTS.weights.medium,
   },
   reason: {

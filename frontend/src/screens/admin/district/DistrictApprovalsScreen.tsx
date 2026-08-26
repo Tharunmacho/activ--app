@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, RefreshControl , TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useDistrictAdminData } from './context/DistrictAdminContext';
@@ -14,6 +14,8 @@ const ACCENTS = {
 };
 
 const DistrictApprovalsScreen = ({ navigation }: any) => {
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
   const { applicants, submitReview, currentDistrict, refreshing, fetchDashboardData } = useDistrictAdminData();
   const [activeFilter, setActiveFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
 
@@ -79,9 +81,52 @@ const DistrictApprovalsScreen = ({ navigation }: any) => {
             <TouchableOpacity style={[styles.actionBtn, styles.approveBtn]} onPress={() => submitReview(applicant, 'approve')} activeOpacity={0.7}>
               <Icon name="check" size={16} color={ACCENTS.green} /><Text style={styles.approveBtnText}>Approve</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionBtn, styles.rejectBtn]} onPress={() => submitReview(applicant, 'reject')} activeOpacity={0.7}>
+            <TouchableOpacity style={[styles.actionBtn, styles.rejectBtn]} onPress={() => setRejectingId(applicant.id)} activeOpacity={0.7}>
               <Icon name="close" size={16} color={ACCENTS.red} /><Text style={styles.rejectBtnText}>Reject</Text>
             </TouchableOpacity>
+          </View>
+        )}
+
+        {/*
+          Inline reject form — an expandable card, not a native <Modal>.
+          A transparent modal opened from inside a bottom-tab screen throws
+          WindowManager BadTokenException on Android and kills the process
+          (see the crash-proof directive, Rule 2).
+
+          It exists because the reason was previously never asked for: the
+          screen called submitReview(applicant, 'reject') with no text and the
+          context substituted "Rejected by <role>", so every applicant saw the
+          same boilerplate whatever the real reason had been.
+        */}
+        {rejectingId === applicant.id && (
+          <View style={rejectStyles.box}>
+            <Text style={rejectStyles.label}>Reason for rejection</Text>
+            <TextInput
+              style={rejectStyles.input}
+              value={rejectReason}
+              onChangeText={setRejectReason}
+              placeholder="Tell the applicant what to fix"
+              placeholderTextColor="#94A3B8"
+              multiline
+            />
+            <View style={rejectStyles.row}>
+              <TouchableOpacity
+                style={rejectStyles.cancel}
+                onPress={() => { setRejectingId(null); setRejectReason(''); }}
+              >
+                <Text style={rejectStyles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={rejectStyles.confirm}
+                onPress={async () => {
+                  await submitReview(applicant, 'reject', (rejectReason || '').trim());
+                  setRejectingId(null);
+                  setRejectReason('');
+                }}
+              >
+                <Text style={rejectStyles.confirmText}>Confirm Rejection</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -154,3 +199,38 @@ const styles = StyleSheet.create({
 });
 
 export default DistrictApprovalsScreen;
+
+const rejectStyles = StyleSheet.create({
+  box: {
+    marginTop: 12,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 12,
+    padding: 12,
+  },
+  label: { fontSize: 12, fontWeight: '700', color: '#B91C1C', marginBottom: 6 },
+  input: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: '#1E293B',
+    minHeight: 60,
+    textAlignVertical: 'top',
+  },
+  row: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  cancel: {
+    flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: 'center',
+    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0',
+  },
+  cancelText: { fontSize: 13, fontWeight: '600', color: '#475569' },
+  confirm: {
+    flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: 'center',
+    backgroundColor: '#EF4444',
+  },
+  confirmText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
+});

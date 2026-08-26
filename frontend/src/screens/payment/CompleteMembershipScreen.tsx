@@ -72,15 +72,20 @@ const CompleteMembershipScreen: React.FC = () => {
           if (appsList.length > 0) {
             const app = appsList[0];
             setApplicationId(app._id || app.id || app.applicationId);
-            const biz = app.businessInfo || app.personalDetails || {};
+            
+            // The frontend sometimes stores data in app.data (from backend),
+            // or sometimes flat (app.businessInfo). We handle both.
+            const biz = app.businessInfo || app.personalDetails || app.data || {};
+            const appRegType = app.registrationType || app.data?.registrationType;
+            const appMemType = app.memberType || app.data?.memberType;
             
             if (
               biz.doingBusiness === false ||
-              app.registrationType === 'aspirant' ||
-              app.memberType === 'aspirant'
+              appRegType === 'aspirant' ||
+              appMemType === 'aspirant'
             ) {
               isAspirantUser = true;
-            } else if (biz.doingBusiness === true || app.registrationType === 'business') {
+            } else if (biz.doingBusiness === true || appRegType === 'business') {
               isAspirantUser = false;
               if (biz.businessCommencementYear) {
                 const currentYear = new Date().getFullYear();

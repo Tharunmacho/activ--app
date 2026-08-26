@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useStateAdminData } from './context/StateAdminContext';
@@ -9,7 +9,7 @@ import { getInitials } from '../applicantStyles';
 const isInactiveMember = (index: number) => index % 4 === 3;
 
 const StateMembersScreen = ({ navigation }: any) => {
-  const { applicants, refreshing, fetchDashboardData, deleteCandidate } = useStateAdminData();
+  const { applicants, refreshing, fetchDashboardData } = useStateAdminData();
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
   const allMembers = useMemo(() => applicants.approved || [], [applicants.approved]);
@@ -43,7 +43,9 @@ const StateMembersScreen = ({ navigation }: any) => {
     const inactive = isInactiveMember(originalIndex);
     return (
       <View key={member.id} style={styles.memberRow}>
-        <View style={styles.avatarCircle}><Text style={styles.avatarText}>{getInitials(member.fullName)}</Text></View>
+        <View style={styles.avatarCircle}>
+          <Text style={styles.avatarText}>{getInitials(member.fullName)}</Text>
+        </View>
         <View style={styles.memberInfo}>
           <Text style={styles.memberName}>{member.fullName}</Text>
           <Text style={styles.memberEmail}>{member.email || 'No email'}</Text>
@@ -51,18 +53,12 @@ const StateMembersScreen = ({ navigation }: any) => {
         <Text style={[styles.statusText, inactive ? styles.statusInactive : styles.statusActive]}>
           {inactive ? 'Inactive' : 'Active'}
         </Text>
-        <TouchableOpacity style={styles.moreBtn} activeOpacity={0.7} onPress={() => {
-          Alert.alert('Options', member.fullName, [
-            { text: '🗑️ Delete', style: 'destructive', onPress: () =>
-              Alert.alert('Confirm Delete', `Permanently delete ${member.fullName}?`, [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Delete', style: 'destructive', onPress: () => deleteCandidate(member.id) },
-              ])
-            },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
-        }}>
-          <Icon name="more-vert" size={20} color="#94A3B8" />
+        <TouchableOpacity
+          style={styles.moreBtn}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('ApplicantDetail', { applicant: member })}
+        >
+          <Icon name="chevron-right" size={24} color="#6366F1" />
         </TouchableOpacity>
       </View>
     );

@@ -9,7 +9,7 @@ import { useBlockAdminData } from './context/BlockAdminContext';
 import { getInitials } from '../applicantStyles';
 
 const BlockSettingsScreen = ({ navigation }: any) => {
-  const { adminName, adminEmail, currentBlock, updateAdminProfile, profileImageUri, setProfileImageUri } = useBlockAdminData();
+  const { adminName, adminEmail, adminPhone, currentBlock, updateAdminProfile, profileImageUri, setProfileImageUri } = useBlockAdminData();
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -17,6 +17,7 @@ const BlockSettingsScreen = ({ navigation }: any) => {
   // Form State
   const [nameInput, setNameInput] = useState(adminName);
   const [emailInput, setEmailInput] = useState(adminEmail);
+  const [phoneInput, setPhoneInput] = useState(adminPhone);
   const [blockInput, setBlockInput] = useState(currentBlock);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -25,8 +26,9 @@ const BlockSettingsScreen = ({ navigation }: any) => {
   useEffect(() => {
     setNameInput(adminName);
     setEmailInput(adminEmail);
+    setPhoneInput(adminPhone);
     setBlockInput(currentBlock);
-  }, [adminName, adminEmail, currentBlock]);
+  }, [adminName, adminEmail, adminPhone, currentBlock]);
 
   const handleLogout = async () => {
     try {
@@ -64,13 +66,14 @@ const BlockSettingsScreen = ({ navigation }: any) => {
 
     try {
       // 1. Update Profile (Name, Email, Block)
-      if (nameInput !== adminName || emailInput !== adminEmail || blockInput !== currentBlock) {
+      if (nameInput !== adminName || emailInput !== adminEmail || phoneInput !== adminPhone || blockInput !== currentBlock) {
         await api.put('/admin/profile', {
           fullName: nameInput,
           email: emailInput,
+          phoneNumber: (phoneInput || '').trim(),
           block: blockInput,
         });
-        updateAdminProfile(nameInput, emailInput);
+        updateAdminProfile(nameInput, emailInput, (phoneInput || '').trim());
         successCount++;
       }
 
@@ -101,26 +104,53 @@ const BlockSettingsScreen = ({ navigation }: any) => {
     }
   };
 
+  /**
+   * Which password fields are currently revealed, keyed by label.
+   *
+   * Keyed rather than a single flag so revealing one field does not reveal the
+   * others beside it. SystemScreen carries the same map; this is the renderer
+   * its comment says the tier screens share, which they did not until now.
+   */
+  const [revealed, setRevealed] = useState<Record<string, boolean>>({});
+
   const renderInput = (
     label: string,
     value: string,
     onChangeText: (text: string) => void,
     placeholder: string,
-    secureTextEntry = false
-  ) => (
+    secureTextEntry = false,
+    keyboardType: 'default' | 'phone-pad' | 'email-address' = 'default'
+  ) => {
+    const shown = secureTextEntry && !!revealed[label];
+    return (
     <View style={styles.inputContainer}>
       <Text style={styles.inputLabel}>{label}</Text>
+      <View style={styles.inputRow}>
       <TextInput
-        style={styles.inputField}
+        style={[styles.inputField, styles.inputFlex, secureTextEntry && styles.inputWithIcon]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor="#94A3B8"
-        secureTextEntry={secureTextEntry}
+        secureTextEntry={secureTextEntry && !shown}
         editable={isEditing}
+        keyboardType={keyboardType}
+        autoCorrect={false}
       />
+      {secureTextEntry ? (
+        <TouchableOpacity
+          style={styles.revealBtn}
+          onPress={() => setRevealed(prev => ({ ...prev, [label]: !prev[label] }))}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityLabel={shown ? 'Hide password' : 'Show password'}
+        >
+          <Icon name={shown ? 'visibility-off' : 'visibility'} size={20} color="#94A3B8" />
+        </TouchableOpacity>
+      ) : null}
+      </View>
     </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -179,6 +209,7 @@ const BlockSettingsScreen = ({ navigation }: any) => {
 
           {renderInput('Full Name', nameInput, setNameInput, 'Enter your name')}
           {renderInput('Email Address', emailInput, setEmailInput, 'Enter your email')}
+          {renderInput('Mobile Number', phoneInput, setPhoneInput, 'Enter your mobile number', false, 'phone-pad')}
           {renderInput('Block Name', blockInput, setBlockInput, 'Enter block name')}
 
           {isEditing && (
@@ -289,6 +320,10 @@ const styles = StyleSheet.create({
   },
   menuSectionTitle: { fontSize: 14, fontWeight: '600', color: '#6366F1', marginBottom: 16 },
 
+  inputRow: { flexDirection: 'row', alignItems: 'center' },
+  inputFlex: { flex: 1 },
+  inputWithIcon: { paddingRight: 44 },
+  revealBtn: { position: 'absolute', right: 4, padding: 8 },
   inputContainer: { marginBottom: 16 },
   inputLabel: { fontSize: 12, fontWeight: '600', color: '#64748B', marginBottom: 6 },
   inputField: {

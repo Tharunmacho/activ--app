@@ -17,7 +17,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
 import { useAuthStore } from '../../stores/exampleStore';
 import api, { getUserData, getUserPassword } from '../../services/api';
-import locationData from '../../assets/data/locations_nested.json';
+import { getStates, getDistricts, getBlocks, RegionNode } from '../../services/regions';
 
 type PersonalDetailsFormScreenProps = NativeStackScreenProps<RootStackParamList, 'PersonalDetailsForm'>;
 
@@ -47,10 +47,13 @@ const PersonalDetailsFormScreen: React.FC<PersonalDetailsFormScreenProps> = ({ n
     fullName: '',
     email: '',
     phoneNumber: '',
-    state: 'Tamil Nadu',
-    district: 'Ariyalur',
-    block: 'Ariyalur',
-    city: 'Ariyalur',
+    // Empty. The three region fields are populated from /regions below, and
+    // pre-filling them with a real region means an applicant who never opens the
+    // dropdown is silently registered into somebody else's block.
+    state: '',
+    district: '',
+    block: '',
+    city: '',
     religion: '',
     socialCategory: '',
     currentPassword: userData.password || (user as any)?.password || '',
@@ -71,46 +74,88 @@ const PersonalDetailsFormScreen: React.FC<PersonalDetailsFormScreenProps> = ({ n
 
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // States list safely extracted
-  const allStates = (locationData?.states || []).map((s) => s.state).filter(Boolean);
+  /**
+   * Region options come from the admin database, not from a bundled list of
+   * every region in India.
+   *
+   * A member may only sit in a region that has an active admin: their block
+   * determines which queue their application is reviewed in, so letting them
+   * move to an unstaffed block would strand it. The previous static list also
+   * needed a `blockVariants` spelling-alias table and an "Others" catch-all —
+   * both are gone, because the names now come from the admin record that the
+   * geofence matches against, so they agree by construction.
+   */
+  const [allStates, setAllStates] = useState<string[]>([]);
+  const [availableDistricts, setAvailableDistricts] = useState<string[]>([]);
+  const [availableBlocks, setAvailableBlocks] = useState<string[]>([]);
+  const [regionError, setRegionError] = useState('');
 
-  // Selected State Data safely extracted
-  const currentStateObj =
-    (locationData?.states || []).find(
-      (s) => s?.state && formData?.state && s.state.toLowerCase() === formData.state.toLowerCase()
-    ) || locationData?.states?.[0];
+  const names = (nodes: RegionNode[]) => (nodes || []).map((node) => node.name).filter(Boolean);
 
-  const availableDistricts = (currentStateObj?.districts || []).map((d) => d.district).filter(Boolean);
-
-  // Selected District Data safely extracted
-  const currentDistrictObj = (currentStateObj?.districts || []).find(
-    (d) => d?.district && formData?.district && d.district.toLowerCase().trim() === formData.district.toLowerCase().trim()
-  );
-
-  const baseBlocks = (currentDistrictObj?.block || []).filter(Boolean);
-  const blockVariants: { [key: string]: string[] } = {
-    'Jayamkondam': ['Jayamkondam', 'Jayankondan'],
-    'Jayankondan': ['Jayankondan', 'Jayamkondam'],
-    'T. Palur': ['T. Palur', 'T.Palur'],
-    'T.Palur': ['T.Palur', 'T. Palur'],
+  /**
+   * Keep the value already stored on the profile in the list even when it is no
+   * longer covered.
+   *
+   * Dropping it would make the field render blank and silently clear a real
+   * saved value the moment the member opens the form. It stays visible, and the
+   * server rejects it on save if it is genuinely unroutable.
+   */
+  const withCurrent = (list: string[], current?: string | null) => {
+    const value = String(current || '').trim();
+    if (!value) return list;
+    const has = list.some((item) => item.toLowerCase() === value.toLowerCase());
+    return has ? list : [value, ...list];
   };
 
-  const expandedBlocks: string[] = [];
-  baseBlocks.forEach((b) => {
-    if (blockVariants[b]) {
-      blockVariants[b].forEach((v) => expandedBlocks.push(v));
-    } else {
-      expandedBlocks.push(b);
-    }
-  });
+  useEffect(() => {
+    let cancelled = false;
+    getStates()
+      .then((nodes) => {
+        if (!cancelled) setAllStates(names(nodes));
+      })
+      .catch(() => {
+        if (!cancelled) setRegionError('Could not load regions. Your saved location is shown as-is.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  if (formData.block && !expandedBlocks.includes(formData.block)) {
-    expandedBlocks.unshift(formData.block);
-  }
-  if (!expandedBlocks.includes('Others')) {
-    expandedBlocks.push('Others');
-  }
-  const availableBlocks = Array.from(new Set(expandedBlocks));
+  useEffect(() => {
+    let cancelled = false;
+    if (!formData.state) {
+      setAvailableDistricts([]);
+      return undefined;
+    }
+    getDistricts(formData.state)
+      .then((nodes) => {
+        if (!cancelled) setAvailableDistricts(withCurrent(names(nodes), formData.district));
+      })
+      .catch(() => {
+        if (!cancelled) setAvailableDistricts(withCurrent([], formData.district));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [formData.state, formData.district]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!formData.state || !formData.district) {
+      setAvailableBlocks([]);
+      return undefined;
+    }
+    getBlocks(formData.state, formData.district)
+      .then((nodes) => {
+        if (!cancelled) setAvailableBlocks(withCurrent(names(nodes), formData.block));
+      })
+      .catch(() => {
+        if (!cancelled) setAvailableBlocks(withCurrent([], formData.block));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [formData.state, formData.district, formData.block]);
 
   useEffect(() => {
     if (userData.email) {
@@ -147,10 +192,10 @@ const PersonalDetailsFormScreen: React.FC<PersonalDetailsFormScreenProps> = ({ n
           fullName: memberData.fullName || storedUserData?.fullName || prev.fullName || '',
           email: memberData.email || storedUserData?.email || prev.email || '',
           phoneNumber: memberData.phoneNumber || storedUserData?.phoneNumber || prev.phoneNumber || '',
-          state: memberData.state || storedUserData?.state || prev.state || 'Tamil Nadu',
-          district: memberData.district || storedUserData?.district || prev.district || 'Ariyalur',
-          block: memberData.block || storedUserData?.block || prev.block || 'Ariyalur',
-          city: memberData.city || storedUserData?.city || prev.city || 'Ariyalur',
+          state: memberData.state || storedUserData?.state || prev.state || '',
+          district: memberData.district || storedUserData?.district || prev.district || '',
+          block: memberData.block || storedUserData?.block || prev.block || '',
+          city: memberData.city || storedUserData?.city || prev.city || '',
           religion: memberData.religion || storedUserData?.religion || prev.religion || '',
           socialCategory: memberData.socialCategory || storedUserData?.socialCategory || prev.socialCategory || '',
           currentPassword: defaultPassword,
@@ -170,20 +215,14 @@ const PersonalDetailsFormScreen: React.FC<PersonalDetailsFormScreenProps> = ({ n
     setFormData((prev) => {
       const updated = { ...prev, [field]: val };
 
+      // Changing a parent clears its children rather than auto-picking the
+      // first option. Auto-picking silently moves the member to a region they
+      // never chose, and their application follows them there.
       if (field === 'state') {
-        const newSt = (locationData?.states || []).find(
-          (s) => s?.state && s.state.toLowerCase() === val.toLowerCase()
-        );
-        const firstDist = newSt?.districts?.[0]?.district || '';
-        const firstBlk = newSt?.districts?.[0]?.block?.[0] || '';
-        updated.district = firstDist;
-        updated.block = firstBlk;
-        updated.city = firstDist;
+        updated.district = '';
+        updated.block = '';
       } else if (field === 'district') {
-        const dData = (currentStateObj?.districts || []).find(
-          (d) => d?.district && d.district.toLowerCase() === val.toLowerCase()
-        );
-        updated.block = dData?.block?.[0] || '';
+        updated.block = '';
         updated.city = val;
       }
       return updated;
@@ -402,6 +441,46 @@ const PersonalDetailsFormScreen: React.FC<PersonalDetailsFormScreenProps> = ({ n
               </View>
             </View>
 
+            {/*
+              State (Icon: map)
+
+              This field was missing from the UI while `validateForm` required
+              it — `if (!formData.state.trim()) newErrors.state = 'State is
+              required'` — so an applicant with no state already on their
+              profile was told the form was invalid with nothing on screen to
+              fix. It is also the parent of the district and block lists, which
+              stay empty until it is set.
+            */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>State</Text>
+              <TouchableOpacity
+                style={[
+                  styles.dropdownPicker,
+                  expandedPicker === 'state' && styles.dropdownPickerActive,
+                ]}
+                onPress={() => togglePicker('state')}
+                activeOpacity={0.8}
+              >
+                <Icon name="map" size={20} color="#1E50E6" style={styles.fieldLeftIcon} />
+                <Text
+                  style={[
+                    styles.dropdownValueText,
+                    !formData.state && styles.placeholderText,
+                  ]}
+                >
+                  {formData.state || 'Select State'}
+                </Text>
+                <Icon
+                  name={expandedPicker === 'state' ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
+                  size={22}
+                  color="#64748B"
+                />
+              </TouchableOpacity>
+              {renderInlineOptions('state', allStates, formData.state)}
+              {errors.state ? <Text style={styles.errorText}>{errors.state}</Text> : null}
+              {regionError ? <Text style={styles.errorText}>{regionError}</Text> : null}
+            </View>
+
             {/* District (Icon: location-city) */}
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>District</Text>
@@ -475,6 +554,31 @@ const PersonalDetailsFormScreen: React.FC<PersonalDetailsFormScreenProps> = ({ n
                 <Text style={styles.cardHeaderTitle}>Contact Information</Text>
                 <Text style={styles.cardHeaderSubtitle}>We'll use this to reach you</Text>
               </View>
+            </View>
+
+            {/*
+              Full Name
+
+              `fullName` was in `formData`, was loaded from `/members/my-profile`
+              and was sent on save — but nothing ever rendered it, so the value
+              could only be whatever registration had already stored and a member
+              could not correct a misspelling of their own name anywhere in the
+              app.
+            */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Full Name</Text>
+              <View style={styles.inputContainer}>
+                <Icon name="person" size={20} color="#1E50E6" style={styles.fieldLeftIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  value={formData.fullName}
+                  onChangeText={(val) => handleInputChange('fullName', val)}
+                  placeholder="Enter Full Name"
+                  placeholderTextColor="#94A3B8"
+                  autoCapitalize="words"
+                />
+              </View>
+              {errors.fullName ? <Text style={styles.errorText}>{errors.fullName}</Text> : null}
             </View>
 
             {/* Phone Number */}

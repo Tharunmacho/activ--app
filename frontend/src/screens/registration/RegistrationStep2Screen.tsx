@@ -21,7 +21,7 @@ import { RootStackParamList } from '../../types';
 import { Picker } from '@react-native-picker/picker';
 import api, { setAuthToken, setUserData, setUserRole } from '../../services/api';
 import { ENDPOINTS } from '../../config/api.config';
-import locationData from '../../assets/data/locations_nested.json';
+import useRegionCascade from '../../hooks/useRegionCascade';
 
 type RegistrationStep2Props = NativeStackScreenProps<RootStackParamList, 'RegistrationStep2'>;
 
@@ -31,51 +31,38 @@ const RegistrationStep2Screen: React.FC<RegistrationStep2Props> = ({
 }) => {
   const { fullName, email, phoneNumber, password } = route.params;
   
-  const [selectedState, setSelectedState] = useState('');
-  const [selectedDistrict, setSelectedDistrict] = useState('');
-  const [selectedBlock, setSelectedBlock] = useState('');
   const [city, setCity] = useState('');
-  
-  const [districts, setDistricts] = useState<string[]>([]);
-  const [blocks, setBlocks] = useState<string[]>([]);
-  
+
+  /**
+   * The region pickers are driven by the admin database, not by a bundled list
+   * of every region in India.
+   *
+   * Only regions with an active admin are offered, so an applicant physically
+   * cannot submit into a block that has nobody to review them — which is what
+   * guarantees every application that exists has a queue it belongs to.
+   */
+  const region = useRegionCascade();
+
+  const {
+    states,
+    districts,
+    blocks,
+    state: selectedState,
+    district: selectedDistrict,
+    block: selectedBlock,
+    setState: setSelectedState,
+    setDistrict: setSelectedDistrict,
+    setBlock: setSelectedBlock,
+  } = region;
+
   const [errors, setErrors] = useState({
     state: '',
     district: '',
     block: '',
     city: '',
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
-
-  const states = locationData.states.map((s) => s.state);
-
-  useEffect(() => {
-    if (selectedState) {
-      const stateData = locationData.states.find((s) => s.state === selectedState);
-      if (stateData) {
-        setDistricts(stateData.districts.map((d) => d.district));
-        setSelectedDistrict('');
-        setSelectedBlock('');
-        setBlocks([]);
-      }
-    }
-  }, [selectedState]);
-
-  useEffect(() => {
-    if (selectedState && selectedDistrict) {
-      const stateData = locationData.states.find((s) => s.state === selectedState);
-      if (stateData) {
-        const districtData = stateData.districts.find(
-          (d) => d.district === selectedDistrict
-        );
-        if (districtData) {
-          setBlocks(districtData.block);
-          setSelectedBlock('');
-        }
-      }
-    }
-  }, [selectedDistrict, selectedState]);
 
   const validateForm = (): boolean => {
     const newErrors = {
@@ -140,6 +127,11 @@ const RegistrationStep2Screen: React.FC<RegistrationStep2Props> = ({
         errorMessage = error.response.data.message;
       } else if (error.response?.status === 409) {
         errorMessage = 'Email already registered. Please login instead.';
+      } else if (error.response?.status === 400) {
+        // Most often the region stopped being covered between loading the form
+        // and submitting it — an admin was removed in the meantime.
+        errorMessage = 'That region is no longer available. Please reselect your location.';
+        region.reload();
       } else if (!error.response) {
         errorMessage = 'Cannot connect to server. Please check your internet connection.';
       }
@@ -197,6 +189,25 @@ const RegistrationStep2Screen: React.FC<RegistrationStep2Props> = ({
               </Text>
             </View>
 
+            {/* Region availability. Three empty dropdowns with no explanation is
+                the worst possible failure here — say what happened instead. */}
+            {region.error ? (
+              <TouchableOpacity style={styles.noticeError} onPress={region.reload} activeOpacity={0.8}>
+                <Icon name="cloud-off" size={18} color="#B91C1C" />
+                <Text style={styles.noticeErrorText}>{region.error} Tap to retry.</Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {region.noCoverage ? (
+              <View style={styles.noticeWarn}>
+                <Icon name="info-outline" size={18} color="#92400E" />
+                <Text style={styles.noticeWarnText}>
+                  No regions are open for registration yet. Please check back once your area has
+                  been assigned an administrator.
+                </Text>
+              </View>
+            ) : null}
+
             {/* Form Card */}
             <View style={styles.formCard}>
               
@@ -213,14 +224,18 @@ const RegistrationStep2Screen: React.FC<RegistrationStep2Props> = ({
                       setSelectedState(value);
                       setErrors({ ...errors, state: '' });
                     }}
-                    enabled={!isLoading}
+                    enabled={!isLoading && !region.loading}
                     style={styles.picker}
                     dropdownIconColor="#9CA3AF"
                     mode="dropdown"
                   >
-                    <Picker.Item label="Select state" value="" color="#9CA3AF" />
-                    {states.map((state) => (
-                      <Picker.Item key={state} label={state} value={state} color="#111827" />
+                    <Picker.Item
+                      label={region.loading ? 'Loading regions…' : 'Select state'}
+                      value=""
+                      color="#9CA3AF"
+                    />
+                    {(states || []).map((item) => (
+                      <Picker.Item key={item.name} label={item.name} value={item.name} color="#111827" />
                     ))}
                   </Picker>
                 </View>
@@ -249,9 +264,13 @@ const RegistrationStep2Screen: React.FC<RegistrationStep2Props> = ({
                     dropdownIconColor="#9CA3AF"
                     mode="dropdown"
                   >
-                    <Picker.Item label="Select district" value="" color="#9CA3AF" />
-                    {districts.map((district) => (
-                      <Picker.Item key={district} label={district} value={district} color="#111827" />
+                    <Picker.Item
+                      label={selectedState ? 'Select district' : 'Select a state first'}
+                      value=""
+                      color="#9CA3AF"
+                    />
+                    {(districts || []).map((item) => (
+                      <Picker.Item key={item.name} label={item.name} value={item.name} color="#111827" />
                     ))}
                   </Picker>
                 </View>
@@ -300,9 +319,13 @@ const RegistrationStep2Screen: React.FC<RegistrationStep2Props> = ({
                     dropdownIconColor="#9CA3AF"
                     mode="dropdown"
                   >
-                    <Picker.Item label="Select block" value="" color="#9CA3AF" />
-                    {blocks.map((block) => (
-                      <Picker.Item key={block} label={block} value={block} color="#111827" />
+                    <Picker.Item
+                      label={selectedDistrict ? 'Select block' : 'Select a district first'}
+                      value=""
+                      color="#9CA3AF"
+                    />
+                    {(blocks || []).map((item) => (
+                      <Picker.Item key={item.name} label={item.name} value={item.name} color="#111827" />
                     ))}
                   </Picker>
                 </View>
@@ -413,6 +436,32 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     zIndex: 1,
   },
+  noticeError: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 24,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  noticeErrorText: { flex: 1, fontSize: 13, color: '#B91C1C', lineHeight: 18 },
+  noticeWarn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 24,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  noticeWarnText: { flex: 1, fontSize: 13, color: '#92400E', lineHeight: 18 },
   heroSubText: {
     fontSize: 14,
     fontWeight: '600',

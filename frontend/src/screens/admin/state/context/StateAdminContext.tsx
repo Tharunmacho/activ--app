@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import api, { getUserData } from '../../../../services/api';
+import api, { getUserData, setUserData } from '../../../../services/api';
 import { Applicant } from '../../../../types';
 
 export interface StateStats {
@@ -30,14 +30,15 @@ interface StateAdminContextType {
   applicants: ApplicantBuckets;
   adminName: string;
   adminEmail: string;
+  adminPhone: string;
   dynamicRoleTitle: string;
   currentState: string;
   profileImageUri: string | null;
   setProfileImageUri: (uri: string | null) => void;
   fetchDashboardData: (isRefresh?: boolean) => Promise<void>;
-  submitReview: (applicant: Applicant, action: 'approve' | 'reject') => Promise<void>;
-  deleteCandidate: (applicantId: string) => Promise<void>;
-  updateAdminProfile: (fullName: string, email: string) => void;
+  submitReview: (applicant: Applicant, action: 'approve' | 'reject', reason?: string) => Promise<void>;
+
+  updateAdminProfile: (fullName: string, email: string, phoneNumber?: string) => void;
   pendingActionId: string | null;
 }
 
@@ -50,6 +51,7 @@ export const StateAdminProvider: React.FC<{ children: ReactNode }> = ({ children
   const [applicants, setApplicants] = useState<ApplicantBuckets>(EMPTY_BUCKETS);
   const [adminName, setAdminName] = useState<string>('State Admin');
   const [adminEmail, setAdminEmail] = useState<string>('');
+  const [adminPhone, setAdminPhone] = useState<string>('');
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [profileImageUri, setProfileImageUriState] = useState<string | null>(null);
 
@@ -80,6 +82,7 @@ export const StateAdminProvider: React.FC<{ children: ReactNode }> = ({ children
     getUserData()
       .then(async data => {
         if (data?.fullName || data?.name) setAdminName(data.fullName || data.name);
+        if (data?.phoneNumber || data?.phone) setAdminPhone(data.phoneNumber || data.phone);
         if (data?.email) {
           setAdminEmail(data.email);
           try {
@@ -89,23 +92,71 @@ export const StateAdminProvider: React.FC<{ children: ReactNode }> = ({ children
         }
       })
       .catch(() => {});
+
+    // Then the record itself. The cached user object is only ever as complete as
+    // the login response that wrote it, and it goes stale the moment a Super
+    // Admin edits the account — so the stored copy seeds the screen instantly and
+    // this corrects it a moment later. Failing is fine: the cached values stand.
+    api.get('/admin/profile')
+      .then(response => {
+        const profile = response.data?.data || response.data || {};
+        if (profile?.fullName) setAdminName(profile.fullName);
+        if (profile?.email) setAdminEmail(profile.email);
+        if (typeof profile?.phoneNumber === 'string') setAdminPhone(profile.phoneNumber);
+      })
+      .catch(() => {});
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  const currentState = stats?.stateName || 'Tamil Nadu';
-  const dynamicRoleTitle = `${currentState} State Admin`;
+  // No fallback — see the note in BlockAdminContext.
+  const currentState = stats?.stateName || '';
+  const dynamicRoleTitle = currentState ? `${currentState} State Admin` : 'State Admin';
 
-  const updateAdminProfile = (fullName: string, email: string) => {
+  const updateAdminProfile = (fullName: string, email: string, phoneNumber?: string) => {
     if (fullName) setAdminName(fullName);
     if (email) setAdminEmail(email);
+    if (typeof phoneNumber === 'string') setAdminPhone(phoneNumber);
+
+    // Mirror it into the cached user object. Without this the screen shows the
+    // new value until the app restarts, then silently reverts to the one stored
+    // at login — which reads as the save having failed.
+    getUserData()
+      .then(data => setUserData({
+        ...(data || {}),
+        ...(fullName ? { fullName, name: fullName } : {}),
+        ...(email ? { email } : {}),
+        ...(typeof phoneNumber === 'string' ? { phoneNumber, phone: phoneNumber } : {}),
+      }))
+      .catch(() => {});
   };
 
-  const submitReview = async (applicant: Applicant, action: 'approve' | 'reject') => {
+  /**
+   * The reason the admin actually typed, not a placeholder.
+   *
+   * This took only (applicant, action) and hardcoded
+   * `rejectionReason: `Rejected by ${dynamicRoleTitle}``. The shared
+   * `ApprovalQueue` component has always collected a real reason and passed
+   * it as a third argument — which this signature simply did not accept, so
+   * every explanation an admin wrote was dropped on the floor and the
+   * applicant was shown boilerplate. The backend stores whatever arrives in
+   * `rejectionReason`, so the value was lost here, on the client.
+   *
+   * The old string stays as a fallback for a rejection submitted with no
+   * text, so a reason is never empty.
+   */
+  const submitReview = async (
+    applicant: Applicant,
+    action: 'approve' | 'reject',
+    reason?: string,
+  ) => {
     setPendingActionId(applicant.id);
     try {
       await api.post(`/applications/${applicant.id}/state-review`, {
         action,
-        rejectionReason: action === 'reject' ? `Rejected by ${dynamicRoleTitle}` : undefined,
+        rejectionReason:
+          action === 'reject'
+            ? (reason || '').trim() || `Rejected by ${dynamicRoleTitle}`
+            : undefined,
       });
 
       setApplicants(prev => {
@@ -137,32 +188,12 @@ export const StateAdminProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
-  const deleteCandidate = async (applicantId: string) => {
-    setPendingActionId(applicantId);
-    try {
-      await api.post(`/admin/users/${applicantId}/delete`);
-      setApplicants(prev => ({
-        ...prev,
-        pending: (prev.pending || []).filter(a => a.id !== applicantId),
-        approved: (prev.approved || []).filter(a => a.id !== applicantId),
-        rejected: (prev.rejected || []).filter(a => a.id !== applicantId),
-        all: (prev.all || []).filter(a => a.id !== applicantId),
-      }));
-      Alert.alert('Success', 'Candidate deleted permanently from the database.');
-      fetchDashboardData(true);
-    } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to delete candidate');
-    } finally {
-      setPendingActionId(null);
-    }
-  };
-
   const value: StateAdminContextType = {
     loading, refreshing, stats, applicants,
     adminName: adminName && adminName !== 'State Admin' ? adminName : dynamicRoleTitle,
-    adminEmail, dynamicRoleTitle, currentState,
+    adminEmail, adminPhone, dynamicRoleTitle, currentState,
     profileImageUri, setProfileImageUri,
-    fetchDashboardData, submitReview, deleteCandidate, updateAdminProfile, pendingActionId,
+    fetchDashboardData, submitReview, updateAdminProfile, pendingActionId,
   };
 
   return <StateAdminContext.Provider value={value}>{children}</StateAdminContext.Provider>;

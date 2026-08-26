@@ -178,7 +178,7 @@ const ProductsServicesScreen: React.FC<Props> = ({ navigation }) => {
           <View style={{ flex: 1, marginLeft: 10 }}>
             <Text style={styles.activeCompanyLabel}>ACTIVE CATALOG</Text>
             <Text style={styles.activeCompanyName}>
-              {selectedCompany?.businessName || 'Local host'}
+              {selectedCompany?.businessName || 'No company selected'}
             </Text>
           </View>
         </View>

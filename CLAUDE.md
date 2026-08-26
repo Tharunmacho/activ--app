@@ -215,6 +215,186 @@ end — if that assertion ever fails, clean up before re-running.
 
 ---
 
+# ADMIN-FIRST REGION ARCHITECTURE
+
+The admin collections are the single source of truth for geography and routing.
+Whatever region names the Super Admin types become, on save, the options an
+applicant sees. Nothing else decides which regions exist.
+
+## 1. Segregated storage — one collection per tier
+
+Writes go to `adminsdb`, split by tier:
+
+```
+block admins    -> adminsdb.blockadmins
+district admins -> adminsdb.districtadmins
+state admins    -> adminsdb.stateadmins
+```
+
+`admin.repository.js` is the **only** module allowed to read or write them.
+Nothing is written to the old unified `admins` collection any more; reads still
+include it, because it holds accounts that predate the split and an account that
+can authenticate must be visible to the code deciding whether it may.
+
+Two field-name traps live behind that repository, and both fail *silently*:
+
+| canonical (what callers pass) | unified `admins` | segregated per-tier |
+|---|---|---|
+| `passwordHash` | `password` | `passwordHash` |
+| `phoneNumber` | `phone` | `phoneNumber` |
+| `active` | `isActive` | `active` |
+
+`toTierDocument()` and `translateUpdate()` are the translation layer. Writing the
+wrong spelling makes Mongoose strict mode drop the path — the account ends up
+with no credential and nothing reports an error. Never hand-write an admin
+document outside the repository.
+
+A tier never stores a region below its own level: updating a state admin
+`$unset`s district and block, so an empty string cannot leak into the region
+tree.
+
+## 2. Free-text regions — no parent hierarchy
+
+There is deliberately **no** requirement that a parent admin exists. Typing
+"New Super Block" into a brand-new district in a brand-new state is a valid,
+one-step way to open that region for registration. `admin.regions.js` resolves
+*spelling only*, in this order:
+
+1. a region with that name already exists → reuse its exact spelling
+2. the canonical India reference recognises it → use that spelling
+3. otherwise → accept as typed, and report it in `regionsCreated`
+
+That reconciliation is not cosmetic. `buildGeoFilter` matches an admin's region
+against an application's with an anchored regex, so "Tamil Nadu" and
+"tamil  nadu" are two different regions, each holding half of one queue.
+
+Region fields are editable on create **and** edit, at every tier. Renaming a
+block here renames it for applicants too.
+
+## 3. Applicant dropdowns are derived, live
+
+`RegistrationStep2Screen` and `PersonalDetailsFormScreen` call
+`GET /regions/{states,districts,blocks,tree}` — never the bundled
+`locations_nested.json`. Selectability is bottom-up:
+
+```
+a block is selectable    <- >= 1 active block admin
+a district is selectable <- >= 1 selectable block
+a state is selectable    <- >= 1 selectable district
+```
+
+Bottom-up because it cannot produce a dead end. A state admin alone puts the
+state in the hierarchy but gives an applicant nothing to pick beneath it;
+**creating a block admin is what opens a region for registration.**
+
+`authService.register()` and `applicationService.createApplication()` re-check
+coverage server-side and store the canonical spelling the admin database
+returns.
+
+## 4. Separating real staffing from the legacy scaffold
+
+`adminsdb` was pre-seeded with a placeholder admin for every region in India
+(~7,700 records, all active, one shared bcrypt hash). Counting those as staffing
+would put all 6,966 blocks back in the dropdowns.
+
+Every account this application creates stamps **`createdVia`**
+(`super_admin_ui` / `bulk_csv` / `tn_pilot_seed` / `migrated_from_admins`). The
+scaffold has none, so that field is the discriminator. It is transitional: once
+the migration has run, nothing lacks the stamp.
+
+- Coverage, directory, hierarchy → stamped records only.
+- Login and delete → **every** record, scaffold included. An account that can
+  sign in must be findable, and a delete that misses one leaves a live credential.
+
+`ADMIN_COUNT_UNSTAMPED_AS_STAFFING=true` disables the filter.
+
+## 5. Orphan fallback: ownership is derived, never rewritten
+
+With no enforced hierarchy this carries more weight than before — a block admin
+can exist under a district with no district admin. `common/tierRouting.js`
+computes ownership at read time from live staffing:
+
+- `owningTier(app)` — the tier the status names.
+- `effectiveTier(app, coverage)` — the first tier at or above it with an admin;
+  `'super'` when none, so an application is never unreachable.
+- `absorbedTiers(app, actingTier)` — the steps the acting tier must complete.
+
+Deriving it means the queue heals **both ways**. A stored status flip would move
+files permanently past a tier, and a replacement admin would inherit an empty
+queue for a region full of unreviewed applicants.
+
+`classifyForLevel(app, level, coverage)` takes coverage as an optional third
+argument; `null` means "unknown staffing" and disables fallback entirely — an
+unknown is not "nobody is there". `applicationService.resolveTierAction()` +
+`stampAbsorbedTiers()` let one approve advance an escalated file properly
+instead of dropping it into the actor's own queue.
+
+## 6. Load balancing
+
+Nothing is assigned to an admin id; queries are geofenced by region string. Many
+admins on one region therefore share one queue by construction. `listAdmins`
+annotates each row with `coAdmins` and the UI says so.
+
+## Migration
+
+```bash
+cd backend
+node scripts/migrate-to-segregated-admins.js            # dry run
+node scripts/migrate-to-segregated-admins.js --confirm  # apply
+```
+
+Five phases, in this order because the extraction reads what the wipe destroys:
+extract the Tamil Nadu regions → back everything up → migrate the real accounts
+out of `admins` into the per-tier collections → delete the scaffold → seed the
+Tamil Nadu pilot as real stamped accounts with per-account passwords.
+
+Generated credentials are written to `backups/pilot-credentials-*.csv` and exist
+nowhere else. `--state "Kerala"` pilots a different state; `--skip-seed` migrates
+and wipes without seeding.
+
+## Route ordering trap
+
+`businessRoutes` is mounted at `/` and calls `router.use(verifyToken)` inside
+itself, making it a **catch-all auth gate for every route registered after it**
+in `routes.js`. The public `/regions` mount must stay above it, or the
+registration dropdowns get 401 and come back empty.
+
+## The adminsdb connection
+
+`adminsDb.ensureReady()` — not `isReady()` — is what the repository awaits.
+`isReady()` is false both when the connection has failed *and* when it has never
+been opened, so a caller that checks it before calling `getConnection()` never
+opens anything. That deadlock made every admin creation report "adminsdb is
+unavailable". The connection is also warmed at boot in `server.js`.
+
+## Bulk CSV onboarding
+
+`POST /admin/super/admins/bulk/validate` (dry run) then `/bulk` (commit).
+Processed tier by tier and written to one collection per tier. No parent is
+required — a lone `block_admin` row for a brand-new state is valid and opens
+that region. What the pass enforces is one spelling per region across the file.
+Invalid rows are reported with their spreadsheet line number and skipped.
+
+## Authentication
+
+The universal fallback password is env-gated and off by default:
+`ADMIN_DEMO_PASSWORDS` is a comma-separated list accepted for any admin account.
+It exists only while the pre-seeded demo admins are in use, logs a warning at
+boot and on every use, and should be unset once the migration has run. A
+plaintext-stored password is still comparable but is upgraded to bcrypt on the
+way through, so each such account is plaintext for exactly one more login.
+
+## Tests
+
+```bash
+cd backend
+npm run test:regions    # 51 pure unit tests, no DB
+npm run test:workflow   # 24 pure unit tests, no DB
+```
+
+
+---
+
 ## Checklist for every edit
 
 - [ ] Behaves correctly with missing/null user state (`user = null`)
@@ -223,3 +403,6 @@ end — if that assertion ever fails, clean up before re-running.
 - [ ] All native/API calls inside `try…catch`
 - [ ] No raw transparent `<Modal>` nested in a sub-tab
 - [ ] `cd frontend && npx tsc --noEmit` returns 0 errors
+- [ ] Region names come from the admin collections, never a static list
+- [ ] Admin documents are written only through `admin.repository` (field names!)
+- [ ] Any new `classifyForLevel` / review path threads `coverage` through

@@ -16,6 +16,8 @@ LogBox.ignoreAllLogs();
 // Auth Screens
 import OnboardingScreen from './src/screens/auth/OnboardingScreen';
 import LoginScreen from './src/screens/auth/LoginScreen';
+import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
+import ResetPasswordScreen from './src/screens/auth/ResetPasswordScreen';
 import WelcomeScreen from './src/screens/auth/WelcomeScreen';
 
 // Registration Screens
@@ -27,6 +29,7 @@ import MemberBottomTabs from './src/navigation/MemberBottomTabs';
 import BlockAdminBottomTabs from './src/navigation/BlockAdminBottomTabs';
 import DistrictAdminBottomTabs from './src/navigation/DistrictAdminBottomTabs';
 import StateAdminBottomTabs from './src/navigation/StateAdminBottomTabs';
+import SuperAdminBottomTabs from './src/navigation/SuperAdminBottomTabs';
 import EditProfileScreen from './src/screens/member/profile/EditProfileScreen';
 import PaidDashboardScreen from './src/screens/member/paidDashboard/PaidDashboardScreen';
 import PaidProfileScreen from './src/screens/member/paidDashboard/PaidProfileScreen';
@@ -114,6 +117,10 @@ function App() {
             component={LoginScreen}
             options={{ headerShown: false }}
           />
+        {/* Reachable from the "Forget password?" link on the login
+            screen, which used to open an Alert with nowhere to go. */}
+        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
           
           {/* Registration Stack */}
           <Stack.Screen 
@@ -280,6 +287,9 @@ function App() {
 
           {/* State Admin Screens */}
           <Stack.Screen name="StateDashboard" component={StateAdminBottomTabs} options={{ headerShown: false }} />
+
+          {/* Super Admin Screens */}
+          <Stack.Screen name="SuperAdminDashboard" component={SuperAdminBottomTabs} options={{ headerShown: false }} />
 
           {/* Payment Screens */}
           <Stack.Screen 

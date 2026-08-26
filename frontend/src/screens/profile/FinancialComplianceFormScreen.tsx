@@ -69,10 +69,19 @@ const FinancialComplianceFormScreen: React.FC<FinancialComplianceFormScreenProps
         });
         if (data.filedITR !== undefined) setItrFiled(data.filedITR);
         else if (data.itrFiled !== undefined) setItrFiled(data.itrFiled);
-        
-        if (data.govtSchemeBenefit) {
-           setSelectedGovtSchemes(['Yes']);
-        }
+
+        /**
+         * Read the schemes the member actually picked.
+         *
+         * This used to set `['Yes']` whenever `govtSchemeBenefit` was true —
+         * a value that is not one of the six options, so no pill rendered as
+         * selected and reopening the form looked like nothing had been saved.
+         * It was a stand-in for real data: `govtSchemes` was being dropped by
+         * Mongoose strict mode, so there was nothing truthful to show. The
+         * field is stored now, so the real list is read back.
+         */
+        setSelectedGovtSchemes(Array.isArray(data.govtSchemes) ? data.govtSchemes : []);
+        setSchemeDetails(data.schemeDetails || '');
       }
     } catch (error: any) {
       console.log('Notice loading financial info:', error?.message);

@@ -317,10 +317,10 @@ const BusinessDashboardScreen: React.FC<BusinessDashboardProps> = ({ navigation 
 
               <View style={styles.heroDetails}>
                 <Text style={styles.heroName} numberOfLines={2}>
-                  {businessProfile.businessName || 'Activ'}
+                  {businessProfile.businessName}
                 </Text>
                 <Text style={styles.heroType} numberOfLines={1}>
-                  {businessProfile.businessType || 'Manufacturing'}
+                  {businessProfile.businessType || '—'}
                 </Text>
 
                 <View style={styles.heroPhoneRow}>

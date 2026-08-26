@@ -106,7 +106,7 @@ const ApplicantDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const stageStyle = getStageStyle(stage) || ACCENTS.slate;
-  const isPending = stage === 'pending' || stage === 'Pending';
+  const isPending = stage === 'pending';
 
   const toggleSection = (key: SectionKey) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -117,10 +117,10 @@ const ApplicantDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     setSubmitting(action);
     const appId = fullApp.applicationId || fullApp._id || fullApp.id;
     try {
-      await api.post(`/applications/${appId}/block-review`, {
+      await api.post(`/applications/${appId}/${action}`, {
         action,
         ...(action === 'reject'
-          ? { rejectionReason: 'Rejected by Block Admin' }
+          ? { rejectionReason: 'Rejected by Admin' }
           : {}),
       });
 
@@ -130,7 +130,7 @@ const ApplicantDetailScreen: React.FC<Props> = ({ navigation, route }) => {
       Alert.alert(
         action === 'approve' ? 'Approved' : 'Rejected',
         action === 'approve'
-          ? `${fullApp.fullName || applicant.fullName}'s application has been forwarded to the District Admin.`
+          ? `${fullApp.fullName || applicant.fullName}'s application has been approved.`
           : `${fullApp.fullName || applicant.fullName}'s application has been rejected.`,
         [{ text: 'Back to List', onPress: () => navigation.goBack() }],
       );
