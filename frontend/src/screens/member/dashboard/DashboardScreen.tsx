@@ -31,6 +31,17 @@ type DashboardScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'MemberMain'>;
 };
 
+/**
+ * Whether a membership has actually been paid for.
+ *
+ * Mirrors `PAID_STATUSES` in the backend's `common/memberContext.js`, and
+ * deliberately excludes `approved` — that is the application-approval state,
+ * written when the State Admin signs off, and it is what unlocks the payment
+ * step rather than replacing it.
+ */
+const isPaidMembership = (status?: string | null): boolean =>
+  ['active', 'completed'].includes(String(status || '').toLowerCase());
+
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuthStore();
@@ -155,7 +166,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   const calculateProfileCompletion = () => {
     // If application has been submitted or approved, completion is 100%
     const hasSubmitted = !!(applicationData && (applicationData._id || applicationData.id || applicationData.status));
-    if (hasSubmitted || profileData?.membershipStatus === 'approved' || profileData?.membershipStatus === 'active') {
+    if (hasSubmitted || isPaidMembership(profileData?.membershipStatus)) {
       return 100;
     }
 
@@ -199,7 +210,14 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   }
 
   // Active Paid Members ALWAYS see PaidDashboardScreen (After Payment Dashboard)
-  if (profileData?.membershipStatus === 'approved' || profileData?.membershipStatus === 'active') {
+  //
+  // `approved` used to count here and it is not a payment: it is the three-tier
+  // workflow approving the APPLICATION, which is exactly the point at which the
+  // member is supposed to be asked to pay. Treating it as paid put every newly
+  // approved member straight onto the after-payment dashboard, where nothing
+  // offers to take their money — while the server, reading the same field the
+  // same wrong way, refused to open a payment order for them at all.
+  if (isPaidMembership(profileData?.membershipStatus)) {
     return <PaidDashboardScreen navigation={navigation as any} />;
   }
 

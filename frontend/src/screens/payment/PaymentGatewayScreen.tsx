@@ -108,7 +108,24 @@ const PaymentGatewayScreen: React.FC<Props> = ({ navigation, route }) => {
       });
     } catch (error: any) {
       console.error('Payment gateway error:', error);
-      Alert.alert('Payment Error', error.message || 'Payment processing failed. Please try again.');
+      /*
+       * The server's own words, when it has any.
+       *
+       * An axios rejection's `message` is "Request failed with status code 400"
+       * — it says nothing about what went wrong, so a refusal the server had
+       * explained precisely ("A mobile number is required before paying",
+       * "This order has expired") reached the member as an unreadable status
+       * line. The response body is where the explanation lives.
+       */
+      const serverMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        (!error?.response ? 'Cannot reach the server. Please check your connection.' : '');
+
+      Alert.alert(
+        'Payment Error',
+        serverMessage || error?.message || 'Payment processing failed. Please try again.',
+      );
     } finally {
       setIsProcessing(false);
     }
