@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Upload, Loader2, Trash2, Image as ImageIcon, Film } from 'lucide-react';
 import { uploadMedia, errorMessage, EMPTY_MEDIA, type CmsMedia } from '@/services/cmsApi';
+import { resolveMediaUrl } from '@/config/api.config';
 import { CmsInput, CmsField } from './CmsUI';
 
 /**
@@ -35,6 +36,23 @@ interface Props {
 
 export default function MediaPicker({ value, onChange, label = 'Media', aspect = '16 / 9', hint }: Props) {
     const media = { ...EMPTY_MEDIA, ...(value || {}) };
+
+    /**
+     * What the PREVIEW loads — not what is stored.
+     *
+     * An upload is stored as `/uploads/<file>`, deliberately relative so the
+     * record does not pin itself to whichever host happened to upload it. The
+     * browser then resolves that against the page it is on, which for this
+     * editor is the website's own origin — and the website does not serve the
+     * backend's upload directory. So the file uploaded fine, the record was
+     * correct, and the editor showed a broken frame.
+     *
+     * `resolveMediaUrl` re-anchors it to the API origin, exactly as every
+     * public page already does on read. Remote URLs and `data:`/`blob:` values
+     * pass through untouched.
+     */
+    const previewSrc = resolveMediaUrl(media.url);
+
     const fileRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState('');
@@ -91,7 +109,7 @@ export default function MediaPicker({ value, onChange, label = 'Media', aspect =
                         </div>
                     ) : media.type === 'video' ? (
                         <video
-                            src={media.url}
+                            src={previewSrc}
                             className="w-full h-full"
                             style={{ objectFit: media.fit, objectPosition: media.position }}
                             muted
@@ -101,7 +119,7 @@ export default function MediaPicker({ value, onChange, label = 'Media', aspect =
                         />
                     ) : (
                         <img
-                            src={media.url}
+                            src={previewSrc}
                             alt={media.alt || ''}
                             className="w-full h-full"
                             style={{ objectFit: media.fit, objectPosition: media.position }}

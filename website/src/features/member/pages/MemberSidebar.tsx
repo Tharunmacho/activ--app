@@ -11,19 +11,54 @@ import {
     NO_ACCESS,
     deriveMemberAccess,
     unlockedNav,
-    upcomingFeatures,
     type MemberAccess,
 } from '@/features/member/memberAccess';
-import { FaFileAlt, FaEnvelope, FaBullhorn, FaLock, FaArrowRight } from 'react-icons/fa';
+import { FaFileAlt, FaEnvelope, FaBullhorn, FaArrowRight, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 type Props = {
     isOpen: boolean;
     onClose: () => void;
 };
 
+/**
+ * How the rail groups its entries.
+ *
+ * PRESENTATION ONLY. Every entry, link, badge and unlock rule is exactly as
+ * `unlockedNav` returns it — this decides which heading an entry is printed
+ * under and nothing else. An entry whose key is in no group would simply not
+ * render, so the last group is a catch-all rather than a list.
+ *
+ * Three groups because eight entries in one run is the length at which a list
+ * stops being scannable, which is the problem the reference rail solves with
+ * WORKSPACE / GENERAL / TOOLS.
+ */
+const NAV_GROUPS: { label: string; keys: string[] }[] = [
+    { label: 'Overview', keys: ['dashboard'] },
+    { label: 'My account', keys: ['profile', 'business', 'application'] },
+    { label: 'Association', keys: ['explore', 'events', 'updates'] },
+    { label: 'Support', keys: ['help', 'settings'] },
+];
+
 export default function MemberSidebar({ isOpen, onClose }: Props) {
     const location = useLocation();
     // Initialize state with localStorage values immediately to avoid showing default "Member"
+    /**
+     * Whether the rail is collapsed to icons.
+     *
+     * Remembered, because it is a preference about how someone likes to work
+     * and not a per-page choice — collapsing it on one screen and finding it
+     * expanded again on the next is the behaviour that makes people stop using
+     * a collapse control at all. Read defensively: a private window throws on
+     * , and the rail must still render.
+     */
+    const [collapsed, setCollapsed] = useState<boolean>(() => {
+        try { return localStorage.getItem('activ:railCollapsed') === '1'; } catch { return false; }
+    });
+
+    useEffect(() => {
+        try { localStorage.setItem('activ:railCollapsed', collapsed ? '1' : '0'); } catch { /* storage unavailable */ }
+    }, [collapsed]);
+
     const [userName, setUserName] = useState(() => localStorage.getItem("userName") || "");
     const [userEmail, setUserEmail] = useState(() => localStorage.getItem("userEmail") || "");
     const [profilePhoto, setProfilePhoto] = useState(() => localStorage.getItem("userProfilePhoto") || "");
@@ -31,7 +66,7 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
     const [paymentStatus, setPaymentStatus] = useState(() => localStorage.getItem("paymentStatus") || "pending");
     const [hasBusinessAccount, setHasBusinessAccount] = useState(false);
     const navigate = useNavigate();
-    const { profileCompletion, upcomingEventsCount, unreadHelpMessages } = useProfile();
+    const { profileCompletion, unreadHelpMessages } = useProfile();
 
     // Refresh data from localStorage whenever location changes (no API calls)
     useEffect(() => {
@@ -282,10 +317,25 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
         help: <FaQuestionCircle />, settings: <FaCog />,
     };
 
+    /*
+     * No Messages badge here any more.
+     *
+     * Messages is not a rail entry — it lives in the icon strip at the top of
+     * the member area, which carries its own unread count. See `MemberTopBar`.
+     */
+    /**
+     * The one badge worth carrying: how far the profile is from done.
+     *
+     * The events count came off. A number beside Events reads as "5 things need
+     * you", the way an unread count does everywhere else — but it was the count
+     * of forthcoming events, which is a fact about the calendar and not a task.
+     * It never went down as a result of anything the member did, so it sat there
+     * permanently asking for attention it did not need.
+     *
+     * The profile percentage stays because it IS a task, and it does go down.
+     */
     const badgeFor = (key: string): string | number | null => {
         if (key === 'profile') return profileCompletion < 100 ? `${profileCompletion}%` : null;
-        if (key === 'messages') return unreadHelpMessages > 0 ? unreadHelpMessages : null;
-        if (key === 'events') return upcomingEventsCount > 0 ? upcomingEventsCount : null;
         return null;
     };
 
@@ -300,11 +350,32 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
             badge: badgeFor(item.key),
         })),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [access, hasBusinessAccount, profileCompletion, unreadHelpMessages, upcomingEventsCount],
+        [access, hasBusinessAccount, profileCompletion, unreadHelpMessages],
     );
 
-    const upcoming = useMemo(() => upcomingFeatures(access), [access]);
 
+
+    /**
+     * The entries, bucketed under their headings — AND NOTHING DROPPED.
+     *
+     * The grouping is a lookup by key, so an entry whose key is in no group
+     * would simply never render: a navigation item silently disappearing
+     * because somebody added it to the nav data and not to the groups here.
+     * Anything unclaimed falls into the last group instead, which makes the
+     * failure visible in the wrong place rather than invisible everywhere.
+     */
+    const navGroups = useMemo(() => {
+        const claimed = new Set(NAV_GROUPS.flatMap(g => g.keys));
+        const orphans = filteredNav.filter(item => !claimed.has(item.key));
+
+        return NAV_GROUPS.map((group, i) => ({
+            label: group.label,
+            entries: [
+                ...filteredNav.filter(item => group.keys.includes(item.key)),
+                ...(i === NAV_GROUPS.length - 1 ? orphans : []),
+            ],
+        })).filter(group => group.entries.length > 0);
+    }, [filteredNav]);
 
     const handleLogout = () => {
         // Clear all user-related localStorage data
@@ -338,7 +409,34 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
               *
               * The mark, centred, with the signed-in account under it.
               */}
-            <div className="px-4 py-6 border-b flex-shrink-0 relative">
+            {/*
+              THE BRAND AND THE ACCOUNT ARE TWO BLOCKS, as on the admin rail.
+
+              They were one padded box with the mark centred and the account
+              tucked under it at a smaller size, so the two sat at different
+              optical weights and the rule between the rail's header and its nav
+              fell in a different place from the admin rail's. One product, two
+              rails, one arrangement:
+
+                  p-4 md:p-6 · centred mark      · border-b
+                  p-4 md:p-6 · avatar + identity · border-b
+
+              The avatar grows to 48px to match, and the account gains a second
+              line — the admin rail says "Block Admin" under the name, and the
+              member rail said nothing, which left the block looking unfinished
+              rather than deliberately sparse.
+            */}
+            {/*
+              THE MARK, CENTRED — as in the reference rail.
+
+              The close button is taken out of the row and positioned instead, so
+              the mark centres on the RAIL rather than on the space left over
+              beside a button: with both in the flow, an invisible 40px button on
+              one side pushes the logo 20px off centre on desktop, which is the
+              kind of thing that reads as carelessness without being nameable.
+            */}
+            <div className={`relative h-[5.5rem] bg-white border-b border-slate-200 flex-shrink-0
+                            flex items-center justify-center ${collapsed ? 'px-2' : 'px-6'}`}>
                 <Link
                     to={paymentStatus === 'completed' ? '/payment/member-dashboard' : '/member/unpaid-dashboard'}
                     onClick={onClose}
@@ -347,135 +445,261 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
                     <img
                         src="/logo_ACTIVian-removebg-preview.png"
                         alt="ACTIV"
-                        className="h-9 w-auto object-contain"
+                        className={`w-auto object-contain ${collapsed ? 'h-8' : 'h-12'}`}
                     />
                 </Link>
 
-                {/*
-                  * Who is signed in, directly under the mark.
-                  *
-                  * The page header that used to carry this is gone, so without
-                  * it the member area never says whose account is open. It is a
-                  * link because "that is me" and "let me look at me" are the
-                  * same instinct.
-                  */}
-                <Link
-                    to="/member/profile-view"
-                    onClick={onClose}
-                    className="mt-4 flex items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-gray-50 transition-colors"
-                >
-                    {profilePhoto ? (
-                        <img
-                            src={profilePhoto}
-                            alt=""
-                            className="w-9 h-9 rounded-full object-cover ring-2 ring-blue-100 shrink-0"
-                        />
-                    ) : (
-                        <span className="w-9 h-9 rounded-full shrink-0 bg-blue-600 text-white
-                                         flex items-center justify-center text-xs font-bold">
-                            {(userName || 'M').split(' ').filter(Boolean).slice(0, 2)
-                                .map(n => n[0]).join('').toUpperCase()}
-                        </span>
-                    )}
-                    <span className="min-w-0 flex items-center">
-                        <span className="block text-sm font-bold text-gray-900 truncate leading-tight">
-                            {userName || 'Member'}
-                        </span>
-
-                    </span>
-                </Link>
-
-                {/* Close button only visible on mobile */}
                 <Button
                     variant="ghost"
                     size="icon"
                     onClick={onClose}
-                    className="lg:hidden absolute right-2 top-1/2 -translate-y-1/2"
+                    className="lg:hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
                 >
                     <FaTimes className="h-5 w-5" />
                 </Button>
             </div>
 
+
+
+
+            {/*
+              THE RAIL, ON THE REFERENCE'S TERMS.
+
+              Three things separated ours from it, and all three were about
+              weight rather than layout:
+
+                GROUPS. The reference breaks eight entries into named sections —
+                  WORKSPACE, GENERAL, TOOLS — so the list is read as three short
+                  lists instead of one long one. Ours was a flat run of eight,
+                  which is the length at which a list stops being scannable.
+
+                TYPE. Ours was 16px semibold; the reference is 14px medium. At
+                  16px every entry competes with the page title beside it, and
+                  the rail reads as the loudest thing on screen rather than as
+                  the quiet index it is.
+
+                THE ACTIVE STATE. Ours was a solid blue bar the full width of the
+                  rail — the heaviest element in the whole window, for a label
+                  saying where you already are. The reference tints it instead
+                  and marks it with a rule on the leading edge: unmistakable, and
+                  it does not shout.
+
+              The groups are declared here rather than on the nav data because
+              they are a property of this rail's presentation; the same entries
+              are ordered differently on mobile.
+            */}
             <nav className="p-3 flex-1 min-h-0 overflow-y-auto overscroll-contain member-rail-scroll">
-                {filteredNav.map((item) => {
-                    const active = location.pathname === item.to;
+                {navGroups.map((group) => {
+                    const entries = group.entries;
+                    // A group whose entries are all still locked prints nothing —
+                    // a heading over an empty list is worse than no heading.
+                    if (!entries.length) return null;
+
                     return (
-                        <Link
-                            key={item.key}
-                            to={item.to}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-all ${
-                                active
-                                    ? 'bg-blue-600 text-white shadow-md'
-                                    : 'text-gray-700 hover:bg-gray-100'
-                            }`}
-                            onClick={onClose}
-                        >
-                            <span className={`w-5 h-5 ${active ? 'text-white' : 'text-gray-500'}`}>
-                                {item.icon}
-                            </span>
-                            <span className="font-medium flex-1">{item.label}</span>
-                            {item.badge !== undefined && item.badge !== null && (
-                                <Badge
-                                    className={`${active ? 'bg-white text-blue-600' : 'bg-blue-600 text-white'} h-5 min-w-5 flex items-center justify-center px-1.5 text-xs font-bold`}
-                                >
-                                    {item.badge}
-                                </Badge>
-                            )}
-                        </Link>
+                        /* No card around a group: the rail is one white surface,
+                           and the headings do the separating. */
+                        <div key={group.label} className="mb-5 last:mb-0">
+                            {/*
+                              The headings in the product accent.
+                              
+                              Grey made these four labels the quietest thing in the rail,
+                              which is wrong: they are the only wayfinding it has.
+                              The accent blue is what every other emphasis in the
+                              product uses, so the rail stays on one palette.
+                            */}
+                            <div className={`mb-2 flex items-center gap-2 ${collapsed ? 'px-0 justify-center' : 'px-3.5'}`}>
+                                {!collapsed && (
+                                    <p className="flex-1 min-w-0 text-[0.8125rem] font-bold uppercase
+                                                  tracking-[0.06em] text-slate-900 truncate">
+                                        {group.label}
+                                    </p>
+                                )}
+
+                                {/*
+                                  THE COLLAPSE CONTROL, on the first heading only —
+                                  where the reference puts it.
+
+                                  It is a real toggle rather than the decorative
+                                  chevron it would have been easier to draw: the
+                                  rail is 288px of a 1440px window, and a member
+                                  reading a directory or a long form wants that
+                                  back. Collapsed, the entries keep their icons and
+                                  their titles, so nothing becomes unreachable —
+                                  only unlabelled.
+
+                                  Desktop only. Below `lg` the rail is a slide-over
+                                  and the close button in the brand row already
+                                  dismisses it; a second control that shrinks a
+                                  panel which is about to be dismissed is two
+                                  answers to one question.
+                                */}
+                                {group === navGroups[0] && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setCollapsed(c => !c)}
+                                        aria-label={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}
+                                        title={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}
+                                        className="hidden lg:flex w-6 h-6 shrink-0 items-center justify-center
+                                                   rounded-md text-slate-400 transition-colors
+                                                   hover:bg-slate-100 hover:text-slate-700"
+                                    >
+                                        {collapsed ? <FaChevronRight className="w-3 h-3" /> : <FaChevronLeft className="w-3 h-3" />}
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="space-y-0.5">
+                                {entries.map((item) => {
+                                    const active = location.pathname === item.to;
+                                    return (
+                                        <Link
+                                            key={item.key}
+                                            to={item.to}
+                                            title={item.label}
+                                            className={`relative flex items-center gap-3.5 py-3.5 rounded-xl
+                                                        text-lg transition-colors
+                                                        ${collapsed ? 'px-0 justify-center' : 'px-3.5'} ${
+                                                active
+                                                    ? 'bg-blue-50 text-blue-700 font-semibold'
+                                                    : 'text-slate-600 font-normal hover:bg-slate-50 hover:text-slate-900'
+                                            }`}
+                                            onClick={onClose}
+                                        >
+                                            {/* The rule on the leading edge. Inset
+                                                so it reads as marking the row, not
+                                                as a border on it. */}
+                                            {active && (
+                                                <span className="absolute left-0 top-1/2 -translate-y-1/2
+                                                                 h-6 w-1 rounded-r-full bg-blue-600" />
+                                            )}
+
+                                            <span className={`w-5 h-5 flex items-center
+                                                              justify-center shrink-0 ${
+                                                active ? 'text-blue-600' : 'text-slate-400'
+                                            }`}>
+                                                {item.icon}
+                                            </span>
+
+                                            {!collapsed && <span className="flex-1 min-w-0 truncate">{item.label}</span>}
+
+                                            {!collapsed && item.badge !== undefined && item.badge !== null && (
+                                                <Badge
+                                                    className={`h-5 min-w-5 flex items-center justify-center px-1.5
+                                                                text-xs font-bold shrink-0 ${
+                                                        active
+                                                            ? 'bg-blue-600 text-white'
+                                                            : 'bg-blue-50 text-blue-700'
+                                                    }`}
+                                                >
+                                                    {item.badge}
+                                                </Badge>
+                                            )}
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     );
                 })}
 
                 {/*
-                  * What is still ahead, as readable text rather than dead links.
-                  *
-                  * Two kinds of entry land here: the ones this member has not
-                  * earned yet, and the ones whose screen does not exist yet.
-                  * Both are things they cannot open, and both are worth seeing -
-                  * the same argument as the read-only benefits panel on the
-                  * dashboard. A greyed-out row that does nothing when clicked
-                  * reads as a broken link; a named upcoming feature reads as a
-                  * reason to carry on.
-                  *
-                  * It sits directly under Help & Support because that is the
-                  * one entry a member always has, and the list answers the
-                  * question support would otherwise be asked: what else is
-                  * there, and how do I get it?
-                  */}
-                {upcoming.length > 0 && (
-                    <div className="mt-4 mx-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-3">
-                        <div className="flex items-center gap-2 text-gray-500 mb-2.5">
-                            <FaLock className="h-3 w-3" />
-                            <span className="text-[0.6875rem] font-semibold uppercase tracking-wide">
-                                Upcoming Features
-                            </span>
-                        </div>
-                        <ul className="space-y-2">
-                            {upcoming.map(item => (
-                                <li key={item.key} className="flex items-start gap-2.5">
-                                    <span className="w-4 h-4 text-gray-400 mt-0.5 shrink-0">
-                                        {ICONS[item.icon]}
-                                    </span>
-                                    <span className="min-w-0">
-                                        <span className="block text-xs font-medium text-gray-600 leading-tight">
-                                            {item.label}
-                                        </span>
-                                        <span className="block text-[0.625rem] text-gray-400 leading-tight mt-0.5">
-                                            {item.requirement}
-                                        </span>
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
+                  THE LOCKED-FEATURES LIST IS GONE FROM THE RAIL.
+
+                  It was a dashed box under Settings listing what a member
+                  cannot reach yet — the same ground the dashboard's
+                  Application Status card covers, in more detail and with the
+                  progress attached. Two answers to one question, and the rail's
+                  was the worse of them: a navigation list is for places you can
+                  go, and half of this one was places you cannot.
+                */}
+
 
 </nav>
 
-            <div className="p-2 border-t flex-shrink-0">
-                <Button variant="ghost" onClick={handleLogout} className="w-full flex items-center gap-2 text-red-600 hover:bg-red-50 p-3">
-                    <FaSignOutAlt className="w-5 h-5" />
-                    <span>Log out</span>
-                </Button>
+            {/*
+              THE ACCOUNT AND THE WAY OUT, TOGETHER AT THE FOOT — the CRM's
+              arrangement.
+
+              It sat directly under the mark before, which pushed the navigation
+              a hundred pixels down the rail and put the one thing a member reads
+              least often at the top of the one thing they read most. The
+              reference puts identity at the bottom, in a bordered card, with
+              the account action beside it — so the rail opens on the
+              destinations and closes on "who am I, and how do I leave".
+            */}
+            <div className={`pt-3 pb-8 bg-white border-t border-slate-200 flex-shrink-0 ${collapsed ? 'px-2' : 'px-3'}`}>
+              <div className="relative">
+                <Link
+                    to="/member/profile-view"
+                    onClick={onClose}
+                    /* Tinted, like the reference's — a filled card under a white
+                       rail reads as a distinct object, where a white one on white
+                       needs its border to do all the work. */
+                    className={`flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 transition-colors
+                               hover:border-slate-300 hover:bg-slate-100 ${collapsed ? 'p-2 justify-center' : 'p-3.5 pr-14'}`}
+                >
+                    {profilePhoto ? (
+                        <img
+                            src={profilePhoto}
+                            alt=""
+                            className="w-11 h-11 rounded-xl object-cover shrink-0"
+                        />
+                    ) : (
+                        <span className="w-11 h-11 rounded-xl shrink-0 bg-blue-600 text-white
+                                         flex items-center justify-center text-sm font-bold">
+                            {(userName || 'M').split(' ').filter(Boolean).slice(0, 2)
+                                .map(n => n[0]).join('').toUpperCase()}
+                        </span>
+                    )}
+                    {!collapsed && (
+                    <span className="min-w-0 flex-1">
+                        <span className="block text-[0.9375rem] font-semibold text-slate-900 truncate">
+                            {userName || 'Member'}
+                        </span>
+                        {/*
+                          THE EMAIL, as the reference card carries it.
+
+                          "Applicant" said what kind of account this is, which the
+                          rail's contents already imply — every entry a member
+                          cannot reach yet is simply absent. The address says WHICH
+                          account, which is the question a shared machine actually
+                          raises, and it is the line the reference puts here.
+                          Falls back to the role when no address is stored, so the
+                          second line is never empty.
+                        */}
+                        <span className="block text-[0.8125rem] text-slate-500 truncate">
+                            {userEmail || (paymentStatus === 'completed' ? 'Member' : 'Applicant')}
+                        </span>
+                    </span>
+                    )}
+                </Link>
+
+                {/*
+                  SIGNING OUT MOVED INTO THE CARD, rather than out of the rail.
+
+                  The standalone Log out button is gone, as asked — the reference
+                  has no such button, and a red bar across the foot of the rail
+                  was the last loud thing left in it.
+
+                  It could not simply be deleted: this was the ONLY way a member
+                  could sign out anywhere in the product, so removing it would
+                  have stranded anyone on a shared machine. The reference tucks
+                  the same action behind its account card; here it is the icon at
+                  the card's right edge, where the chevron was. The card still
+                  opens the profile — only the last 40px belong to signing out.
+                */}
+                <button
+                    type="button"
+                    onClick={handleLogout}
+                    aria-label="Log out"
+                    title="Log out"
+                    className={`w-9 h-9 rounded-lg flex items-center justify-center text-slate-400
+                               transition-colors hover:bg-red-50 hover:text-red-600 ${
+                        collapsed ? 'mx-auto mt-2' : 'absolute right-5 top-1/2 -translate-y-1/2'}`}
+                >
+                    <FaSignOutAlt className="w-4 h-4" />
+                </button>
+              </div>
             </div>
         </div>
     );
@@ -483,7 +707,8 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
     return (
         <>
             {/* Desktop/Tablet: Permanent Sidebar - Always visible on md screens and above */}
-            <div className="hidden lg:flex lg:flex-col lg:w-[20.5rem] xl:w-[22rem] bg-white border-r h-screen sticky top-0">
+            <div className={`hidden lg:flex lg:flex-col bg-white border-r border-slate-200 h-screen sticky top-0
+                            transition-[width] duration-200 ${collapsed ? 'lg:w-[5rem]' : 'lg:w-72 xl:w-80'}`}>
                 <SidebarContent />
             </div>
 

@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-    Mail, MapPin, Shield, Camera, Pencil, Check, LogOut, Loader2, Eye, EyeOff,
+    Mail, MapPin, Shield, Camera, Pencil, Check, LogOut, Loader2, Eye, EyeOff, ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch, getAdminProfile, logout, errorMessage } from "@/services/activApi";
+import { TIERS } from "./tierConfig";
 
 /**
  * The admin Settings screen, matching the mobile app's.
@@ -240,11 +241,29 @@ export default function AdminSettingsScreen({
         (saved.fullName || "A").split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
     return (
-        <div className="min-h-screen flex bg-slate-100">
+        <div className="min-h-screen flex bg-white">
             {sidebar}
 
             <div className="flex-1 min-w-0 flex flex-col">
-                <header className="h-[4.5rem] shrink-0 bg-white border-b border-slate-200 flex items-center px-5 lg:px-8">
+                <header className="h-[4.5rem] shrink-0 bg-white border-b border-slate-200 flex items-center gap-3 px-5 lg:px-8">
+                    {/*
+                      BACK, on every leaf screen.
+
+                      Settings is a place an admin arrives at from the dashboard
+                      and has to leave again, and the only way out was the rail —
+                      which is hidden on a phone. The browser's own Back is not a
+                      substitute: it retraces whatever brought you here, which
+                      after a save is this same page.
+                    */}
+                    <button
+                        type="button"
+                        onClick={() => navigate(TIERS[tier].base + '/dashboard')}
+                        aria-label="Back to dashboard"
+                        className="w-9 h-9 -ml-1 rounded-xl flex items-center justify-center text-slate-500
+                                   transition-colors hover:bg-slate-100 hover:text-slate-900"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
                     <h1 className="text-[1.3125rem] font-bold tracking-tight text-slate-900">Settings</h1>
 
                     {/* Mobile's header Edit/Save toggle. */}
@@ -269,11 +288,19 @@ export default function AdminSettingsScreen({
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto p-5 lg:p-8">
-                    <div className="max-w-3xl mx-auto space-y-6">
+                {/*
+                  LEFT-ALIGNED, at the width every other admin page uses.
+
+                  This was `max-w-3xl mx-auto`, which parked the content in a
+                  narrow column down the middle of the window while Approvals,
+                  Members and the Hub beside it ran the full width. Two pages of
+                  one product should not disagree about where the left margin is.
+                */}
+                <main className="flex-1 overflow-y-auto p-6">
+                    <div className="max-w-[90rem] space-y-6">
 
                         {/* Profile card — avatar, name, role, email, region. */}
-                        <section className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+                        <section className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-6">
                             <div className="flex flex-col sm:flex-row sm:items-center gap-5">
                                 <button
                                     type="button"
@@ -317,7 +344,7 @@ export default function AdminSettingsScreen({
                         </section>
 
                         {/* Profile Information — inline, read-only until Edit. */}
-                        <section className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+                        <section className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-6">
                             <h3 className="text-lg font-bold text-slate-900 mb-5">Profile Information</h3>
 
                             {loading ? (

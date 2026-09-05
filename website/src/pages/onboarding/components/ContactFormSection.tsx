@@ -7,6 +7,7 @@ import { CmsIcon } from '@/components/shared/CmsIcon';
 import { PAGE_CONTAINER } from '@/components/layout/pageContainer';
 import { SECTION_HEADING, SECTION_LEDE, EYEBROW } from '@/components/layout/typography';
 import { Reveal } from '@/components/shared/Reveal';
+import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
 
 /**
  * The contact page.
@@ -170,8 +171,13 @@ export function ContactFormSection() {
                                             </div>
                                         </div>
                                     )}
+                                    {/* The overhang below is a desktop flourish. On a phone the
+                                        content column is only 16px from the screen edge, so 24px
+                                        of it fell off the side and the photograph was sliced down
+                                        its right edge. */}
                                     {heroMedia[1] && (
-                                        <div className="absolute top-1/2 -translate-y-1/2 right-0 -mr-6 w-[45%] h-[55%]
+                                        <div className="absolute top-1/2 -translate-y-1/2 right-0 mr-0 sm:-mr-6
+                                                        w-[45%] h-[55%]
                                                         z-20 rotate-3 shadow-2xl rounded-2xl bg-white p-1">
                                             <div className="w-full h-full rounded-[14px] overflow-hidden relative">
                                                 <CmsMediaFrame media={heroMedia[1]} width={360} />
@@ -344,7 +350,10 @@ export function ContactFormSection() {
                                     <div className="text-sm text-gray-500 space-y-1">
                                         {[phone, info?.alternatePhone].filter(Boolean).map((p, i) => (
                                             <p key={i}>
-                                                <a href={`tel:${(p || '').replace(/\s+/g, '')}`} className="hover:text-brand-600 transition-colors">
+                                                <a
+                                                    href={`tel:${(p || '').replace(/\s+/g, '')}`}
+                                                    className="block py-3 -my-1.5 hover:text-brand-600 transition-colors"
+                                                >
                                                     {p}
                                                 </a>
                                             </p>
@@ -356,7 +365,11 @@ export function ContactFormSection() {
                                 {detail(
                                     infoCard?.emailLabel || '',
                                     <Mail size={18} />,
-                                    <a href={`mailto:${email}`} className="text-sm text-gray-500 hover:text-brand-600 transition-colors">
+                                    <a
+                                        href={`mailto:${email}`}
+                                        className="block py-3 -my-1.5 text-sm text-gray-500
+                                                   hover:text-brand-600 transition-colors"
+                                    >
                                         {email}
                                     </a>,
                                     !!email,
@@ -371,6 +384,16 @@ export function ContactFormSection() {
                                     workingHours.length > 0,
                                     true,
                                 )}
+
+                                {/* Rows the editor named themselves — a WhatsApp
+                                    number, a registration desk, whatever this
+                                    association needs that the four above do not
+                                    cover. Nothing is drawn when none are set. */}
+                                <CmsExtraFields
+                                    fields={info?.extraFields}
+                                    variant="list"
+                                    className="pt-2"
+                                />
                             </div>
 
                             {info?.mapEmbedUrl && (

@@ -42,7 +42,7 @@ export default function UpdateCard({
     return (
         <Link
             to={`/member/updates/${update.id}`}
-            className="group block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden
+            className="group block bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] overflow-hidden
                        hover:border-blue-400 hover:shadow-md transition-all"
         >
             {!compact && banner ? (
@@ -58,13 +58,13 @@ export default function UpdateCard({
 
             <div className="p-4 lg:p-5">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className={`text-[0.65625rem] font-bold uppercase tracking-wide px-2 py-0.5
+                    <span className={`text-[0.6875rem] font-bold uppercase tracking-wide px-2 py-0.5
                                       rounded-full ${style.cls}`}>
                         {style.label}
                     </span>
 
                     {update.pinned ? (
-                        <span className="inline-flex items-center gap-1 text-[0.65625rem] font-bold uppercase
+                        <span className="inline-flex items-center gap-1 text-[0.6875rem] font-bold uppercase
                                          tracking-wide text-blue-700">
                             <Pin className="w-3 h-3" /> Pinned
                         </span>
@@ -94,7 +94,7 @@ export default function UpdateCard({
                 ) : null}
 
                 {update.attachmentUrl ? (
-                    <p className="mt-2.5 inline-flex items-center gap-1.5 text-[0.75rem] font-semibold text-blue-600">
+                    <p className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600">
                         <Paperclip className="w-3.5 h-3.5" />
                         {update.attachmentLabel || 'Attachment'}
                     </p>

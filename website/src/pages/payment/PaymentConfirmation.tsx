@@ -8,6 +8,19 @@ import confetti from 'canvas-confetti';
 import { getUserApplication } from '@/services/applicationApi';
 import { apiFetch } from "@/services/activApi";
 
+/**
+ * An amount, or a dash when none was recorded.
+ *
+ * A receipt must not print a figure nobody was charged, and it must not print
+ * "₹null" either. Both became possible once the invented defaults came out —
+ * the first is a lie in writing on the page members screenshot, the second is a
+ * bug report.
+ */
+const money = (value?: number | null) =>
+  value === null || value === undefined || Number.isNaN(Number(value))
+    ? '—'
+    : '₹' + Number(value).toLocaleString('en-IN');
+
 export default function PaymentConfirmation() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -63,22 +76,33 @@ export default function PaymentConfirmation() {
         window.dispatchEvent(new CustomEvent('paymentCompleted'));
         window.dispatchEvent(new Event('profileUpdated'));
 
-        // Determine plan type based on memberType and payment details
-        let planType = 'Aspirant Plan';
-        let planAmount = 2000;
+        /*
+         * WHAT WAS ACTUALLY PAID — NEVER A DEFAULT.
+         *
+         * This used to fall back to ₹2,000, and to ₹5,000 for a business
+         * member, whenever the recorded amount was missing. On a RECEIPT that
+         * is not a harmless placeholder: it tells a member who paid ₹10,000
+         * that they paid ₹2,000, in writing, on the page they screenshot. And
+         * since the Super Admin can change the prices, the defaults were
+         * guaranteed to be wrong eventually.
+         *
+         * Only recorded values now, in order of how close they are to the
+         * transaction: what the gateway screen carried across, then what the
+         * application stored. `null` when none of them holds a figure, and the
+         * receipt renders a dash rather than a number nobody was charged.
+         */
+        const recordedAmount =
+          stateDetails?.planAmount
+          ?? app.paymentDetails?.planAmount
+          ?? app.paymentAmount
+          ?? null;
 
-        if (app.paymentDetails?.planType) {
-          // Use saved payment details if available
-          planType = app.paymentDetails.planType;
-          planAmount = app.paymentDetails.planAmount || 2000;
-        } else if (app.memberType === 'business') {
-          // Business member - use default business plan
-          planType = 'Business Membership';
-          planAmount = 5000; // Default to basic plan
-        } else if (app.memberType === 'aspirant') {
-          planType = 'Aspirant Plan';
-          planAmount = 2000;
-        }
+        const planType =
+          stateDetails?.planType
+          || app.paymentDetails?.planType
+          || (app.memberType === 'aspirant' ? 'Aspirant Plan' : 'Membership');
+
+        const planAmount = recordedAmount;
 
         const details = {
           membershipId: `ACTIV-2024-${String(Math.floor(Math.random() * 999999)).padStart(6, '0')}`,
@@ -104,16 +128,24 @@ export default function PaymentConfirmation() {
     } catch (error) {
       console.error('Error loading payment details:', error);
       // Don't redirect on error during testing
+      /*
+       * A FAILED LOAD IS NOT A RECEIPT.
+       *
+       * This used to invent one — "Test Member", application "TEST-APP", ₹2,000
+       * — and render it as though it described a real payment. Nothing here is
+       * known, so nothing is claimed: the amounts are null and the screen prints
+       * a dash where a figure would go.
+       */
       setPaymentDetails({
-        membershipId: 'ACTIV-2024-000000',
-        memberName: 'Test Member',
-        transactionId: 'TEST_' + Date.now(),
+        membershipId: '',
+        memberName: '',
+        transactionId: '',
         paymentDate: new Date().toISOString(),
-        planType: 'Aspirant Plan',
-        planAmount: 2000,
+        planType: 'Membership',
+        planAmount: null,
         supportAmount: 0,
-        totalAmount: 2000,
-        applicationId: 'TEST-APP',
+        totalAmount: null,
+        applicationId: '',
         validFor: '1 Year'
       });
     } finally {
@@ -159,7 +191,7 @@ export default function PaymentConfirmation() {
       >
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-700">Loading payment details...</p>
+          <p className="text-slate-700">Loading payment details...</p>
         </div>
       </MemberPageShell>
     );
@@ -180,10 +212,10 @@ Payment Date: ${new Date(paymentDetails.paymentDate).toLocaleString()}
 Application ID: ${paymentDetails.applicationId || 'N/A'}
 
 Membership Type: ${paymentDetails.planType === 'annual' ? 'Annual Membership' : 'Lifetime Membership'}
-Membership Fee: ₹${paymentDetails.planAmount}
+Membership Fee: ${money(paymentDetails.planAmount)}
 Support Amount: ₹${paymentDetails.supportAmount || 0}
 --------------------------------------
-Total Amount Paid: ₹${paymentDetails.totalAmount}
+Total Amount Paid: ${money(paymentDetails.totalAmount)}
 
 Status: COMPLETED
 Payment Method: ${paymentDetails.paymentMethod?.toUpperCase() || 'CARD'}
@@ -211,9 +243,9 @@ Thank you for joining ACTIV!
             sidebar={false}
     >
       {/* Header */}
-      <div className="bg-white border-b border-gray-300 shadow-md">
+      <div className="bg-white border-b border-slate-300 shadow-md">
         <div className="max-w-6xl mx-auto px-6 py-5">
-          <h1 className="text-2xl font-bold text-gray-900">Payment Confirmation</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Payment Confirmation</h1>
         </div>
       </div>
 
@@ -225,10 +257,10 @@ Thank you for joining ACTIV!
               <CheckCircle className="w-16 h-16 text-white" strokeWidth={3} />
             </div>
           </div>
-          <h1 className="text-5xl font-bold text-gray-900 mb-4">
+          <h1 className="text-5xl font-bold text-slate-900 mb-4">
             Payment Successful!
           </h1>
-          <p className="text-xl text-gray-600">
+          <p className="text-xl text-slate-600">
             Welcome to ACTIV – Your membership is now active
           </p>
         </div>
@@ -238,52 +270,52 @@ Thank you for joining ACTIV!
           {/* Left Column - Membership Details */}
           <div className="lg:col-span-2 space-y-6">
             {/* Membership Details Card */}
-            <Card className="border-2 border-gray-300 shadow-xl">
-              <div className="bg-gray-100 p-6 border-b-2 border-gray-300 flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">Membership Details</h2>
+            <Card className="border-2 border-slate-300 shadow-xl">
+              <div className="bg-slate-100 p-6 border-b-2 border-slate-300 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-slate-900">Membership Details</h2>
                 <span className="px-4 py-2 bg-green-500 text-white rounded-full text-sm font-bold shadow-md">
                   ✓ Active
                 </span>
               </div>
               <CardContent className="p-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <p className="text-xs text-gray-500 mb-1 font-semibold uppercase tracking-wide">Membership ID</p>
-                    <p className="text-lg font-bold text-gray-900">{paymentDetails.membershipId}</p>
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs text-slate-500 mb-1 font-semibold uppercase tracking-wide">Membership ID</p>
+                    <p className="text-lg font-bold text-slate-900">{paymentDetails.membershipId}</p>
                   </div>
 
-                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <p className="text-xs text-gray-500 mb-1 font-semibold uppercase tracking-wide">Member Name</p>
-                    <p className="text-lg font-bold text-gray-900">{paymentDetails.fullName}</p>
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs text-slate-500 mb-1 font-semibold uppercase tracking-wide">Member Name</p>
+                    <p className="text-lg font-bold text-slate-900">{paymentDetails.fullName}</p>
                   </div>
 
-                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <p className="text-xs text-gray-500 mb-1 font-semibold uppercase tracking-wide">Plan</p>
-                    <p className="text-lg font-bold text-gray-900">{paymentDetails.planType}</p>
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs text-slate-500 mb-1 font-semibold uppercase tracking-wide">Plan</p>
+                    <p className="text-lg font-bold text-slate-900">{paymentDetails.planType}</p>
                   </div>
 
                   <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-300">
                     <p className="text-xs text-blue-700 mb-1 font-semibold uppercase tracking-wide">Amount Paid</p>
-                    <p className="text-2xl font-bold text-blue-600">₹{paymentDetails.totalAmount}</p>
+                    <p className="text-2xl font-bold text-blue-600">{money(paymentDetails.totalAmount)}</p>
                   </div>
 
-                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <p className="text-xs text-gray-500 mb-1 font-semibold uppercase tracking-wide">Valid For</p>
-                    <p className="text-lg font-bold text-gray-900">{paymentDetails.validFor}</p>
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs text-slate-500 mb-1 font-semibold uppercase tracking-wide">Valid For</p>
+                    <p className="text-lg font-bold text-slate-900">{paymentDetails.validFor}</p>
                   </div>
 
-                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <p className="text-xs text-gray-500 mb-1 font-semibold uppercase tracking-wide">Payment Reference</p>
-                    <p className="font-mono text-xs text-gray-900 break-all">{paymentDetails.transactionId}</p>
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs text-slate-500 mb-1 font-semibold uppercase tracking-wide">Payment Reference</p>
+                    <p className="font-mono text-xs text-slate-900 break-all">{paymentDetails.transactionId}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Download Documents Card */}
-            <Card className="border-2 border-gray-300 shadow-xl">
-              <div className="bg-gray-100 p-6 border-b-2 border-gray-300">
-                <h2 className="text-xl font-bold text-gray-900">Download Documents</h2>
+            <Card className="border-2 border-slate-300 shadow-xl">
+              <div className="bg-slate-100 p-6 border-b-2 border-slate-300">
+                <h2 className="text-xl font-bold text-slate-900">Download Documents</h2>
               </div>
               <CardContent className="p-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -318,9 +350,9 @@ Thank you for joining ACTIV!
 
           {/* Right Column - What's Next */}
           <div className="lg:col-span-1">
-            <Card className="border-2 border-gray-300 shadow-xl sticky top-24">
-              <div className="bg-gray-100 p-6 border-b-2 border-gray-300">
-                <h2 className="text-xl font-bold text-gray-900">What's Next?</h2>
+            <Card className="border-2 border-slate-300 shadow-xl sticky top-24">
+              <div className="bg-slate-100 p-6 border-b-2 border-slate-300">
+                <h2 className="text-xl font-bold text-slate-900">What's Next?</h2>
               </div>
               <CardContent className="p-8">
                 <div className="space-y-6">
@@ -335,7 +367,7 @@ Thank you for joining ACTIV!
                         <div className={`w-12 h-12 bg-${item.color}-100 rounded-xl flex items-center justify-center flex-shrink-0`}>
                           <Icon className={`w-6 h-6 text-${item.color}-600`} />
                         </div>
-                        <p className="text-sm text-gray-700 leading-relaxed pt-2">{item.text}</p>
+                        <p className="text-sm text-slate-700 leading-relaxed pt-2">{item.text}</p>
                       </div>
                     );
                   })}

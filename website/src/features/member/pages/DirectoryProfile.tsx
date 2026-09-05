@@ -1,8 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, Building2, Package, Users, CalendarDays } from 'lucide-react';
+import { MapPin, Building2, Package, Users, CalendarDays, MessageSquare, Lock } from 'lucide-react';
 import MemberPageShell from '@/pages/member/MemberPageShell';
 import { EmptyState, RowsSkeleton, SectionCard } from '@/features/member/components/MemberUI';
+import useMembershipGate from '@/features/member/useMembershipGate';
+import { useProfile } from '@/contexts/ProfileContext';
+import { getMyApplication } from '@/services/activApi';
+import {
+    deriveMemberAccess, membershipCta, MEMBERS_ONLY_COPY,
+} from '@/features/member/memberAccess';
 import { formatDate } from '@/features/member/components/eventFormat';
 import {
     getDirectoryEntry, recordProductView,
@@ -28,9 +34,41 @@ export default function DirectoryProfile() {
     const { id = '' } = useParams();
     const navigate = useNavigate();
 
-    const [entry, setEntry] = useState<(DirectoryEntry & { products: DirectoryProduct[] }) | null>(null);
+    // `Omit` because the card's products are the FULL lines — category and
+    // price — not the four-tile preview `DirectoryEntry` carries.
+    const [entry, setEntry] = useState<
+        (Omit<DirectoryEntry, 'products'> & { products: DirectoryProduct[] }) | null
+    >(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+
+    /*
+     * Whether this reader may contact the member they are looking at.
+     *
+     * Browsing the directory is open to an applicant — that is the point of
+     * showing them who is already a member. Reaching a person through it is the
+     * one thing an active membership buys, so the control is present either way
+     * and says which of the two it is doing.
+     */
+    const { profileCompletion } = useProfile();
+    const { isPaid } = useMembershipGate();
+    const [application, setApplication] = useState<any>(null);
+    const [askedToConnect, setAskedToConnect] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        getMyApplication()
+            .then((app) => { if (!cancelled) setApplication(app); })
+            .catch(() => { /* an applicant with no application is the normal case */ });
+        return () => { cancelled = true; };
+    }, []);
+
+    const access = useMemo(
+        () => deriveMemberAccess(profileCompletion, application, isPaid),
+        [profileCompletion, application, isPaid],
+    );
+
+    const cta = useMemo(() => membershipCta(access), [access]);
 
     useEffect(() => {
         let cancelled = false;
@@ -76,7 +114,15 @@ export default function DirectoryProfile() {
     }
 
     const photo = resolveMediaUrl(entry.profilePhoto);
-    const where = [entry.city, entry.block, entry.district, entry.state].filter(Boolean).join(', ');
+    /*
+     * The region, not an address.
+     *
+     * `city` is no longer sent — see the note on `toDirectoryEntry`. Block,
+     * district and state name an administrative area rather than a place, which
+     * is the line this directory draws: a buyer may know which block a supplier
+     * trades in without being handed the way to turn up at their premises.
+     */
+    const where = [entry.block, entry.district, entry.state].filter(Boolean).join(', ');
 
     return (
         <MemberPageShell
@@ -95,7 +141,7 @@ export default function DirectoryProfile() {
         >
             <div className="space-y-5">
                 {/* ---------- identity ---------- */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 lg:p-6
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-5 lg:p-6
                                 flex flex-wrap items-start gap-4">
                     {photo ? (
                         <img
@@ -138,6 +184,53 @@ export default function DirectoryProfile() {
                                 </span>
                             ) : null}
                         </div>
+
+                        {/*
+                          * One control, two honest answers.
+                          *
+                          * For an active membership it opens Messages. For an
+                          * applicant it says, in place, that connecting with
+                          * members is what activating adds — and then offers the
+                          * step this account is actually on. It is not disabled
+                          * and it is not hidden: a greyed-out button invites a
+                          * click that does nothing, and a hidden one means an
+                          * applicant never learns the feature exists.
+                          */}
+                        <div className="mt-4">
+                            <button
+                                type="button"
+                                onClick={() => (access.membershipActive
+                                    ? navigate('/member/messages')
+                                    : setAskedToConnect(true))}
+                                className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700
+                                           text-white text-[0.8125rem] font-bold px-4 py-2 rounded-xl
+                                           shadow-sm transition-colors"
+                            >
+                                {access.membershipActive
+                                    ? <MessageSquare className="w-4 h-4" />
+                                    : <Lock className="w-3.5 h-3.5" />}
+                                Message {(entry.fullName || '').split(' ').filter(Boolean)[0] || 'member'}
+                            </button>
+
+                            {askedToConnect && !access.membershipActive ? (
+                                <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-4">
+                                    <p className="text-[0.8125rem] font-bold text-slate-900">
+                                        {MEMBERS_ONLY_COPY.title}
+                                    </p>
+                                    <p className="text-[0.8125rem] text-slate-600 mt-1 leading-relaxed">
+                                        {MEMBERS_ONLY_COPY.short} {cta.detail}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate(cta.to)}
+                                        className="inline-flex items-center gap-1 mt-3 text-[0.8125rem]
+                                                   font-bold text-blue-700 hover:underline"
+                                    >
+                                        {cta.label} →
+                                    </button>
+                                </div>
+                            ) : null}
+                        </div>
                     </div>
                 </div>
 
@@ -171,19 +264,17 @@ export default function DirectoryProfile() {
                                         )}
 
                                         <div className="min-w-0">
-                                            <p className="text-[0.875rem] font-semibold text-slate-900 truncate">
+                                            <p className="text-sm font-semibold text-slate-900 truncate">
                                                 {company.businessName}
                                             </p>
                                             {company.businessType ? (
-                                                <p className="text-[0.75rem] text-blue-700 font-medium">
+                                                <p className="text-xs text-blue-700 font-medium">
                                                     {company.businessType}
                                                 </p>
                                             ) : null}
-                                            {company.location || company.area ? (
-                                                <p className="text-[0.75rem] text-slate-500 truncate mt-0.5">
-                                                    {[company.area, company.location].filter(Boolean).join(', ')}
-                                                </p>
-                                            ) : null}
+                                            {/* `location` and `area` are gone: they were the
+                                                company's street address in prose, and the
+                                                directory does not hand those out. */}
                                         </div>
                                     </div>
                                 );
@@ -207,7 +298,7 @@ export default function DirectoryProfile() {
                             detail="This member has not published any products or services."
                         />
                     ) : (
-                        <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
+                        <div className="grid gap-5 grid-cols-2 lg:grid-cols-3">
                             {entry.products.map((product) => {
                                 const image = resolveMediaUrl(product.imageUrl);
 
@@ -237,14 +328,14 @@ export default function DirectoryProfile() {
                                         </div>
 
                                         <div className="p-2.5">
-                                            <p className="text-[0.78125rem] font-semibold text-slate-900 truncate">
+                                            <p className="text-[0.8125rem] font-semibold text-slate-900 truncate">
                                                 {product.name}
                                             </p>
                                             <p className="text-[0.6875rem] text-slate-500 truncate">
                                                 {product.category}
                                             </p>
                                             {product.price > 0 ? (
-                                                <p className="text-[0.78125rem] font-bold text-blue-700 mt-0.5 tabular-nums">
+                                                <p className="text-[0.8125rem] font-bold text-blue-700 mt-0.5 tabular-nums">
                                                     ₹{product.price.toLocaleString('en-IN')}
                                                 </p>
                                             ) : null}

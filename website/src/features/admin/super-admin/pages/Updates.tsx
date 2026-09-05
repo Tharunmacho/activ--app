@@ -248,21 +248,21 @@ export default function SuperAdminUpdates() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex">
+        <div className="min-h-screen bg-white flex">
             <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
             <div className="flex-1 min-w-0">
-                <header className="bg-white border-b px-6 py-4 flex items-center gap-3">
+                <header className="bg-white border-b border-slate-200 px-6 py-4 flex flex-wrap items-center gap-3">
                     <button
-                        className="lg:hidden text-gray-600"
+                        className="lg:hidden text-slate-500"
                         onClick={() => setSidebarOpen(true)}
                         aria-label="Open menu"
                     >
                         <Menu className="w-5 h-5" />
                     </button>
                     <div className="min-w-0">
-                        <h1 className="text-2xl font-bold text-gray-900">Association Updates</h1>
-                        <p className="text-sm text-gray-600 mt-0.5">
+                        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900">Association Updates</h1>
+                        <p className="text-sm text-slate-600 mt-0.5">
                             News and notices, targeted by region and by membership.
                         </p>
                     </div>
@@ -277,7 +277,7 @@ export default function SuperAdminUpdates() {
                     </button>
                 </header>
 
-                <main className="p-6 space-y-5">
+                <main className="p-6 space-y-6 max-w-[90rem]">
                     {error ? (
                         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                             {error}
@@ -288,7 +288,7 @@ export default function SuperAdminUpdates() {
                     {showForm ? (
                         <form
                             onSubmit={submit}
-                            className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 lg:p-6 space-y-5"
+                            className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-5 lg:p-6 space-y-6"
                         >
                             <div className="flex items-start justify-between gap-3">
                                 <h2 className="text-lg font-bold text-slate-900">
@@ -304,7 +304,7 @@ export default function SuperAdminUpdates() {
                                 </button>
                             </div>
 
-                            <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="grid gap-5 sm:grid-cols-2">
                                 <div className="sm:col-span-2">
                                     <Field label="Headline">
                                         <input
@@ -530,7 +530,7 @@ export default function SuperAdminUpdates() {
                     ) : null}
 
                     {/* ---------------------------------------------- listing */}
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-5">
                         <h2 className="text-lg font-bold text-slate-900 mb-4">
                             Updates ({rows.length})
                         </h2>

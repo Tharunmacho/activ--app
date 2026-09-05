@@ -222,7 +222,7 @@ const Approvals = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-gray-50 to-white">
+    <div className="min-h-screen flex bg-white">
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
@@ -240,49 +240,49 @@ const Approvals = () => {
         <div className="md:hidden flex items-center justify-between p-4 bg-white border-b shadow-sm">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <h1 className="text-xl font-bold text-gray-900">Approvals</h1>
+          <h1 className="text-xl font-bold text-slate-900">Approvals</h1>
           <Avatar className="w-10 h-10 ring-2 ring-blue-100">
             <AvatarImage src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=96&h=96&fit=crop&crop=face" className="object-cover" />
-            <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold">
+            <AvatarFallback className="bg-blue-600 text-white font-bold">
               {(localStorage.getItem('userName') || 'A').split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
         </div>
 
-        <div className="flex-1 p-4 md:p-6 overflow-auto">
-          <div className="w-full max-w-7xl mx-auto space-y-5 md:space-y-6 pt-12 lg:pt-0">
+        <div className="flex-1 p-6 overflow-auto">
+          <div className="w-full max-w-[90rem] space-y-6">
             {/* Header */}
-            <div className="bg-gradient-to-br from-blue-600 to-blue-700 shadow-xl p-6 rounded-2xl border border-blue-500">
+            <div className="bg-blue-600 p-6 rounded-2xl shadow-[0_10px_28px_-6px_rgba(37,99,235,0.55)]">
               <h1 className="text-3xl font-bold text-white">Application Approvals</h1>
               <p className="text-blue-100 mt-1">Review and manage member applications</p>
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
-              <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-6 border border-blue-500 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 md:gap-5">
+              <div className="bg-blue-600 rounded-2xl p-6 shadow-[0_10px_28px_-6px_rgba(37,99,235,0.55)]">
                 <p className="text-blue-100 text-sm mb-2 font-medium">Total</p>
-                <p className="text-4xl font-bold text-white">{stats.total}</p>
+                <p className="text-4xl font-bold tracking-tight tabular-nums text-white">{stats.total}</p>
               </div>
 
-              <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-2xl p-6 border border-purple-500 shadow-xl hover:shadow-2xl transition-all duration-300">
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                 <p className="text-purple-100 text-sm mb-2 font-medium">Pending</p>
-                <p className="text-4xl font-bold text-white">{stats.pending}</p>
+                <p className="text-4xl font-bold tracking-tight tabular-nums text-white">{stats.pending}</p>
               </div>
 
-              <div className="bg-gradient-to-br from-cyan-600 to-cyan-700 rounded-2xl p-6 border border-cyan-500 shadow-xl hover:shadow-2xl transition-all duration-300">
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                 <p className="text-cyan-100 text-sm mb-2 font-medium">Approved</p>
-                <p className="text-4xl font-bold text-white">{stats.approved}</p>
+                <p className="text-4xl font-bold tracking-tight tabular-nums text-white">{stats.approved}</p>
               </div>
 
-              <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl p-6 border border-indigo-500 shadow-xl hover:shadow-2xl transition-all duration-300">
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                 <p className="text-indigo-100 text-sm mb-2 font-medium">Rejected</p>
-                <p className="text-4xl font-bold text-white">{stats.rejected}</p>
+                <p className="text-4xl font-bold tracking-tight tabular-nums text-white">{stats.rejected}</p>
               </div>
             </div>
 

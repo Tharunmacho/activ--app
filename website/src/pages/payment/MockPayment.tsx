@@ -47,7 +47,7 @@ export default function MockPayment() {
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}
-          className="mb-6 text-gray-600 hover:text-gray-900 hover:bg-white/50"
+          className="mb-6 text-slate-600 hover:text-slate-900 hover:bg-white/50"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
@@ -147,8 +147,8 @@ export default function MockPayment() {
               >
                 <CreditCard className="w-8 h-8 text-white" />
               </div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-1">Test Payment</h1>
-              <p className="text-gray-500 text-sm">Simulate payment for testing</p>
+              <h1 className="text-2xl font-bold text-slate-900 mb-1">Test Payment</h1>
+              <p className="text-slate-500 text-sm">Simulate payment for testing</p>
             </div>
 
             {/* Test Mode Badge */}
@@ -213,8 +213,8 @@ export default function MockPayment() {
             </div>
 
             {/* Footer */}
-            <div className="mt-8 pt-6 border-t border-gray-100">
-              <div className="flex items-center justify-center gap-6 text-gray-400">
+            <div className="mt-8 pt-6 border-t border-slate-100">
+              <div className="flex items-center justify-center gap-6 text-slate-400">
                 <div className="flex items-center gap-1.5">
                   <Shield className="w-3.5 h-3.5" />
                   <span className="text-xs">Secure</span>

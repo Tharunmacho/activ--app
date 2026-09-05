@@ -5,7 +5,9 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
-import { apiFetch, getSuperOverview } from '@/services/activApi';
+import { toast } from 'sonner';
+import { apiFetch, getSuperOverview, approveApplication, rejectApplication, errorMessage } from '@/services/activApi';
+import ApplicantDecisionRow from '@/features/admin/components/ApplicantDecisionRow';
 
 /**
  * The Hub: every application on the platform, reached by drilling down through
@@ -27,10 +29,49 @@ type Tier = 'block' | 'district' | 'state';
 type Level = 'tiers' | 'regions' | 'applications';
 type Status = 'all' | 'pending' | 'approved' | 'rejected';
 
-const TIERS: { key: Tier; title: string; plural: string; icon: typeof MapPin; accent: string }[] = [
-    { key: 'block', title: 'Block', plural: 'Blocks', icon: MapPin, accent: 'text-purple-600 bg-purple-50' },
-    { key: 'district', title: 'District', plural: 'Districts', icon: Map, accent: 'text-amber-600 bg-amber-50' },
-    { key: 'state', title: 'State', plural: 'States', icon: Globe, accent: 'text-green-600 bg-green-50' },
+/**
+ * The three tiers, and the colour each one owns.
+ *
+ * COLOUR AS AN IDENTIFIER, NOT AS DECORATION. A super admin moves between these
+ * three cards constantly and the only thing distinguishing them was a word and a
+ * small tinted glyph — so the eye had to read "District Level" every time rather
+ * than recognising it. Giving each tier one hue, used on its header band, its
+ * icon and its hover ring, makes the card recognisable before it is read, and
+ * the same hue then means the same tier wherever it appears.
+ *
+ * Violet → district amber → state emerald reads as an outward journey: the
+ * smallest patch is the coolest colour, the widest the warmest-then-settled. It
+ * is arbitrary, as any such mapping is; what matters is that it is fixed.
+ *
+ * `head` is a tint rather than a saturated fill: the numbers underneath are the
+ * content, and a solid colour band above them competes for the same attention
+ * the figures need. Saturation is spent on the icon and the top rule instead.
+ */
+const TIERS: {
+    key: Tier; title: string; plural: string; icon: typeof MapPin;
+    accent: string; head: string; rule: string; ring: string;
+}[] = [
+    {
+        key: 'block', title: 'Block', plural: 'Blocks', icon: MapPin,
+        accent: 'text-violet-600 bg-violet-100',
+        head: 'bg-gradient-to-r from-violet-50 to-white',
+        rule: 'bg-violet-500',
+        ring: 'hover:border-violet-300 hover:shadow-[0_12px_32px_-8px_rgba(139,92,246,0.45)]',
+    },
+    {
+        key: 'district', title: 'District', plural: 'Districts', icon: Map,
+        accent: 'text-amber-600 bg-amber-100',
+        head: 'bg-gradient-to-r from-amber-50 to-white',
+        rule: 'bg-amber-500',
+        ring: 'hover:border-amber-300 hover:shadow-[0_12px_32px_-8px_rgba(245,158,11,0.45)]',
+    },
+    {
+        key: 'state', title: 'State', plural: 'States', icon: Globe,
+        accent: 'text-emerald-600 bg-emerald-100',
+        head: 'bg-gradient-to-r from-emerald-50 to-white',
+        rule: 'bg-emerald-500',
+        ring: 'hover:border-emerald-300 hover:shadow-[0_12px_32px_-8px_rgba(16,185,129,0.45)]',
+    },
 ];
 
 const STATUSES: Status[] = ['all', 'pending', 'approved', 'rejected'];
@@ -64,6 +105,7 @@ export default function Hub() {
     const [query, setQuery] = useState('');
 
     const [overviewFailed, setOverviewFailed] = useState(false);
+    const [acting, setActing] = useState<string | null>(null);
 
     useEffect(() => {
         getSuperOverview()
@@ -106,6 +148,14 @@ export default function Hub() {
         setLoading(true);
         try {
             const params = new URLSearchParams({ limit: '50' });
+            /*
+              WHICH LEVEL is being browsed, so the server can place each file
+              at the tier that currently holds it. Without it a file approved
+              at the block stayed in the block's list — labelled
+              "Pending-District" and still offering buttons for a decision
+              that had already moved on.
+            */
+            params.set('level', tier);
             // Only the fields this tier actually names — sending an empty block
             // would filter to applications whose block is literally ''.
             if (r.state) params.set('state', r.state);
@@ -123,6 +173,47 @@ export default function Hub() {
         }
     };
 
+    /**
+     * Approve or reject, then refresh the file list and the region counts.
+     *
+     * The endpoint is tier-agnostic: the server picks whichever tier the file
+     * currently sits at and advances it one step, so approving a Pending-Block
+     * file here moves it to Pending-District exactly as the block admin's own
+     * approval would. Nothing about the workflow is decided on this screen.
+     *
+     * Both refreshes matter. The row changing without its region's "3 pending"
+     * changing reads as a save that half worked.
+     */
+    const decide = async (id: string, approve: boolean, reason?: string) => {
+        setActing(id);
+        try {
+            if (approve) {
+                // The server names where the file went next; say that rather
+                // than a generic "Approved" that leaves the admin guessing.
+                const res = await approveApplication(id);
+                toast.success(res?.message || 'Approved — sent to the next tier');
+            } else {
+                await rejectApplication(id, (reason || '').trim() || 'No reason given');
+                toast.success('Rejected');
+            }
+            if (region) await openRegion(region, status);
+            if (tier) await openTierCounts(tier);
+        } catch (err) {
+            toast.error(errorMessage(err, 'Could not record that decision'));
+        } finally {
+            setActing(null);
+        }
+    };
+
+    /** Refresh the region counts behind the current level, without navigating. */
+    const openTierCounts = async (t: Tier) => {
+        try {
+            const res = await apiFetch(`/admin/super/directory?level=${t}`);
+            const data = res.ok ? (await res.json()).data : {};
+            setRegions(data.regions || []);
+        } catch { /* the list simply keeps its previous counts */ }
+    };
+
     const back = () => {
         if (level === 'applications') { setLevel('regions'); setRegion(null); }
         else if (level === 'regions') { setLevel('tiers'); setRegions([]); }
@@ -133,36 +224,60 @@ export default function Hub() {
             .toLowerCase().includes(query.trim().toLowerCase()))
         : regions;
 
-    const stat = (label: string, value: number | string, tone = 'bg-gray-50 text-gray-900') => (
-        <div className={`rounded-xl p-5 ${tone}`}>
-            <p className="text-3xl font-bold">{value ?? 0}</p>
-            <p className="text-sm opacity-70 mt-1">{label}</p>
+    /**
+     * ONE LOUD TILE, AND THE REST QUIET.
+     *
+     * These were four saturated cards — blue, purple, teal, indigo, side by
+     * side. Four things shouting is four things ignored: nothing on the row said
+     * which number the Super Admin opens this page to read, and the colours
+     * carried no meaning beyond being different from each other.
+     *
+     * Total members is the one that matters, so it keeps the solid fill and
+     * everything else is white. The eye lands on it, and the three beside it are
+     * still perfectly legible — they simply stop competing.
+     */
+    const stat = (label: string, value: number | string, primary = false) => (
+        <div className={`p-6 rounded-2xl ${
+            primary
+                ? 'bg-blue-600 shadow-[0_10px_28px_-6px_rgba(37,99,235,0.55)]'
+                : 'bg-white border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]'
+        }`}>
+            <p className={`text-4xl font-bold tracking-tight tabular-nums ${
+                primary ? 'text-white' : 'text-slate-900'
+            }`}>
+                {value ?? 0}
+            </p>
+            <p className={`text-sm font-medium mt-1.5 ${
+                primary ? 'text-blue-100' : 'text-slate-500'
+            }`}>
+                {label}
+            </p>
         </div>
     );
 
     return (
-        <div className="min-h-screen bg-gray-50 flex">
+        <div className="min-h-screen bg-white flex">
             <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
             <div className="flex-1 min-w-0">
-                <header className="bg-white border-b px-6 py-4 flex items-center gap-3">
-                    <button className="lg:hidden text-gray-600" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
+                <header className="bg-white border-b border-slate-200 px-6 py-4 flex flex-wrap items-center gap-3">
+                    <button className="lg:hidden text-slate-500" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
                         <Menu className="w-5 h-5" />
                     </button>
 
                     {level !== 'tiers' && (
-                        <button onClick={back} className="text-gray-600 hover:text-gray-900" aria-label="Back">
+                        <button onClick={back} className="text-slate-500 hover:text-slate-900" aria-label="Back">
                             <ArrowLeft className="w-5 h-5" />
                         </button>
                     )}
 
                     <div className="min-w-0">
-                        <h1 className="text-2xl font-bold text-gray-900 truncate">
+                        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900 truncate">
                             {level === 'tiers' && 'Hub'}
                             {level === 'regions' && `${TIERS.find(t => t.key === tier)?.plural}`}
                             {level === 'applications' && (region?.name || 'Applications')}
                         </h1>
-                        <p className="text-sm text-gray-600 mt-0.5">
+                        <p className="text-sm text-slate-600 mt-0.5">
                             {level === 'tiers' && 'Browse applications by the region that owns them.'}
                             {level === 'regions' && 'Pick a region to see its applications.'}
                             {level === 'applications' && [region?.block, region?.district, region?.state]
@@ -171,7 +286,7 @@ export default function Hub() {
                     </div>
                 </header>
 
-                <main className="p-6 space-y-5">
+                <main className="p-6 space-y-6 max-w-[90rem]">
                     {/* ------------------------------------------------ tiers */}
                     {level === 'tiers' && (
                         <>
@@ -188,10 +303,10 @@ export default function Hub() {
 
                             {/* Platform totals, from `data.stats`. */}
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                {stat('Total members', platform.totalMembers, 'bg-blue-600 text-white')}
-                                {stat('Pending', platform.pendingApplications, 'bg-purple-600 text-white')}
-                                {stat('Approved', platform.approvedApplications, 'bg-teal-600 text-white')}
-                                {stat('Rejected', platform.rejectedApplications, 'bg-indigo-600 text-white')}
+                                {stat('Total members', platform.totalMembers, true)}
+                                {stat('Pending', platform.pendingApplications)}
+                                {stat('Approved', platform.approvedApplications)}
+                                {stat('Rejected', platform.rejectedApplications)}
                             </div>
 
                             {/*
@@ -206,41 +321,54 @@ export default function Hub() {
                               * The card IS the drill-down, as on mobile — the numbers
                               * and the way in are the same control.
                               */}
-                            <div className="grid gap-4 md:grid-cols-3">
-                                {TIERS.map(({ key, title, icon: Icon, accent }) => {
+                            <div className="grid gap-5 md:grid-cols-3">
+                                {TIERS.map(({ key, title, icon: Icon, accent, head, rule, ring }) => {
                                     const t = tierStats[key] || {};
                                     const figures = [
-                                        { label: 'Total Members', value: t.total, tone: 'text-gray-900' },
+                                        { label: 'Total members', value: t.total, tone: 'text-slate-900' },
                                         { label: 'Pending', value: t.pending, tone: 'text-amber-600' },
-                                        { label: 'Approved', value: t.approved, tone: 'text-green-600' },
-                                        { label: 'Rejected', value: t.rejected, tone: 'text-red-600' },
+                                        { label: 'Approved', value: t.approved, tone: 'text-emerald-600' },
+                                        { label: 'Rejected', value: t.rejected, tone: 'text-rose-600' },
                                     ];
 
                                     return (
                                         <button
                                             key={key}
                                             onClick={() => openTier(key)}
-                                            className="bg-white rounded-xl border text-left hover:shadow-md
-                                                       transition-shadow overflow-hidden"
+                                            className={`group relative bg-white border border-slate-200 rounded-2xl
+                                                        text-left overflow-hidden transition-all duration-200
+                                                        shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]
+                                                        hover:-translate-y-0.5 ${ring}`}
                                         >
-                                            <div className="flex items-center gap-3 px-5 py-4 border-b">
-                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${accent}`}>
+                                            {/* The tier's colour, as a rule across the top.
+                                                Two pixels of saturation identifies the card
+                                                from across the page without taking any of
+                                                the attention the figures need. */}
+                                            <span className={`absolute inset-x-0 top-0 h-1 ${rule}`} />
+
+                                            <div className={`flex items-center gap-3 px-5 pt-5 pb-4 ${head}`}>
+                                                <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${accent}`}>
                                                     <Icon className="w-5 h-5" />
                                                 </div>
-                                                <p className="font-semibold text-gray-900 flex-1">{title} Level</p>
-                                                <ChevronRight className="w-5 h-5 text-gray-400" />
+                                                <p className="font-bold tracking-tight text-slate-900 flex-1">
+                                                    {title} Level
+                                                </p>
+                                                {/* Slides on hover, so the card reads as a way
+                                                    in rather than as a panel of numbers. */}
+                                                <ChevronRight className="w-5 h-5 text-slate-400 shrink-0
+                                                                         transition-transform duration-200
+                                                                         group-hover:translate-x-0.5
+                                                                         group-hover:text-slate-600" />
                                             </div>
 
-                                            <div className="grid grid-cols-2 bg-gray-50/60">
-                                                {figures.map((f, i) => (
-                                                    <div
-                                                        key={f.label}
-                                                        className={`p-4 ${i < 2 ? 'border-b' : ''} ${i % 2 === 0 ? 'border-r' : ''}`}
-                                                    >
-                                                        <p className={`text-xl font-extrabold ${f.tone}`}>
+                                            <div className="grid grid-cols-2 divide-x divide-y divide-slate-100
+                                                            border-t border-slate-100">
+                                                {figures.map((f) => (
+                                                    <div key={f.label} className="px-5 py-4 -mt-px first:mt-0">
+                                                        <p className={`text-2xl font-bold tracking-tight tabular-nums ${f.tone}`}>
                                                             {Number(f.value || 0)}
                                                         </p>
-                                                        <p className="text-xs font-semibold text-gray-500 mt-0.5">
+                                                        <p className="text-xs font-semibold text-slate-500 mt-1">
                                                             {f.label}
                                                         </p>
                                                     </div>
@@ -253,7 +381,7 @@ export default function Hub() {
 
                             <button
                                 onClick={() => navigate('/super-admin/admins')}
-                                className="w-full bg-white rounded-xl border p-6 text-left hover:shadow-md
+                                className="w-full bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-6 text-left hover:shadow-md
                                            transition-shadow flex items-center justify-between"
                             >
                                 <div className="flex items-center gap-4">
@@ -261,13 +389,13 @@ export default function Hub() {
                                         <Users className="w-6 h-6" />
                                     </div>
                                     <div>
-                                        <p className="font-semibold text-gray-900">Staff a region</p>
-                                        <p className="text-sm text-gray-500">
+                                        <p className="font-semibold text-slate-900">Staff a region</p>
+                                        <p className="text-sm text-slate-500">
                                             Adding a block admin is what opens a region for registration.
                                         </p>
                                     </div>
                                 </div>
-                                <ChevronRight className="w-5 h-5 text-gray-400" />
+                                <ChevronRight className="w-5 h-5 text-slate-400" />
                             </button>
                         </>
                     )}
@@ -276,12 +404,12 @@ export default function Hub() {
                     {level === 'regions' && (
                         <>
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                 <input
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
                                     placeholder="Filter regions"
-                                    className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm
+                                    className="h-11 w-full pl-9 pr-3.5 rounded-xl border border-slate-200 text-sm outline-none transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10
                                                focus:outline-none focus:ring-2 focus:ring-blue-600"
                                 />
                             </div>
@@ -291,17 +419,17 @@ export default function Hub() {
                             ) : visibleRegions.length === 0 ? (
                                 <Empty text="No regions at this level yet." />
                             ) : (
-                                <div className="bg-white rounded-xl border divide-y">
+                                <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] divide-y divide-slate-100">
                                     {visibleRegions.map(r => (
                                         <button
                                             key={r.id || r.name}
                                             onClick={() => openRegion(r)}
                                             className="w-full px-5 py-4 flex items-center justify-between
-                                                       hover:bg-gray-50 text-left"
+                                                       hover:bg-slate-50 text-left"
                                         >
                                             <div className="min-w-0">
-                                                <p className="font-medium text-gray-900">{r.name}</p>
-                                                <p className="text-xs text-gray-500 mt-0.5">
+                                                <p className="font-medium text-slate-900">{r.name}</p>
+                                                <p className="text-xs text-slate-500 mt-0.5">
                                                     {[r.district, r.state].filter(Boolean).join(', ') || '—'}
                                                     {/* An unstaffed region is the one worth chasing:
                                                         its applications escalate to the tier above. */}
@@ -315,8 +443,8 @@ export default function Hub() {
                                                 <span className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
                                                     {r.pending} pending
                                                 </span>
-                                                <span className="text-xs text-gray-500">{r.applications} total</span>
-                                                <ChevronRight className="w-4 h-4 text-gray-400" />
+                                                <span className="text-xs text-slate-500">{r.applications} total</span>
+                                                <ChevronRight className="w-4 h-4 text-slate-400" />
                                             </div>
                                         </button>
                                     ))}
@@ -336,7 +464,7 @@ export default function Hub() {
                                         className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${
                                             status === s
                                                 ? 'bg-blue-600 text-white'
-                                                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                                                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
                                         }`}
                                     >
                                         {s}
@@ -349,21 +477,17 @@ export default function Hub() {
                             ) : applicants.length === 0 ? (
                                 <Empty text={`No ${status === 'all' ? '' : status + ' '}applications in this region.`} />
                             ) : (
-                                <div className="bg-white rounded-xl border divide-y">
+                                <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] divide-y divide-slate-100">
+                                    {/* The decision is made here, on the row the drill-down found.
+                                        Sending a super admin to a different screen to approve is
+                                        the point at which they lose the region they drilled into. */}
                                     {applicants.map((a: any) => (
-                                        <div key={a._id || a.id} className="px-5 py-4 flex items-center justify-between gap-4">
-                                            <div className="min-w-0">
-                                                <p className="font-medium text-gray-900 truncate">
-                                                    {a.fullName || a.email || 'Applicant'}
-                                                </p>
-                                                <p className="text-xs text-gray-500 mt-0.5 truncate">
-                                                    {a.email}{a.phone ? ` · ${a.phone}` : ''}
-                                                </p>
-                                            </div>
-                                            <span className="text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 shrink-0">
-                                                {a.status || '—'}
-                                            </span>
-                                        </div>
+                                        <ApplicantDecisionRow
+                                            key={a._id || a.id}
+                                            applicant={a}
+                                            busy={acting === String(a.id || a._id)}
+                                            onDecide={decide}
+                                        />
                                     ))}
                                 </div>
                             )}
@@ -376,11 +500,11 @@ export default function Hub() {
 }
 
 const Busy = () => (
-    <div className="flex items-center justify-center gap-3 py-16 text-gray-500">
+    <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] flex items-center justify-center gap-3 py-16 text-slate-500">
         <Loader2 className="w-5 h-5 animate-spin" /> Loading…
     </div>
 );
 
 const Empty = ({ text }: { text: string }) => (
-    <p className="text-center text-gray-500 py-16">{text}</p>
+    <p className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] text-center text-slate-500 py-16">{text}</p>
 );

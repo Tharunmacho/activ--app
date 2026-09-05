@@ -108,7 +108,7 @@ const AdminDashboard = () => {
   }, [role, userName]);
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-50">
+    <div className="min-h-screen flex bg-white">
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
@@ -126,16 +126,16 @@ const AdminDashboard = () => {
         <div className="md:hidden flex items-center justify-between p-4 bg-white border-b shadow-sm">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
+          <h1 className="text-xl font-bold text-slate-900">Dashboard</h1>
           <Avatar className="w-10 h-10 ring-2 ring-blue-100 cursor-pointer hover:ring-4 transition-all" onClick={() => navigate('/super-admin/settings')}>
             {adminInfo?.avatarUrl && <AvatarImage src={adminInfo.avatarUrl} className="object-cover" />}
-            <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold">
+            <AvatarFallback className="bg-blue-600 text-white font-bold">
               {avatarInitials}
             </AvatarFallback>
           </Avatar>
@@ -144,44 +144,44 @@ const AdminDashboard = () => {
         {/* Main scrollable content */}
         <div className="flex-1 flex flex-col overflow-auto">
           {/* TOP SECTION - White Header with Shadow */}
-          <div className="bg-white p-6 lg:p-10 shadow-lg">
-            <div className="max-w-7xl mx-auto pt-12 lg:pt-0">
+          <div className="p-6 max-w-[90rem] space-y-6">
+            <div className="max-w-[90rem]">
 
               {/* Header Section */}
               <div className="mb-8">
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-4 text-center md:text-left">
                   <Avatar className="w-16 h-16 ring-4 ring-blue-100">
                     <AvatarImage src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=96&h=96&fit=crop&crop=face" className="object-cover" />
-                    <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold text-2xl">
+                    <AvatarFallback className="bg-blue-600 text-white font-bold text-2xl">
                       {avatarInitials}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{dashboardTitle}</h1>
-                    <p className="text-gray-600 text-base md:text-lg">{dashboardSubtitle}</p>
+                    <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{dashboardTitle}</h1>
+                    <p className="text-slate-500 text-base md:text-lg">{dashboardSubtitle}</p>
                   </div>
                 </div>
               </div>
 
               {/* Statistics Section */}
               <div>
-                <h2 className="text-xl font-semibold mb-4 text-gray-900">Overview Statistics</h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-6 border border-blue-500 shadow-xl hover:shadow-2xl transition-all duration-300">
+                <h2 className="text-xl font-semibold mb-4 text-slate-900">Overview Statistics</h2>
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="bg-blue-600 rounded-2xl p-6 shadow-[0_10px_28px_-6px_rgba(37,99,235,0.55)]">
                     <p className="text-blue-100 text-sm mb-1 font-medium">Total Members</p>
-                    <p className="text-4xl font-bold text-white">{stats.totalMembers}</p>
+                    <p className="text-4xl font-bold tracking-tight tabular-nums text-white">{stats.totalMembers}</p>
                   </div>
-                  <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-2xl p-6 border border-purple-500 shadow-xl hover:shadow-2xl transition-all duration-300">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                     <p className="text-purple-100 text-sm mb-1 font-medium">Pending</p>
-                    <p className="text-4xl font-bold text-white">{stats.pending}</p>
+                    <p className="text-4xl font-bold tracking-tight tabular-nums text-white">{stats.pending}</p>
                   </div>
-                  <div className="bg-gradient-to-br from-cyan-600 to-cyan-700 rounded-2xl p-6 border border-cyan-500 shadow-xl hover:shadow-2xl transition-all duration-300">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                     <p className="text-cyan-100 text-sm mb-1 font-medium">Approved</p>
-                    <p className="text-4xl font-bold text-white">{stats.approved}</p>
+                    <p className="text-4xl font-bold tracking-tight tabular-nums text-white">{stats.approved}</p>
                   </div>
-                  <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl p-6 border border-indigo-500 shadow-xl hover:shadow-2xl transition-all duration-300">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                     <p className="text-indigo-100 text-sm mb-1 font-medium">Rejected</p>
-                    <p className="text-4xl font-bold text-white">{stats.rejected}</p>
+                    <p className="text-4xl font-bold tracking-tight tabular-nums text-white">{stats.rejected}</p>
                   </div>
                 </div>
               </div>
@@ -189,24 +189,24 @@ const AdminDashboard = () => {
           </div>
 
           {/* MAIN CONTENT - Light Background */}
-          <div className="bg-gradient-to-br from-gray-50 to-white p-6 lg:p-10">
-            <div className="max-w-7xl mx-auto space-y-6">
+          <div className="px-6 pb-6 max-w-[90rem]">
+            <div className="max-w-[90rem] space-y-6">
               {/* Header */}
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Recent Activity</h2>
-                  <p className="text-gray-600 text-sm">Latest application submissions</p>
+                  <h2 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900">Recent Activity</h2>
+                  <p className="text-slate-500 text-sm">Latest application submissions</p>
                 </div>
                 <Link to="/admin/applications">
-                  <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg px-6 shadow-lg">
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6 shadow-sm">
                     View All
                   </Button>
                 </Link>
               </div>
 
               {/* Applications Table/List */}
-              <div className="bg-white rounded-2xl p-6 shadow-2xl border border-gray-100">
-                <div className="hidden md:grid grid-cols-4 gap-4 px-4 py-3 text-sm font-semibold text-gray-700 border-b border-gray-200 mb-4">
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+                <div className="hidden md:grid grid-cols-4 gap-4 px-4 py-3 text-sm font-semibold text-slate-700 border-b border-slate-200 mb-4">
                   <div>Name</div>
                   <div>Status</div>
                   <div>Size</div>
@@ -217,18 +217,18 @@ const AdminDashboard = () => {
                   {recentApplications.map((app) => (
                     <div
                       key={app.id}
-                      className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-all duration-200 shadow-sm border border-blue-100"
+                      className="grid grid-cols-1 md:grid-cols-4 gap-5 items-center p-4 rounded-xl bg-white hover:bg-slate-50 transition-colors duration-200 border border-slate-200"
                     >
                       <div className="flex items-center gap-3">
                         <Avatar className="w-10 h-10 ring-2 ring-blue-200">
                           <AvatarImage src={app.image} className="object-cover" />
-                          <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold text-sm">
+                          <AvatarFallback className="bg-blue-600 text-white font-bold text-sm">
                             {app.name.split(' ').map(n => n[0]).join('')}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-semibold text-gray-900 text-sm">{app.name}</p>
-                          <p className="text-xs text-gray-600">{app.id}</p>
+                          <p className="font-semibold text-slate-900 text-sm">{app.name}</p>
+                          <p className="text-xs text-slate-500">{app.id}</p>
                         </div>
                       </div>
                       <div>
@@ -243,9 +243,9 @@ const AdminDashboard = () => {
                           {app.status?.toLowerCase() === "approved" ? "Approved" : "Pending"}
                         </Badge>
                       </div>
-                      <div className="text-sm text-gray-700 font-medium">{app.size}</div>
+                      <div className="text-sm text-slate-700 font-medium">{app.size}</div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700 font-medium">{app.date}</span>
+                        <span className="text-sm text-slate-700 font-medium">{app.date}</span>
                         <Link to={`/admin/application/${app.id}`}>
                           <Button
                             size="sm"

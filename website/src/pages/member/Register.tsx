@@ -270,7 +270,7 @@ const MemberRegister = () => {
       </div>
 
       {/* Right Panel - Registration Form */}
-      <div className="flex-1 flex items-center justify-center p-6 bg-gradient-to-br from-gray-50 to-white overflow-auto">
+      <div className="flex-1 flex items-center justify-center p-6 bg-gradient-to-br from-slate-50 to-white overflow-auto">
         <div className="w-full max-w-md space-y-6">
           {/* Mobile Logo */}
           <div className="md:hidden text-center">
@@ -290,21 +290,21 @@ const MemberRegister = () => {
                 className="w-14 h-14 object-contain"
               />
             </div>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900">Create Your Account</h2>
-            <p className="text-sm text-gray-600">Step {step} of 2</p>
+            <h2 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900">Create Your Account</h2>
+            <p className="text-sm text-slate-500">Step {step} of 2</p>
           </div>
 
           {/* Progress Bar */}
-          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+          <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
             <div
-              className="bg-gradient-to-r from-blue-600 to-blue-800 h-2 rounded-full transition-all duration-300"
+              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
               style={{ width: step === 1 ? '50%' : '100%' }}
             />
           </div>
 
           {/* Form Card */}
           <Card className="shadow-xl border-0">
-            <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200">
+            <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50 border-b border-slate-200">
               <CardTitle className="text-xl">
                 {step === 1 ? 'Account Credentials (Required)' : 'Profile Details'}
               </CardTitle>
@@ -388,7 +388,7 @@ const MemberRegister = () => {
                     Next <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
 
-                  <p className="text-center text-sm text-gray-600">
+                  <p className="text-center text-sm text-slate-500">
                     Already have an account?{" "}
                     <Link to="/" className="text-blue-600 hover:text-blue-700 font-semibold">
                       Sign in
@@ -495,14 +495,14 @@ const MemberRegister = () => {
                     <Button
                       type="button"
                       variant="ghost"
-                      className="w-full h-11 text-gray-600 hover:text-gray-900"
+                      className="w-full h-11 text-slate-500 hover:text-slate-900"
                       onClick={() => handleStep2Submit({ stateName: '', districtName: '', block: '', city: '' })}
                     >
                       Skip & Go to Dashboard
                     </Button>
                   </div>
 
-                  <p className="text-center text-sm text-gray-600">
+                  <p className="text-center text-sm text-slate-500">
                     Already have an account?{" "}
                     <Link to="/" className="text-blue-600 hover:text-blue-700 font-semibold">
                       Sign in

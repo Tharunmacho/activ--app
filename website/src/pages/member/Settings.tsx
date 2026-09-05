@@ -4,12 +4,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Mail, Phone, MapPin, Save, Camera } from "lucide-react";
+import { User, Mail, Phone, MapPin, Save, Camera, Menu } from "lucide-react";
 import MemberSidebar from "./MemberSidebar";
+import MemberTopBar from "@/features/member/components/MemberTopBar";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/services/activApi";
 import { useProfile } from "@/contexts/ProfileContext";
+
+/**
+ * A stored Boolean, as the form's yes/no strings.
+ *
+ * `doingBusiness`, `memberOfOtherChamber` and `filedITR` are Booleans in the
+ * database and yes/no strings in these inputs. `value || ""` turned a stored
+ * `false` into the empty string — indistinguishable from "never answered" — so
+ * a member who had said "no" reopened the page with the question blank.
+ */
+const yesNoText = (value: unknown): string => {
+    if (value === true) return "yes";
+    if (value === false) return "no";
+    return String(value ?? "");
+};
 
 const MemberSettings = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -135,18 +150,28 @@ const MemberSettings = () => {
             if (businessRes.ok) {
                 const businessResult = await businessRes.json();
                 if (businessResult.success && businessResult.data) {
+                    /*
+                      * The names `GET /members/business-info` returns.
+                      *
+                      * It answers `organizationName`, `constitutionType`,
+                      * `businessCommencementYear`, `numberOfEmployees`,
+                      * `memberOfOtherChamber` and `govtOrganizations`; this read
+                      * the form's shorthand, so all six came back `undefined`
+                      * and the fields rendered empty over data that existed.
+                      * Saving then wrote those blanks back.
+                      */
                     setFormData(prev => ({
                         ...prev,
-                        doingBusiness: businessResult.data.doingBusiness || "",
-                        organization: businessResult.data.organization || "",
-                        constitution: businessResult.data.constitution || "",
+                        doingBusiness: yesNoText(businessResult.data.doingBusiness),
+                        organization: businessResult.data.organizationName || businessResult.data.organization || "",
+                        constitution: businessResult.data.constitutionType || businessResult.data.constitution || "",
                         businessTypes: businessResult.data.businessTypes || [],
                         businessActivities: businessResult.data.businessActivities || "",
-                        businessYear: businessResult.data.businessYear || "",
-                        employees: businessResult.data.employees || "",
-                        chamber: businessResult.data.chamber || "",
-                        chamberDetails: businessResult.data.chamberDetails || "",
-                        govtOrgs: businessResult.data.govtOrgs || []
+                        businessYear: String(businessResult.data.businessCommencementYear || businessResult.data.businessYear || ""),
+                        employees: String(businessResult.data.numberOfEmployees || businessResult.data.employees || ""),
+                        chamber: yesNoText(businessResult.data.memberOfOtherChamber ?? businessResult.data.chamber),
+                        chamberDetails: businessResult.data.otherChamber || businessResult.data.chamberDetails || "",
+                        govtOrgs: businessResult.data.govtOrganizations || businessResult.data.govtOrgs || []
                     }));
                 }
             }
@@ -157,9 +182,10 @@ const MemberSettings = () => {
                 if (declarationResult.success && declarationResult.data) {
                     setFormData(prev => ({
                         ...prev,
-                        sisterConcerns: declarationResult.data.sisterConcerns || "",
+                        sisterConcerns: String(declarationResult.data.sisterConcerns ?? ""),
                         companyNames: declarationResult.data.companyNames || [],
-                        declarationAccepted: declarationResult.data.declarationAccepted || false
+                        // `agreeToDeclaration` is what the endpoint returns.
+                        declarationAccepted: declarationResult.data.agreeToDeclaration === true
                     }));
                 }
             }
@@ -170,12 +196,15 @@ const MemberSettings = () => {
                 if (financialResult.success && financialResult.data) {
                     setFormData(prev => ({
                         ...prev,
-                        pan: financialResult.data.pan || "",
-                        gst: financialResult.data.gst || "",
-                        udyam: financialResult.data.udyam || "",
-                        filedITR: financialResult.data.filedITR || "",
+                        // `panNumber` / `gstNumber` / `udyamNumber` — the three
+                        // identifiers a member is most likely to come here to
+                        // correct, and the three that were rendering blank.
+                        pan: financialResult.data.panNumber || financialResult.data.pan || "",
+                        gst: financialResult.data.gstNumber || financialResult.data.gst || "",
+                        udyam: financialResult.data.udyamNumber || financialResult.data.udyam || "",
+                        filedITR: yesNoText(financialResult.data.filedITR),
                         turnoverRange: financialResult.data.turnoverRange || "",
-                        govtSchemes: financialResult.data.govtSchemes || "",
+                        govtSchemes: financialResult.data.govtSchemes || [],
                     }));
                 }
             }
@@ -284,17 +313,26 @@ const MemberSettings = () => {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
+                /*
+                  * The names the schema stores, not the form's own shorthand.
+                  *
+                  * `organization`, `constitution`, `businessYear`, `employees`,
+                  * `chamber` and `govtOrgs` are not keys `updateMember` reads,
+                  * so Mongoose strict mode dropped all six on every save while
+                  * the response said 200 and the toast said "saved". Six
+                  * corrections a member made here never reached the database.
+                  */
                 body: JSON.stringify({
                     doingBusiness: formData.doingBusiness,
-                    organization: formData.organization,
-                    constitution: formData.constitution,
+                    organizationName: formData.organization,
+                    constitutionType: formData.constitution,
                     businessTypes: formData.businessTypes,
                     businessActivities: formData.businessActivities,
-                    businessYear: formData.businessYear,
-                    employees: formData.employees,
-                    chamber: formData.chamber || undefined, // Send undefined instead of empty string
-                    chamberDetails: formData.chamberDetails,
-                    govtOrgs: formData.govtOrgs
+                    businessCommencementYear: formData.businessYear,
+                    numberOfEmployees: formData.employees,
+                    memberOfOtherChamber: formData.chamber || undefined, // undefined, not '' — see asBool
+                    otherChamber: formData.chamberDetails,
+                    govtOrganizations: formData.govtOrgs
                 })
                 });
             }
@@ -306,10 +344,13 @@ const MemberSettings = () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
+                // `agreeToDeclaration` is the stored field; `declarationAccepted`
+                // is not a key the server reads, so the consent was recorded as
+                // false for everyone who saved from here.
                 body: JSON.stringify({
                     sisterConcerns: formData.sisterConcerns,
                     companyNames: formData.companyNames,
-                    declarationAccepted: formData.declarationAccepted
+                    agreeToDeclaration: formData.declarationAccepted
                 })
             });
 
@@ -322,10 +363,12 @@ const MemberSettings = () => {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
+                // Same again: `panNumber`, not `pan`. The three identifiers a
+                // member is most likely to correct were the three being lost.
                 body: JSON.stringify({
-                    pan: formData.pan,
-                    gst: formData.gst,
-                    udyam: formData.udyam,
+                    panNumber: formData.pan,
+                    gstNumber: formData.gst,
+                    udyamNumber: formData.udyam,
                     filedITR: formData.filedITR || undefined,
                     turnoverRange: formData.turnoverRange,
                     govtSchemes: formData.govtSchemes || undefined,
@@ -392,12 +435,12 @@ const MemberSettings = () => {
 
     if (loading) {
         return (
-            <div className="flex h-screen bg-gray-50">
+            <div className="flex h-screen bg-white font-sans">
                 <MemberSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
                 <div className="flex-1 flex items-center justify-center">
                     <div className="text-center">
                         <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-gray-600">Loading...</p>
+                        <p className="text-slate-500">Loading...</p>
                     </div>
                 </div>
             </div>
@@ -405,31 +448,38 @@ const MemberSettings = () => {
     }
 
     return (
-        <div className="flex h-screen bg-gray-50">
+        <div className="flex h-screen bg-slate-50">
             <MemberSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
             
             <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Header */}
-                <header className="bg-white shadow-sm z-10">
-                    <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-800">Settings</h1>
-                            <p className="text-sm text-gray-600 mt-1">Manage your profile and account preferences</p>
-                        </div>
-                        <button
-                            className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
-                            onClick={() => setSidebarOpen(true)}
-                        >
-                            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
-                        </button>
+                <header className="h-[5.5rem] shrink-0 bg-white border-b border-slate-200 flex items-center gap-3 px-6 z-10">
+                    <button
+                        type="button"
+                        className="lg:hidden text-slate-500 hover:text-slate-700 shrink-0"
+                        onClick={() => setSidebarOpen(true)}
+                        aria-label="Open menu"
+                    >
+                        <Menu className="w-5 h-5" />
+                    </button>
+
+                    <div className="min-w-0">
+                        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900 truncate">
+                            Settings
+                        </h1>
+                        <p className="text-sm text-slate-500 mt-0.5 truncate hidden sm:block">
+                            Manage your profile and account preferences
+                        </p>
+                    </div>
+
+                    <div className="ml-auto flex items-center gap-2 shrink-0">
+                        <MemberTopBar />
                     </div>
                 </header>
 
                 {/* Content */}
-                <div className="flex-1 p-4 md:p-6 overflow-auto">
-                    <div className="max-w-4xl mx-auto space-y-6">
+                <div className="flex-1 p-6 overflow-auto">
+                    <div className="max-w-[90rem] space-y-6">
                         {/* Profile Photo Section */}
                         <Card>
                             <CardHeader>
@@ -440,7 +490,7 @@ const MemberSettings = () => {
                                     <div className="relative">
                                         <Avatar className="w-24 h-24">
                                             <AvatarImage src={profilePhoto || undefined} />
-                                            <AvatarFallback className="bg-gradient-to-br from-blue-600 to-blue-800 text-white text-2xl font-bold">
+                                            <AvatarFallback className="bg-blue-600 text-white text-2xl font-bold">
                                                 {formData.name ? formData.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "U"}
                                             </AvatarFallback>
                                         </Avatar>
@@ -469,7 +519,7 @@ const MemberSettings = () => {
                                                 {isUploadingPhoto ? 'Uploading...' : 'Change Photo'}
                                             </Button>
                                         </label>
-                                        <p className="text-xs text-gray-500 mt-2">JPG, PNG or GIF. Max size 5MB.</p>
+                                        <p className="text-xs text-slate-500 mt-2">JPG, PNG or GIF. Max size 5MB.</p>
                                     </div>
                                 </div>
                             </CardContent>
@@ -783,6 +833,43 @@ const MemberSettings = () => {
 
                         </>
                         )}
+
+                        {/*
+                          * Why an applicant sees one section and not four.
+                          *
+                          * Settings is in the rail from the day the account exists
+                          * now, so an applicant reaches this screen while their
+                          * business, financial and declaration forms are still with
+                          * the review team — locked on purpose, because a file that
+                          * changes underneath a reviewer is a file nobody has
+                          * actually approved. Without this note the screen reads as
+                          * three missing sections; with it, it reads as three
+                          * sections that are exactly where they should be.
+                          */}
+                        {!isPaid && (
+                        <Card className="border-blue-100 bg-blue-50/60">
+                            <CardContent className="pt-6">
+                                <p className="text-sm font-bold text-slate-900">
+                                    Your application forms are locked while they are in review
+                                </p>
+                                <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
+                                    Your contact details above can be changed at any time. The business,
+                                    financial and declaration sections were submitted with your application
+                                    and stay as the review team received them. If one of them needs a
+                                    correction, send it from{' '}
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate('/member/help')}
+                                        className="font-semibold text-blue-700 hover:underline"
+                                    >
+                                        Help &amp; Support
+                                    </button>{' '}
+                                    with your application reference.
+                                </p>
+                            </CardContent>
+                        </Card>
+                        )}
+
                         {/* Save Button */}
                         <Card>
                             <CardContent className="pt-6">

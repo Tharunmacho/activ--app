@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +56,10 @@ type ProfileData = {
   organization?: string;
   constitution?: string;
   businessTypes?: string[];
+  /* A field of its own. The Business Activities textarea was registered as
+     `businessYear`, so the description and the commencement year shared one
+     value and each overwrote the other. */
+  businessActivities?: string;
   businessYear?: string;
   employees?: string;
   chamber?: string;
@@ -100,6 +104,7 @@ const defaultProfile: ProfileData = {
   organization: "",
   constitution: "",
   businessTypes: [],
+  businessActivities: "",
   businessYear: "",
   employees: "",
   chamber: "",
@@ -164,14 +169,14 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl bg-white border border-[#E8EEF6] shadow-sm p-5 lg:p-6">
+    <section className="rounded-2xl bg-white border border-[#E8EEF6] shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-5 lg:p-6">
       <div className="flex items-start gap-3 pb-4 mb-5 border-b border-[#F1F5F9]">
         <span className="w-10 h-10 rounded-xl bg-[#EEF3FE] flex items-center justify-center shrink-0">
           <Icon className="w-[1.125rem] h-[1.125rem] text-[#1E50E6]" />
         </span>
         <div className="min-w-0">
           <h3 className="font-display text-[0.9375rem] font-bold text-[#0F172A] leading-tight">{title}</h3>
-          {subtitle ? <p className="text-[0.78125rem] text-[#64748B] mt-1 leading-snug">{subtitle}</p> : null}
+          {subtitle ? <p className="text-[0.8125rem] text-[#64748B] mt-1 leading-snug">{subtitle}</p> : null}
         </div>
       </div>
       {children}
@@ -190,6 +195,17 @@ export default function Profile() {
   const [districts, setDistricts] = useState<string[]>([]);
   const [blocks, setBlocks] = useState<string[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(1);
+  /**
+   * The furthest step this member has reached — NOT the same as `currentStep`.
+   *
+   * The rail decided "can I click this?" with `s.n < currentStep`, which is only
+   * true for steps behind the one on screen. So the moment a returning member
+   * was resumed onto step 3, steps 1 and 2 were clickable and 4 was not — right
+   * — but stepping BACK to 2 to check an answer made 3 and 4 unreachable again,
+   * and the only way forward was to re-submit each step in turn. High-water mark
+   * kept separately, so the rail walks both ways.
+   */
+  const [furthestStep, setFurthestStep] = useState<number>(1);
   const [isLocked, setIsLocked] = useState(false);
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
   const [hasExistingProfile, setHasExistingProfile] = useState(false);
@@ -208,6 +224,28 @@ export default function Profile() {
    */
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
   const navigate = useNavigate();
+  /**
+   * `?step=3` — "open this application AT the financial step".
+   *
+   * My Profile and My Documents list the four sections with a "Complete now"
+   * against each, and those pointed at `/member/forms/financial` — the
+   * standalone form pages, which are a SECOND set of screens asking the same
+   * questions. A member filling one of those is not filling in this
+   * application: different screen, different stepper, and nothing carries them
+   * on to the step after it. The links come here now and name the step, so
+   * "Complete now" against Financial opens the financial step of the
+   * application the member is actually completing.
+   *
+   * A hint, not a command: the loader below still resolves where the member
+   * genuinely is, and this only chooses between steps they have reached. An
+   * out-of-range or unreached step is ignored rather than obeyed — a link is
+   * not a reason to let someone skip a form.
+   */
+  const [searchParams] = useSearchParams();
+  const requestedStep = (() => {
+    const raw = Number(searchParams.get('step'));
+    return Number.isInteger(raw) && raw >= 1 && raw <= 4 ? raw : 0;
+  })();
 
   const {
     register,
@@ -220,7 +258,20 @@ export default function Profile() {
 
   // Auto-save disabled - Data is saved manually when clicking Save/Next buttons
 
-  // Load profile data from backend on mount
+  /**
+   * EVERY STEP THE MEMBER HAS ALREADY ANSWERED, BACK IN ITS FIELDS.
+   *
+   * This used to load step 1 and then `return` inside the `if (personalResult
+   * .data)` branch — so the business, financial and declaration reads below it
+   * were only ever reached by a member who had NO personal profile, which is
+   * nobody who has completed a step. Anyone who filled in step 2 and came back
+   * found it blank, retyped it, and saved a second time over the top.
+   *
+   * The four reads are independent and are issued together. One failing must
+   * not blank the others: each is applied only if it answers, and `reset` is
+   * called ONCE at the end with everything merged, so React Hook Form gets one
+   * new baseline rather than four partial ones racing each other.
+   */
   useEffect(() => {
     const loadUserProfile = async () => {
       try {
@@ -229,113 +280,226 @@ export default function Profile() {
         // If authenticated, load from backend
         if (!token) return;
 
-        // Load personal form data
-        const personalFormResponse = await apiFetch("/members/my-profile", {
+        const auth = {
           headers: {
             "Authorization": `Bearer ${token}`,
             "Content-Type": "application/json"
           }
-        });
+        };
 
-
-        if (personalFormResponse.ok) {
-          const personalResult = await personalFormResponse.json();
-
-          if (personalResult.data) {
-            const formData = personalResult.data;
-
-            setHasExistingProfile(true);
-            setIsLocked(formData.isLocked || false);
-
-            const formValues = {
-              name: formData.fullName || formData.name || "",
-              phone: formData.phoneNumber || "",
-              email: formData.email || "",
-              state: formData.state || "",
-              district: formData.district || "",
-              block: formData.block || "",
-              city: formData.city || "",
-              religion: formData.religion || "",
-              socialCategory: formData.socialCategory || "",
-              password: "",
-              confirmPassword: "",
-              currentPassword: ""
-            };
-
-            reset(formValues);
-
-            // Load districts if state exists
-            if (formData.state) {
-              getDistricts(formData.state)
-                .then((r) => setDistricts((r.districts || []).map((d) => d.name)))
-                .catch(() => setDistricts([]));
-
-              // Load blocks if district exists
-              if (formData.district) {
-                getBlocks(formData.state, formData.district)
-                  .then((r) => setBlocks((r.blocks || []).map((b) => b.name)))
-                  .catch(() => setBlocks([]));
-              }
-            }
-            return;
+        /** A step's payload, or null if it is not there yet. */
+        const read = async (path: string) => {
+          try {
+            const response = await apiFetch(path, auth);
+            if (!response.ok) return { status: response.status, data: null as any };
+            const body = await response.json();
+            return { status: response.status, data: body?.data ?? null };
+          } catch {
+            return { status: 0, data: null as any };
           }
-        }
+        };
+
+        const [personal, business, financial, declaration] = await Promise.all([
+          read("/members/my-profile"),
+          read("/members/business-info"),
+          read("/members/financial-info"),
+          read("/members/declaration-info"),
+        ]);
 
         /**
-         * A 404 here means this account has no member record at all.
+         * A 404 on the personal read means this account has no member record at
+         * all.
          *
-         * `GET /members/my-profile` looks the caller up in the "web users"
-         * (MemberDetails) collection. An admin — block, district, state or super
-         * — lives in `adminsdb`, not there, so the call answers
-         * `404 Profile not found`. This branch used to fall straight through and
-         * leave the form rendered empty and editable, which reads exactly like a
-         * member who simply has not filled anything in yet. It is not: pressing
-         * "Save Personal Details" then calls `PUT /members/profile`, which does
-         * the same lookup and answers `404 Member not found`, so the form can
-         * never save either. Saying so is the difference between a blank form
-         * and an explanation.
+         * `GET /members/my-profile` looks the caller up in the MemberDetails
+         * collection. An admin — block, district, state or super — lives in
+         * `adminsdb`, not there, so the call answers `404 Profile not found`.
+         * This used to fall through and leave the form rendered empty and
+         * editable, which reads exactly like a member who has not filled
+         * anything in yet. It is not: pressing Save then calls
+         * `PUT /members/profile`, which does the same lookup and answers
+         * `404 Member not found`, so the form can never save either. Saying so
+         * is the difference between a blank form and an explanation.
          */
-        if (personalFormResponse.status === 404) {
+        if (personal.status === 404) {
           setNoMemberRecord(true);
           return;
         }
 
-        // Load business form data
-        const businessFormResponse = await apiFetch("/members/business-info", {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json"
-          }
-        });
+        /** "yes" / "no" — the shape the radio groups are registered with. */
+        const yesNo = (value: unknown): string => {
+          if (value === true) return "yes";
+          if (value === false) return "no";
+          if (value === "yes" || value === "no") return value;
+          return "";
+        };
 
+        const merged: Record<string, unknown> = {};
+        /** Which steps actually came back answered — drives the rail below. */
+        const answered = { personal: false, business: false, financial: false };
 
-        if (businessFormResponse.ok) {
-          const businessResult = await businessFormResponse.json();
+        // ------------------------------------------------- step 1: personal
+        if (personal.data) {
+          const d = personal.data;
+          answered.personal = true;
+          setHasExistingProfile(true);
+          setIsLocked(d.isLocked || false);
 
-          if (businessResult.data) {
-            const businessData = businessResult.data;
+          Object.assign(merged, {
+            name: d.fullName || d.name || "",
+            phone: d.phoneNumber || "",
+            email: d.email || "",
+            state: d.state || "",
+            district: d.district || "",
+            block: d.block || "",
+            city: d.city || "",
+            religion: d.religion || "",
+            socialCategory: d.socialCategory || "",
+            // Never restored: these are not stored, and a prefilled password box
+            // is a password box the member cannot tell is empty.
+            password: "",
+            confirmPassword: "",
+            currentPassword: ""
+          });
 
-            reset(prev => ({
-              ...prev,
-              doingBusiness: businessData.doingBusiness || "",
-              organization: businessData.organization || "",
-              constitution: businessData.constitution || "",
-              businessTypes: businessData.businessTypes || [],
-              businessYear: businessData.businessYear || "",
-              employees: businessData.employees || "",
-              chamber: businessData.chamber || "",
-              chamberDetails: businessData.chamberDetails || "",
-              govtOrgs: businessData.govtOrgs || []
-            }));
+          // The two dependent dropdowns need their options before the values
+          // above can select anything — an <option> that does not exist yet
+          // cannot be the selected one.
+          if (d.state) {
+            getDistricts(d.state)
+              .then((r) => setDistricts((r.districts || []).map((x) => x.name)))
+              .catch(() => setDistricts([]));
+
+            if (d.district) {
+              getBlocks(d.state, d.district)
+                .then((r) => setBlocks((r.blocks || []).map((x) => x.name)))
+                .catch(() => setBlocks([]));
+            }
           }
         }
+
+        // ------------------------------------------------- step 2: business
+        /*
+         * Read the names `GET /members/business-info` actually returns —
+         * `organizationName`, `constitutionType`, `businessCommencementYear`,
+         * `numberOfEmployees`, `memberOfOtherChamber`, `otherChamber`,
+         * `govtOrganizations`. The form's own shorthand is kept as a fallback so
+         * a cached or older response shape still populates rather than blanking
+         * the step.
+         */
+        if (business.data) {
+          const d = business.data;
+          answered.business = d.doingBusiness !== null && d.doingBusiness !== undefined;
+
+          Object.assign(merged, {
+            doingBusiness: yesNo(d.doingBusiness),
+            organization: d.organizationName || d.organization || "",
+            constitution: d.constitutionType || d.constitution || "",
+            businessTypes: d.businessTypes || [],
+            businessActivities: d.businessActivities || "",
+            businessYear: String(d.businessCommencementYear || d.businessYear || ""),
+            employees: String(d.numberOfEmployees || d.employees || ""),
+            chamber: yesNo(d.memberOfOtherChamber ?? d.chamber),
+            chamberDetails: d.otherChamber || d.chamberDetails || "",
+            govtOrgs: d.govtOrganizations || d.govtOrgs || []
+          });
+        }
+
+        // ------------------------------------------------ step 3: financial
+        if (financial.data) {
+          const d = financial.data;
+          answered.financial = Boolean(
+            d.panNumber || d.gstNumber || d.udyamNumber || d.turnoverRange
+          );
+
+          /*
+           * `schemeDetails` is one stored string behind three inputs, joined
+           * with ", " on the way out. Split on the same separator so the three
+           * boxes come back the way they were typed. A fourth entry would be
+           * lost, so the remainder is kept on the third rather than dropped.
+           */
+          const schemes = String(d.schemeDetails || "")
+            .split(",")
+            .map((part: string) => part.trim())
+            .filter(Boolean);
+
+          const turnovers: string[] = Array.isArray(d.turnoverLast3Years)
+            ? d.turnoverLast3Years.map((value: unknown) => String(value ?? ""))
+            : [];
+
+          Object.assign(merged, {
+            pan: d.panNumber || "",
+            gst: d.gstNumber || "",
+            udyam: d.udyamNumber || "",
+            filedITR: yesNo(d.filedITR),
+            itrYears: d.itrYears === null || d.itrYears === undefined ? "" : String(d.itrYears),
+            turnoverRange: d.turnoverRange || "",
+            turnover1: turnovers[0] || "",
+            turnover2: turnovers[1] || "",
+            turnover3: turnovers[2] || "",
+            // The radio asks "have you benefited from a scheme" — that answer is
+            // `govtSchemeBenefit`, not the list of scheme names.
+            govtSchemes: yesNo(d.govtSchemeBenefit),
+            scheme1: schemes[0] || "",
+            scheme2: schemes[1] || "",
+            scheme3: schemes.slice(2).join(", ")
+          });
+        }
+
+        // ---------------------------------------------- step 4: declaration
+        if (declaration.data) {
+          const d = declaration.data;
+          const names: string[] = Array.isArray(d.companyNames)
+            ? d.companyNames.map((value: unknown) => String(value ?? ""))
+            : [];
+
+          Object.assign(merged, {
+            sisterConcerns: d.sisterConcerns === null || d.sisterConcerns === undefined
+              ? ""
+              : String(d.sisterConcerns),
+            companyNames: names.join(", ")
+          });
+
+          /*
+           * These two live outside the form, so `reset` cannot restore them.
+           * The row list keeps one empty box when there is nothing stored, or
+           * the member is left with an "Add" button and nowhere to type.
+           */
+          setCompanyNames(names.length ? names : [""]);
+          setDeclarationAccepted(d.agreeToDeclaration === true);
+        }
+
+        // One baseline, once — see the note above this effect.
+        if (Object.keys(merged).length) {
+          reset((prev: ProfileData) => ({ ...prev, ...merged } as ProfileData));
+        }
+
+        /**
+         * OPEN THE FIRST STEP THAT STILL NEEDS AN ANSWER.
+         *
+         * A member who had filled two steps and came back landed on step 1 with
+         * no way forward: the rail only lets you click a step you have already
+         * passed, and `currentStep` always started at 1, so steps 2, 3 and 4
+         * were unreachable until step 1 was submitted again. Resuming where they
+         * stopped is also simply what "come back later" means for a form whose
+         * own strapline is "everything saves as you go".
+         *
+         * `furthestStep` is remembered separately so the rail stays walkable in
+         * BOTH directions afterwards — going back to check step 2 must not make
+         * steps 3 and 4 unreachable again.
+         */
+        const firstUnanswered = [answered.personal, answered.business, answered.financial]
+          .findIndex((done) => !done);
+        const resumeAt = firstUnanswered === -1 ? 4 : firstUnanswered + 1;
+        setFurthestStep(resumeAt);
+        // `?step=` may only pick a step at or before the one they have reached.
+        setCurrentStep(requestedStep && requestedStep <= resumeAt ? requestedStep : resumeAt);
       } catch (error) {
         console.error("Error loading profile:", error);
       }
     };
 
     loadUserProfile();
-  }, [reset]);
+  }, [reset, requestedStep]);
 
   /**
    * Selectable states come from the admin database, never a bundled list.
@@ -405,6 +569,18 @@ export default function Profile() {
     };
     loadBlocks();
   }, [selectedState, selectedDistrict]);
+
+  /**
+   * Move forward a step, and remember that this member has now reached it.
+   *
+   * Advancing with a bare `setCurrentStep` was what made the rail forget: the
+   * step opened, the member filled it in, and nothing recorded that they had
+   * ever been there — so on the next visit the rail offered them step 1 again.
+   */
+  const advanceTo = (step: number) => {
+    setFurthestStep((mark) => Math.max(mark, step));
+    setCurrentStep(step);
+  };
 
   const saveCurrentStepData = (data: ProfileData) => {
     const currentData = JSON.parse(localStorage.getItem("userProfile") || "{}");
@@ -568,7 +744,7 @@ export default function Profile() {
     if (currentStep === 1) {
       const saved = await saveStep1(data);
       if (saved) {
-        setCurrentStep(2);
+        advanceTo(2);
       }
     } else if (currentStep === 2) {
       if (data.doingBusiness === "no") {
@@ -658,17 +834,29 @@ export default function Profile() {
         try {
           const token = localStorage.getItem("token");
           if (token) {
+            /*
+             * The names the schema actually stores.
+             *
+             * This sent `organization`, `constitution`, `businessYear`,
+             * `employees`, `chamber` and `govtOrgs` — none of which
+             * `updateMember` reads. Mongoose strict mode dropped every one of
+             * them, the request answered 200 and the toast said "saved", so a
+             * member filled in eight fields and got two back. The server now
+             * also accepts the short names (see `FIELD_ALIASES`), but sending
+             * the real ones is the fix; the aliases are there for the clients
+             * that cannot be corrected retroactively.
+             */
             const businessData = {
               doingBusiness: data.doingBusiness,
-              organization: data.organization,
-              constitution: data.constitution,
+              organizationName: data.organization,
+              constitutionType: data.constitution,
               businessTypes: data.businessTypes,
-              businessActivities: data.businessYear, // Using businessYear field for activities
-              businessYear: data.businessYear,
-              employees: data.employees,
-              chamber: data.chamber,
-              chamberDetails: data.chamberDetails || "",
-              govtOrgs: data.govtOrgs || []
+              businessActivities: data.businessActivities,
+              businessCommencementYear: data.businessYear,
+              numberOfEmployees: data.employees,
+              memberOfOtherChamber: data.chamber,
+              otherChamber: data.chamberDetails || "",
+              govtOrganizations: data.govtOrgs || []
             };
 
 
@@ -703,7 +891,7 @@ export default function Profile() {
         }
 
         saveCurrentStepData(data);
-        setCurrentStep(3);
+        advanceTo(3);
       } else {
         toast.error("Please select if you are doing business");
       }
@@ -712,20 +900,52 @@ export default function Profile() {
       try {
         const token = localStorage.getItem("token");
         if (token) {
+          /*
+           * `panNumber`, not `pan` — same story as the business block above.
+           *
+           * The three identifiers a member is most likely to check afterwards
+           * were the three being dropped. `scheme1..3` are three inputs behind
+           * one stored field, so they are joined here rather than sent as
+           * three keys the schema has never had.
+           */
+          const schemeDetails = [data.scheme1, data.scheme2, data.scheme3]
+            .map((value: unknown) => String(value || "").trim())
+            .filter(Boolean)
+            .join(", ");
+
+          /*
+           * `govtSchemes` is a yes/no RADIO on this form, not a list.
+           *
+           * It was being sent as `govtSchemes` (a `[String]` field, so "no"
+           * stored as `["no"]`) and the derived flag was
+           * `(data.govtSchemes || []).length > 0` — `.length` on a string. "no"
+           * is two characters, so a member answering NO was recorded as a
+           * scheme beneficiary, and the form read that back as "yes" the next
+           * time they opened it. The question the radio actually asks is the
+           * one `govtSchemeBenefit` stores; the scheme names live in
+           * `schemeDetails`, from the three boxes below it.
+           */
+          const turnoverLast3Years = [data.turnover1, data.turnover2, data.turnover3]
+            .map((value: unknown) => String(value || "").trim());
+
           const financialData = {
-            pan: data.pan,
-            gst: data.gst,
-            udyam: data.udyam,
+            panNumber: data.pan,
+            gstNumber: data.gst,
+            udyamNumber: data.udyam,
             filedITR: data.filedITR,
-            itrYears: data.itrYears,
+            // Blank means "not answered" to the server, which leaves whatever
+            // is stored alone — the field is only shown once ITR is answered
+            // yes, so a member who never sees it cannot blank it by accident.
+            itrYears: data.itrYears ?? "",
             turnoverRange: data.turnoverRange,
-            turnover1: data.turnover1,
-            turnover2: data.turnover2,
-            turnover3: data.turnover3,
-            govtSchemes: data.govtSchemes,
-            scheme1: data.scheme1 || "",
-            scheme2: data.scheme2 || "",
-            scheme3: data.scheme3 || ""
+            // Sent even when all three are blank — that is how a member clears
+            // them. Trailing blanks are trimmed so an untouched form does not
+            // store three empty strings.
+            turnoverLast3Years: turnoverLast3Years.some(Boolean)
+              ? turnoverLast3Years
+              : [],
+            govtSchemeBenefit: data.govtSchemes === "yes",
+            schemeDetails
           };
 
           const response = await apiFetch("/members/profile", {
@@ -754,7 +974,7 @@ export default function Profile() {
       }
 
       saveCurrentStepData(data);
-      setCurrentStep(4);
+      advanceTo(4);
     }
   };
 
@@ -980,23 +1200,71 @@ export default function Profile() {
       width="wide"
       sidebar={false}
     >
-      <div className="mx-auto w-full max-w-[87.5rem]">
-        <div className="grid gap-6 lg:grid-cols-[292px_minmax(0,1fr)] items-start">
+      <div className="w-full">
+        {/*
+          THE STEP HEADING SPANS BOTH COLUMNS.
 
-          {/* ======================================================= left rail */}
-          <aside className="lg:sticky lg:top-6">
-            <div className="rounded-2xl border border-[#E8EEF6] bg-white shadow-sm overflow-hidden">
+          It used to be the first thing INSIDE the right-hand column, which is
+          why the two cards never lined up: the form column began with ~5rem of
+          heading and the membership card began with the card, so the card's top
+          edge landed level with the middle of the first form card. Nothing was
+          mis-set — they were being measured from different starting points.
+
+          Above the grid, both columns start on the same line, and the heading
+          reads as what it is: the title of this step, not a caption for the
+          right-hand column.
+        */}
+        <div className="mb-6">
+          <h2 className="font-display text-[1.375rem] lg:text-[1.5625rem] font-extrabold
+                         tracking-tight text-[#0F172A]">
+            {heading.title}
+          </h2>
+          <p className="text-sm text-[#64748B] mt-1 max-w-[68ch]">{heading.blurb}</p>
+        </div>
+
+        <div className="grid gap-6 lg:gap-7 lg:grid-cols-[23rem_minmax(0,1fr)] items-start">
+
+          {/* ======================================================= left rail
+              THE CARD RUNS TO THE BOTTOM OF THE VIEW.
+
+              It used to be as tall as its own contents — brand block, four
+              steps, a help line — and then stopped, leaving a stub beside a
+              form column three times its height. Nothing was misaligned; the
+              rail simply ended in the middle of the page and the eye read the
+              white below it as something missing.
+
+              A screen tall instead: 100vh less the header, the page padding
+              above and below, and the step heading that now sits above the
+              grid — so its foot lands on the fold.
+
+              NOT STICKY, and that is the point. Sticky made the card leave its
+              row the moment the page moved: it locked under the header while
+              the form column kept scrolling, so the two card tops were flush at
+              the top of the page and nowhere else. A pinned card that drifts
+              out of line with the thing beside it reads as a misalignment every
+              time you scroll, which is worse than losing the pinning. Both
+              cards are ordinary items in one grid row now, so they start on the
+              same line at every scroll position.
+
+              The steps take the space they need, `Need help?` is pushed to the
+              floor of the card,
+              and the flexible middle absorbs the difference — so the rail meets
+              the bottom of the window at every height instead of at four
+              particular ones. The nav scrolls within itself on a short screen,
+              so a laptop can still reach step 4. */}
+          <aside className="lg:h-[calc(100vh-13.5rem)]">
+            <div className="h-full flex flex-col rounded-2xl border border-[#E8EEF6] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] overflow-hidden">
 
               {/* Brand and progress, in one block, so "how far am I" is answered
                   before the eye reaches the steps. */}
-              <div className="bg-gradient-to-br from-[#3B6FF5] to-[#1E3FA8] text-white p-5 lg:p-6">
+              <div className="shrink-0 bg-blue-600 text-white p-5 lg:p-6">
                 <p className="text-[0.625rem] font-bold uppercase tracking-[0.14em] text-white/70">
                   Membership application
                 </p>
                 <h2 className="font-display text-xl font-extrabold mt-1.5 tracking-tight">
                   ACTIV Membership
                 </h2>
-                <p className="text-[0.78125rem] text-white/80 mt-1 leading-snug">
+                <p className="text-[0.8125rem] text-white/80 mt-1 leading-snug">
                   Four steps. Everything saves as you go.
                 </p>
 
@@ -1013,29 +1281,46 @@ export default function Profile() {
                 </div>
               </div>
 
-              {/* The four steps. A cleared step links back to itself; an unreached
-                  one does not, so the rail can never skip a member past a form
-                  they have not filled in. */}
-              <nav className="p-3" aria-label="Application steps">
+              {/*
+                  THE FOUR STEPS, SPREAD DOWN THE CARD.
+
+                  A cleared step links back to itself; an unreached one does
+                  not, so the rail can never skip a member past a form they have
+                  not filled in.
+
+                  Each row takes an equal share of the height and the connector
+                  between two nodes grows with it, so a taller card reads as a
+                  longer journey rather than a short list with a hole underneath.
+                  What does NOT grow is the tinted panel behind the current step:
+                  that hugs its own two lines, because a highlight stretched to a
+                  quarter of the card is a coloured rectangle, not a marker.
+                  `min-h` keeps a row legible on a laptop, at which point the nav
+                  scrolls instead of crushing them. */}
+              <nav className="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col"
+                   aria-label="Application steps">
                 {RAIL.map((s, i) => {
+                  // `done` paints the green tick: a step BEHIND the one on
+                  // screen. `reachable` decides whether it can be clicked, and
+                  // is the high-water mark — see `furthestStep`.
                   const done = s.n < currentStep;
+                  const reachable = s.n <= Math.max(currentStep, furthestStep);
                   const active = s.n === currentStep;
                   const last = i === RAIL.length - 1;
                   return (
                     <button
                       key={s.n}
                       type="button"
-                      onClick={() => done && setCurrentStep(s.n)}
-                      disabled={!done}
+                      onClick={() => reachable && setCurrentStep(s.n)}
+                      disabled={!reachable}
                       aria-current={active ? 'step' : undefined}
-                      className={`w-full flex gap-3 text-left rounded-xl px-3 py-2.5 transition-colors
-                                  focus-visible:outline focus-visible:outline-2
+                      className={`group w-full flex-1 min-h-[3.5rem] flex gap-3 text-left pl-3
+                                  rounded-xl focus-visible:outline focus-visible:outline-2
                                   focus-visible:outline-offset-2 focus-visible:outline-[#1E50E6]
-                                  ${active ? 'bg-[#EEF3FE]' : done ? 'hover:bg-slate-50' : 'cursor-default'}`}
+                                  ${reachable ? '' : 'cursor-default'}`}
                     >
-                      <span className="flex flex-col items-center shrink-0">
+                      <span className="flex flex-col items-center shrink-0 pt-2.5">
                         <span className={`w-7 h-7 rounded-full flex items-center justify-center
-                                          text-[0.75rem] font-bold transition-colors ${done
+                                          text-xs font-bold transition-colors ${done
                             ? 'bg-[#16A34A] text-white'
                             : active
                               ? 'bg-[#1E50E6] text-white ring-4 ring-[#DBE6FD]'
@@ -1049,14 +1334,18 @@ export default function Profile() {
                         ) : null}
                       </span>
 
-                      <span className="min-w-0 pb-1">
-                        <span className={`block text-[0.84375rem] font-bold leading-tight ${active
+                      <span className={`min-w-0 flex-1 self-start rounded-xl px-3 py-2.5 mr-3
+                                        transition-colors ${active
+                          ? 'bg-[#EEF3FE]'
+                          : reachable ? 'group-hover:bg-slate-50' : ''
+                        }`}>
+                        <span className={`block text-sm font-bold leading-tight ${active
                             ? 'text-[#1E50E6]'
                             : done ? 'text-[#0F172A]' : 'text-[#94A3B8]'
                           }`}>
                           {s.name}
                         </span>
-                        <span className={`block text-[0.71875rem] mt-0.5 leading-snug ${active ? 'text-[#475569]' : 'text-[#94A3B8]'
+                        <span className={`block text-xs mt-0.5 leading-snug ${active ? 'text-[#475569]' : 'text-[#94A3B8]'
                           }`}>
                           {s.hint}
                         </span>
@@ -1066,7 +1355,7 @@ export default function Profile() {
                 })}
               </nav>
 
-              <div className="px-5 py-4 border-t border-[#F1F5F9] bg-slate-50/70">
+              <div className="shrink-0 px-5 py-4 border-t border-[#F1F5F9] bg-slate-50/70">
                 <p className="text-[0.625rem] font-bold uppercase tracking-[0.08em] text-[#64748B]">
                   Need help?
                 </p>
@@ -1074,7 +1363,7 @@ export default function Profile() {
                   href="https://activ.org.in"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-[0.78125rem] font-semibold text-[#1E50E6] hover:underline"
+                  className="text-[0.8125rem] font-semibold text-[#1E50E6] hover:underline"
                 >
                   activ.org.in
                 </a>
@@ -1084,14 +1373,6 @@ export default function Profile() {
 
           {/* ==================================================== the step form */}
           <div className="min-w-0 space-y-5">
-
-            <div>
-              <h2 className="font-display text-[1.375rem] lg:text-[1.5625rem] font-extrabold
-                             tracking-tight text-[#0F172A]">
-                {heading.title}
-              </h2>
-              <p className="text-[0.84375rem] text-[#64748B] mt-1 max-w-[68ch]">{heading.blurb}</p>
-            </div>
 
             {isLocked && currentStep === 1 && (
               <div className="rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] p-4
@@ -1379,9 +1660,9 @@ export default function Profile() {
                   button does not move as a card above it grows or a conditional
                   block opens.
                 */}
-                <div className="rounded-2xl bg-white border border-[#E8EEF6] shadow-sm
+                <div className="rounded-2xl bg-white border border-[#E8EEF6] shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]
                                 px-5 py-4 flex items-center gap-3">
-                  <p className="text-[0.78125rem] text-[#64748B] hidden sm:block">Step 1 of 4</p>
+                  <p className="text-[0.8125rem] text-[#64748B] hidden sm:block">Step 1 of 4</p>
                   <Button
                     type="button"
                     onClick={handleNext}
@@ -1486,11 +1767,20 @@ export default function Profile() {
                     </div>
 
                     <div>
+                      {/*
+                        * Registered as `businessActivities`, not `businessYear`.
+                        *
+                        * This textarea and the Commencement Year dropdown below
+                        * it were bound to the SAME form field. Two questions,
+                        * one value: typing a description of the business
+                        * overwrote the year, picking a year overwrote the
+                        * description, and whichever survived was saved as both.
+                        */}
                       <Label htmlFor="businessActivities">Business Activities</Label>
                       <textarea
                         id="businessActivities"
                         placeholder="Describe your business activities"
-                        {...register("businessYear")}
+                        {...register("businessActivities")}
                         className="w-full mt-1 px-3 py-2 border border-input bg-background rounded-md min-h-[6.25rem] text-sm"
                       />
                     </div>
@@ -1584,7 +1874,7 @@ export default function Profile() {
 
                 {watch("doingBusiness") === "no" && (
                   <>
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl mb-4">
                       <div className="flex items-start gap-3">
                         <div className="text-blue-600 mt-1">
                           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1612,7 +1902,7 @@ export default function Profile() {
                           <p className="text-sm text-amber-800 mb-3">
                             This application is under the Verification and Screening Process. We have every right to ACCEPT or REJECT this application according to our membership policy.
                           </p>
-                          <div className="flex items-start gap-3 p-3 bg-white rounded-lg">
+                          <div className="flex items-start gap-3 p-3 bg-white rounded-xl">
                             <input
                               type="checkbox"
                               {...register("declarationAccepted")}
@@ -1631,9 +1921,9 @@ export default function Profile() {
                 </div>
                 </Section>
 
-                <div className="rounded-2xl bg-white border border-[#E8EEF6] shadow-sm
+                <div className="rounded-2xl bg-white border border-[#E8EEF6] shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]
                                 px-5 py-4 flex items-center gap-3">
-                  <p className="text-[0.78125rem] text-[#64748B] hidden sm:block">Step 2 of 4</p>
+                  <p className="text-[0.8125rem] text-[#64748B] hidden sm:block">Step 2 of 4</p>
                   <div className="ml-auto flex items-center gap-3">
                     <Button
                       type="button"
@@ -1838,9 +2128,9 @@ export default function Profile() {
                   </Fields>
                 </Section>
 
-                <div className="rounded-2xl bg-white border border-[#E8EEF6] shadow-sm
+                <div className="rounded-2xl bg-white border border-[#E8EEF6] shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]
                                 px-5 py-4 flex items-center gap-3">
-                  <p className="text-[0.78125rem] text-[#64748B] hidden sm:block">Step 3 of 4</p>
+                  <p className="text-[0.8125rem] text-[#64748B] hidden sm:block">Step 3 of 4</p>
                   <div className="ml-auto flex items-center gap-3">
                     <Button
                       type="button"
@@ -1934,7 +2224,7 @@ export default function Profile() {
 
                 <Section icon={ScrollText} title="The undertaking" subtitle="Read this before you submit — it is the agreement your application is reviewed under.">
                   <div className="rounded-xl bg-[#FFFBEB] border border-[#FDE68A] p-5">
-                    <p className="text-[0.84375rem] text-[#92400E] leading-relaxed">
+                    <p className="text-sm text-[#92400E] leading-relaxed">
                       This application is under the Verification and Screening Process. We have every
                       right to ACCEPT or REJECT this application according to our membership policy.
                     </p>
@@ -1947,7 +2237,7 @@ export default function Profile() {
                         onChange={(e) => setDeclarationAccepted(e.target.checked)}
                         className="mt-0.5 w-4 h-4 accent-[#B45309] shrink-0"
                       />
-                      <span className="text-[0.84375rem] font-semibold text-[#92400E]">
+                      <span className="text-sm font-semibold text-[#92400E]">
                         I confirm the above information is true and correct
                         <span className="text-red-600 ml-0.5">*</span>
                       </span>
@@ -1955,9 +2245,9 @@ export default function Profile() {
                   </div>
                 </Section>
 
-                <div className="rounded-2xl bg-white border border-[#E8EEF6] shadow-sm
+                <div className="rounded-2xl bg-white border border-[#E8EEF6] shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]
                                 px-5 py-4 flex items-center gap-3">
-                  <p className="text-[0.78125rem] text-[#64748B] hidden sm:block">Last step</p>
+                  <p className="text-[0.8125rem] text-[#64748B] hidden sm:block">Last step</p>
                   <div className="ml-auto flex items-center gap-3">
                     <Button
                       type="button"

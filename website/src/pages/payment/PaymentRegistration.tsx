@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, ArrowLeft, Shield, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { getUserApplication } from '@/services/applicationApi';
-import { ASPIRANT_PLAN } from '@/features/member/membershipPlans';
+import { resolvePlanEligibility } from '@/features/member/membershipPlans';
 import { getPaymentStatus } from "@/services/activApi";
 
 export default function PaymentRegistration() {
@@ -79,15 +79,27 @@ export default function PaymentRegistration() {
        * `result.paymentUrl` from a response that never arrived. Mobile makes no
        * request when a plan is chosen; the gateway records the payment.
        *
-       * The aspirant price is read from the shared plan definition rather than
-       * repeated here, so it cannot drift from what the plan picker charges.
+       * THE ASPIRANT PRICE IS ASKED FOR, NOT ASSUMED. It used to come from a
+       * constant in the bundle, which stopped being the price the moment the
+       * Super Admin edited it — and this screen hands that number to the
+       * gateway. Resolved live, it is the same figure the plans screen shows
+       * and the same one the server charges.
        */
+      const eligibility = await resolvePlanEligibility();
+      const plan = eligibility.selected;
+
+      if (!plan) {
+        toast.error('Could not read the membership price. Please try again.');
+        setProcessing(false);
+        return;
+      }
+
       navigate('/payment/gateway', {
         state: {
-          planType: ASPIRANT_PLAN.name,
-          planId: ASPIRANT_PLAN.id,
-          planAmount: ASPIRANT_PLAN.price,
-          totalAmount: ASPIRANT_PLAN.price,
+          planType: plan.name,
+          planId: plan.id,
+          planAmount: plan.price,
+          totalAmount: plan.price,
           applicationId: application?.applicationId || application?._id || '',
         },
       });
@@ -103,7 +115,7 @@ export default function PaymentRegistration() {
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-700">Loading payment details...</p>
+          <p className="text-slate-700">Loading payment details...</p>
         </div>
       </div>
     );
@@ -112,15 +124,15 @@ export default function PaymentRegistration() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="bg-white border-b border-gray-300 sticky top-0 z-50 shadow-md">
+      <div className="bg-white border-b border-slate-300 sticky top-0 z-50 shadow-md">
         <div className="max-w-7xl mx-auto px-6 py-5 flex items-center gap-4">
           <button
             onClick={() => navigate('/member/application-status')}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-200 hover:scale-105"
+            className="p-2 hover:bg-slate-100 rounded-lg transition-all duration-200 hover:scale-105"
           >
-            <ArrowLeft className="w-6 h-6 text-gray-700" />
+            <ArrowLeft className="w-6 h-6 text-slate-700" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">Payment Registration</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Payment Registration</h1>
         </div>
       </div>
 
@@ -132,10 +144,10 @@ export default function PaymentRegistration() {
               Complete Your Registration
             </span>
           </div>
-          <h1 className="text-5xl font-bold text-gray-900 mb-4">
+          <h1 className="text-5xl font-bold text-slate-900 mb-4">
             Aspirant Membership
           </h1>
-          <p className="text-gray-600 text-lg max-w-2xl mx-auto leading-relaxed">
+          <p className="text-slate-600 text-lg max-w-2xl mx-auto leading-relaxed">
             Join our community of aspiring professionals and unlock exclusive student benefits
           </p>
         </div>
@@ -150,12 +162,12 @@ export default function PaymentRegistration() {
               <CardContent className="p-8">
                 <div className="flex items-start justify-between mb-6">
                   <div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Aspirant Plan</h3>
-                    <p className="text-gray-600 text-sm">For students without company experience</p>
+                    <h3 className="text-2xl font-bold text-slate-900 mb-2">Aspirant Plan</h3>
+                    <p className="text-slate-600 text-sm">For students without company experience</p>
                   </div>
                   <div className="text-right">
                     <div className="text-5xl font-bold text-blue-600">₹2,000</div>
-                    <div className="text-gray-600 mt-1 font-medium">per year</div>
+                    <div className="text-slate-600 mt-1 font-medium">per year</div>
                   </div>
                 </div>
 
@@ -170,7 +182,7 @@ export default function PaymentRegistration() {
                       <div className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center mt-0.5">
                         <CheckCircle className="w-4 h-4 text-white" />
                       </div>
-                      <span className="text-gray-700 text-sm leading-relaxed">{feature}</span>
+                      <span className="text-slate-700 text-sm leading-relaxed">{feature}</span>
                     </div>
                   ))}
                 </div>
@@ -207,7 +219,7 @@ export default function PaymentRegistration() {
                   <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-blue-600 flex items-center justify-center shadow-md">
                     <Shield className="w-7 h-7 text-white" />
                   </div>
-                  <h3 className="font-bold text-gray-900 text-xl">What Happens Next?</h3>
+                  <h3 className="font-bold text-slate-900 text-xl">What Happens Next?</h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[
@@ -220,7 +232,7 @@ export default function PaymentRegistration() {
                       <span className="text-xl">{item.icon}</span>
                       <div className="flex items-start gap-2">
                         <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <span className="text-gray-700 text-sm font-medium">{item.text}</span>
+                        <span className="text-slate-700 text-sm font-medium">{item.text}</span>
                       </div>
                     </div>
                   ))}
@@ -231,19 +243,19 @@ export default function PaymentRegistration() {
 
           {/* Right Column - Payment Summary */}
           <div className="lg:col-span-1">
-            <Card className="shadow-xl border-2 border-gray-300 sticky top-24 bg-white">
+            <Card className="shadow-xl border-2 border-slate-300 sticky top-24 bg-white">
               {/* Header */}
-              <div className="bg-gray-100 p-6 border-b-2 border-gray-300">
-                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <div className="bg-slate-100 p-6 border-b-2 border-slate-300">
+                <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
                   <span>💳</span> Payment Summary
                 </h2>
               </div>
 
               <CardContent className="p-8">
                 <div className="space-y-5 mb-8">
-                  <div className="flex justify-between items-center p-3 rounded-lg bg-gray-50 border border-gray-200">
-                    <span className="text-gray-600 text-sm font-medium">Member Type</span>
-                    <span className="font-bold text-gray-900">Aspirant (Student)</span>
+                  <div className="flex justify-between items-center p-3 rounded-lg bg-slate-50 border border-slate-200">
+                    <span className="text-slate-600 text-sm font-medium">Member Type</span>
+                    <span className="font-bold text-slate-900">Aspirant (Student)</span>
                   </div>
 
                   <div className="flex justify-between items-center p-3 rounded-lg bg-blue-50 border-2 border-blue-400">
@@ -251,22 +263,22 @@ export default function PaymentRegistration() {
                     <span className="font-bold text-blue-900">Aspirant Plan</span>
                   </div>
 
-                  <div className="border-t-2 border-gray-300 pt-5 mt-5">
+                  <div className="border-t-2 border-slate-300 pt-5 mt-5">
                     <div className="flex justify-between items-center mb-3 text-sm">
-                      <span className="text-gray-600">Subtotal</span>
-                      <span className="font-semibold text-gray-900">₹2,000</span>
+                      <span className="text-slate-600">Subtotal</span>
+                      <span className="font-semibold text-slate-900">₹2,000</span>
                     </div>
                     <div className="flex justify-between items-center mb-5 text-sm">
-                      <span className="text-gray-600">Tax & Fees</span>
+                      <span className="text-slate-600">Tax & Fees</span>
                       <span className="font-semibold text-green-600">₹0 (Included)</span>
                     </div>
-                    <div className="flex justify-between items-center pt-5 border-t-2 border-gray-300 bg-blue-50 -mx-8 px-8 py-5 rounded-b-lg">
-                      <span className="text-lg font-bold text-gray-900">Total Amount</span>
+                    <div className="flex justify-between items-center pt-5 border-t-2 border-slate-300 bg-blue-50 -mx-8 px-8 py-5 rounded-b-lg">
+                      <span className="text-lg font-bold text-slate-900">Total Amount</span>
                       <div className="text-right">
                         <span className="text-4xl font-bold text-blue-600 block">
                           ₹2,000
                         </span>
-                        <span className="text-xs text-gray-600">One-time payment</span>
+                        <span className="text-xs text-slate-600">One-time payment</span>
                       </div>
                     </div>
                   </div>
@@ -291,9 +303,9 @@ export default function PaymentRegistration() {
                 </Button>
 
                 {/* Trust Badges */}
-                <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-                  <p className="text-xs text-gray-500 mb-2">Trusted by 1000+ students</p>
-                  <div className="flex items-center justify-center gap-2 text-xs text-gray-600">
+                <div className="mt-6 pt-6 border-t border-slate-200 text-center">
+                  <p className="text-xs text-slate-500 mb-2">Trusted by 1000+ students</p>
+                  <div className="flex items-center justify-center gap-2 text-xs text-slate-600">
                     <Shield className="w-4 h-4 text-green-600" />
                     <span>Money-back guarantee</span>
                   </div>

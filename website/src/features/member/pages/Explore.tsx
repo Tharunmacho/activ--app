@@ -92,7 +92,7 @@ const Explore = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="min-h-screen flex bg-white">
       {/* Sidebar menu for all screen sizes */}
       <MemberSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -114,17 +114,17 @@ const Explore = () => {
 
         {/* Page content */}
         <div className="flex-1 p-3 md:p-6 overflow-auto">
-          <div className="max-w-7xl mx-auto">
-            <h1 className="text-2xl md:text-3xl font-bold mb-6 hidden md:block text-gray-800">Explore Members</h1>
+          <div className="max-w-[90rem]">
+            <h1 className="text-2xl md:text-3xl font-bold mb-6 hidden md:block text-slate-800">Explore Members</h1>
 
             {/* Search Bar */}
             <div className="relative mb-6">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
               <Input
                 placeholder="Search members, businesses, or products..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="pl-12 py-6 rounded-2xl border-2 border-gray-200 focus:border-blue-500 shadow-sm"
+                className="pl-12 py-6 rounded-2xl border-2 border-slate-200 focus:border-blue-500 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]"
               />
             </div>
 
@@ -132,15 +132,15 @@ const Explore = () => {
             {loading && (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-4 text-gray-600">Loading members...</p>
+                <p className="mt-4 text-slate-500">Loading members...</p>
               </div>
             )}
 
             {/* Members Grid */}
             {!loading && filteredMembers.length === 0 && (
               <div className="text-center py-12">
-                <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">No paid members found</p>
+                <Package className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+                <p className="text-slate-500">No paid members found</p>
               </div>
             )}
 
@@ -150,7 +150,7 @@ const Explore = () => {
                   <Card key={member.userId} className="overflow-hidden hover:shadow-2xl transition-all duration-300 rounded-2xl border-0">
                     <CardContent className="p-0">
                       {/* Member Header */}
-                      <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 text-white">
+                      <div className="bg-blue-600 p-6 text-white">
                         <div className="flex items-center gap-4 mb-4">
                           <Avatar className="w-16 h-16 border-4 border-white shadow-lg">
                             <AvatarImage src={member.profilePicture || "/placeholder.svg"} />
@@ -175,18 +175,18 @@ const Explore = () => {
 
                       {/* Companies Section */}
                       {member.companies.length > 0 && (
-                        <div className="p-4 bg-gray-50 border-b">
+                        <div className="p-4 bg-slate-50 border-b">
                           <div className="flex items-center gap-2 mb-3">
-                            <Building2 className="w-4 h-4 text-gray-600" />
-                            <span className="font-semibold text-sm text-gray-700">
+                            <Building2 className="w-4 h-4 text-slate-500" />
+                            <span className="font-semibold text-sm text-slate-700">
                               {member.companies.length} {member.companies.length === 1 ? 'Business' : 'Businesses'}
                             </span>
                           </div>
                           <div className="space-y-2">
                             {member.companies.slice(0, 2).map((company) => (
                               <div key={company._id} className="bg-white p-3 rounded-lg shadow-sm">
-                                <p className="font-medium text-sm text-gray-900">{company.businessName}</p>
-                                <p className="text-xs text-gray-500">{company.businessType}</p>
+                                <p className="font-medium text-sm text-slate-900">{company.businessName}</p>
+                                <p className="text-xs text-slate-500">{company.businessType}</p>
                               </div>
                             ))}
                           </div>
@@ -197,14 +197,14 @@ const Explore = () => {
                       {member.products.length > 0 ? (
                         <div className="p-4">
                           <div className="flex items-center justify-between mb-3">
-                            <span className="font-semibold text-sm text-gray-700">
+                            <span className="font-semibold text-sm text-slate-700">
                               {member.productCount} {member.productCount === 1 ? 'Product' : 'Products'}
                             </span>
                           </div>
                           <div className="grid grid-cols-3 gap-2">
                             {member.products.slice(0, 6).map((product) => (
                               <div key={product._id} className="relative group cursor-pointer">
-                                <div className="aspect-square bg-gray-200 rounded-lg overflow-hidden">
+                                <div className="aspect-square bg-slate-200 rounded-lg overflow-hidden">
                                   {product.imageUrl ? (
                                     <img
                                       src={product.imageUrl}
@@ -212,8 +212,8 @@ const Explore = () => {
                                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                                     />
                                   ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-300 to-gray-400">
-                                      <Package className="w-8 h-8 text-gray-500" />
+                                    <div className="w-full h-full flex items-center justify-center bg-slate-200">
+                                      <Package className="w-8 h-8 text-slate-500" />
                                     </div>
                                   )}
                                 </div>
@@ -229,7 +229,7 @@ const Explore = () => {
                         </div>
                       ) : (
                         <div className="p-4 text-center">
-                          <p className="text-sm text-gray-500">No products yet</p>
+                          <p className="text-sm text-slate-500">No products yet</p>
                         </div>
                       )}
                     </CardContent>

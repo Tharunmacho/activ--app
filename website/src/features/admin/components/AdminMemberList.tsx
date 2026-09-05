@@ -45,7 +45,7 @@ export default function AdminMemberList({
     loading?: boolean;
     emptyHint?: string;
     onOpen: (member: AdminMemberRow) => void;
-    /** Suspend an active member, or reactivate a suspended one. */
+    /** Block an active member, or unblock a blocked one. */
     onToggleActive?: (member: AdminMemberRow, nextActive: boolean) => void;
     /** Permanent, cascading delete. The caller confirms before calling. */
     onDelete?: (member: AdminMemberRow) => void;
@@ -63,12 +63,12 @@ export default function AdminMemberList({
 
     if (loading) {
         return (
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 py-16">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] py-16">
                 <div className="flex flex-col items-center text-center">
                     <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center mb-3 animate-pulse">
                         <Users className="w-7 h-7 text-blue-600" />
                     </div>
-                    <p className="text-gray-600">Loading members…</p>
+                    <p className="text-slate-500">Loading members…</p>
                 </div>
             </div>
         );
@@ -76,11 +76,11 @@ export default function AdminMemberList({
 
     if (!members.length) {
         return (
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 py-16">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] py-16">
                 <div className="flex flex-col items-center text-center px-4">
-                    <Users className="w-10 h-10 text-gray-300 mb-3" />
-                    <p className="text-base font-semibold text-gray-700">No members found</p>
-                    {emptyHint ? <p className="text-sm text-gray-500 mt-1">{emptyHint}</p> : null}
+                    <Users className="w-10 h-10 text-slate-300 mb-3" />
+                    <p className="text-base font-semibold text-slate-700">No members found</p>
+                    {emptyHint ? <p className="text-sm text-slate-500 mt-1">{emptyHint}</p> : null}
                 </div>
             </div>
         );
@@ -90,7 +90,8 @@ export default function AdminMemberList({
         'w-9 h-9 rounded-lg flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed';
 
     return (
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden
+                        shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
             {members.map((member, i) => {
                 const inactive = (member.status || '').toLowerCase() === 'inactive';
                 const rowId = member.id || member.applicationId || String(i);
@@ -99,8 +100,14 @@ export default function AdminMemberList({
                 return (
                     <div
                         key={rowId}
-                        className={`flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors ${i === members.length - 1 ? '' : 'border-b border-gray-100'
-                            }`}
+                        /* A deactivated member is dimmed and marked with a rose
+                           rule down the left edge, so the state is legible from
+                           the shape of the row before any text is read. */
+                        className={`flex items-center gap-4 px-5 py-4 transition-colors border-l-[3px] ${
+                            inactive
+                                ? 'border-l-rose-400 bg-rose-50/40 hover:bg-rose-50/70'
+                                : 'border-l-transparent hover:bg-slate-50'
+                        } ${i === members.length - 1 ? '' : 'border-b border-slate-100'}`}
                     >
                         <button
                             type="button"
@@ -112,10 +119,10 @@ export default function AdminMemberList({
                             </span>
 
                             <span className="flex-1 min-w-0">
-                                <span className="block font-semibold text-gray-900 truncate">
+                                <span className="block font-semibold text-slate-900 truncate">
                                     {member.name || 'Name not provided'}
                                 </span>
-                                <span className="block text-sm text-gray-500 truncate">
+                                <span className="block text-sm text-slate-500 truncate">
                                     {member.email || 'No email'}
                                 </span>
                                 {/* Only shown when there is one — an active member
@@ -129,9 +136,27 @@ export default function AdminMemberList({
                             </span>
                         </button>
 
+                        {/*
+                          A BADGE, NOT A WORD.
+                          
+                          This was coloured text alone, and green text at the end
+                          of a row reads as part of the row rather than as its
+                          state — so toggling a member produced a change nobody
+                          could see. A filled pill with a dot in front of it is
+                          the thing the eye finds when it scans a column for
+                          "which of these is switched off".
+                        */}
                         <span
-                            className={`text-sm font-semibold shrink-0 hidden sm:inline ${inactive ? 'text-red-500' : 'text-green-600'}`}
+                            className={`shrink-0 hidden sm:inline-flex items-center gap-1.5 rounded-full
+                                        border px-2.5 py-1 text-xs font-semibold transition-colors ${
+                                inactive
+                                    ? 'border-rose-200 bg-rose-50 text-rose-700'
+                                    : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                            }`}
                         >
+                            <span className={`w-1.5 h-1.5 rounded-full ${
+                                inactive ? 'bg-rose-500' : 'bg-emerald-500'
+                            }`} />
                             {inactive ? 'Inactive' : 'Active'}
                         </span>
 
@@ -149,8 +174,13 @@ export default function AdminMemberList({
                             <button
                                 type="button"
                                 disabled={busy || !onToggleActive}
-                                title={inactive ? 'Reactivate this member' : 'Suspend this member'}
-                                aria-label={inactive ? `Reactivate ${member.name || 'member'}` : `Suspend ${member.name || 'member'}`}
+                                /* "Block", not "Suspend": the action now stops the
+                                   member signing in at all, and the word an admin
+                                   reads should match what actually happens. */
+                                title={inactive
+                                    ? 'Unblock this member — they can sign in again'
+                                    : 'Block this member — they will not be able to sign in'}
+                                aria-label={inactive ? `Unblock ${member.name || 'member'}` : `Block ${member.name || 'member'}`}
                                 onClick={() => onToggleActive?.(member, inactive)}
                                 className={`${iconBtn} ${inactive
                                     ? 'text-green-600 hover:bg-green-50'

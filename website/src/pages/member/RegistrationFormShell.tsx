@@ -37,7 +37,7 @@ export function FormCard({
     children: ReactNode;
 }) {
     return (
-        <section className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+        <section className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-6">
             <div className="flex items-start gap-3 mb-5">
                 <span className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
                     <Icon className="w-5 h-5 text-blue-600" />
@@ -149,9 +149,9 @@ export default function RegistrationFormShell({
         coherent.
     */
     return (
-        <div className="min-h-screen flex flex-col bg-slate-100">
+        <div className="min-h-screen flex flex-col bg-white">
             <div className="flex-1 min-w-0 flex flex-col">
-                <header className="h-[4.5rem] shrink-0 bg-white border-b border-slate-200 flex items-center gap-3 px-5 lg:px-8">
+                <header className="h-[5.5rem] shrink-0 bg-white border-b border-slate-200 flex items-center gap-3 px-6">
                     <button
                         type="button"
                         className="shrink-0 w-9 h-9 rounded-lg border border-slate-200 flex items-center
@@ -162,16 +162,19 @@ export default function RegistrationFormShell({
                         <ArrowLeft className="w-5 h-5" />
                     </button>
                     <div className="min-w-0">
-                        <h1 className="text-[1.3125rem] font-bold tracking-tight text-slate-900 truncate">{title}</h1>
-                        <p className="text-[0.8125rem] text-slate-500 truncate hidden sm:block">{description}</p>
+                        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900 truncate">{title}</h1>
+                        <p className="text-sm text-slate-500 mt-0.5 truncate hidden sm:block">{description}</p>
                     </div>
                     <span className="ml-auto text-sm font-medium text-slate-500 shrink-0">
                         Step {step} of {TOTAL_STEPS}
                     </span>
                 </header>
 
-                <main className="flex-1 overflow-y-auto p-5 lg:p-8">
-                    <div className="max-w-4xl mx-auto">
+                <main className="flex-1 overflow-y-auto p-6">
+                    {/* Centred at 108rem — the rail's 18rem plus the 90rem
+                        column — so this shell fills the window to the same place
+                        a shell WITH a rail does. See MemberPageShell.RAILLESS. */}
+                    <div className="w-full max-w-[108rem] mx-auto">
                         <Stepper current={step} />
 
                         <form onSubmit={onSubmit} className="space-y-6">

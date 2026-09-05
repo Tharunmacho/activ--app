@@ -135,41 +135,60 @@ export default function AdminDashboardScreen({ tier }: { tier: AdminTier }) {
     };
 
     return (
-        <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-50">
+        <div className="min-h-screen flex bg-white">
             <AdminSidebar tier={tier} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
             <div className="flex-1 min-w-0 flex flex-col">
                 <div className="md:hidden flex items-center justify-between p-4 bg-white border-b shadow-sm">
                     <button
                         onClick={() => setSidebarOpen(true)}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                         aria-label="Open menu"
                     >
                         <Menu className="w-6 h-6" />
                     </button>
-                    <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
+                    <h1 className="text-xl font-bold text-slate-900">Dashboard</h1>
                     <span className="w-10" />
                 </div>
 
+                {/*
+                  The white header bar every other admin screen opens with.
+                  Dashboard had none, so it was the one screen whose title
+                  scrolled away with the content — and the only one without a way
+                  back to itself from a sub-page.
+                */}
+                <header className="hidden md:flex bg-white border-b border-slate-200 px-6 py-4
+                                   flex-wrap items-center gap-3">
+                    <div className="min-w-0 flex-1">
+                        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900">
+                            Dashboard
+                        </h1>
+                        <p className="text-sm text-slate-500 mt-0.5">
+                            {config.label} admin — your region at a glance.
+                        </p>
+                    </div>
+                </header>
+
                 <div className="flex-1 overflow-auto">
-                    {/* Identity band */}
-                    <div className="bg-white p-6 lg:p-10 shadow-lg">
-                        <div className="max-w-7xl mx-auto">
+                    {/* `max-w-7xl mx-auto` centred this one screen's content
+                        while every other admin page runs from the left margin. */}
+                    <div className="p-6 max-w-[90rem] space-y-6">
+                        <div>
                             <div className="flex items-center gap-4 mb-8">
                                 <Avatar className="w-16 h-16 ring-4 ring-blue-100">
-                                    <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold text-xl">
+                                    <AvatarFallback className="bg-blue-600 text-white font-bold text-xl">
                                         {config.initials}
                                     </AvatarFallback>
                                 </Avatar>
                                 <div className="min-w-0">
-                                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 truncate">{userName}</h1>
-                                    <p className="text-gray-600">{config.dashboardTitle}</p>
-                                    {location ? <p className="text-sm text-gray-500 truncate">{location}</p> : null}
+                                    <h1 className="text-2xl md:text-3xl font-bold text-slate-900 truncate">{userName}</h1>
+                                    <p className="text-slate-500">{config.dashboardTitle}</p>
+                                    {location ? <p className="text-sm text-slate-500 truncate">{location}</p> : null}
                                 </div>
                             </div>
 
-                            <h2 className="text-xl font-semibold mb-4 text-gray-900">Overview Statistics</h2>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <h2 className="text-xl font-semibold mb-4 text-slate-900">Overview Statistics</h2>
+                            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                                 {TILES.map((t) => (
                                     <div
                                         key={t.label}
@@ -179,7 +198,7 @@ export default function AdminDashboardScreen({ tier }: { tier: AdminTier }) {
                                             <t.icon className={`w-5 h-5 ${t.sub}`} />
                                             <p className={`${t.sub} text-sm font-medium`}>{t.label}</p>
                                         </div>
-                                        <p className="text-4xl font-bold text-white tabular-nums">
+                                        <p className="text-4xl font-bold tracking-tight tabular-nums text-white tabular-nums">
                                             {loading ? "…" : t.value}
                                         </p>
                                     </div>
@@ -189,22 +208,22 @@ export default function AdminDashboardScreen({ tier }: { tier: AdminTier }) {
                     </div>
 
                     {/* Recent activity */}
-                    <div className="bg-gradient-to-br from-gray-50 to-white p-6 lg:p-10">
-                        <div className="max-w-7xl mx-auto space-y-6">
+                    <div className="px-6 pb-6 max-w-[90rem]">
+                        <div className="max-w-[90rem] space-y-6">
                             <div className="flex items-center justify-between flex-wrap gap-3">
                                 <div>
-                                    <h2 className="text-2xl font-bold text-gray-900">Recent Activity</h2>
-                                    <p className="text-gray-600 text-sm">Latest application submissions</p>
+                                    <h2 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900">Recent Activity</h2>
+                                    <p className="text-slate-500 text-sm">Latest application submissions</p>
                                 </div>
                                 <Link to={`${config.base}/approvals`}>
-                                    <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg px-6 shadow-lg">
+                                    <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6 shadow-sm">
                                         View All
                                     </Button>
                                 </Link>
                             </div>
 
-                            <div className="bg-white rounded-2xl p-6 shadow-2xl border border-gray-100">
-                                <div className="hidden md:grid grid-cols-4 gap-4 px-4 py-3 text-sm font-semibold text-gray-700 border-b border-gray-200 mb-4">
+                            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+                                <div className="hidden md:grid grid-cols-4 gap-4 px-4 py-3 text-sm font-semibold text-slate-700 border-b border-slate-200 mb-4">
                                     <div>Name</div>
                                     <div>Status</div>
                                     {/* These read "Size" and "Modified" — leftovers from a
@@ -225,17 +244,17 @@ export default function AdminDashboardScreen({ tier }: { tier: AdminTier }) {
                                             return (
                                                 <div
                                                     key={app.id || app.applicationId}
-                                                    className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-all duration-200 shadow-sm border border-blue-100"
+                                                    className="grid grid-cols-1 md:grid-cols-4 gap-5 items-center p-4 rounded-xl bg-white hover:bg-slate-50 transition-colors duration-200 border border-slate-200"
                                                 >
                                                     <div className="flex items-center gap-3 min-w-0">
                                                         <Avatar className="w-10 h-10 ring-2 ring-blue-200">
-                                                            <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold text-sm">
+                                                            <AvatarFallback className="bg-blue-600 text-white font-bold text-sm">
                                                                 {initials}
                                                             </AvatarFallback>
                                                         </Avatar>
                                                         <div className="min-w-0">
-                                                            <p className="font-semibold text-gray-900 text-sm truncate">{displayName}</p>
-                                                            <p className="text-xs text-gray-600 truncate">
+                                                            <p className="font-semibold text-slate-900 text-sm truncate">{displayName}</p>
+                                                            <p className="text-xs text-slate-500 truncate">
                                                                 <span title={app.applicationId || undefined}>
                                                                     {formatApplicationRef(app).short || 'N/A'}
                                                                 </span>
@@ -247,10 +266,10 @@ export default function AdminDashboardScreen({ tier }: { tier: AdminTier }) {
                                                             {app.statusLabel || stage}
                                                         </Badge>
                                                     </div>
-                                                    <div className="text-sm text-gray-700 capitalize">
+                                                    <div className="text-sm text-slate-700 capitalize">
                                                         {app.memberType || "—"}
                                                     </div>
-                                                    <div className="text-sm text-gray-700">
+                                                    <div className="text-sm text-slate-700">
                                                         {app.submittedAt
                                                             ? new Date(app.submittedAt).toLocaleDateString("en-GB", {
                                                                 day: "2-digit", month: "short", year: "numeric",
@@ -262,8 +281,8 @@ export default function AdminDashboardScreen({ tier }: { tier: AdminTier }) {
                                         })
                                     ) : (
                                         <div className="text-center py-10">
-                                            <Users className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                                            <p className="text-gray-500 text-sm">
+                                            <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                                            <p className="text-slate-500 text-sm">
                                                 {loading ? "Loading applications…" : "No applications yet"}
                                             </p>
                                         </div>

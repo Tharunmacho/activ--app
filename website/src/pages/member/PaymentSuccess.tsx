@@ -108,10 +108,11 @@ export default function PaymentSuccess() {
             sidebar={false}
             backTo="/payment/member-dashboard"
         >
-            <div className="mx-auto w-full max-w-[87.5rem]">
+            <div className="w-full">
 
                 {/* ---------------- celebration hero ---------------- */}
-                <div className="rounded-3xl bg-white border p-7 text-center shadow-sm mb-5"
+                <div className="rounded-2xl bg-white border p-7 text-center mb-5
+                                shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]"
                      style={{ borderColor: PALETTE.border }}>
                     <div className="relative h-[7.5rem] flex items-center justify-center">
                         <span aria-hidden className="absolute w-[6.5rem] h-[6.5rem] rounded-full opacity-20 animate-ping"

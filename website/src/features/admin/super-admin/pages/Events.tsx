@@ -17,40 +17,54 @@ import EventsManager from '@/pages/cms/EventsManager';
  * in step, and events are the one collection the public site, the member app and
  * this screen all read.
  *
- * What differs is the audience an event opens with. Everything posted HERE is
- * for paying members: `defaultAudience="paid"` means a new event is members-only
- * unless the administrator deliberately changes it, and the public listing
- * (`cms.service.listEvents`) filters `audience: 'paid'` out, so nothing posted
- * here reaches the onboarding pages. An event meant for the public site is
- * posted from the CMS instead, where the default is `all`.
+ * WHO SEES AN EVENT IS DECIDED BY ITS REGION, not by whether the member has
+ * paid. An event aimed at a block reaches every member standing in that block —
+ * paid and unpaid alike — because the association's reason for posting it is
+ * that those people are there, not that they have a receipt. `defaultAudience`
+ * is therefore `all`, and the members-only switch stays on the form for the
+ * events that genuinely are a membership benefit.
+ *
+ * WHETHER IT ALSO REACHES THE PUBLIC SITE IS ASKED, NOT ASSUMED. The form
+ * carries an "Onboarding website" choice — keep it inside the association, or
+ * post it in the onboarding events section as well. It used to be neither: a
+ * targeted event was withheld from the public pages outright, on the grounds
+ * that those pages have no viewer to compare a region against. That reasoning
+ * described the page, and the page can now say where an event is for and let a
+ * visitor filter to their own region, so the decision belongs to whoever is
+ * posting rather than to a rule.
+ *
+ * NO SECTION COPY HERE. The eyebrow, heading, chips and empty-state wording
+ * around the public events grid are the onboarding page's furniture and stay in
+ * the CMS — `showSectionCopy` follows `channel`, so this screen opens on the
+ * programme itself rather than on five cards of copy for a page it does not own.
  */
 export default function SuperAdminEvents() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
-        <div className="min-h-screen bg-gray-50 flex">
+        <div className="min-h-screen bg-white flex">
             <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
             <div className="flex-1 min-w-0">
-                <header className="bg-white border-b px-6 py-4 flex items-center gap-3">
+                <header className="bg-white border-b border-slate-200 px-6 py-4 flex flex-wrap items-center gap-3">
                     <button
-                        className="lg:hidden text-gray-600"
+                        className="lg:hidden text-slate-500"
                         onClick={() => setSidebarOpen(true)}
                         aria-label="Open menu"
                     >
                         <Menu className="w-5 h-5" />
                     </button>
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Events</h1>
-                        <p className="text-sm text-gray-600 mt-0.5">
-                            For paying members. Events posted here do not appear on the public
-                            site — post those from the CMS.
+                        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900">Events</h1>
+                        <p className="text-sm text-slate-600 mt-0.5">
+                            Aim an event at a state, district or block and every member there sees it —
+                            paid or unpaid. Choose whether it also appears on the onboarding site.
                         </p>
                     </div>
                 </header>
 
                 <main className="p-6">
-                    <EventsManager defaultAudience="paid" />
+                    <EventsManager defaultAudience="all" channel="members" />
                 </main>
             </div>
         </div>

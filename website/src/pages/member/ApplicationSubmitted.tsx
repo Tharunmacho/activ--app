@@ -18,19 +18,64 @@
  * placeholder that every member saw whenever that key was missing, which is
  * always, because nothing writes it any more.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MemberPageShell from '@/pages/member/MemberPageShell';
-import { Bell, Loader2, Copy, Check } from 'lucide-react';
+import {
+    Bell, Loader2, Copy, Check, CalendarDays, MapPin, BadgeCheck,
+    ArrowRight, LayoutDashboard, Clock, ShieldCheck, Mail,
+} from 'lucide-react';
 import { getUserApplication } from '@/services/applicationApi';
 import { deriveApprovalFlags } from '@/services/activApi';
 import { formatApplicationRef } from '@/lib/applicationRef';
-import { dashboardPathFor } from '@/features/member/memberAccess';
+import { dashboardPathFor, applicantKindLabel } from '@/features/member/memberAccess';
 import useMembershipGate from '@/features/member/useMembershipGate';
 import {
     PALETTE, SuccessMark, ScreenTitle, ScreenSubtitle, KitCard, KitCardHeader,
     StageRail, NoticeRow, PrimaryAction, GhostAction, type KitStage,
 } from '@/features/member/memberScreenKit';
+
+/** "5 Sept 2026". Empty for a date that is missing or will not parse. */
+const formatDate = (value?: string | null): string => {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+/**
+ * What the association does next, in the member's terms.
+ *
+ * This screen answered "it is in" and stopped, which leaves the one question a
+ * person actually has at this moment — "so what happens now, and when?" — to be
+ * guessed at. The three steps below are the same three the rail above shows,
+ * said as process rather than as state, because a rail of pending nodes tells
+ * you where a file is and nothing about what is being done to it.
+ *
+ * No dates are promised. The association reviews at three tiers on its own
+ * schedule, and a screen that invents "within 7 days" is a screen that starts
+ * lying on day eight.
+ */
+const WHAT_NEXT = [
+    {
+        icon: ShieldCheck,
+        title: 'Three tiers review it',
+        detail: 'Your Block admin looks at it first, then District, then State. '
+            + 'Each has to approve before it moves on.',
+    },
+    {
+        icon: Bell,
+        title: 'You hear at every stage',
+        detail: 'A notification arrives as each tier clears it — nothing here needs '
+            + 'watching in the meantime.',
+    },
+    {
+        icon: BadgeCheck,
+        title: 'Then you pay and you are in',
+        detail: 'Once the State admin approves, your membership payment unlocks and '
+            + 'your profile goes live in the directory.',
+    },
+];
 
 /** Mobile's three review stages, with its captions. */
 const STAGE_LABELS = [
@@ -110,7 +155,7 @@ export default function ApplicationSubmitted() {
             sidebar={false}
             backTo={dashboard}
         >
-            <div className="mx-auto w-full max-w-[87.5rem]">
+            <div className="w-full">
                 <SuccessMark />
 
                 <ScreenTitle>Application Submitted</ScreenTitle>
@@ -118,79 +163,181 @@ export default function ApplicationSubmitted() {
                     Your membership application is in and moving through review.
                 </ScreenSubtitle>
 
-                <div className="grid gap-6 lg:grid-cols-3 items-start mt-2">
-
-                <div className="lg:col-span-2 space-y-4">
                 {/*
-                  * The reference, on the screen that creates it.
-                  *
-                  * This is the one moment a member is most likely to write it
-                  * down, so it is shown here rather than only on the status
-                  * screen — same short form as everywhere else, with the full
-                  * `_id` one click away for support.
-                  */}
-                {appRef.short ? (
-                    <KitCard>
-                        <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                                <p className="text-[0.625rem] font-bold uppercase tracking-[0.06em]"
-                                   style={{ color: PALETTE.muted }}>
-                                    Application Reference
-                                </p>
-                                <p className="font-display text-lg font-extrabold mt-0.5"
-                                   style={{ color: PALETTE.ink }} title={appRef.full}>
-                                    {appRef.short}
-                                </p>
-                            </div>
+                  THE FACTS ABOUT THIS SUBMISSION, ON ONE LINE.
+
+                  Reference, date, member type and the region reviewing it — the
+                  four things a member quotes when they contact the association,
+                  and the four the status screen already prints in exactly this
+                  strip. This screen showed only the reference and left the other
+                  three to be found one click away, which is the wrong way round:
+                  THIS is the moment someone writes them down.
+                */}
+                <div className="mt-8 rounded-2xl bg-white border py-4 grid grid-cols-2 lg:grid-cols-4
+                                lg:divide-x"
+                     style={{ borderColor: PALETTE.border }}>
+                    <FactCell
+                        icon={<Copy className="w-3.5 h-3.5" />}
+                        label="Application Reference"
+                        value={appRef.short || '—'}
+                        title={appRef.full}
+                        action={appRef.full ? (
                             <button
                                 type="button"
                                 onClick={copyRef}
                                 title={`Copy full ID: ${appRef.full}`}
                                 aria-label="Copy full application ID"
-                                className="shrink-0 h-9 px-3 rounded-lg border text-xs font-semibold
-                                           flex items-center gap-1.5 hover:bg-slate-50 transition-colors"
-                                style={{ borderColor: PALETTE.border, color: PALETTE.muted }}
+                                className="shrink-0 transition-colors hover:opacity-70"
+                                style={{ color: copied ? PALETTE.success : PALETTE.muted }}
                             >
-                                {copied
-                                    ? <><Check className="w-3.5 h-3.5" style={{ color: PALETTE.success }} /> Copied</>
-                                    : <><Copy className="w-3.5 h-3.5" /> Copy</>}
+                                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                             </button>
-                        </div>
-                    </KitCard>
-                ) : null}
-
-                <KitCard>
-                    <KitCardHeader
-                        title="Approval Progress"
-                        pill={`Stage ${currentStage} of ${STAGE_LABELS.length}`}
+                        ) : null}
                     />
-                    <StageRail stages={stages} />
-                </KitCard>
-
-                <NoticeRow icon={<Bell className="w-4 h-4" />}>
-                    You&apos;ll be notified as each stage is completed.
-                </NoticeRow>
+                    <FactCell
+                        icon={<CalendarDays className="w-3.5 h-3.5" />}
+                        label="Submitted"
+                        value={formatDate(application?.submittedAt || application?.createdAt) || '—'}
+                    />
+                    <FactCell
+                        icon={<BadgeCheck className="w-3.5 h-3.5" />}
+                        label="Member Type"
+                        value={applicantKindLabel(application) || '—'}
+                        className="border-t lg:border-t-0"
+                    />
+                    <FactCell
+                        icon={<MapPin className="w-3.5 h-3.5" />}
+                        label="Reviewed In"
+                        value={[application?.block, application?.district].filter(Boolean).join(', ') || '—'}
+                        title={[application?.block, application?.district, application?.state]
+                            .filter(Boolean).join(', ')}
+                        className="border-t lg:border-t-0"
+                    />
                 </div>
 
                 {/*
-                  * The two ways on, beside the progress rather than under it.
-                  *
-                  * On a narrow screen they stack in mobile's order — status
-                  * first, dashboard second. On a wide one they sit level with
-                  * the card they follow from, so the member is not scrolling
-                  * past a three-item list to find the button.
-                  */}
-                <div className="lg:sticky lg:top-6">
-                    <PrimaryAction onClick={() => navigate('/member/application-status')}>
-                        View Application Status
-                    </PrimaryAction>
-                    <GhostAction onClick={() => navigate(dashboard)}>
-                        Go to Dashboard
-                    </GhostAction>
-                </div>
+                  TWO COLUMNS THAT BOTH CARRY THEIR WEIGHT.
 
+                  The right-hand column used to hold two buttons and then roughly
+                  400px of bare white down to the fold, because a 2:1 grid was
+                  being used to put a pair of buttons beside a three-item list.
+                  The progress rail and what-happens-next are the two halves of
+                  the same answer, so they sit side by side, and the actions go
+                  under the rail where a member arrives at them having read it.
+                */}
+                <div className="grid gap-6 lg:grid-cols-2 items-start mt-6">
+
+                    <div className="space-y-6">
+                        <KitCard>
+                            <KitCardHeader
+                                title="Approval Progress"
+                                pill={`Stage ${currentStage} of ${STAGE_LABELS.length}`}
+                            />
+                            <StageRail stages={stages} />
+                        </KitCard>
+
+                        <div>
+                            <PrimaryAction onClick={() => navigate('/member/application-status')}>
+                                View Application Status
+                            </PrimaryAction>
+                            <GhostAction onClick={() => navigate(dashboard)}>
+                                Go to Dashboard
+                            </GhostAction>
+                        </div>
+                    </div>
+
+                    <div className="space-y-6">
+                        <KitCard>
+                            <KitCardHeader title="What happens next" />
+
+                            <ol className="space-y-5 mt-1">
+                                {WHAT_NEXT.map((step, i) => {
+                                    const Icon = step.icon;
+                                    return (
+                                        <li key={step.title} className="flex gap-3.5">
+                                            <span className="w-9 h-9 rounded-xl flex items-center justify-center
+                                                             shrink-0"
+                                                  style={{ backgroundColor: '#EEF2FF', color: PALETTE.primary }}>
+                                                <Icon className="w-[1.125rem] h-[1.125rem]" />
+                                            </span>
+                                            <div className="min-w-0">
+                                                <p className="font-display text-sm font-bold leading-tight"
+                                                   style={{ color: PALETTE.ink }}>
+                                                    <span className="tabular-nums" style={{ color: PALETTE.muted }}>
+                                                        {i + 1}.{' '}
+                                                    </span>
+                                                    {step.title}
+                                                </p>
+                                                <p className="text-[0.8125rem] mt-1 leading-relaxed"
+                                                   style={{ color: PALETTE.muted }}>
+                                                    {step.detail}
+                                                </p>
+                                            </div>
+                                        </li>
+                                    );
+                                })}
+                            </ol>
+                        </KitCard>
+
+                        <NoticeRow icon={<Bell className="w-4 h-4" />}>
+                            You&apos;ll be notified as each stage is completed.
+                        </NoticeRow>
+
+                        {/*
+                          Where to go with a question — including the reference,
+                          because "quote your application id" is the first thing
+                          anyone will be asked and it is on this screen already.
+                        */}
+                        <NoticeRow
+                            icon={<Mail className="w-4 h-4" />}
+                            tone={PALETTE.muted}
+                            soft="#F8FAFC"
+                        >
+                            Questions? Write to{' '}
+                            <a
+                                href={`mailto:support@activ.org.in?subject=${
+                                    encodeURIComponent(`Application ${appRef.short || ''}`)}`}
+                                className="font-semibold underline"
+                                style={{ color: PALETTE.primary }}
+                            >
+                                support@activ.org.in
+                            </a>
+                            {appRef.short ? ` and quote ${appRef.short}.` : '.'}
+                        </NoticeRow>
+                    </div>
                 </div>
             </div>
         </MemberPageShell>
     );
 }
+
+/**
+ * One fact in the strip under the headline.
+ *
+ * Same shape as `StripCell` on the Application Status screen, plus an icon and
+ * an optional trailing control — the two screens print the same four facts and
+ * a member moving between them should not have to re-find where each one lives.
+ */
+const FactCell = ({ icon, label, value, title, className = '', action }: {
+    icon: ReactNode;
+    label: string;
+    value: string;
+    title?: string;
+    className?: string;
+    action?: ReactNode;
+}) => (
+    <div className={`px-4 py-1 min-w-0 ${className}`} style={{ borderColor: PALETTE.border }}>
+        <div className="flex items-center gap-1.5" style={{ color: PALETTE.muted }}>
+            <span className="shrink-0">{icon}</span>
+            <p className="text-[0.625rem] font-bold uppercase tracking-[0.06em] truncate">{label}</p>
+        </div>
+        <div className="flex items-center gap-1.5 mt-1 min-w-0">
+            <p className="font-display text-sm font-bold truncate"
+               style={{ color: PALETTE.ink }}
+               title={title || value}>
+                {value}
+            </p>
+            {action}
+        </div>
+    </div>
+);

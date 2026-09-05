@@ -13,7 +13,7 @@ import {
     CmsPage,
     CmsSection,
 } from './components/CmsUI';
-import { BulletList, StatList, IconPicker } from './components/CmsEditors';
+import { BulletList, StatList, IconPicker , ExtraFieldsEditor } from './components/CmsEditors';
 import MediaPicker from './components/MediaPicker';
 import RichTextEditor from './components/RichTextEditor';
 
@@ -156,6 +156,11 @@ export default function AboutManager() {
                             max={6}
                         />
                     </CmsSection>
+                    <ExtraFieldsEditor
+                        items={about.extraFields || []}
+                        onChange={extraFields => set({ extraFields })}
+                        hint="Anything else this page should say. Each row shows as a labelled line under the figures bar."
+                    />
                 </div>
 
                 <div className="mt-6">

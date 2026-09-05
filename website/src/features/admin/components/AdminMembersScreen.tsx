@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Users, CheckCircle, XCircle, Menu } from "lucide-react";
+import { Search, Users, CheckCircle, XCircle, Menu, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import AdminSidebar from "./AdminSidebar";
 import AdminMemberList from "./AdminMemberList";
@@ -21,11 +22,27 @@ import { TIERS, type AdminTier } from "./tierConfig";
  * Members are the approved applicants plus the rejected ones, which the server
  * marks Inactive — the same directory mobile renders, from the same payload.
  */
+/**
+ * One tab, selected or not.
+ *
+ * The blue fill is what the shared primitive does not give us: its
+ * `data-[state=active]` styling is a white background, which is invisible on a
+ * white card — pressing Active filtered the list underneath and left the tabs
+ * looking identical, so a working control read as broken. Declared once here so
+ * the three triggers cannot drift apart.
+ */
+const TAB_TRIGGER =
+    'flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold '
+    + 'text-slate-600 transition-colors hover:text-slate-900 '
+    + 'data-[state=active]:bg-blue-600 data-[state=active]:text-white '
+    + 'data-[state=active]:shadow-sm';
+
 export default function AdminMembersScreen({ tier }: { tier: AdminTier }) {
     const config = TIERS[tier];
 
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const navigate = useNavigate();
     const [tab, setTab] = useState<"all" | "active" | "inactive">("all");
     const [members, setMembers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -76,7 +93,7 @@ export default function AdminMembersScreen({ tier }: { tier: AdminTier }) {
     useEffect(() => { load(); }, [load, tier]);
 
     /**
-     * Suspend or reactivate a member.
+     * Block or unblock a member.
      *
      * The id sent is the application id the row carries. The endpoint used to be
      * handed `memberId`, which is the auth id on any applicant who has a login —
@@ -89,7 +106,9 @@ export default function AdminMembersScreen({ tier }: { tier: AdminTier }) {
         try {
             setBusyId(member.id || id);
             await memberAction(id, nextActive ? "activate" : "suspend");
-            toast.success(nextActive ? "Member reactivated" : "Member suspended");
+            toast.success(nextActive
+                ? 'Member unblocked — they can sign in again'
+                : 'Member blocked — they can no longer sign in');
             await load();
         } catch (error) {
             toast.error(errorMessage(error, "Could not update this member"));
@@ -175,7 +194,7 @@ This removes their application, login, member record, business, financial and de
     };
 
     return (
-        <div className="min-h-screen flex bg-gradient-to-br from-gray-50 to-white">
+        <div className="min-h-screen flex bg-white">
             <AdminSidebar tier={tier} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
             <div className="flex-1 min-w-0 flex flex-col">
@@ -183,28 +202,53 @@ This removes their application, login, member record, business, financial and de
                 <div className="md:hidden flex items-center justify-between p-4 bg-white border-b shadow-sm">
                     <button
                         onClick={() => setSidebarOpen(true)}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                         aria-label="Open menu"
                     >
                         <Menu className="w-6 h-6" />
                     </button>
-                    <h1 className="text-xl font-bold text-gray-900">Members</h1>
+                    <h1 className="text-xl font-bold text-slate-900">Members</h1>
                     <span className="w-10" />
                 </div>
 
-                <div className="flex-1 p-4 md:p-6 overflow-auto">
-                    <div className="w-full max-w-6xl mx-auto space-y-6">
-                        <div className="bg-gradient-to-br from-blue-600 to-blue-700 shadow-xl p-6 rounded-2xl border border-blue-500">
-                            <h1 className="text-3xl font-bold text-white">Members</h1>
-                            <p className="text-blue-100 mt-1">
-                                {config.label} members — approved and rejected applicants in your region
-                            </p>
-                        </div>
+                {/*
+                  A PAGE HEADER, NOT A BANNER.
 
-                        <Card className="shadow-lg border-0">
+                  This screen opened with a solid blue block carrying its own
+                  title, while Approvals, Manage Admins and Settings beside it
+                  open with a white bar and a back button. One product should not
+                  introduce itself two different ways — and the blue block also
+                  spent the loudest colour on the page on a heading rather than
+                  on a figure.
+                */}
+                <header className="hidden md:flex bg-white border-b border-slate-200 px-6 py-4
+                                   flex-wrap items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => navigate(config.base + '/dashboard')}
+                        aria-label="Back to dashboard"
+                        className="w-9 h-9 -ml-1 rounded-xl flex items-center justify-center text-slate-500
+                                   transition-colors hover:bg-slate-100 hover:text-slate-900"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div className="min-w-0 flex-1">
+                        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900">
+                            Members
+                        </h1>
+                        <p className="text-sm text-slate-500 mt-0.5">
+                            {config.label} members — approved and rejected applicants in your region
+                        </p>
+                    </div>
+                </header>
+
+                <div className="flex-1 p-6 overflow-auto">
+                    <div className="w-full max-w-[90rem] space-y-6">
+                        <Card className="border border-slate-200 rounded-2xl overflow-hidden
+                                         shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                             <CardContent className="pt-6">
                                 <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                                     {/*
                                         A decorative "Filter" button used to sit beside
                                         this with no onClick. The tabs below are the
@@ -220,15 +264,38 @@ This removes their application, login, member record, business, financial and de
                             </CardContent>
                         </Card>
 
+                        {/*
+                          THE SELECTED TAB HAS TO BE VISIBLE.
+
+                          The shared `TabsTrigger` marks the active tab with
+                          `data-[state=active]:bg-background` — white — and this
+                          list sits on a near-white card. White on white: pressing
+                          Active changed the list underneath and left the tabs
+                          looking identical, so the control read as broken when it
+                          was working perfectly.
+
+                          Solid blue instead, the same treatment the segmented
+                          control in `AdminUI` uses, on an inset slate track. Now
+                          the chosen tab is the loudest thing in the row.
+                        */}
                         <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
-                            <TabsList className="grid w-full grid-cols-3 h-auto p-1">
-                                <TabsTrigger value="all" className="flex items-center gap-2 py-3">
+                            <TabsList className="grid w-full grid-cols-3 h-auto gap-1 p-1 bg-slate-100 rounded-xl ring-1 ring-slate-200/60">
+                                <TabsTrigger
+                                    value="all"
+                                    className={TAB_TRIGGER}
+                                >
                                     <Users className="w-4 h-4" /> All ({counts.total})
                                 </TabsTrigger>
-                                <TabsTrigger value="active" className="flex items-center gap-2 py-3">
+                                <TabsTrigger
+                                    value="active"
+                                    className={TAB_TRIGGER}
+                                >
                                     <CheckCircle className="w-4 h-4" /> Active ({counts.active})
                                 </TabsTrigger>
-                                <TabsTrigger value="inactive" className="flex items-center gap-2 py-3">
+                                <TabsTrigger
+                                    value="inactive"
+                                    className={TAB_TRIGGER}
+                                >
                                     <XCircle className="w-4 h-4" /> Inactive ({counts.inactive})
                                 </TabsTrigger>
                             </TabsList>

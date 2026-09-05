@@ -79,7 +79,7 @@ export default function AssociationUpdates() {
         >
             <div className="space-y-5">
                 {/* ---------- filters ---------- */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-4 space-y-3">
                     <div className="relative">
                         <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                         <input
@@ -106,7 +106,7 @@ export default function AssociationUpdates() {
                                         key={key}
                                         type="button"
                                         onClick={() => setCategory(key)}
-                                        className={`px-3 py-1.5 rounded-full text-[0.78125rem] font-semibold
+                                        className={`px-3 py-1.5 rounded-full text-[0.8125rem] font-semibold
                                                     transition-colors ${
                                             active
                                                 ? 'bg-blue-600 text-white'

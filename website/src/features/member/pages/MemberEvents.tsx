@@ -99,7 +99,7 @@ export default function MemberEvents() {
                   * A responsive flex row, not a scrolling strip: three tabs must
                   * fit side by side at every width the member area supports.
                   */}
-                <div className="flex gap-1.5 bg-white rounded-2xl border border-slate-200 shadow-sm p-1.5">
+                <div className="flex gap-1.5 bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-1.5">
                     {TABS.map(({ key, label, count }) => {
                         const active = tab === key;
                         return (
@@ -107,7 +107,7 @@ export default function MemberEvents() {
                                 key={key}
                                 type="button"
                                 onClick={() => setTab(key)}
-                                className={`flex-1 min-w-0 px-2 py-2.5 rounded-xl text-[0.78125rem] font-semibold
+                                className={`flex-1 min-w-0 px-2 py-2.5 rounded-xl text-[0.8125rem] font-semibold
                                             transition-colors flex items-center justify-center gap-1.5 ${
                                     active
                                         ? 'bg-blue-600 text-white'
@@ -116,7 +116,7 @@ export default function MemberEvents() {
                             >
                                 <span className="truncate">{label}</span>
                                 {count > 0 ? (
-                                    <span className={`shrink-0 text-[0.65625rem] font-bold px-1.5 rounded-full ${
+                                    <span className={`shrink-0 text-[0.6875rem] font-bold px-1.5 rounded-full ${
                                         active ? 'bg-white/25' : 'bg-slate-200 text-slate-600'
                                     }`}>
                                         {count}

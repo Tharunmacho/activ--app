@@ -6,6 +6,7 @@ import { Briefcase, Building2, Landmark } from "lucide-react";
 import { toast } from "sonner";
 import RegistrationFormShell, { FormCard, FormField, FormGrid } from "./RegistrationFormShell";
 import { getBusinessInfo, updateProfile, submitApplication, errorMessage } from "@/services/activApi";
+import PlanHint from "./PlanHint";
 
 /** The three option lists mobile's Business Information screen offers. */
 const CONSTITUTION_TYPES = ['OPC', 'TRUST', 'SOCIETY', 'Proprietorship', 'Partnership', 'Private Limited'];
@@ -54,7 +55,7 @@ const Pill = ({
   <button
     type="button"
     onClick={onClick}
-    className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${selected
+    className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ${selected
       ? "bg-blue-600 text-white border-blue-600"
       : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
       }`}
@@ -315,6 +316,21 @@ const BusinessInformationForm = () => {
                   placeholder="e.g. 2018"
                   className="h-11 border-slate-200 focus-visible:ring-blue-500"
                 />
+
+                {/*
+                  WHAT THIS FIELD DECIDES, said where it is typed.
+
+                  The year entered here is what picks the membership plan and
+                  its price — and until now that connection was invisible: the
+                  applicant filled in a year on one screen and met a figure on
+                  another, with nothing linking the two. Someone who mistyped
+                  2018 as 2081 found out at the payment step, if at all.
+
+                  Read from the live plan rows, never computed here. The bands
+                  and the prices are the Super Admin's to change, and a copy of
+                  either in this file would be wrong the first time they did.
+                */}
+                <PlanHint year={formData.businessCommencementYear} />
               </FormField>
 
               <FormField label="Number of Employees">

@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, MapPin, Clock, ArrowRight, X } from 'lucide-react';
+import { Search, MapPin, Clock, ArrowRight, X, Landmark } from 'lucide-react';
 import type { CmsEvent, EventsSettings } from '@/services/cmsApi';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
 import { CmsIcon } from '@/components/shared/CmsIcon';
 import { Reveal } from '@/components/shared/Reveal';
+import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
 import { Tilt3D } from '@/components/shared/Tilt3D';
 import { PAGE_CONTAINER } from '@/components/layout/pageContainer';
 import { CARD_TITLE, CARD_BODY, MICRO_LABEL } from '@/components/layout/typography';
@@ -39,6 +40,70 @@ const WHEN = [
 type When = (typeof WHEN)[number]['value'];
 
 const ALL = 'All';
+
+/**
+ * Region matching, in the browser, on the same terms the server uses.
+ *
+ * Region names are free text a Super Admin typed (see the admin-first region
+ * architecture note in CLAUDE.md), so "Tamil Nadu" and "tamil  nadu" are one
+ * place to a reader and two strings to `===`. `regionMatch.js` normalises
+ * exactly this way — trim, collapse runs of whitespace, case-fold — and the two
+ * have to agree or the public page's filter and the dashboards' filter would
+ * disagree about which events belong to a district.
+ */
+const norm = (value?: string) => (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+
+interface Region { state: string; district: string; block: string }
+
+const LEVELS = ['state', 'district', 'block'] as const;
+
+/**
+ * Every region one event was aimed at, as a list.
+ *
+ * `targets` is the real answer; the legacy `state`/`district`/`block` trio is
+ * the fallback for rows written before multi-targeting, which carry their one
+ * region there. An empty list means the event was aimed at everybody — which is
+ * why this returns `[]` rather than `[{'', '', ''}]`: the two are handled
+ * differently by the filter below, and collapsing them would make "everywhere"
+ * look like a region that matches nothing.
+ */
+const regionsOf = (event: CmsEvent): Region[] => {
+    const list = Array.isArray(event?.targets) ? event.targets : [];
+    if (list.length) {
+        return list.map((t) => ({
+            state: t?.state || '', district: t?.district || '', block: t?.block || '',
+        }));
+    }
+    if (event?.state) {
+        return [{ state: event.state, district: event.district || '', block: event.block || '' }];
+    }
+    return [];
+};
+
+/**
+ * Does an event aimed at `target` belong in a visitor's view of `selection`?
+ *
+ * Yes when the two are on the SAME PATH — for each of state, district and block,
+ * either side may be silent, but where both name something they must name the
+ * same thing.
+ *
+ * That symmetry is the whole point, and neither "target contains selection" nor
+ * "selection contains target" gets it right on its own:
+ *
+ *   picked Kalayarkoil, event aimed at Tamil Nadu     -> RELEVANT. A state-wide
+ *      notice is for the people in that block as much as for anyone else.
+ *   picked Sivaganga, event aimed at Kalayarkoil      -> RELEVANT. Narrowing to
+ *      a district should surface what is happening inside it, not just what was
+ *      addressed to the district as a whole.
+ *   picked Sivaganga, event aimed at Chennai          -> NOT. Both named a
+ *      district and they differ.
+ */
+const onSamePath = (target: Region, selection: Region) =>
+    LEVELS.every((level) => {
+        const a = norm(target[level]);
+        const b = norm(selection[level]);
+        return !a || !b || a === b;
+    });
 
 /** Split for the date block: the three lines are stacked, not one string. */
 const splitDate = (iso: string | null) => {
@@ -78,6 +143,26 @@ export function EventsExplorer({ events, settings }: Props) {
     const [location, setLocation] = useState<string>(ALL);
     const [when, setWhen] = useState<When>('upcoming');
 
+    /*
+     * The region filter, as three dependent choices rather than one flat list.
+     *
+     * State first, then the districts of that state, then the blocks of that
+     * district — the same cascade the Super Admin fills in when they create an
+     * admin, and the same order the region picker on the event form uses. A
+     * single "All regions" dropdown was the obvious cheaper option and is the
+     * wrong shape for this data: there are 38 districts in Tamil Nadu alone and
+     * several thousand blocks under them, so one list is unreadable and one that
+     * ignores the hierarchy puts "Chennai" and "Kalayarkoil" side by side with
+     * nothing to say that one is inside the other.
+     *
+     * Held as three pieces of state and not one object because each has to be
+     * cleared when the level above it changes, and that is a conditional per
+     * level whichever way it is stored.
+     */
+    const [state, setState] = useState<string>(ALL);
+    const [district, setDistrict] = useState<string>(ALL);
+    const [block, setBlock] = useState<string>(ALL);
+
     const chips = settings?.categories || [];
 
     /**
@@ -96,13 +181,105 @@ export function EventsExplorer({ events, settings }: Props) {
         return Array.from(seen).sort((a, b) => a.localeCompare(b));
     }, [events]);
 
+    /**
+     * Every region any event on this page was aimed at, flattened once.
+     *
+     * Derived from the events for the same reason the location list is: a
+     * hand-kept list of regions would offer districts with nothing in them and
+     * would go stale the moment a region was renamed in the admin collections.
+     * Here, a region is offered exactly when something is happening in it.
+     *
+     * Recomputed only when the events change — the three dropdowns read slices
+     * of this, so choosing a state does not rebuild the index.
+     */
+    const regionIndex = useMemo(
+        () => (events || []).flatMap((event) => regionsOf(event)),
+        [events],
+    );
+
+    /**
+     * The options at each level, narrowed by the levels above.
+     *
+     * `uniq` keeps the first spelling it meets of each region and compares on
+     * the normalised form, so two events whose editors typed "Tamil Nadu" and
+     * "Tamil  Nadu" contribute ONE option rather than two that each hide half
+     * the programme.
+     */
+    const uniq = (values: string[]) => {
+        const seen = new Map<string, string>();
+        values.forEach((value) => {
+            const key = norm(value);
+            if (key && !seen.has(key)) seen.set(key, (value || '').trim());
+        });
+        return Array.from(seen.values()).sort((a, b) => a.localeCompare(b));
+    };
+
+    const stateOptions = useMemo(
+        () => uniq(regionIndex.map((r) => r.state)),
+        [regionIndex],
+    );
+
+    const districtOptions = useMemo(() => {
+        if (state === ALL) return [];
+        return uniq(regionIndex.filter((r) => norm(r.state) === norm(state)).map((r) => r.district));
+    }, [regionIndex, state]);
+
+    const blockOptions = useMemo(() => {
+        if (state === ALL || district === ALL) return [];
+        return uniq(regionIndex
+            .filter((r) => norm(r.state) === norm(state) && norm(r.district) === norm(district))
+            .map((r) => r.block));
+    }, [regionIndex, state, district]);
+
+    /*
+     * Choosing a wider region clears the narrower ones inside it.
+     *
+     * Without this, switching from Tamil Nadu to Kerala keeps "Sivaganga"
+     * selected and the grid empties — a filter naming a district that is not in
+     * the chosen state can never match anything, and the page gives the visitor
+     * no clue why. Done in the handlers rather than in an effect so the reset is
+     * part of the click that caused it.
+     */
+    const pickState = (value: string) => {
+        setState(value);
+        setDistrict(ALL);
+        setBlock(ALL);
+    };
+
+    const pickDistrict = (value: string) => {
+        setDistrict(value);
+        setBlock(ALL);
+    };
+
     const filtered = useMemo(() => {
         const needle = (query || '').trim().toLowerCase();
         const now = Date.now();
+        const regionPicked = state !== ALL || district !== ALL || block !== ALL;
+        const selection: Region = {
+            state: state === ALL ? '' : state,
+            district: district === ALL ? '' : district,
+            block: block === ALL ? '' : block,
+        };
 
         return (events || []).filter((event) => {
             if (category !== ALL && (event?.category || '') !== category) return false;
             if (location !== ALL && (event?.location || '') !== location) return false;
+
+            /*
+             * Region.
+             *
+             * An UNTARGETED event passes every region filter, and that is not a
+             * shortcut — empty means "the whole association", so a national
+             * announcement is genuinely part of what is happening in Sivaganga.
+             * Hiding it when a visitor narrows to their own district would make
+             * the filter subtract the events that matter most.
+             */
+            if (regionPicked) {
+                const regions = regionsOf(event);
+                if (regions.length && !regions.some((target) => onSamePath(target, selection))) {
+                    return false;
+                }
+            }
 
             if (when !== 'all') {
                 const start = event?.startAt ? new Date(event.startAt).getTime() : NaN;
@@ -123,20 +300,33 @@ export function EventsExplorer({ events, settings }: Props) {
             }
             return true;
         });
-    }, [events, query, category, location, when]);
+    }, [events, query, category, location, when, state, district, block]);
 
-    const isFiltered = !!(query.trim()) || category !== ALL || location !== ALL || when !== 'upcoming';
+    const isFiltered = !!(query.trim()) || category !== ALL || location !== ALL
+        || when !== 'upcoming' || state !== ALL || district !== ALL || block !== ALL;
 
     const reset = () => {
         setQuery('');
         setCategory(ALL);
         setLocation(ALL);
         setWhen('upcoming');
+        setState(ALL);
+        setDistrict(ALL);
+        setBlock(ALL);
     };
 
-    /** What the visitor narrowed by, for the empty-state sentence. */
+    /**
+     * What the visitor narrowed by, for the empty-state sentence.
+     *
+     * Region is named before the coarser filters and from the NARROWEST level
+     * chosen: someone who drilled to a block and found nothing is looking for
+     * the block's name in that sentence, not their state's.
+     */
     const describeFilter = () => {
         if (query.trim()) return `"${query.trim()}"`;
+        if (block !== ALL) return block;
+        if (district !== ALL) return district;
+        if (state !== ALL) return state;
         if (category !== ALL) return category;
         if (location !== ALL) return location;
         return WHEN.find((w) => w.value === when)?.label || 'that filter';
@@ -217,6 +407,68 @@ export function EventsExplorer({ events, settings }: Props) {
                                 </select>
                             )}
 
+                            {/*
+                              STATE, THEN DISTRICT, THEN BLOCK -- in that order,
+                              left to right, and each appearing only once the one
+                              before it has been answered.
+
+                              Progressive rather than three dropdowns always on
+                              screen. On a page whose toolbar already holds a
+                              search, a category and a date window, three more
+                              permanently-visible selects would be six controls
+                              for a visitor who wants "events near me", and two
+                              of the three would be disabled and unexplained
+                              until the state was chosen. Revealed in sequence,
+                              the row grows by exactly as much as the visitor has
+                              asked for.
+
+                              Offered at all only when the events on this page
+                              carry regions. An association posting everything
+                              nationally never sees a region filter, rather than
+                              seeing one with a single option in it.
+                            */}
+                            {stateOptions.length > 0 && (
+                                <select
+                                    aria-label="State"
+                                    value={state}
+                                    onChange={(e) => pickState(e.target.value)}
+                                    className={selectClass}
+                                >
+                                    <option value={ALL}>All states</option>
+                                    {stateOptions.map((s, i) => (
+                                        <option key={i} value={s}>{s}</option>
+                                    ))}
+                                </select>
+                            )}
+
+                            {districtOptions.length > 0 && (
+                                <select
+                                    aria-label="District"
+                                    value={district}
+                                    onChange={(e) => pickDistrict(e.target.value)}
+                                    className={selectClass}
+                                >
+                                    <option value={ALL}>All districts</option>
+                                    {districtOptions.map((d, i) => (
+                                        <option key={i} value={d}>{d}</option>
+                                    ))}
+                                </select>
+                            )}
+
+                            {blockOptions.length > 0 && (
+                                <select
+                                    aria-label="Block"
+                                    value={block}
+                                    onChange={(e) => setBlock(e.target.value)}
+                                    className={selectClass}
+                                >
+                                    <option value={ALL}>All blocks</option>
+                                    {blockOptions.map((b, i) => (
+                                        <option key={i} value={b}>{b}</option>
+                                    ))}
+                                </select>
+                            )}
+
                             <select
                                 aria-label="When"
                                 value={when}
@@ -264,7 +516,7 @@ export function EventsExplorer({ events, settings }: Props) {
                                         type="button"
                                         onClick={() => setCategory(chip.label)}
                                         className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl
-                                                    px-4 py-2 text-sm font-bold transition-all duration-200 ${
+                                                    px-4 py-2.5 text-sm font-bold transition-all duration-200 ${
                                             active
                                                 ? 'bg-white text-brand-800 shadow-[0_6px_16px_-6px_rgb(28_46_104/0.5)]'
                                                 : 'text-brand-600/80 hover:text-brand-800'
@@ -296,6 +548,38 @@ export function EventsExplorer({ events, settings }: Props) {
                         {filtered.map((event, i) => {
                             const date = splitDate(event?.startAt);
                             const time = formatTimeRange(event?.startAt, event?.endAt);
+
+                            /*
+                              WHO THE EVENT IS FOR, on the card.
+                              
+                              The venue line under it says where to turn up; this
+                              says which part of the association it belongs to,
+                              and they are routinely different — a state-level
+                              conclave for Tamil Nadu held at a hall in Chennai.
+                              Without it, a visitor who filtered to their district
+                              has no way to tell whether a result is theirs or is
+                              a national announcement that passes every region
+                              filter.
+
+                              The FIRST region as a breadcrumb, with a count for
+                              the rest — not the server's `targetLabel`, which
+                              joins every scope with commas. That reads well in a
+                              table on an admin screen and not at all here: five
+                              across, a card is about 220px wide, and an event
+                              aimed at eight blocks would fill it with region
+                              names and push the title out of the card. One
+                              breadcrumb and "+7 more" says the same thing in the
+                              space available.
+
+                              Nothing is drawn for an untargeted event.
+                              "Everyone" on every card is a badge carrying no
+                              information.
+                            */
+                            const regions = regionsOf(event);
+                            const reach = regions.length
+                                ? LEVELS.map((level) => regions[0][level]).filter(Boolean).join(' › ')
+                                : '';
+                            const extraRegions = Math.max(regions.length - 1, 0);
 
                             return (
                                 <Reveal
@@ -343,21 +627,27 @@ export function EventsExplorer({ events, settings }: Props) {
                                                 */}
                                                 {date && (
                                                     <div
-                                                        className={`absolute left-5 flex w-14 flex-col items-center
-                                                                    rounded-xl bg-white px-2 py-2 text-center
-                                                                    ring-1 ring-brand-100
+                                                        /* Wider and larger on a phone, where the
+                                                           card is one across; it steps back down
+                                                           from `sm`, where five share a row. */
+                                                        className={`absolute left-5 flex w-16 sm:w-14 flex-col
+                                                                    items-center rounded-xl bg-white px-2 py-2
+                                                                    text-center ring-1 ring-brand-100
                                                                     shadow-[0_8px_20px_-8px_rgb(28_46_104/0.5)]
                                                                     ${event?.media?.url ? '-top-9' : 'top-4'}`}
                                                         style={{ transform: 'translateZ(30px)' }}
                                                     >
-                                                        <span className="text-lg font-black leading-none text-brand-800">
+                                                        <span className="text-xl sm:text-lg font-black leading-none
+                                                                         text-brand-800">
                                                             {date.day}
                                                         </span>
-                                                        <span className="mt-0.5 text-[0.5625rem] font-extrabold
-                                                                         uppercase tracking-[0.1em] text-brand-600">
+                                                        <span className="mt-0.5 text-[0.6875rem] xl:text-[0.625rem]
+                                                                         font-extrabold uppercase tracking-[0.08em]
+                                                                         text-brand-600">
                                                             {date.month}
                                                         </span>
-                                                        <span className="text-[0.5625rem] font-bold text-gray-400">
+                                                        <span className="text-[0.6875rem] xl:text-[0.625rem]
+                                                                         font-bold text-gray-400">
                                                             {date.year}
                                                         </span>
                                                     </div>
@@ -374,7 +664,13 @@ export function EventsExplorer({ events, settings }: Props) {
                                                     <h3 className={`${CARD_TITLE} text-[0.9375rem] leading-snug
                                                                     text-brand-800 line-clamp-3 transition-colors
                                                                     group-hover:text-brand-600`}>
-                                                        {event?.title || ''}
+                                                        {/* No field on the event form is
+                                                            required, so a published event
+                                                            can genuinely have no title.
+                                                            A named placeholder beats an
+                                                            empty heading, which reads as
+                                                            a broken card. */}
+                                                        {event?.title || 'Untitled event'}
                                                     </h3>
 
                                                     {event?.description && (
@@ -386,6 +682,20 @@ export function EventsExplorer({ events, settings }: Props) {
                                                 </div>
 
                                                 <div className="mt-auto space-y-2 pt-5">
+                                                    {reach && (
+                                                        <p className="flex items-start gap-2 text-[0.75rem]
+                                                                      font-bold text-brand-600">
+                                                            <Landmark size={13} className="mt-0.5 shrink-0 text-brand-400" />
+                                                            <span className="line-clamp-1">
+                                                                {reach}
+                                                                {extraRegions > 0 && (
+                                                                    <span className="font-semibold text-gray-400">
+                                                                        {' '}+{extraRegions} more
+                                                                    </span>
+                                                                )}
+                                                            </span>
+                                                        </p>
+                                                    )}
                                                     {event?.location && (
                                                         <p className="flex items-start gap-2 text-[0.75rem]
                                                                       font-semibold text-gray-500">
@@ -400,12 +710,35 @@ export function EventsExplorer({ events, settings }: Props) {
                                                             <span>{time}</span>
                                                         </p>
                                                     )}
+                                                    {/*
+                                                      An undated event says so.
+                                                      
+                                                      The date block above is simply not
+                                                      drawn when there is no date, which
+                                                      leaves a card that looks like every
+                                                      other one minus a corner — read as
+                                                      a rendering fault rather than as
+                                                      information. Since the date stopped
+                                                      being a required field this is a
+                                                      real state a visitor will meet.
+                                                    */}
+                                                    {!date && (
+                                                        <p className="flex items-center gap-2 text-[0.75rem]
+                                                                      font-semibold text-gray-400">
+                                                            <Clock size={13} className="shrink-0 text-brand-300" />
+                                                            <span>Date to be confirmed</span>
+                                                        </p>
+                                                    )}
 
+                                                    {/* Its own page. This pointed back at the
+                                                        list the card is already on, so "View
+                                                        Details" showed no details. */}
                                                     <Link
-                                                        to="/events"
+                                                        to={`/events/${event?.id || ''}`}
                                                         aria-label={`More about ${event?.title || 'this event'}`}
-                                                        className={`${MICRO_LABEL} mt-3 inline-flex items-center gap-1.5
-                                                                    text-brand-600 transition-colors hover:text-brand-800`}
+                                                        className={`${MICRO_LABEL} mt-1 inline-flex items-center gap-1.5
+                                                                    py-3.5 text-brand-600 transition-colors
+                                                                    hover:text-brand-800`}
                                                     >
                                                         View Details
                                                         <ArrowRight
@@ -468,6 +801,9 @@ export function EventsExplorer({ events, settings }: Props) {
                         </div>
                     </Reveal>
                 )}
+
+                {/* Fields the editor added to this page. */}
+                <CmsExtraFields fields={settings?.extraFields} className="mt-16" />
             </div>
         </section>
     );

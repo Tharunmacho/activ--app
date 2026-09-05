@@ -60,6 +60,7 @@ export function AboutSection() {
             media={about.media}
             logoOverlay={about.logoOverlay}
             statsBar={about.statsBar}
+            extraFields={about.extraFields}
         />
     );
 }

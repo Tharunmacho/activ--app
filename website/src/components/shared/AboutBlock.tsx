@@ -1,10 +1,11 @@
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
 import { CmsIcon } from '@/components/shared/CmsIcon';
+import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
 import { CountUp } from '@/components/shared/CountUp';
 import { Reveal } from '@/components/shared/Reveal';
 import { Tilt3D } from '@/components/shared/Tilt3D';
 import { MissionCarousel } from '@/components/shared/MissionCarousel';
-import type { CmsBullet, CmsMedia, CmsStat } from '@/services/cmsApi';
+import type { CmsBullet, CmsMedia, CmsStat, CmsExtraField } from '@/services/cmsApi';
 import { PAGE_CONTAINER } from '@/components/layout/pageContainer';
 import {
     SECTION_HEADING, SECTION_LEDE, EYEBROW, STAT_FIGURE, STAT_LABEL,
@@ -52,16 +53,18 @@ interface Props {
     media?: CmsMedia | null;
     logoOverlay?: CmsMedia | null;
     statsBar?: CmsStat[];
+    /** Fields the editor named themselves, under the figures bar. */
+    extraFields?: CmsExtraField[];
 }
 
 export function AboutBlock({
     badgeIcon, badgeText, heading, headingHighlight,
-    body, bullets = [], media, logoOverlay, statsBar = [],
+    body, bullets = [], media, logoOverlay, statsBar = [], extraFields = [],
 }: Props) {
     const hasMedia = !!media?.url;
     const hasCopy = !!(badgeText || heading || headingHighlight || body);
 
-    if (!hasCopy && !hasMedia && !bullets.length && !statsBar.length) return null;
+    if (!hasCopy && !hasMedia && !bullets.length && !statsBar.length && !extraFields.length) return null;
 
     return (
         <section className="w-full py-20 bg-[#fbfcff] flex flex-col items-center relative overflow-hidden font-sans">
@@ -220,6 +223,12 @@ export function AboutBlock({
                     </Reveal>
                 </div>
             )}
+
+            {/* Whatever the editor added that this block does not know about.
+                Renders nothing at all when the list is empty. */}
+            <div className={`${PAGE_CONTAINER} relative z-10`}>
+                <CmsExtraFields fields={extraFields} className="mt-12" />
+            </div>
         </section>
     );
 }

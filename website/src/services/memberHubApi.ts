@@ -129,10 +129,50 @@ export interface EventSpeaker {
 
 export type RegistrationStatus = 'registered' | 'waitlist' | 'cancelled';
 
+/** One question on an event's own registration form (EVT-004). */
+export interface RegistrationFieldDef {
+    /** Stable identifier the answer is stored against. Survives a rename. */
+    key: string;
+    label: string;
+    type: 'text' | 'textarea' | 'number' | 'email' | 'phone' | 'date' | 'select' | 'checkbox';
+    required: boolean;
+    placeholder: string;
+    helpText: string;
+    /** For `select` only; empty for every other type. */
+    options: string[];
+}
+
+/**
+ * One answer, carrying the label it was given under.
+ *
+ * The label is stored with the answer rather than looked up from the event when
+ * the attendee list is read: the form is editable after people register, so a
+ * label read at render time would relabel answers somebody already gave — and a
+ * deleted field would leave its answers with no heading at all.
+ */
+export interface RegistrationResponse {
+    key: string;
+    label: string;
+    value: string;
+}
+
+/** What a seat cost and whether it has been settled. See the model's note. */
+export interface RegistrationPayment {
+    /** `not_required` free · `pending` held, unpaid · `paid` confirmed. */
+    status: 'not_required' | 'pending' | 'paid';
+    amount: number;
+    reference: string;
+    method: string;
+    paidAt: string | null;
+}
+
 export interface EventRegistration {
     id: string;
     eventId: string;
     userId: string;
+    payment: RegistrationPayment;
+    /** The answers this member gave to the event's own form, in its order. */
+    responses: RegistrationResponse[];
     memberName: string;
     email: string;
     phone: string;
@@ -174,6 +214,18 @@ export interface MemberEvent {
     /** The deadline, or the start — derived, so moving the event moves it. */
     registrationClosesAt: string | null;
     capacity: number;
+    /** Rupees. 0 is free; anything above it adds a payment step. */
+    registrationFee: number;
+    /*
+     * The questions THIS event asks, designed per event by the super admin.
+     *
+     * The member screen renders whatever is in here and holds no list of its
+     * own — a client that knows the fields is a client that has to ship before
+     * the association can ask a new question.
+     */
+    registrationFields: RegistrationFieldDef[];
+    /** Every region this event was aimed at. Empty means everyone. */
+    targets: { state: string; district: string; block: string }[];
     registrationNote: string;
     reminderOffsetsHours: number[];
     /**
@@ -196,6 +248,19 @@ export const registerForEvent = async (id: string, details: Record<string, any> 
     unwrap<EventRegistration & { alreadyRegistered?: boolean }>(
         await api.post(ENDPOINTS.EVENTS.REGISTER(id), details), {} as any);
 
+/**
+ * Settle the fee on a held seat.
+ *
+ * A separate call from `registerForEvent` because holding a seat and paying for
+ * it are two things: a member can hold one and pay later, a payment can fail
+ * and be retried, and a real gateway will one day call the server back from
+ * outside the browser. Idempotent — a refreshed receipt page is not a second
+ * purchase.
+ */
+export const payForEvent = async (id: string, details: Record<string, any> = {}) =>
+    unwrap<EventRegistration & { alreadyPaid?: boolean }>(
+        await api.post(ENDPOINTS.EVENTS.PAY_REGISTRATION(id), details), {} as any);
+
 export const cancelEventRegistration = async (id: string) =>
     unwrap<EventRegistration | null>(await api.delete(ENDPOINTS.EVENTS.REGISTER(id)), null);
 
@@ -215,16 +280,28 @@ export interface DirectoryCompany {
     id: string;
     businessName: string;
     businessType: string;
-    location: string;
-    area: string;
     logo: string;
+}
+
+/** A product as it appears on a search row: picture and name, nothing else. */
+export interface DirectoryProductPreview {
+    id: string;
+    name: string;
+    imageUrl: string;
 }
 
 export interface DirectoryEntry {
     id: string;
     fullName: string;
     profilePhoto: string;
-    city: string;
+    /*
+     * No `city`, and no `location`/`area` on the companies above.
+     *
+     * The server stopped sending them: a directory that prints where a member's
+     * premises are is a mailing list, which is the one thing DIR-001 says it is
+     * not. State, district and block stay — they are the region tree every
+     * screen filters on, not an address.
+     */
     state: string;
     district: string;
     block: string;
@@ -234,6 +311,8 @@ export interface DirectoryEntry {
     companies: DirectoryCompany[];
     sectors: string[];
     productCount: number;
+    /** Up to four, for the tiles on the row. See `PRODUCT_PREVIEW` server-side. */
+    products: DirectoryProductPreview[];
 }
 
 export interface DirectoryProduct {
@@ -255,9 +334,17 @@ export interface DirectoryFilters {
     limit?: number;
 }
 
+/** Where the viewer is registered — what the screen defaults its filters to. */
+export interface ViewerRegion {
+    state: string;
+    district: string;
+    block: string;
+}
+
 const EMPTY_DIRECTORY = {
     members: [] as DirectoryEntry[],
     pagination: { page: 1, limit: 20, total: 0, pages: 0 },
+    viewerRegion: { state: '', district: '', block: '' } as ViewerRegion,
 };
 
 /**
@@ -278,8 +365,16 @@ export const searchDirectory = async (filters: DirectoryFilters = {}) => {
         await api.get(ENDPOINTS.MEMBERS.DIRECTORY, { params }), EMPTY_DIRECTORY);
 };
 
+/**
+ * One member's card — the same shape, with the FULL catalogue lines.
+ *
+ * `DirectoryEntry.products` is the four-tile preview (picture and name). The
+ * card replaces it with `DirectoryProduct`, which carries category and price
+ * too: a price belongs where a buyer is looking at one supplier deliberately,
+ * not on a row of search results where it reads as a quotation.
+ */
 export const getDirectoryEntry = async (id: string) =>
-    unwrap<(DirectoryEntry & { products: DirectoryProduct[] }) | null>(
+    unwrap<(Omit<DirectoryEntry, 'products'> & { products: DirectoryProduct[] }) | null>(
         await api.get(ENDPOINTS.MEMBERS.DIRECTORY_ENTRY(id)), null);
 
 export const listDirectorySectors = async () =>

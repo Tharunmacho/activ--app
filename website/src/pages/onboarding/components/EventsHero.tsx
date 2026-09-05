@@ -101,7 +101,7 @@ export function EventsHero({ settings }: Props) {
                                         <p className="text-2xl font-black tracking-tight tabular-nums">
                                             <CountUp value={stat.value} />
                                         </p>
-                                        <p className="mt-0.5 text-[0.6875rem] font-bold uppercase
+                                        <p className="mt-0.5 text-xs sm:text-[0.6875rem] font-bold uppercase
                                                       tracking-[0.08em] text-white/55">
                                             {stat.label}
                                         </p>
@@ -152,7 +152,7 @@ export function EventsHero({ settings }: Props) {
                                             <p className="text-sm font-extrabold leading-tight">{heroBadge.title}</p>
                                         )}
                                         {heroBadge?.subtitle && (
-                                            <p className="mt-1 text-[0.6875rem] leading-snug text-white/70">
+                                            <p className="mt-1 text-xs leading-snug text-white/70">
                                                 {heroBadge.subtitle}
                                             </p>
                                         )}

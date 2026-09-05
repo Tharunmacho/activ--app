@@ -106,8 +106,8 @@ export default function AuditLog() {
     return (
         <div className="bg-white rounded-xl border">
             <header className="px-6 py-5 border-b">
-                <h2 className="text-lg font-bold text-gray-900">Audit log</h2>
-                <p className="text-sm text-gray-500 mt-0.5">
+                <h2 className="text-lg font-bold text-slate-900">Audit log</h2>
+                <p className="text-sm text-slate-500 mt-0.5">
                     {counts.all !== undefined
                         ? `${counts.all} recorded action(s) — every approval, rejection and admin change.`
                         : 'Every approval, rejection and admin change, with who did it.'}
@@ -116,12 +116,12 @@ export default function AuditLog() {
 
             <div className="px-6 py-4 border-b flex flex-wrap items-center gap-3">
                 <div className="relative flex-1 min-w-[12.5rem]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="Who did what — name, email or applicant"
-                        className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm
+                        className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm
                                    focus:outline-none focus:ring-2 focus:ring-blue-600"
                     />
                 </div>
@@ -134,7 +134,7 @@ export default function AuditLog() {
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                                 category === c.key
                                     ? 'bg-blue-600 text-white'
-                                    : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
                             }`}
                         >
                             {c.label}
@@ -148,7 +148,7 @@ export default function AuditLog() {
 
             <div className="divide-y max-h-[32.5rem] overflow-y-auto">
                 {entries.length === 0 && !loading ? (
-                    <p className="text-center text-gray-500 py-12">
+                    <p className="text-center text-slate-500 py-12">
                         {query || category !== 'all' ? 'Nothing matches that filter.' : 'No activity recorded yet.'}
                     </p>
                 ) : (
@@ -156,8 +156,8 @@ export default function AuditLog() {
                         <div key={e.id} className="px-6 py-4">
                             <div className="flex items-start justify-between gap-4">
                                 <div className="min-w-0">
-                                    <p className="text-sm text-gray-900">{e.summary || e.action}</p>
-                                    <p className="text-xs text-gray-500 mt-1">
+                                    <p className="text-sm text-slate-900">{e.summary || e.action}</p>
+                                    <p className="text-xs text-slate-500 mt-1">
                                         {e.actorName || e.actorEmail}
                                         {e.actorRoleLabel && ` · ${e.actorRoleLabel}`}
                                         {e.location && ` · ${e.location}`}
@@ -165,7 +165,7 @@ export default function AuditLog() {
                                 </div>
 
                                 <div className="text-right shrink-0">
-                                    <p className="text-xs text-gray-400 whitespace-nowrap">{when(e.createdAt)}</p>
+                                    <p className="text-xs text-slate-400 whitespace-nowrap">{when(e.createdAt)}</p>
                                     {/* A super admin acting on a tier's behalf is worth
                                         marking: the decision was not the region's own. */}
                                     {e.proxy && (
@@ -187,7 +187,7 @@ export default function AuditLog() {
                         onClick={() => load(page + 1, false)}
                         disabled={loading}
                         className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg
-                                   border border-gray-200 text-sm font-medium disabled:opacity-60"
+                                   border border-slate-200 text-sm font-medium disabled:opacity-60"
                     >
                         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                         {loading ? 'Loading…' : 'Load more'}

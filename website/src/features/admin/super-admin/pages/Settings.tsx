@@ -156,7 +156,7 @@ const Settings = () => {
     }, []);
 
     return (
-        <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-50">
+        <div className="min-h-screen flex bg-white">
             {/* Mobile Overlay */}
             {sidebarOpen && (
                 <div
@@ -174,16 +174,16 @@ const Settings = () => {
                 <div className="md:hidden flex items-center justify-between p-4 bg-white border-b shadow-sm">
                     <button
                         onClick={() => setSidebarOpen(true)}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                     >
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </button>
-                    <h1 className="text-xl font-bold text-gray-900">Settings</h1>
+                    <h1 className="text-xl font-bold text-slate-900">Settings</h1>
                     <Avatar className="w-10 h-10 ring-2 ring-blue-100 cursor-pointer hover:ring-4 transition-all" onClick={() => setProfileModalOpen(true)}>
                         {adminInfo?.avatarUrl && <AvatarImage src={adminInfo.avatarUrl} className="object-cover" />}
-                        <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold">
+                        <AvatarFallback className="bg-blue-600 text-white font-bold">
                             {avatarInitials}
                         </AvatarFallback>
                     </Avatar>
@@ -192,36 +192,36 @@ const Settings = () => {
                 {/* Main scrollable content */}
                 <div className="flex-1 flex flex-col overflow-auto">
                     {/* TOP SECTION - White Header with Shadow */}
-                    <div className="bg-white p-6 lg:p-10 shadow-lg">
-                        <div className="max-w-6xl mx-auto pt-12 lg:pt-0">
+                    <div className="p-6 max-w-[90rem] space-y-6">
+                        <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-6">
                             {/* Header Section */}
                             <div className="mb-8">
                                 <div className="flex flex-col md:flex-row items-center md:items-start gap-4 text-center md:text-left">
                                     <Avatar className="w-20 h-20 ring-4 ring-blue-100 cursor-pointer hover:ring-6 hover:ring-blue-200 transition-all" onClick={() => setProfileModalOpen(true)}>
                                         {adminInfo?.avatarUrl && <AvatarImage src={adminInfo.avatarUrl} className="object-cover" />}
-                                        <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold text-2xl">
+                                        <AvatarFallback className="bg-blue-600 text-white font-bold text-2xl">
                                             {avatarInitials}
                                         </AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1">
-                                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{userName}</h1>
-                                        <p className="text-gray-600 text-base md:text-lg flex items-center gap-2 justify-center md:justify-start mt-1">
+                                        <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{userName}</h1>
+                                        <p className="text-slate-500 text-base md:text-lg flex items-center gap-2 justify-center md:justify-start mt-1">
                                             <Shield className="w-5 h-5" />
                                             {roleLabel}
                                         </p>
                                         <div className="flex flex-col sm:flex-row items-center gap-3 mt-3">
-                                            <div className="flex items-center gap-2 text-gray-600">
+                                            <div className="flex items-center gap-2 text-slate-500">
                                                 <Mail className="w-4 h-4" />
                                                 <span className="text-sm">{userEmail}</span>
                                             </div>
-                                            <div className="flex items-center gap-2 text-gray-600">
+                                            <div className="flex items-center gap-2 text-slate-500">
                                                 <MapPin className="w-4 h-4" />
                                                 <span className="text-sm">{adminLocation}</span>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3 mt-4 justify-center md:justify-start">
-                                            <span className="font-medium text-gray-700">Status:</span>
-                                            <Badge className={activeStatus ? "bg-green-500 hover:bg-green-600" : "bg-gray-500 hover:bg-gray-600"}>
+                                            <span className="font-medium text-slate-700">Status:</span>
+                                            <Badge className={activeStatus ? "bg-green-500 hover:bg-green-600" : "bg-slate-500 hover:bg-slate-600"}>
                                                 {activeStatus ? "Active" : "Inactive"}
                                             </Badge>
                                             <Switch
@@ -235,28 +235,28 @@ const Settings = () => {
 
                             {/* Statistics Grid */}
                             <div>
-                                <h2 className="text-xl font-semibold mb-4 text-gray-900">Platform</h2>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-6 border border-blue-500 shadow-xl hover:shadow-2xl transition-all duration-300">
+                                <h2 className="text-base font-bold tracking-tight text-slate-900 mb-4">Platform</h2>
+                                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                                    <div className="bg-blue-600 rounded-2xl p-6 shadow-[0_10px_28px_-6px_rgba(37,99,235,0.55)]">
                                         <div className="flex items-center gap-2 mb-2">
                                             <Users className="w-5 h-5 text-blue-100" />
                                             <p className="text-blue-100 text-sm font-medium">Total members</p>
                                         </div>
-                                        <p className="text-4xl font-bold text-white">{stats.totalMembers}</p>
+                                        <p className="text-4xl font-bold tracking-tight tabular-nums text-white">{stats.totalMembers}</p>
                                     </div>
-                                    <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-2xl p-6 border border-purple-500 shadow-xl hover:shadow-2xl transition-all duration-300">
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                                         <div className="flex items-center gap-2 mb-2">
-                                            <Clock className="w-5 h-5 text-purple-100" />
-                                            <p className="text-purple-100 text-sm font-medium">Applications</p>
+                                            <Clock className="w-5 h-5 text-amber-500" />
+                                            <p className="text-slate-500 text-sm font-medium">Applications</p>
                                         </div>
-                                        <p className="text-4xl font-bold text-white">{stats.totalApplications}</p>
+                                        <p className="text-4xl font-bold tracking-tight tabular-nums text-slate-900">{stats.totalApplications}</p>
                                     </div>
-                                    <div className="bg-gradient-to-br from-cyan-600 to-cyan-700 rounded-2xl p-6 border border-cyan-500 shadow-xl hover:shadow-2xl transition-all duration-300">
+                                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                                         <div className="flex items-center gap-2 mb-2">
-                                            <CheckCircle className="w-5 h-5 text-cyan-100" />
-                                            <p className="text-cyan-100 text-sm font-medium">Admin accounts</p>
+                                            <CheckCircle className="w-5 h-5 text-emerald-500" />
+                                            <p className="text-slate-500 text-sm font-medium">Admin accounts</p>
                                         </div>
-                                        <p className="text-4xl font-bold text-white">{stats.totalAdmins}</p>
+                                        <p className="text-4xl font-bold tracking-tight tabular-nums text-slate-900">{stats.totalAdmins}</p>
                                     </div>
                                 </div>
                             </div>
@@ -264,14 +264,14 @@ const Settings = () => {
                     </div>
 
                     {/* MAIN CONTENT - Light Background */}
-                    <div className="bg-gradient-to-br from-gray-50 to-white p-6 lg:p-10">
-                        <div className="max-w-6xl mx-auto space-y-6">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-6">Settings & Preferences</h2>
+                    <div className="px-6 pb-6 max-w-[90rem]">
+                        <div className="space-y-6">
+                            <h2 className="text-base font-bold tracking-tight text-slate-900">Settings & Preferences</h2>
 
-                            <div className="grid md:grid-cols-2 gap-6">
+                            <div className="grid gap-5 md:grid-cols-2">
                                 {/* Account Settings Card */}
-                                <Card className="shadow-xl border-0 hover:shadow-2xl transition-shadow duration-300">
-                                    <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+                                <Card className="border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] overflow-hidden">
+                                    <CardHeader className="border-b border-slate-100 bg-white">
                                         <CardTitle className="text-lg font-bold flex items-center gap-2">
                                             <User className="w-5 h-5 text-blue-600" />
                                             Account Settings
@@ -280,22 +280,22 @@ const Settings = () => {
                                     <CardContent className="pt-4 space-y-2">
                                         <button 
                                             onClick={() => setProfileModalOpen(true)}
-                                            className="w-full flex items-center justify-between p-4 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 rounded-xl transition-all duration-200 group border border-transparent hover:border-blue-200"
+                                            className="w-full flex items-center justify-between p-4 hover:bg-slate-50 rounded-xl transition-colors duration-200 group border border-transparent hover:border-slate-200"
                                         >
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
                                                     <User className="w-5 h-5 text-blue-600" />
                                                 </div>
-                                                <span className="font-medium text-gray-900">Profile Information</span>
+                                                <span className="font-medium text-slate-900">Profile Information</span>
                                             </div>
-                                            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                                            <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-blue-600 transition-colors" />
                                         </button>
                                     </CardContent>
                                 </Card>
 
                                 {/* Support Card */}
-                                <Card className="shadow-xl border-0 hover:shadow-2xl transition-shadow duration-300">
-                                    <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+                                <Card className="border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] overflow-hidden">
+                                    <CardHeader className="border-b border-slate-100 bg-white">
                                         <CardTitle className="text-lg font-bold flex items-center gap-2">
                                             <HelpCircle className="w-5 h-5 text-blue-600" />
                                             Help & Support

@@ -124,7 +124,7 @@ const Members = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-gray-50 to-white">
+    <div className="min-h-screen flex bg-white">
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
@@ -142,24 +142,24 @@ const Members = () => {
         <div className="md:hidden flex items-center justify-between p-4 bg-white border-b shadow-sm">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <h1 className="text-xl font-bold text-gray-900">Members</h1>
+          <h1 className="text-xl font-bold text-slate-900">Members</h1>
           <Avatar className="w-10 h-10 ring-2 ring-blue-100">
             <AvatarImage src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=96&h=96&fit=crop&crop=face" className="object-cover" />
-            <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold">
+            <AvatarFallback className="bg-blue-600 text-white font-bold">
               {(localStorage.getItem('userName') || 'A').split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
         </div>
 
-        <div className="flex-1 p-4 md:p-6 overflow-auto">
-          <div className="w-full max-w-6xl mx-auto space-y-6 pt-12 lg:pt-0">
-            <div className="bg-gradient-to-br from-blue-600 to-blue-700 shadow-xl p-6 rounded-2xl border border-blue-500">
+        <div className="flex-1 p-6 overflow-auto">
+          <div className="w-full  space-y-6 pt-12 lg:pt-0">
+            <div className="bg-blue-600 p-6 rounded-2xl shadow-[0_10px_28px_-6px_rgba(37,99,235,0.55)]">
               <h1 className="text-3xl font-bold text-white">Members</h1>
               <p className="text-blue-100 mt-1">Manage and view all registered members</p>
             </div>
@@ -169,7 +169,7 @@ const Members = () => {
               <CardContent className="pt-6">
                 <div className="flex gap-2">
                   <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
                     <Input
                       placeholder="Search members by name or email..."
                       value={searchQuery}
@@ -193,7 +193,7 @@ const Members = () => {
                       <Users className="w-8 h-8 text-blue-600" />
                     </div>
                     <h3 className="text-lg font-semibold mb-2">No members found</h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-slate-500">
                       {searchQuery ? "Try adjusting your search" : "There are no members to display yet."}
                     </p>
                   </div>
@@ -204,7 +204,7 @@ const Members = () => {
                 {filteredMembers.map((member) => (
                   <div
                     key={member.id}
-                    className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-6 border border-blue-500 shadow-xl hover:shadow-2xl transition-all duration-300"
+                    className="bg-blue-600 rounded-2xl p-6 shadow-[0_10px_28px_-6px_rgba(37,99,235,0.55)]"
                   >
                     <div className="flex items-start gap-4 mb-4">
                       <Avatar className="w-16 h-16 ring-4 ring-white/30">
@@ -216,7 +216,7 @@ const Members = () => {
                       <div className="flex-1">
                         <h3 className="text-lg font-bold text-white">{member.name}</h3>
                         <p className="text-blue-100 text-sm">{member.id}</p>
-                        <Badge className={member.status === 'Active' ? 'bg-green-500 hover:bg-green-600 mt-2' : 'bg-gray-500 hover:bg-gray-600 mt-2'}>
+                        <Badge className={member.status === 'Active' ? 'bg-green-500 hover:bg-green-600 mt-2' : 'bg-slate-500 hover:bg-slate-600 mt-2'}>
                           {member.status}
                         </Badge>
                       </div>

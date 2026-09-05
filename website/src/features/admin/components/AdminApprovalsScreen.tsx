@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
-import { Menu } from "lucide-react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { Menu, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/toaster";
 import AdminSidebar from "./AdminSidebar";
@@ -10,6 +11,9 @@ import {
     getApplicationProfile, errorMessage, type Applicant,
 } from "@/services/activApi";
 import { TIERS, type AdminTier } from "./tierConfig";
+import ApplicantRegionFilter, {
+    EMPTY_SELECTION, matchesSelection, type RegionSelection,
+} from "./ApplicantRegionFilter";
 
 /**
  * The admin approvals queue, shared by every tier.
@@ -28,6 +32,7 @@ import { TIERS, type AdminTier } from "./tierConfig";
  * match, which is why the server's classification is used verbatim.
  */
 export default function AdminApprovalsScreen({ tier }: { tier: AdminTier }) {
+    const navigate = useNavigate();
     const config = TIERS[tier];
 
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -36,6 +41,37 @@ export default function AdminApprovalsScreen({ tier }: { tier: AdminTier }) {
     const [serverBuckets, setServerBuckets] = useState<ApplicantBuckets>({
         pending: [], approved: [], rejected: [], all: [],
     });
+
+    /**
+     * Which block, or which district's blocks, the queue is narrowed to.
+     *
+     * A view over what the server already sent — see `ApplicantRegionFilter`.
+     * Nothing here is sent back to the API, so a district admin cannot widen
+     * their geofence with it and the mobile app is unaffected.
+     */
+    const [region, setRegion] = useState<RegionSelection>({ ...EMPTY_SELECTION });
+
+    /**
+     * The filter applied to ALL FOUR buckets, not just the visible one.
+     *
+     * The pills print their own counts, and filtering only the rendered list
+     * would leave "Pending (12)" above three cards — which reads as a screen
+     * that has lost nine applicants rather than as a filter doing its job.
+     */
+    const buckets = useMemo(() => {
+        const active = !!(region.state || region.district || region.block);
+        if (!active) return serverBuckets;
+
+        const narrow = (rows: Applicant[]) =>
+            (rows || []).filter((row) => matchesSelection(row, region));
+
+        return {
+            pending: narrow(serverBuckets.pending),
+            approved: narrow(serverBuckets.approved),
+            rejected: narrow(serverBuckets.rejected),
+            all: narrow(serverBuckets.all),
+        };
+    }, [serverBuckets, region]);
 
     const [detailOpen, setDetailOpen] = useState(false);
     const [detailProfile, setDetailProfile] = useState<any>(null);
@@ -128,40 +164,80 @@ export default function AdminApprovalsScreen({ tier }: { tier: AdminTier }) {
     }, []);
 
     return (
-        <div className="min-h-screen flex bg-gradient-to-br from-gray-50 to-white">
+        <div className="min-h-screen flex bg-white">
             <AdminSidebar tier={tier} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
             <div className="flex-1 min-w-0 flex flex-col">
                 <div className="md:hidden flex items-center justify-between p-4 bg-white border-b shadow-sm">
                     <button
                         onClick={() => setSidebarOpen(true)}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                         aria-label="Open menu"
                     >
                         <Menu className="w-6 h-6" />
                     </button>
-                    <h1 className="text-xl font-bold text-gray-900">Approvals</h1>
+                    <h1 className="text-xl font-bold text-slate-900">Approvals</h1>
                     <span className="w-10" />
                 </div>
 
-                <div className="flex-1 p-4 md:p-6 overflow-auto">
-                    <div className="w-full max-w-7xl mx-auto space-y-5 md:space-y-6">
-                        {/*
-                            Heading only — no banner, no stat tiles.
+                {/*
+                  THE HEADER IS A WHITE BAR, LIKE EVERY OTHER ADMIN SCREEN.
 
-                            Mobile's Approvals screen is a plain "Approvals"
-                            title above the four filter pills. The website
-                            carried a gradient banner and a four-tile row whose
-                            numbers were, by construction, the same four numbers
-                            the pills underneath already print: Total / Pending /
-                            Approved / Rejected against All (9) / Pending (3) /
-                            Approved (5) / Rejected (0). Two thirds of the
-                            viewport restated the tab bar.
+                  It was a heading inside the scrolling content, sitting straight
+                  on the page tint — so Approvals opened without the white band
+                  that Settings, Members and Manage Admins all open with, and
+                  scrolled the title away with the list. Outside the scroll area
+                  it stays put and the four screens introduce themselves the same
+                  way.
+
+                  Back, because the rail is hidden on a phone and the browser's
+                  own Back retraces whatever brought you here — which after an
+                  approval is this same page.
+                */}
+                <header className="hidden md:flex bg-white border-b border-slate-200 px-6 py-4
+                                   flex-wrap items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => navigate(config.base + '/dashboard')}
+                        aria-label="Back to dashboard"
+                        className="w-9 h-9 -ml-1 rounded-xl flex items-center justify-center
+                                   text-slate-500 transition-colors hover:bg-slate-100
+                                   hover:text-slate-900"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div className="min-w-0 flex-1">
+                        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900">
+                            Approvals
+                        </h1>
+                        <p className="text-sm text-slate-500 mt-0.5">
+                            {config.label} applications — approve or reject what has reached your tier.
+                        </p>
+                    </div>
+                </header>
+
+                {/*
+                  Left-aligned at the shared width. `max-w-7xl mx-auto` centred
+                  this one screen's content while the rest of the admin area runs
+                  from the left margin.
+                */}
+                <div className="flex-1 p-6 overflow-auto">
+                    <div className="w-full max-w-[90rem] space-y-6">
+                        {/*
+                          Above the pills, because it narrows what they count.
+                          Options are built from the `all` bucket — the complete
+                          set this tier can see — so choosing one does not delete
+                          the choices beside it.
                         */}
-                        <h1 className="hidden md:block text-2xl font-bold text-gray-900">Approvals</h1>
+                        <ApplicantRegionFilter
+                            applicants={serverBuckets.all}
+                            levels={config.approvalFilters}
+                            selection={region}
+                            onChange={setRegion}
+                        />
 
                         <ApprovalQueue
-                            buckets={serverBuckets}
+                            buckets={buckets}
                             level={config.queueLevel}
                             activeFilter={tab}
                             onFilterChange={(f) => setTab(f)}

@@ -25,6 +25,13 @@ import Hero from "./pages/onboarding/Hero";
 import AboutPage from "./pages/onboarding/AboutPage";
 import EventsPage from "./pages/onboarding/EventsPage";
 import GalleryPage from "./pages/onboarding/GalleryPage";
+/* One item's own page. Lazy: it is reached by a click from the landing page or
+   the gallery, never as a first paint, so it does not belong in the entry
+   bundle the landing page waits on. */
+const GalleryDetailPage = lazy(() => import("./pages/onboarding/GalleryDetailPage"));
+/* One event's own page. Lazy for the same reason: reached by a click, never
+   as a first paint. */
+const EventDetailPage = lazy(() => import("./pages/onboarding/EventDetailPage"));
 import ContactPage from "./pages/onboarding/ContactPage";
 import EnhancedLoginPage from "./shared/components/EnhancedLoginPage";
 
@@ -59,6 +66,15 @@ const MemberEvents = lazy(() => import("./features/member/pages/MemberEvents"));
 const MemberEventDetail = lazy(() => import("./features/member/pages/MemberEventDetail"));
 const MemberDirectory = lazy(() => import("./features/member/pages/MemberDirectory"));
 const DirectoryProfile = lazy(() => import("./features/member/pages/DirectoryProfile"));
+/*
+ * The three screens that used to be "upcoming features" with nothing behind
+ * them. Messages is the one member-only feature and still opens — it explains
+ * what an active membership adds and carries the button that gets there.
+ */
+const EventRegistration = lazy(() => import("./features/member/pages/EventRegistration"));
+const MemberMessages = lazy(() => import("./features/member/pages/MemberMessages"));
+const MemberDocuments = lazy(() => import("./features/member/pages/MemberDocuments"));
+const MemberHelp = lazy(() => import("./features/member/pages/MemberHelp"));
 const CertificatePage = lazy(() => import("./features/member/pages/CertificatePage"));
 import MemberSettings from "./pages/member/Settings";
 
@@ -95,12 +111,16 @@ const DistrictDashboard = lazy(() => import("./features/admin/district-admin/pag
 const DistrictApprovals = lazy(() => import("./features/admin/district-admin/pages/Approvals"));
 const DistrictMembers = lazy(() => import("./features/admin/district-admin/pages/Members"));
 const DistrictSettings = lazy(() => import("./features/admin/district-admin/pages/Settings"));
+const DistrictHub = lazy(() => import("./features/admin/district-admin/pages/Hub"));
+const DistrictAdmins = lazy(() => import("./features/admin/district-admin/pages/ManageAdmins"));
 
 // State Admin Imports
 const StateDashboard = lazy(() => import("./features/admin/state-admin/pages/Dashboard"));
 const StateApprovals = lazy(() => import("./features/admin/state-admin/pages/Approvals"));
 const StateMembers = lazy(() => import("./features/admin/state-admin/pages/Members"));
 const StateSettings = lazy(() => import("./features/admin/state-admin/pages/Settings"));
+const StateHub = lazy(() => import("./features/admin/state-admin/pages/Hub"));
+const StateAdmins = lazy(() => import("./features/admin/state-admin/pages/ManageAdmins"));
 
 // Super Admin Imports
 // The Hub replaces the old flat dashboard: mobile drills tiers -> regions
@@ -111,6 +131,7 @@ const SuperMembers = lazy(() => import("./features/admin/super-admin/pages/Membe
 const SuperSettings = lazy(() => import("./features/admin/super-admin/pages/Settings"));
 const SuperManageAdmins = lazy(() => import("./features/admin/super-admin/pages/ManageAdmins"));
 const SuperEvents = lazy(() => import("./features/admin/super-admin/pages/Events"));
+const SuperMembership = lazy(() => import("./features/admin/super-admin/pages/Membership"));
 const SuperUpdates = lazy(() => import("./features/admin/super-admin/pages/Updates"));
 
 // CMS (public-site content management, super admin only)
@@ -163,7 +184,14 @@ const App = () => (
               <Route path="/onboarding" element={<Hero />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/events" element={<EventsPage />} />
+              {/* Where an event card goes when it is clicked. Below /events,
+                  so the list keeps the bare path. */}
+              <Route path="/events/:id" element={<EventDetailPage />} />
               <Route path="/gallery" element={<GalleryPage />} />
+              {/* Where a poster goes when it is clicked, on the landing page or
+                  in the gallery grid. Below /gallery, so the list keeps the
+                  bare path. */}
+              <Route path="/gallery/:id" element={<GalleryDetailPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/login" element={<EnhancedLoginPage />} />
               {/* The login page has linked to /forgot-password all along;
@@ -181,8 +209,20 @@ const App = () => (
               <Route path="/member/updates/:id" element={<AnnouncementDetail />} />
               <Route path="/member/events" element={<MemberEvents />} />
               <Route path="/member/events/:id" element={<MemberEventDetail />} />
+              {/*
+                * Registration is its own screen, not a form in the event's
+                * sidebar. It is a transaction — it has steps, it takes money,
+                * and it carries whatever questions the organiser added — and it
+                * is drawn without the member rail so there is one way forward
+                * and one way back. Declared AFTER `/:id` is fine: the paths
+                * differ in length, so there is no ambiguity for the router.
+                */}
+              <Route path="/member/events/:id/register" element={<EventRegistration />} />
               <Route path="/member/directory" element={<MemberDirectory />} />
               <Route path="/member/directory/:id" element={<DirectoryProfile />} />
+              <Route path="/member/messages" element={<MemberMessages />} />
+              <Route path="/member/documents" element={<MemberDocuments />} />
+              <Route path="/member/help" element={<MemberHelp />} />
               {/*
                 * `/explore` was the old client-side-filtered member list. It
                 * resolves to the directory rather than 404ing, because it is
@@ -245,6 +285,12 @@ const App = () => (
               <Route path="/district-admin/applications" element={<DistrictApprovals />} />
               <Route path="/district-admin/members" element={<DistrictMembers />} />
               <Route path="/district-admin/settings" element={<DistrictSettings />} />
+              {/* The blocks of this district, with their queues — the super
+                  admin Hub, narrowed by the server to this patch. */}
+              <Route path="/district-admin/hub" element={<DistrictHub />} />
+              {/* The block admins of this district — the super admin's Admins
+                  screen, narrowed by the server to their patch. */}
+              <Route path="/district-admin/admins" element={<DistrictAdmins />} />
 
               {/* State Admin Routes */}
               <Route path="/state-admin/dashboard" element={<StateDashboard />} />
@@ -252,6 +298,10 @@ const App = () => (
               <Route path="/state-admin/applications" element={<StateApprovals />} />
               <Route path="/state-admin/members" element={<StateMembers />} />
               <Route path="/state-admin/settings" element={<StateSettings />} />
+              {/* The districts and blocks of this state, with their queues. */}
+              <Route path="/state-admin/hub" element={<StateHub />} />
+              {/* The district and block admins of this state. */}
+              <Route path="/state-admin/admins" element={<StateAdmins />} />
 
               {/* Super Admin Routes */}
               <Route path="/super-admin/dashboard" element={<SuperHub />} />
@@ -265,6 +315,7 @@ const App = () => (
               {/* Events is a TAB of the super-admin section on mobile. Linking
                   at /cms/events dropped the administrator into the CMS shell. */}
               <Route path="/super-admin/events" element={<SuperEvents />} />
+              <Route path="/super-admin/membership" element={<SuperMembership />} />
               {/* Association Updates (MEM-001) — authored here, delivered to the
                   dashboard of every member whose region matches. */}
               <Route path="/super-admin/updates" element={<SuperUpdates />} />

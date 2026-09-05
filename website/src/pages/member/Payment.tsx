@@ -125,7 +125,7 @@ export default function Payment() {
             sidebar={false}
             backTo={dashboard}
         >
-            <div className="mx-auto w-full max-w-[87.5rem] space-y-6">
+            <div className="w-full space-y-6">
 
                 {/* ---------------- title header ---------------- */}
                 <div className="text-center">

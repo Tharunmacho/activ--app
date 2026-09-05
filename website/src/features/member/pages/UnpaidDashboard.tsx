@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
     Menu, CheckCircle, Clock, FileText, ArrowRight, TrendingUp, ShieldCheck, Sparkles,
-    Search, Bell, CreditCard, BadgeCheck, Building2, BookOpen, BarChart3,
+    Search, Bell, CreditCard, BadgeCheck, BarChart3,
     CalendarDays, MapPin, Info, AlertTriangle, Users, Mail, Phone, LifeBuoy, Copy, Check,
+    Megaphone, MessageSquare, FileBadge, Handshake, Store, Circle,
 } from "lucide-react";
 import MemberSidebar from "./MemberSidebar";
 import { useProfile } from "@/contexts/ProfileContext";
@@ -20,8 +21,12 @@ import {
     type TimelineStageStatus,
 } from "@/services/activApi";
 import { getContactInfo } from "@/services/cmsApi";
-import { deriveMemberAccess, nextMilestone, applicantKindLabel, formatApplicationRef } from "@/features/member/memberAccess";
+import {
+    deriveMemberAccess, nextMilestone, applicantKindLabel, formatApplicationRef,
+    membershipCta,
+} from "@/features/member/memberAccess";
 import useMembershipGate from "@/features/member/useMembershipGate";
+import MemberTopBar from "@/features/member/components/MemberTopBar";
 
 /**
  * The dashboard an applicant sees between registering and paying.
@@ -45,19 +50,72 @@ const BUSINESS_BENEFITS = [
 ];
 
 /**
- * The features that arrive with an active membership.
+ * What becoming a member of the association actually gets you.
  *
- * Presented as description only — no `onClick`, no `to`, no button. A member
- * reads what each one is; wanting it is the reason to activate. Giving these
- * controls that then refuse would teach the member that the product is broken.
+ * This replaced a "Pre-Payment Benefits (Draft Features)" panel that listed six
+ * things the applicant could already do — a business profile, a draft
+ * catalogue, stock, documents. Telling someone what they ALREADY have is not a
+ * reason to join anything, and it was the largest panel on a screen whose one
+ * job is to turn an applicant into a member.
+ *
+ * So the list is what activation ADDS, and it leads with the association's own
+ * purpose: being connected to the other members. The trading tools come second,
+ * because a chamber is a network first and a catalogue afterwards.
+ *
+ * Still description only — no `onClick`, no `to`, no button per row. There is
+ * exactly one control on this card, the one that moves the account forward, and
+ * a row that offers a second control the member cannot use would teach them the
+ * product is broken.
  */
-const PRE_PAYMENT_FEATURES = [
-    { icon: Building2, tone: 'text-purple-600 bg-purple-50', title: 'Business Profile', detail: 'Add logo, company details and description.' },
-    { icon: BookOpen, tone: 'text-emerald-600 bg-emerald-50', title: 'Catalogue (Draft)', detail: 'Add your products and services to your catalogue.' },
-    { icon: BarChart3, tone: 'text-orange-600 bg-orange-50', title: 'Stock Management', detail: 'Add stock details and manage inventory.' },
-    { icon: FileText, tone: 'text-blue-600 bg-blue-50', title: 'Documents', detail: 'Upload business documents and certificates.' },
-    { icon: Search, tone: 'text-teal-600 bg-teal-50', title: 'Analytics (Preview)', detail: 'Track preview of profile and catalogue views.' },
-    { icon: Bell, tone: 'text-rose-600 bg-rose-50', title: 'Events & Updates', detail: 'Stay updated with events and announcements.' },
+const MEMBERSHIP_BENEFITS = [
+    {
+        icon: MessageSquare,
+        tone: 'text-blue-600 bg-blue-50',
+        title: 'Message any member',
+        detail: 'Reach members directly from their directory card.',
+    },
+    {
+        icon: Handshake,
+        tone: 'text-indigo-600 bg-indigo-50',
+        title: 'Business introductions',
+        detail: 'Be introduced to members trading in your own sector.',
+    },
+    {
+        icon: Users,
+        tone: 'text-teal-600 bg-teal-50',
+        title: 'Listed in the directory',
+        detail: 'Your name and business visible to the whole association.',
+    },
+    {
+        icon: CalendarDays,
+        tone: 'text-emerald-600 bg-emerald-50',
+        title: 'Members-only events',
+        detail: 'Conclaves and networking meets held for members alone.',
+    },
+    {
+        icon: Megaphone,
+        tone: 'text-amber-600 bg-amber-50',
+        title: 'Schemes and tenders',
+        detail: 'Notices the association publishes to active members first.',
+    },
+    {
+        icon: FileBadge,
+        tone: 'text-rose-600 bg-rose-50',
+        title: 'Your certificates',
+        detail: 'Membership and tax exemption certificates in your name.',
+    },
+    {
+        icon: Store,
+        tone: 'text-orange-600 bg-orange-50',
+        title: 'Publish your catalogue',
+        detail: 'Put your products in front of every member of the network.',
+    },
+    {
+        icon: BarChart3,
+        tone: 'text-purple-600 bg-purple-50',
+        title: 'Reach and analytics',
+        detail: 'See who is viewing your profile and your catalogue.',
+    },
 ];
 
 /** The three review tiers, in order. Payment is the fourth node, added below. */
@@ -71,7 +129,7 @@ const STAGE_CHIP: Record<TimelineStageStatus, { label: string; cls: string }> = 
     approved: { label: 'Approved', cls: 'bg-emerald-100 text-emerald-700' },
     in_progress: { label: 'In Review', cls: 'bg-amber-100 text-amber-700' },
     rejected: { label: 'Returned', cls: 'bg-red-100 text-red-700' },
-    pending: { label: 'Pending', cls: 'bg-gray-100 text-gray-500' },
+    pending: { label: 'Pending', cls: 'bg-slate-100 text-slate-500' },
 };
 
 const formatDate = (value?: string | null): string => {
@@ -80,6 +138,13 @@ const formatDate = (value?: string | null): string => {
     if (Number.isNaN(d.getTime())) return '';
     return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 };
+
+const PROFILE_FORMS = [
+    'Personal Details',
+    'Business Details',
+    'Financial Details',
+    'Declaration',
+] as const;
 
 const UnpaidDashboard = () => {
     // The same figure the sidebar badge shows, from the one place that computes
@@ -97,6 +162,7 @@ const UnpaidDashboard = () => {
     // Seeded from storage so a returning member sees their name before the
     // profile call lands; replaced by the database answer either way.
     const [memberName, setMemberName] = useState(() => localStorage.getItem('userName') || '');
+
 
     /**
      * One load, three independent feeds.
@@ -174,6 +240,15 @@ const UnpaidDashboard = () => {
     );
 
     const flags = useMemo(() => deriveApprovalFlags(application), [application]);
+
+    /**
+     * The one call to action, named for the step this account is actually on.
+     *
+     * Every locked surface on this page ends in it, so an applicant is never
+     * offered "Activate membership" while their application is still in review
+     * — that button leads to a payment screen which would refuse them.
+     */
+    const cta = useMemo(() => membershipCta(access), [access]);
 
     /**
      * The identifier a member can quote to support.
@@ -324,17 +399,17 @@ const UnpaidDashboard = () => {
 
     if (loading) {
         return (
-            <div className="flex h-screen bg-gray-50">
+            <div className="flex h-screen bg-slate-50">
                 <MemberSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
                 <div className="flex-1 flex items-center justify-center">
-                    <p className="text-gray-600">Loading your dashboard…</p>
+                    <p className="text-slate-500">Loading your dashboard…</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="flex h-screen bg-gray-50">
+        <div className="flex h-screen bg-slate-50">
             <MemberSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
             {/*
@@ -347,30 +422,94 @@ const UnpaidDashboard = () => {
               */}
             <div className="flex-1 min-h-0 overflow-y-auto">
                 <button
-                    className="lg:hidden fixed top-3 left-3 z-40 p-2 rounded-lg bg-white shadow border"
+                    className="lg:hidden fixed top-3 left-3 z-40 p-2 rounded-xl bg-white border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]"
                     onClick={() => setSidebarOpen(true)}
                     aria-label="Open menu"
                 >
                     <Menu className="h-5 w-5" />
                 </button>
 
-                <div className="w-full px-6 lg:px-8 py-8 space-y-8">
+                {/*
+                  THE GREETING IS THE PAGE HEADER, in the white bar every other
+                  screen opens with.
 
-                    {/* ---------- greeting + identity ---------- */}
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-                        {/*
-                          * Clear of the floating menu button below `lg`, where it
-                          * is pinned to the top-left corner and would otherwise sit
-                          * across the first word of the greeting.
-                          */}
-                        <div className="min-w-0 pl-11 lg:pl-0">
-                            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
-                                Welcome back{memberName ? `, ${memberName}` : ''} 👋
-                            </h1>
-                            <p className="text-base text-gray-500 mt-2">
-                                {milestone ? "Let's complete your membership journey" : "You're all set."}
-                            </p>
+                  It used to be the first block of the scrolling content, with
+                  the icon strip floating on a row of its own above it. Two
+                  consequences, both visible: the dashboard was the one member
+                  screen with no header band, and the greeting scrolled away
+                  while every other screen's title stayed put.
+
+                  Same bar as `MemberPageShell` and the admin screens — white,
+                  `border-b`, sticky, with the icons on the right — so the
+                  dashboard now introduces itself the way the rest of the product
+                  does.
+                */}
+                <header className="h-[5.5rem] shrink-0 sticky top-0 z-10 bg-white border-b border-slate-200
+                                   px-6 flex items-center gap-3">
+                    {/* Clear of the floating menu button below `lg`, where it is
+                        pinned to the top-left corner and would otherwise sit
+                        across the first word of the greeting. */}
+                    <div className="min-w-0 flex-1 pl-11 lg:pl-0">
+                        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900">
+                            Welcome back{memberName ? `, ${memberName}` : ''} 👋
+                        </h1>
+                        <p className="text-sm text-slate-500 mt-0.5">
+                            {milestone ? "Let's complete your membership journey" : "You're all set."}
+                        </p>
+                    </div>
+
+                    {/*
+                      THE TWO FACTS THAT IDENTIFY THIS APPLICATION LIVE IN THE
+                      HEADER BAR.
+
+                      They were a strip of two cards floating in the body, right-
+                      aligned above the hero pair — so the first thing under a
+                      header that says "Welcome back" was two boxes hanging in
+                      space, and they scrolled away the moment the member moved.
+
+                      A reference number and a membership type are not content;
+                      they are what this screen IS, the same way the title is.
+                      They belong in the band that stays put, beside the greeting
+                      and before the icons.
+
+                      From `xl` only — below it the bar has room for the greeting
+                      and the two icons and nothing else, so the body strip below
+                      still renders at those widths. One or the other, never both.
+                    */}
+                    {access.applicationSubmitted && (
+                        <div className="hidden xl:flex items-center gap-5 shrink-0 mr-1">
+                            <HeaderFact
+                                icon={<FileText className="h-3.5 w-3.5" />}
+                                tone="text-blue-600 bg-blue-50"
+                                label="Application ID"
+                                value={appRef.short}
+                                fullValue={appRef.full}
+                                valueTone="text-blue-700"
+                            />
+                            <span className="w-px h-10 bg-slate-200" aria-hidden />
+                            <HeaderFact
+                                icon={<BadgeCheck className="h-3.5 w-3.5" />}
+                                tone="text-purple-600 bg-purple-50"
+                                label="Member Type"
+                                value={resolvedMemberType}
+                                valueTone="text-purple-700"
+                            />
+                            <span className="w-px h-10 bg-slate-200" aria-hidden />
                         </div>
+                    )}
+
+                    <div className="shrink-0">
+                        <MemberTopBar />
+                    </div>
+                </header>
+
+                <div className="w-full max-w-[90rem] p-6 space-y-6">
+
+                    {/* ---------- identity tiles, below `xl` only ----------
+                        The same two facts the header carries from `xl` up. Not a
+                        duplicate on screen: exactly one of the two is ever
+                        rendered. */}
+                    <div className="xl:hidden flex flex-col lg:flex-row lg:items-center justify-end gap-5">
 
                         {/*
                           * Nothing here until there is something to show.
@@ -414,20 +553,20 @@ const UnpaidDashboard = () => {
                           * points at the one thing that is finished instead of
                           * the one thing that is now happening.
                           */}
-                        <Card className={`text-white shadow-lg overflow-hidden h-full border-0 ${
+                        <Card className={`text-white overflow-hidden h-full rounded-2xl border-0 shadow-[0_10px_28px_-6px_rgba(16,24,40,0.25)] ${
                             access.applicationSubmitted ? 'bg-emerald-600' : 'bg-blue-600'
                         }`}>
-                            <CardContent className="p-7 h-full flex items-center justify-between gap-5">
+                            <CardContent className="p-5 h-full flex items-start justify-between gap-4">
                                 <div className="flex-1 min-w-0">
-                                    <h2 className="text-2xl font-bold mb-4">
+                                    <h2 className="text-lg font-bold tracking-tight mb-3">
                                         {access.applicationSubmitted ? 'Profile Complete' : 'Complete Your Profile'}
                                     </h2>
-                                    <p className="mb-3">
-                                        <span className="font-display font-extrabold text-5xl tabular">{profileCompletion}%</span>
-                                        <span className="ml-2 text-base text-white/85">completed</span>
+                                    <p className="mb-2.5">
+                                        <span className="font-display font-bold text-3xl tabular">{profileCompletion}%</span>
+                                        <span className="ml-2 text-sm text-white/85">completed</span>
                                     </p>
 
-                                    <div className="h-1.5 bg-white/25 rounded-full overflow-hidden mb-4 max-w-[13.75rem]">
+                                    <div className="h-1.5 bg-white/25 rounded-full overflow-hidden mb-3 max-w-[12rem]">
                                         <div
                                             className="h-full bg-white rounded-full transition-all duration-500"
                                             style={{ width: `${profileCompletion}%` }}
@@ -450,12 +589,30 @@ const UnpaidDashboard = () => {
                                     </p>
 
                                     <Button
+                                        /*
+                                          `?step=1` — this button starts the
+                                          application, it does not resume it.
+
+                                          Bare `/member/profile` opens at the
+                                          first step still needing an answer,
+                                          which is right for coming back to
+                                          half-finished work and wrong for the
+                                          card headed "Complete Your Profile":
+                                          a member who has only done Personal
+                                          pressed it and landed on Business,
+                                          having never been shown the screen the
+                                          button names. The four ticks directly
+                                          below say which forms are outstanding,
+                                          and the rail inside jumps to any step
+                                          already reached — so starting at the
+                                          top costs nothing and skips nothing.
+                                        */
                                         onClick={() => navigate(
                                             access.applicationSubmitted
                                                 ? '/member/application-status'
                                                 : profileCompletion >= 100
                                                     ? '/member/profile-view'
-                                                    : '/member/profile',
+                                                    : '/member/profile?step=1',
                                         )}
                                         size="lg"
                                         className={`bg-white font-bold ${
@@ -469,6 +626,54 @@ const UnpaidDashboard = () => {
                                             : profileCompletion >= 100 ? 'View Profile' : 'Continue Profile'}
                                         <ArrowRight className="ml-1.5 h-4 w-4" />
                                     </Button>
+
+                                    {/*
+                                      THE FOUR FORMS, TICKED OFF — the profile
+                                      card's answer to the business card's three
+                                      benefit rows.
+
+                                      The card said "2 of 4 forms done" and left
+                                      the rest of its height empty, so the one
+                                      question it raises — WHICH two — was
+                                      answered on another screen. The same rows
+                                      the business card uses: a tinted square, a
+                                      title, a line under it.
+
+                                      Read from `formsCompleted`, the list the
+                                      percentage is computed from, so the ticks
+                                      and the figure above them cannot disagree.
+                                      Financial Details is only asked of a member
+                                      who declared a business, which is exactly
+                                      what `totalFormsRequired` counts — so the
+                                      list follows that count rather than a fixed
+                                      four.
+                                    */}
+                                    <ul className="mt-5 space-y-2">
+                                        {PROFILE_FORMS
+                                            .filter(form => totalFormsRequired > 3 || form !== 'Financial Details')
+                                            .map((form) => {
+                                                const done = access.applicationSubmitted
+                                                    || formsCompleted.includes(form);
+
+                                                return (
+                                                    <li key={form} className="flex items-center gap-2.5">
+                                                        <span className={`w-6 h-6 rounded-lg shrink-0 flex items-center
+                                                                          justify-center ${
+                                                            done ? 'bg-white/25' : 'bg-white/10'
+                                                        }`}>
+                                                            {done
+                                                                ? <Check className="w-3.5 h-3.5 text-white" />
+                                                                : <Circle className="w-2.5 h-2.5 text-white/60" />}
+                                                        </span>
+                                                        <span className={`text-sm ${
+                                                            done ? 'font-semibold text-white' : 'text-white/70'
+                                                        }`}>
+                                                            {form}
+                                                        </span>
+                                                    </li>
+                                                );
+                                            })}
+                                    </ul>
                                 </div>
                                 <img
                                     src="/clipboard_3d.png"
@@ -479,10 +684,10 @@ const UnpaidDashboard = () => {
                             </CardContent>
                         </Card>
 
-                        <Card className="bg-purple-700 text-white shadow-lg overflow-hidden h-full border-0">
-                            <CardContent className="p-7 h-full flex items-start justify-between gap-5">
+                        <Card className="bg-violet-600 text-white overflow-hidden h-full rounded-2xl border-0 shadow-[0_10px_28px_-6px_rgba(16,24,40,0.25)]">
+                            <CardContent className="p-5 h-full flex items-start justify-between gap-4">
                                 <div className="flex-1 min-w-0">
-                                    <h2 className="text-2xl font-extrabold tracking-tight mb-2">Your Business Account</h2>
+                                    <h2 className="text-lg font-bold tracking-tight mb-2">Your Business Account</h2>
                                     <span className="inline-block text-xs font-semibold bg-white/25
                                                      rounded px-2.5 py-1 mb-4">
                                         Draft Mode
@@ -539,31 +744,6 @@ const UnpaidDashboard = () => {
                       * says so in the timeline.
                       */}
                     <section id="application-status" className="scroll-mt-4">
-                        <div className="flex items-start justify-between gap-4 mb-4">
-                            <div>
-                                <h3 className="text-2xl font-extrabold text-gray-900 tracking-tight">
-                                    Application Status &amp; Progress
-                                </h3>
-                                <p className="text-base text-gray-500 mt-2">
-                                    Track your membership approval progress
-                                </p>
-                            </div>
-                            {/*
-                              * The only route into the dedicated status screen.
-                              * Every other reference to the application — the
-                              * sidebar entry included — lands on this card.
-                              */}
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="shrink-0 gap-1.5 text-xs"
-                                onClick={() => navigate('/member/application-status')}
-                            >
-                                <CalendarDays className="h-3.5 w-3.5" />
-                                View Full Timeline
-                            </Button>
-                        </div>
-
                         {/*
                           * The card is the way in to the full screen.
                           *
@@ -583,27 +763,81 @@ const UnpaidDashboard = () => {
                                     navigate('/member/application-status');
                                 }
                             }}
-                            className="cursor-pointer transition-shadow hover:shadow-md
-                                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                            className={`cursor-pointer rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]
+                                        transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_4px_8px_-2px_rgba(16,24,40,0.12),0_16px_32px_-8px_rgba(16,24,40,0.16)]
+                                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}
                         >
-                            <CardContent className="p-6 sm:p-7 space-y-6">
+                            {/*
+                              THE HEADING BELONGS TO THE CARD, NOT TO THE PAGE.
 
-                                {/* ---- top: overall progress + the four nodes ---- */}
-                                <div className="rounded-lg border bg-white shadow-sm p-5">
+                              It sat above as a free-floating section title, which
+                              is what every other card on this dashboard does NOT
+                              do: theirs are inside, in a header row with a rule
+                              under it. Outside, the title read as a page section
+                              that happened to contain a card, and the card itself
+                              opened straight onto a progress bar with nothing
+                              naming it.
+
+                              NO ICON TILE HERE. The heading carries this card on
+                              its own — a tile beside it would be the third
+                              calendar glyph in one header, since the action
+                              button already has one, and the point of the tiles
+                              elsewhere is to tell cards apart at a glance rather
+                              than to decorate every one of them.
+                            */}
+                            <div className="flex flex-wrap items-start gap-3 p-6 pb-5 border-b border-slate-100">
+                                <div className="min-w-0 flex-1">
+                                    <h3 className="text-lg font-bold tracking-tight text-slate-900">
+                                        Application Status &amp; Progress
+                                    </h3>
+                                    <p className="text-sm text-slate-500 mt-1">
+                                        Track your membership approval progress
+                                    </p>
+                                </div>
+                                {/*
+                                  * The only route into the dedicated status screen.
+                                  * Every other reference to the application — the
+                                  * sidebar entry included — lands on this card.
+                                  *
+                                  * `stopPropagation`, because the card is itself a
+                                  * link now that the button lives inside it: without
+                                  * it one press would navigate twice.
+                                  */}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="shrink-0 gap-1.5 text-xs rounded-xl"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate('/member/application-status');
+                                    }}
+                                >
+                                    <CalendarDays className="h-3.5 w-3.5" />
+                                    View Full Timeline
+                                </Button>
+                            </div>
+
+                            <CardContent className="p-6 space-y-6">
+
+                                {/* ---- top: overall progress + the four nodes ----
+                                     Tinted rather than outlined: it sits directly under
+                                     the header rule now, and a border here would draw a
+                                     second line a few pixels below the first. */}
+                                <div className="rounded-xl bg-slate-50 p-5">
                                     <div className="flex items-start justify-between gap-3 mb-2">
                                         <div>
-                                            <p className="font-display text-base font-extrabold text-gray-800">Overall Progress</p>
-                                            <p className="text-sm text-gray-500 mt-1">
+                                            <p className="font-display text-base font-bold text-slate-800">Overall Progress</p>
+                                            <p className="text-sm text-slate-500 mt-1">
                                                 {stagesDone} of 4 stages completed
                                             </p>
                                         </div>
-                                        <span className="font-display text-base font-extrabold text-white bg-blue-600
+                                        <span className="font-display text-base font-bold text-white bg-blue-600
                                                          rounded-lg px-4 py-2 shrink-0 tabular">
                                             {overallPercent}%
                                         </span>
                                     </div>
 
-                                    <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden mb-8 mt-4">
+                                    <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden mb-8 mt-4">
                                         <div
                                             className="h-full bg-blue-600 rounded-full transition-all duration-500"
                                             style={{ width: `${overallPercent}%` }}
@@ -613,7 +847,7 @@ const UnpaidDashboard = () => {
                                     <div className="relative">
                                         {/* The joining line only makes sense when all four sit in a row. */}
                                         <div className="hidden sm:block absolute left-[12.5%] right-[12.5%] top-5 h-px
-                                                        border-t border-dashed border-gray-300" />
+                                                        border-t border-dashed border-slate-300" />
                                         <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-y-6 gap-x-2">
                                             {TIERS.map(tier => (
                                                 <StageNode
@@ -644,7 +878,7 @@ const UnpaidDashboard = () => {
                                 <div className="grid gap-6 lg:grid-cols-2 items-start">
 
                                     <div>
-                                        <p className="font-display text-lg font-extrabold text-gray-800 mb-3">Timeline</p>
+                                        <p className="font-display text-lg font-bold text-slate-800 mb-3">Timeline</p>
                                         {!application ? (
                                             <EmptyState
                                                 icon={<FileText className="h-5 w-5" />}
@@ -663,24 +897,24 @@ const UnpaidDashboard = () => {
                                                             ) : row.state === 'rejected' ? (
                                                                 <AlertTriangle className="h-4 w-4 text-red-500" />
                                                             ) : (
-                                                                <span className="block h-4 w-4 rounded-full border-2 border-gray-200" />
+                                                                <span className="block h-4 w-4 rounded-full border-2 border-slate-200" />
                                                             )}
                                                         </span>
                                                         <span className="flex-1 min-w-0">
                                                             <span className={`block text-base leading-tight ${
                                                                 row.state === 'pending'
-                                                                    ? 'text-gray-400'
-                                                                    : 'font-semibold text-gray-800'
+                                                                    ? 'text-slate-400'
+                                                                    : 'font-semibold text-slate-800'
                                                             }`}>
                                                                 {row.title}
                                                             </span>
                                                             {row.by && row.state !== 'pending' && (
-                                                                <span className="block text-xs text-gray-400 mt-1">
+                                                                <span className="block text-xs text-slate-400 mt-1">
                                                                     {row.by}
                                                                 </span>
                                                             )}
                                                         </span>
-                                                        <span className="shrink-0 text-xs text-gray-400 font-medium">
+                                                        <span className="shrink-0 text-xs text-slate-400 font-medium">
                                                             {row.at && row.state !== 'pending'
                                                                 ? formatDate(row.at)
                                                                 : row.state === 'pending' ? 'Pending' : ''}
@@ -690,7 +924,7 @@ const UnpaidDashboard = () => {
                                             </ul>
                                         )}
 
-                                        <div className="mt-4 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2
+                                        <div className="mt-4 rounded-xl bg-blue-50 border border-blue-200 px-3 py-2
                                                         flex items-start gap-2">
                                             <Info className="h-3.5 w-3.5 text-blue-600 mt-0.5 shrink-0" />
                                             <p className="text-[0.6875rem] text-blue-800 leading-snug">
@@ -700,15 +934,15 @@ const UnpaidDashboard = () => {
                                     </div>
 
                                     <div className="space-y-4">
-                                        <div className="rounded-lg border bg-white shadow-sm p-5">
+                                        <div className="rounded-xl border border-slate-200 bg-white p-5">
                                             <div className="flex items-center justify-between gap-2 mb-2">
-                                                <p className="font-display text-lg font-extrabold text-gray-800">Current Status</p>
+                                                <p className="font-display text-lg font-bold text-slate-800">Current Status</p>
                                                 <span className={`text-[0.8125rem] font-bold rounded-full px-3 py-1.5 shrink-0 ${
                                                     application
                                                         ? flags.isRejected
                                                             ? 'bg-red-100 text-red-700'
                                                             : 'bg-blue-100 text-blue-700'
-                                                        : 'bg-gray-100 text-gray-500'
+                                                        : 'bg-slate-100 text-slate-500'
                                                 }`}>
                                                     {application
                                                         ? flags.isRejected ? 'Returned' : 'In Review'
@@ -716,7 +950,7 @@ const UnpaidDashboard = () => {
                                                 </span>
                                             </div>
 
-                                            <p className="text-sm text-gray-600 leading-relaxed mb-6">
+                                            <p className="text-sm text-slate-500 leading-relaxed mb-6">
                                                 {application ? (
                                                     <>
                                                         Your application is currently under review at the{' '}
@@ -759,7 +993,7 @@ const UnpaidDashboard = () => {
                         </Card>
                     </section>
 
-                    {/* ---------- what's next + pre-payment benefits ---------- */}
+                    {/* ---------- what's next + membership benefits ---------- */}
                     {/*
                       * Two cards, not two halves of one.
                       *
@@ -771,10 +1005,10 @@ const UnpaidDashboard = () => {
                       * border.
                       */}
                     <div className="grid gap-6 lg:grid-cols-2 items-start">
-                        <Card className="h-full">
-                            <CardContent className="p-6 sm:p-7">
+                        <Card className="h-full rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+                            <CardContent className="p-6">
                                 <div>
-                                    <h3 className="text-base font-extrabold text-gray-900 tracking-tight mb-4">What&apos;s Next?</h3>
+                                    <h3 className="text-base font-bold text-slate-900 tracking-tight mb-4">What&apos;s Next?</h3>
                                     <ul className="space-y-4">
                                         {WHATS_NEXT.map(({ icon: Icon, title, detail, active }) => (
                                             <li key={title} className="flex items-start gap-4">
@@ -786,10 +1020,10 @@ const UnpaidDashboard = () => {
                                                 </div>
                                                 <div className="min-w-0 pt-1.5">
                                                     <p className={`text-base font-bold leading-tight ${
-                                                        active ? 'text-gray-900' : 'text-gray-700'
+                                                        active ? 'text-slate-900' : 'text-slate-700'
                                                     }`}>{title}</p>
                                                     <p className={`text-sm leading-snug mt-1.5 ${
-                                                        active ? 'text-gray-600 font-medium' : 'text-gray-500'
+                                                        active ? 'text-slate-500 font-medium' : 'text-slate-500'
                                                     }`}>{detail}</p>
                                                 </div>
                                             </li>
@@ -800,41 +1034,79 @@ const UnpaidDashboard = () => {
                         </Card>
 
                         {/*
-                          * Pre-payment benefits — read only, by design.
-                                  *
-                                  * Six descriptions and not one control. This is the
-                                  * catalogue of what activation buys, and the way to get
-                                  * any of it is the single CTA at the foot of the page. A
-                                  * control that refuses teaches a member the product is
-                          * broken.
+                          * What membership unlocks — read only, by design.
+                          *
+                          * Eight descriptions and exactly one control. This is
+                          * the catalogue of what activation buys, and the way to
+                          * get any of it is the single button at the foot of the
+                          * card. A per-row control that then refuses teaches a
+                          * member the product is broken.
+                          *
+                          * It leads with messaging and introductions because that
+                          * is what an association IS — a chamber is a network
+                          * first and a set of trading tools second, and an
+                          * applicant deciding whether to join is deciding whether
+                          * to be connected to the people already in it.
                           */}
-                        <Card className="h-full">
-                            <CardContent className="p-6 sm:p-7">
+                        <Card className="h-full rounded-2xl border border-blue-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+                            <CardContent className="p-6">
                                 <div>
-                                    <h3 className="text-xl font-extrabold text-gray-900 tracking-tight">
-                                        Pre-Payment Benefits{' '}
-                                        <span className="text-base font-medium text-gray-400">(Draft Features)</span>
+                                    <span className="inline-flex items-center gap-1.5 text-[0.6875rem] font-bold
+                                                     uppercase tracking-wide text-blue-700 bg-blue-50
+                                                     rounded-full px-2.5 py-1 mb-3">
+                                        <Sparkles className="h-3 w-3" /> Membership benefits
+                                    </span>
+
+                                    <h3 className="text-xl font-bold tracking-tight text-slate-900 tracking-tight">
+                                        What your membership unlocks
                                     </h3>
-                                    <p className="text-sm text-gray-500 mt-2 mb-6 leading-relaxed">
-                                        Start building your business profile and catalogue. All data is private
-                                        until your membership is activated.
+                                    <p className="text-sm text-slate-500 mt-2 mb-6 leading-relaxed">
+                                        ACTIV is a network before it is anything else. Activating your
+                                        membership puts you in touch with every other member — and puts your
+                                        business in front of them.
                                     </p>
 
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
-                                        {PRE_PAYMENT_FEATURES.map(({ icon: Icon, tone, title, detail }) => (
-                                            <div key={title} className="text-center">
-                                                <div className={`w-12 h-12 rounded-lg ${tone} flex items-center
-                                                                 justify-center mx-auto mb-3 shadow-sm`}>
-                                                    <Icon className="h-6 w-6" />
+                                    <div className="grid grid-cols-2 gap-x-5 gap-y-5">
+                                        {MEMBERSHIP_BENEFITS.map(({ icon: Icon, tone, title, detail }) => (
+                                            <div key={title} className="flex items-start gap-3 min-w-0">
+                                                <div className={`w-9 h-9 rounded-lg ${tone} flex items-center
+                                                                 justify-center shrink-0 shadow-sm`}>
+                                                    <Icon className="h-4 w-4" />
                                                 </div>
-                                                <p className="text-base font-bold text-gray-800 leading-tight">
-                                                    {title}
-                                                </p>
-                                                <p className="text-sm text-gray-500 mt-1.5 leading-snug">
-                                                    {detail}
-                                                </p>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-bold text-slate-800 leading-tight">
+                                                        {title}
+                                                    </p>
+                                                    <p className="text-xs text-slate-500 mt-1 leading-snug">
+                                                        {detail}
+                                                    </p>
+                                                </div>
                                             </div>
                                         ))}
+                                    </div>
+
+                                    {/*
+                                      * The step this account is actually on.
+                                      *
+                                      * `membershipCta` never offers "Activate
+                                      * membership" to someone whose application has
+                                      * not been approved — that button leads to a
+                                      * payment screen which would refuse them, and a
+                                      * member refused once stops pressing buttons.
+                                      */}
+                                    <div className="mt-6 pt-5 border-t border-slate-100">
+                                        {cta.detail ? (
+                                            <p className="text-sm text-slate-500 mb-3 leading-relaxed">
+                                                {cta.detail}
+                                            </p>
+                                        ) : null}
+                                        <Button
+                                            onClick={() => navigate(cta.to)}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                                        >
+                                            {cta.label}
+                                            <ArrowRight className="ml-1.5 h-4 w-4" />
+                                        </Button>
                                     </div>
                                 </div>
                             </CardContent>
@@ -843,10 +1115,10 @@ const UnpaidDashboard = () => {
 
                     {/* ---------- recent updates + support ---------- */}
                     <div className="grid gap-6 lg:grid-cols-2 items-start">
-                        <Card className="h-full">
-                            <CardContent className="p-6 sm:p-7">
+                        <Card className="h-full rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+                            <CardContent className="p-6">
                                 <div className="flex items-center justify-between gap-2 mb-4">
-                                    <h3 className="text-xl font-extrabold text-gray-900 tracking-tight">Recent Updates</h3>
+                                    <h3 className="text-xl font-bold tracking-tight text-slate-900 tracking-tight">Recent Updates</h3>
                                     <button
                                         onClick={() => navigate('/member/application-status')}
                                         className="text-sm font-semibold text-blue-600 hover:underline shrink-0"
@@ -870,10 +1142,10 @@ const UnpaidDashboard = () => {
                                                     <Bell className="h-5 w-5" />
                                                 </div>
                                                 <div className="min-w-0 flex-1">
-                                                    <p className="text-base font-semibold text-gray-800 leading-snug">
+                                                    <p className="text-base font-semibold text-slate-800 leading-snug">
                                                         {item.description}
                                                     </p>
-                                                    <p className="text-sm text-gray-400 mt-1">
+                                                    <p className="text-sm text-slate-400 mt-1">
                                                         {formatDate(item.at)}
                                                     </p>
                                                 </div>
@@ -893,13 +1165,13 @@ const UnpaidDashboard = () => {
                           * here that nobody remembers to update. Each row is omitted
                           * when the CMS has not been given that value.
                           */}
-                        <Card className="h-full bg-blue-50/60 border-blue-100">
-                            <CardContent className="p-6 sm:p-7">
+                        <Card className="h-full rounded-2xl bg-blue-50/60 border border-blue-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+                            <CardContent className="p-6">
                                 <div className="flex items-center gap-2 mb-2">
                                     <LifeBuoy className="h-5 w-5 text-blue-600" />
-                                    <h3 className="text-xl font-extrabold text-gray-900 tracking-tight">Need Help?</h3>
+                                    <h3 className="text-xl font-bold tracking-tight text-slate-900 tracking-tight">Need Help?</h3>
                                 </div>
-                                <p className="text-sm text-gray-600 leading-relaxed mb-6">
+                                <p className="text-sm text-slate-500 leading-relaxed mb-6">
                                     Our support team is here to help you at every step of your membership journey.
                                 </p>
 
@@ -926,7 +1198,7 @@ const UnpaidDashboard = () => {
                                         </SupportRow>
                                     )}
                                     {supportHours.length === 0 && !supportEmail && !supportPhone && (
-                                        <p className="text-[0.6875rem] text-gray-500">
+                                        <p className="text-[0.6875rem] text-slate-500">
                                             Send us a message and the team will get back to you.
                                         </p>
                                     )}
@@ -957,7 +1229,7 @@ const UnpaidDashboard = () => {
                                         </a>
                                     </Button>
                                 ) : (
-                                    <p className="text-[0.6875rem] text-gray-500 font-medium">
+                                    <p className="text-[0.6875rem] text-slate-500 font-medium">
                                         In-app support is coming soon.
                                     </p>
                                 )}
@@ -966,25 +1238,28 @@ const UnpaidDashboard = () => {
                     </div>
 
                     {/* ---------- the single call to action ---------- */}
-                    <Card className="bg-blue-50/70 border-blue-100">
-                        <CardContent className="p-6 sm:p-7 flex flex-col md:flex-row items-start md:items-center gap-5">
+                    <Card className="rounded-2xl bg-blue-50/70 border border-blue-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+                        <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center gap-5">
                             <img
                                 src="/clipboard_3d.png"
                                 alt=""
                                 className="hidden md:block w-20 lg:w-24 shrink-0 object-contain drop-shadow-lg"
                             />
                             <div className="flex-1 min-w-0">
-                                <h3 className="text-base font-extrabold text-gray-900 tracking-tight">
+                                <h3 className="text-base font-bold text-slate-900 tracking-tight">
                                     Complete Your Profile &amp; Unlock Full Benefits
                                 </h3>
-                                <p className="text-sm text-gray-600 mt-1.5 leading-relaxed">
+                                <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
                                     Finish your profile, get verified and access all features designed to grow
                                     your business with ACTIV.
                                 </p>
                             </div>
                             <Button
+                                /* Step 1 for the same reason as the hero card
+                                   above: "Complete Your Profile" opens the
+                                   profile, not whichever step is next. */
                                 onClick={() => navigate(
-                                    access.applicationApproved ? '/member/payment' : '/member/profile',
+                                    access.applicationApproved ? '/member/payment' : '/member/profile?step=1',
                                 )}
                                 className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 shrink-0"
                             >
@@ -1005,6 +1280,69 @@ const UnpaidDashboard = () => {
  * The short reference is the readable one, but the admin queues display the
  * whole `_id`, so the long form has to be one click away rather than lost.
  */
+/**
+ * One fact, sized for the header band.
+ *
+ * The same content as `IdentityTile` and deliberately NOT the same shape: a
+ * card inside a header bar is a box drawn on a box. Here the icon, the label
+ * and the value sit on the bar itself, divided from their neighbour by a rule —
+ * which is how the admin header and the reference dashboard present a figure
+ * that belongs to the page rather than to its content.
+ *
+ * The copy button is kept. It is the whole reason the short form is safe to
+ * show: a member quoting their reference to support needs the full id, and
+ * truncating it without a way to retrieve it would make the tile decorative.
+ */
+const HeaderFact = ({ icon, tone, label, value, valueTone, fullValue }: {
+    icon: React.ReactNode; tone: string; label: string; value: string;
+    valueTone: string; fullValue?: string;
+}) => {
+    const [copied, setCopied] = useState(false);
+
+    const copy = () => {
+        if (!fullValue) return;
+        navigator.clipboard?.writeText(fullValue)
+            .then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1600);
+            })
+            .catch(() => { /* clipboard blocked; the tooltip still shows the value */ });
+    };
+
+    return (
+        <div className="flex items-center gap-2.5 min-w-0">
+            <span className={`w-9 h-9 rounded-xl ${tone} flex items-center justify-center shrink-0`}>
+                {icon}
+            </span>
+            <div className="min-w-0">
+                <p className="text-[0.625rem] font-bold uppercase tracking-[0.08em] text-slate-500
+                              leading-none">
+                    {label}
+                </p>
+                <div className="flex items-center gap-1.5 mt-1.5 min-w-0">
+                    <p title={fullValue || value}
+                       className={`font-display font-bold text-[0.9375rem] leading-none truncate ${valueTone}`}>
+                        {value}
+                    </p>
+                    {fullValue ? (
+                        <button
+                            type="button"
+                            onClick={copy}
+                            title={`Copy full ID: ${fullValue}`}
+                            aria-label="Copy full application ID"
+                            className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                            {copied
+                                ? <Check className="h-3.5 w-3.5 text-emerald-600" />
+                                : <Copy className="h-3.5 w-3.5" />}
+                        </button>
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const IdentityTile = ({ icon, tone, label, value, valueTone, fullValue }: {
     icon: React.ReactNode; tone: string; label: string; value: string;
     valueTone: string; fullValue?: string;
@@ -1022,15 +1360,15 @@ const IdentityTile = ({ icon, tone, label, value, valueTone, fullValue }: {
     };
 
     return (
-        <div className="rounded-xl border bg-white px-5 py-4 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white px-5 py-4">
             <div className="flex items-center gap-2 mb-1">
                 <span className={`w-8 h-8 rounded-full ${tone} flex items-center justify-center shrink-0`}>
                     {icon}
                 </span>
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</span>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</span>
             </div>
             <div className="flex items-center gap-2 min-w-0 mt-1">
-                <p title={fullValue || value} className={`font-display font-extrabold text-lg truncate ${valueTone}`}>
+                <p title={fullValue || value} className={`font-display font-bold text-lg truncate ${valueTone}`}>
                     {value}
                 </p>
                 {fullValue ? (
@@ -1039,7 +1377,7 @@ const IdentityTile = ({ icon, tone, label, value, valueTone, fullValue }: {
                         onClick={copy}
                         title={`Copy full ID: ${fullValue}`}
                         aria-label="Copy full application ID"
-                        className="shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+                        className="shrink-0 text-slate-400 hover:text-slate-500 transition-colors"
                     >
                         {copied
                             ? <Check className="h-3.5 w-3.5 text-emerald-600" />
@@ -1063,15 +1401,15 @@ const StageNode = ({ label, state, at }: { label: string; state: TimelineStageSt
                         ? 'bg-white text-amber-500 border-2 border-amber-400'
                         : state === 'rejected'
                             ? 'bg-red-100 text-red-600'
-                            : 'bg-white text-gray-300 border-2 border-gray-200'
+                            : 'bg-white text-slate-300 border-2 border-slate-200'
             }`}>
                 {done ? <CheckCircle className="h-5 w-5" /> : <Clock className="h-5 w-5" />}
             </div>
-            <p className="text-sm font-bold text-gray-800 leading-tight">{label}</p>
+            <p className="text-sm font-bold text-slate-800 leading-tight">{label}</p>
             <span className={`inline-block mt-2 text-[0.6875rem] font-bold rounded px-2.5 py-1 ${chip.cls}`}>
                 {chip.label}
             </span>
-            {at && <p className="text-xs text-gray-400 mt-2">{at}</p>}
+            {at && <p className="text-xs text-slate-400 mt-2">{at}</p>}
         </div>
     );
 };
@@ -1080,8 +1418,8 @@ const DetailRow = ({ icon, label, value }: { icon: React.ReactNode; label: strin
     <div className="flex items-start gap-2.5">
         <span className="text-blue-600 mt-0.5 shrink-0">{icon}</span>
         <div className="min-w-0">
-            <p className="text-sm font-bold text-gray-700 leading-tight">{label}</p>
-            <p className="text-base text-gray-600 break-words leading-snug mt-1.5 font-medium">{value}</p>
+            <p className="text-sm font-bold text-slate-700 leading-tight">{label}</p>
+            <p className="text-base text-slate-500 break-words leading-snug mt-1.5 font-medium">{value}</p>
         </div>
     </div>
 );
@@ -1092,17 +1430,17 @@ const SupportRow = ({ icon, children }: { icon: React.ReactNode; children: React
                          justify-center shrink-0 border border-blue-100">
             {icon}
         </span>
-        <div className="min-w-0 text-sm text-gray-700 leading-snug pt-2 font-medium">{children}</div>
+        <div className="min-w-0 text-sm text-slate-700 leading-snug pt-2 font-medium">{children}</div>
     </div>
 );
 
 const EmptyState = ({ icon, title, detail }: { icon: React.ReactNode; title: string; detail: string }) => (
     <div className="text-center py-8">
-        <div className="w-12 h-12 rounded-lg bg-gray-100 text-gray-400 flex items-center justify-center mx-auto mb-3">
+        <div className="w-12 h-12 rounded-lg bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
             {icon}
         </div>
-        <p className="text-base font-semibold text-gray-700">{title}</p>
-        <p className="text-sm text-gray-500 mt-1 max-w-[13.75rem] mx-auto leading-snug">{detail}</p>
+        <p className="text-base font-semibold text-slate-700">{title}</p>
+        <p className="text-sm text-slate-500 mt-1 max-w-[13.75rem] mx-auto leading-snug">{detail}</p>
     </div>
 );
 

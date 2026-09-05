@@ -10,7 +10,10 @@ export default function Hero() {
       {/* 0. Header Navigation */}
       <HeaderSection />
 
-      {/* 1. Landing Area (Carousel) */}
+      {/* 1. Landing Area (Carousel).
+             It carries the recent gallery posters as well as the authored
+             slides, and each poster links to that event's own page — which is
+             why there is no separate gallery strip further down this page. */}
       <CarouselSection />
 
       {/* 2. About Card Section */}

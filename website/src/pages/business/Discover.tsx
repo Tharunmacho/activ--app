@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Building2, Phone, Mail, MapPin, Package, X, Compass } from "lucide-react";
 import BusinessPageShell from "./BusinessPageShell";
 import { Card, EmptyState, Loading } from "./BusinessUI";
-import { apiFetch } from "@/services/activApi";
+import { apiFetch, getMyProfile } from "@/services/activApi";
 import { resolveMediaUrl } from "@/config/api.config";
 import { useActiveCompanyStore } from "@/contexts/ActiveCompanyContext";
 
@@ -80,6 +80,51 @@ const Discover = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [activeQuery, setActiveQuery] = useState("");
     const [filter, setFilter] = useState<DiscoverFilter>('all');
+
+    /**
+     * The viewer's own region, and whether the search is narrowed to it.
+     *
+     * A member looking for a supplier wants someone they can actually deal
+     * with, so this opens on their own block — the same default the member
+     * directory now uses, and the same escape: it is stated on screen and one
+     * click widens it. Products and companies carry no region of their own, so
+     * the server resolves it through the OWNER's member record; see
+     * `regionOwners.js`.
+     */
+    const [homeRegion, setHomeRegion] = useState({ state: '', district: '', block: '' });
+    const [nearbyOnly, setNearbyOnly] = useState(true);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        // The member's own record, not the token: `auth.service` mints some
+        // member tokens with no location claims at all.
+        getMyProfile()
+            .then((me: any) => {
+                if (cancelled || !me) return;
+                setHomeRegion({
+                    state: me.state || '',
+                    district: me.district || '',
+                    block: me.block || '',
+                });
+            })
+            .catch(() => { /* no region simply means a network-wide search */ });
+
+        return () => { cancelled = true; };
+    }, []);
+
+    /** The region query string, or empty when searching the whole network. */
+    const regionParams = useMemo(() => {
+        if (!nearbyOnly || !homeRegion.state) return '';
+
+        return (['state', 'district', 'block'] as const)
+            .filter((key) => !!homeRegion[key])
+            .map((key) => `&${key}=${encodeURIComponent(homeRegion[key])}`)
+            .join('');
+    }, [nearbyOnly, homeRegion]);
+
+    const homeLabel = [homeRegion.block, homeRegion.district].filter(Boolean).join(', ')
+        || homeRegion.state;
     const [companies, setCompanies] = useState<CompanyItem[]>([]);
     const [products, setProducts] = useState<ProductItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -141,8 +186,8 @@ const Discover = () => {
                 const q = encodeURIComponent(term);
 
                 const [compRes, prodRes] = await Promise.allSettled([
-                    apiFetch(`/business-profiles/discover?q=${q}`),
-                    apiFetch(`/products/discover?q=${q}`),
+                    apiFetch(`/business-profiles/discover?q=${q}${regionParams}`),
+                    apiFetch(`/products/discover?q=${q}${regionParams}`),
                 ]);
 
                 let compList: CompanyItem[] = [];
@@ -187,7 +232,9 @@ const Discover = () => {
     useEffect(() => {
         fetchDiscoverData(activeQuery);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeQuery, activeCompany?._id]);
+        // `regionParams` is in the deps: toggling "my region only" has to re-run
+        // the search, not wait for the next keystroke to pick it up.
+    }, [activeQuery, activeCompany?._id, regionParams]);
 
     const hasQuery = activeQuery.length >= MIN_QUERY_LENGTH;
     const isTermTooShort = activeQuery.length > 0 && !hasQuery;
@@ -463,9 +510,34 @@ const Discover = () => {
                         })}
                     </div>
 
+                    {/*
+                      * The region toggle, beside the filters rather than buried.
+                      *
+                      * The search opens narrowed to the member's own block, which
+                      * is the right default and an invisible one unless it is
+                      * shown. Without this control a member whose block has three
+                      * suppliers would conclude the whole network has three.
+                      */}
+                    {homeRegion.state ? (
+                        <button
+                            type="button"
+                            onClick={() => setNearbyOnly((only) => !only)}
+                            aria-pressed={nearbyOnly}
+                            className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium inline-flex
+                                        items-center gap-1.5 transition-colors ${nearbyOnly
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                                }`}
+                        >
+                            <MapPin className="w-3.5 h-3.5" />
+                            {nearbyOnly ? (homeLabel || 'My region') : 'Whole network'}
+                        </button>
+                    ) : null}
+
                     <p className="text-sm text-slate-500 lg:max-w-xs lg:text-right shrink-0">
                         {hasQuery
-                            ? `Showing results matching "${activeQuery}".`
+                            ? `Showing results matching "${activeQuery}"${
+                                nearbyOnly && homeLabel ? ` in ${homeLabel}` : ''}.`
                             : isTermTooShort
                                 ? `Type at least ${MIN_QUERY_LENGTH} characters to search.`
                                 : `Showing ${activeCompany?.businessName || 'your company'} only.`}

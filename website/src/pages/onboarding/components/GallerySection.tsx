@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Calendar, MapPin, Grid3x3 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Calendar, MapPin, Grid3x3, ArrowRight } from 'lucide-react';
 import {
     getGallery, getGallerySettings,
     type GalleryItem, type GallerySettings,
@@ -9,6 +10,7 @@ import { CmsIcon } from '@/components/shared/CmsIcon';
 import { PAGE_CONTAINER } from '@/components/layout/pageContainer';
 import { SECTION_HEADING, SECTION_LEDE, EYEBROW } from '@/components/layout/typography';
 import { Reveal } from '@/components/shared/Reveal';
+import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
 import { Tilt3D } from '@/components/shared/Tilt3D';
 
 /**
@@ -163,41 +165,57 @@ export function GallerySection() {
                                 <div className="relative h-[28.125rem] md:h-[31.25rem] w-full max-w-3xl mx-auto isolate">
                                     {/* Fixed positions rather than a loop: the three frames
                                         are deliberately different sizes and angles. */}
+                                    {/* Each frame links to its own item, like every other
+                                        picture on the site now — a visitor who clicks
+                                        the biggest photograph on the page expects it to
+                                        do what the small ones below it do. */}
                                     {collage[0] && (
                                         <div className="absolute top-4 left-0 w-3/5 h-4/5 z-10 -rotate-2 group transform-gpu">
-                                            <div className="w-full h-full rounded-3xl overflow-hidden border-[6px]
-                                                            border-white shadow-xl bg-gray-100 transform-gpu">
+                                            <Link
+                                                to={`/gallery/${collage[0]._id}`}
+                                                aria-label={collage[0].title ? `View details of ${collage[0].title}` : 'View gallery item'}
+                                                className="block w-full h-full rounded-3xl overflow-hidden border-[6px]
+                                                           border-white shadow-xl bg-gray-100 transform-gpu"
+                                            >
                                                 <CmsMediaFrame
                                                     media={collage[0].media}
                                                     priority
                                                     width={520}
                                                     className="group-hover:scale-105 transition-transform duration-700 transform-gpu"
                                                 />
-                                            </div>
+                                            </Link>
                                         </div>
                                     )}
                                     {collage[1] && (
                                         <div className="absolute -top-4 right-4 w-[42%] h-[45%] z-20 rotate-2 group transform-gpu">
-                                            <div className="w-full h-full rounded-3xl overflow-hidden border-[6px]
-                                                            border-white shadow-xl bg-gray-100 transform-gpu">
+                                            <Link
+                                                to={`/gallery/${collage[1]._id}`}
+                                                aria-label={collage[1].title ? `View details of ${collage[1].title}` : 'View gallery item'}
+                                                className="block w-full h-full rounded-3xl overflow-hidden border-[6px]
+                                                           border-white shadow-xl bg-gray-100 transform-gpu"
+                                            >
                                                 <CmsMediaFrame
                                                     media={collage[1].media}
                                                     width={380}
                                                     className="group-hover:scale-105 transition-transform duration-700 transform-gpu"
                                                 />
-                                            </div>
+                                            </Link>
                                         </div>
                                     )}
                                     {collage[2] && (
                                         <div className="absolute bottom-4 right-0 w-[45%] h-[45%] z-30 -rotate-1 group transform-gpu">
-                                            <div className="w-full h-full rounded-3xl overflow-hidden border-[6px]
-                                                            border-white shadow-xl bg-gray-100 transform-gpu">
+                                            <Link
+                                                to={`/gallery/${collage[2]._id}`}
+                                                aria-label={collage[2].title ? `View details of ${collage[2].title}` : 'View gallery item'}
+                                                className="block w-full h-full rounded-3xl overflow-hidden border-[6px]
+                                                           border-white shadow-xl bg-gray-100 transform-gpu"
+                                            >
                                                 <CmsMediaFrame
                                                     media={collage[2].media}
                                                     width={380}
                                                     className="group-hover:scale-105 transition-transform duration-700 transform-gpu"
                                                 />
-                                            </div>
+                                            </Link>
                                         </div>
                                     )}
                                 </div>
@@ -255,12 +273,22 @@ export function GallerySection() {
                                long gallery never looks like it failed to load. */
                             <Reveal key={card._id} delay={Math.min(i % 4, 3) * 80} className="h-full">
                                 <Tilt3D className="h-full" intensity={9} lift={1.03} glare={false} perspective={800}>
-                                    <div
+                                    {/*
+                                      The whole card is the link to this item's
+                                      own page. A "details" button in the corner
+                                      would be the smallest target on a tile
+                                      whose picture is what everyone taps.
+                                    */}
+                                    <Link
+                                        to={`/gallery/${card._id}`}
+                                        aria-label={card.title ? `View details of ${card.title}` : 'View gallery item'}
                                         className="bg-white rounded-[1.25rem] overflow-hidden h-full
                                                    border border-brand-100/70
                                                    shadow-[0_10px_36px_-14px_rgb(28_46_104/0.18)]
                                                    transition-shadow duration-500
                                                    hover:shadow-[0_26px_56px_-18px_rgb(28_46_104/0.38)]
+                                                   focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600
+                                                   focus-visible:ring-offset-2
                                                    flex flex-col group"
                                     >
                                 <div className="w-full h-48 relative overflow-hidden bg-gray-50 p-1">
@@ -281,7 +309,9 @@ export function GallerySection() {
                                                     className="text-brand-600"
                                                     fallback="image"
                                                 />
-                                                <span className="uppercase tracking-wider">{card.category}</span>
+                                                <span className="text-[0.6875rem] uppercase tracking-wider">
+                                                    {card.category}
+                                                </span>
                                             </div>
                                         )}
                                     </div>
@@ -312,8 +342,20 @@ export function GallerySection() {
                                             )}
                                         </div>
                                     )}
+
+                                    {/* `mt-auto` on this rather than on the row above
+                                        when there are no details, so a card with
+                                        neither date nor location still puts the cue
+                                        at its foot and the grid stays even. */}
+                                    <span className={`${!card.eventDate && !card.location ? 'mt-auto pt-4' : 'mt-3'}
+                                                     inline-flex items-center gap-1.5 text-brand-600
+                                                     text-[0.6875rem] font-extrabold uppercase tracking-widest
+                                                     opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100
+                                                     transition-opacity duration-300`}>
+                                        View details <ArrowRight size={13} />
+                                    </span>
                                         </div>
-                                    </div>
+                                    </Link>
                                 </Tilt3D>
                             </Reveal>
                         ))}
@@ -333,6 +375,10 @@ export function GallerySection() {
                         </button>
                     </div>
                 )}
+
+                {/* Fields the editor added to this page. Nothing is drawn
+                    when the list is empty. */}
+                <CmsExtraFields fields={settings?.extraFields} className="mt-16" />
             </div>
         </section>
     );

@@ -192,14 +192,14 @@ export default function PaidDashboard() {
 
     return (
         <MemberPageShell
-            title="Dashboard"
-            subtitle={`Welcome back, ${firstName}`}
+            title={`Welcome back, ${firstName} 👋`}
+            subtitle="Your membership at a glance"
             width="wide"
         >
             <div className="space-y-6">
                 {/* ================================ membership card */}
-                <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 text-white
-                                p-6 lg:p-8 shadow-lg">
+                <div className="rounded-2xl bg-blue-600 text-white
+                                p-6 lg:p-8 shadow-[0_10px_28px_-6px_rgba(37,99,235,0.55)]">
                     <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="min-w-0">
                             <h2 className="text-2xl font-bold truncate">{name}</h2>
@@ -247,7 +247,7 @@ export default function PaidDashboard() {
                 </div>
 
                 {/* ================================ at a glance */}
-                <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-5 grid-cols-2 lg:grid-cols-4">
                     <StatTile
                         label="Updates"
                         value={updates.length}
@@ -289,7 +289,7 @@ export default function PaidDashboard() {
                     )}
                 </div>
 
-                <div className="grid gap-6 lg:grid-cols-12 items-start">
+                <div className="grid gap-5 lg:grid-cols-12 items-start">
                     {/* ================================ left column */}
                     <div className="lg:col-span-7 space-y-6">
                         {/* ---------- Association Updates (MEM-001) ---------- */}
@@ -351,7 +351,7 @@ export default function PaidDashboard() {
                                 actionTo="/business/dashboard"
                                 actionLabel="Open"
                             >
-                                <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+                                <div className="grid gap-5 grid-cols-2 lg:grid-cols-4">
                                     <StatTile
                                         label="Catalogue"
                                         value={analytics.catalogue.total}
@@ -394,7 +394,7 @@ export default function PaidDashboard() {
                                   */}
                                 {lowStock.length > 0 ? (
                                     <div className="mt-4 pt-4 border-t border-slate-100">
-                                        <p className="text-[0.75rem] font-semibold uppercase tracking-wide
+                                        <p className="text-xs font-semibold uppercase tracking-wide
                                                       text-slate-500 mb-2.5">
                                             Needs restocking
                                         </p>
@@ -437,7 +437,7 @@ export default function PaidDashboard() {
                     <div className="lg:col-span-5 space-y-6">
                         {/* ---------- quick actions ---------- */}
                         <SectionCard title="Quick actions" icon={<User className="w-5 h-5" />}>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-2 gap-5">
                                 {[
                                     { label: 'My Profile', icon: User, to: '/member/profile-view' },
                                     { label: 'Directory', icon: Users, to: '/member/directory' },
@@ -456,7 +456,7 @@ export default function PaidDashboard() {
                                                          justify-center mb-2">
                                             <Icon className="w-5 h-5 text-blue-600" />
                                         </span>
-                                        <span className="text-[0.78125rem] font-semibold text-slate-800 text-center">
+                                        <span className="text-[0.8125rem] font-semibold text-slate-800 text-center">
                                             {label}
                                         </span>
                                     </button>
@@ -465,10 +465,19 @@ export default function PaidDashboard() {
                         </SectionCard>
 
                         {/* ---------- documents ---------- */}
+                        {/*
+                          * "See all" leads to the Documents screen.
+                          *
+                          * That screen is deliberately not in the sidebar — the
+                          * rail is for places a member lives, not for a filing
+                          * cabinet they open twice a year — so this is one of the
+                          * two ways in, alongside Help & Support.
+                          */}
                         <SectionCard
                             title="Official Documents"
                             subtitle="Issued against your active membership"
                             icon={<FileText className="w-5 h-5" />}
+                            actionTo="/member/documents"
                         >
                             <div className="space-y-3">
                                 {DOCUMENTS.map((doc) => (
@@ -481,7 +490,7 @@ export default function PaidDashboard() {
                                                    transition-colors text-left"
                                     >
                                         <span className="flex items-center gap-3 min-w-0">
-                                            <span className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600
+                                            <span className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600
                                                              flex items-center justify-center shrink-0">
                                                 <FileText className="w-5 h-5" />
                                             </span>
@@ -502,7 +511,7 @@ export default function PaidDashboard() {
 
                         {/* ---------- business shortcut ---------- */}
                         {entitlements.catalogue ? (
-                            <div className="rounded-2xl bg-gradient-to-br from-blue-700 to-blue-900 text-white
+                            <div className="rounded-2xl bg-blue-600 text-white
                                             p-6 shadow-md">
                                 <div className="flex flex-wrap items-center justify-between gap-4">
                                     <div className="min-w-0">
@@ -547,10 +556,10 @@ export default function PaidDashboard() {
                                                 <Clock className="w-4 h-4" />
                                             </span>
                                             <span className="min-w-0 flex-1">
-                                                <span className="block text-[0.84375rem] font-medium text-slate-900">
+                                                <span className="block text-sm font-medium text-slate-900">
                                                     {row.description || row.type}
                                                 </span>
-                                                <span className="block text-[0.71875rem] text-slate-400 mt-0.5">
+                                                <span className="block text-xs text-slate-400 mt-0.5">
                                                     {row.at ? new Date(row.at).toLocaleString() : ''}
                                                 </span>
                                             </span>

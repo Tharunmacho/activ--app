@@ -85,11 +85,19 @@ const STAGE_COLORS: Record<string, string> = {
     closed: 'bg-slate-100 text-slate-600 hover:bg-slate-100',
 };
 
+/**
+ * The selected tab's fill.
+ *
+ * Each bucket keeps its own colour — green for approved, red for rejected — so
+ * the tab agrees with the badges on the cards underneath it. No borders: these
+ * sit on an inset track now and a border on the raised tab would read as a
+ * second outline inside the first.
+ */
 const TAB_ACTIVE: Record<BucketKey, string> = {
-    pending: 'bg-blue-600 text-white border-blue-600',
-    approved: 'bg-green-600 text-white border-green-600',
-    rejected: 'bg-red-600 text-white border-red-600',
-    all: 'bg-blue-600 text-white border-blue-600',
+    pending: 'bg-blue-600 text-white shadow-sm',
+    approved: 'bg-emerald-600 text-white shadow-sm',
+    rejected: 'bg-rose-600 text-white shadow-sm',
+    all: 'bg-blue-600 text-white shadow-sm',
 };
 
 const getInitials = (fullName?: string | null): string => {
@@ -177,7 +185,16 @@ export default function ApprovalQueue({
         return (
             <Card
                 key={applicant?.id || applicant?.applicationId}
-                className={`mb-3 ${onPressApplicant ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+                /* The admin area's card, so an applicant row sits at the same
+                   elevation as every other panel around it. */
+                className={`mb-4 border border-slate-200 rounded-2xl
+                            shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] ${
+                    onPressApplicant
+                        ? 'cursor-pointer transition-all duration-200 hover:-translate-y-0.5 '
+                          + 'hover:border-slate-300 '
+                          + 'hover:shadow-[0_4px_8px_-2px_rgba(16,24,40,0.12),0_16px_32px_-8px_rgba(16,24,40,0.16)]'
+                        : ''
+                }`}
                 onClick={() => onPressApplicant?.(applicant)}
             >
                 <CardContent className="p-4">
@@ -189,11 +206,11 @@ export default function ApprovalQueue({
                         <div className="flex-1 min-w-0">
                             {/* Never a placeholder name: an admin deciding on a
                                 membership must not be shown invented details. */}
-                            <p className="font-semibold text-gray-900 truncate">
+                            <p className="font-semibold text-slate-900 truncate">
                                 {applicant?.fullName || 'Name not provided'}
                             </p>
                             {!!applicant?.email && (
-                                <p className="text-sm text-gray-500 truncate">{applicant.email}</p>
+                                <p className="text-sm text-slate-500 truncate">{applicant.email}</p>
                             )}
                         </div>
 
@@ -204,19 +221,19 @@ export default function ApprovalQueue({
 
                     <div className="mt-3 space-y-1 text-sm">
                         <div className="flex items-center gap-1">
-                            <span className="text-gray-500">Role:</span>
+                            <span className="text-slate-500">Role:</span>
                             <span className={isAspirant ? 'text-emerald-600 font-semibold' : 'text-blue-600 font-semibold'}>
                                 {displayRole}
                             </span>
                         </div>
                         {!!location && (
-                            <div className="flex items-center gap-1 text-gray-600">
+                            <div className="flex items-center gap-1 text-slate-500">
                                 <MapPin className="w-3.5 h-3.5" />
                                 <span className="truncate">{location}</span>
                             </div>
                         )}
                         {!!applicant?.phone && (
-                            <div className="flex items-center gap-1 text-gray-600">
+                            <div className="flex items-center gap-1 text-slate-500">
                                 <Phone className="w-3.5 h-3.5" />
                                 <span>{applicant.phone}</span>
                             </div>
@@ -232,12 +249,12 @@ export default function ApprovalQueue({
 
                         The date format is mobile's: 02 Sep 2026.
                     */}
-                    <div className="mt-3 grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
+                    <div className="mt-3 grid grid-cols-2 gap-3 pt-3 border-t border-slate-100">
                         <div>
-                            <p className="text-[0.6875rem] uppercase tracking-wider text-gray-400 font-semibold">
+                            <p className="text-[0.6875rem] uppercase tracking-wider text-slate-400 font-semibold">
                                 Applied on
                             </p>
-                            <p className="text-sm text-gray-800 font-medium">
+                            <p className="text-sm text-slate-800 font-medium">
                                 {applicant?.submittedAt
                                     ? new Date(applicant.submittedAt).toLocaleDateString('en-GB', {
                                         day: '2-digit', month: 'short', year: 'numeric',
@@ -246,10 +263,10 @@ export default function ApprovalQueue({
                             </p>
                         </div>
                         <div>
-                            <p className="text-[0.6875rem] uppercase tracking-wider text-gray-400 font-semibold">
+                            <p className="text-[0.6875rem] uppercase tracking-wider text-slate-400 font-semibold">
                                 Membership Type
                             </p>
-                            <p className="text-sm text-gray-800 font-medium capitalize">
+                            <p className="text-sm text-slate-800 font-medium capitalize">
                                 {applicant?.memberType || applicant?.role || 'Member'}
                             </p>
                         </div>
@@ -267,7 +284,7 @@ export default function ApprovalQueue({
                     {!!applicant?.approvedByText && (
                         <p
                             className={`mt-2 text-xs ${
-                                stage === 'rejected' || stage === 'closed' ? 'text-red-600' : 'text-gray-500'
+                                stage === 'rejected' || stage === 'closed' ? 'text-red-600' : 'text-slate-500'
                             }`}
                         >
                             {applicant.approvedByText}
@@ -315,7 +332,7 @@ export default function ApprovalQueue({
                         and the reason must stay visible while it is typed. */}
                     {canAct && isRejecting && (
                         <div className="mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
-                            <label className="text-xs font-medium text-gray-700">Reason for rejection</label>
+                            <label className="text-xs font-medium text-slate-700">Reason for rejection</label>
                             <Textarea
                                 value={rejectReason}
                                 onChange={(e) => setRejectReason(e.target.value)}
@@ -357,10 +374,20 @@ export default function ApprovalQueue({
     };
 
     return (
-        <div className="p-4">
-            <h2 className="text-lg font-bold text-gray-900 mb-3">{copy.title}</h2>
+        <div>
+            <h2 className="text-base font-bold tracking-tight text-slate-900 mb-3">{copy.title}</h2>
 
-            <div className="flex gap-1 mb-4">
+            {/*
+              AN INSET TRACK, not four free-floating pills.
+
+              Each tab carried its own white fill and border, so on the page tint
+              they read as four separate cards rather than as one control with
+              four positions — and the selected one was hard to pick out among
+              them. One slate track with the active tab raised out of it in solid
+              blue is the same treatment the Members tabs use, and the two
+              screens sit one click apart.
+            */}
+            <div className="flex gap-1 mb-5 p-1 rounded-xl bg-slate-100 ring-1 ring-slate-200/60">
                 {FILTER_TABS.map((tab) => {
                     const isActive = activeFilter === tab.key;
                     const count = (safeBuckets[tab.key] || []).length;
@@ -369,8 +396,11 @@ export default function ApprovalQueue({
                             key={tab.key}
                             type="button"
                             onClick={() => setActiveFilter(tab.key)}
-                            className={`flex-1 px-2 py-2 rounded-full border text-xs font-medium truncate transition-colors ${
-                                isActive ? TAB_ACTIVE[tab.key] : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                            className={`flex-1 px-2 py-2 rounded-lg text-xs font-semibold truncate
+                                        transition-colors ${
+                                isActive
+                                    ? TAB_ACTIVE[tab.key]
+                                    : 'text-slate-600 hover:text-slate-900'
                             }`}
                         >
                             {tab.label} ({count})
@@ -382,10 +412,25 @@ export default function ApprovalQueue({
             {visible.length > 0 ? (
                 visible.map(renderCard)
             ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <Inbox className="w-9 h-9 text-gray-300 mb-2" />
-                    <p className="font-medium text-gray-700">No {activeFilter} applications</p>
-                    <p className="text-sm text-gray-500 mt-1 max-w-sm">
+                /*
+                  AN EMPTY STATE IS STILL A SURFACE.
+
+                  This was bare text and an icon floating on the page, so an
+                  empty bucket looked like a screen that had failed to render
+                  rather than a screen with nothing in it. The card is the same
+                  card an applicant row would have appeared in, which is exactly
+                  the point: the panel is there, it is simply empty.
+                */
+                <div className="flex flex-col items-center justify-center py-16 px-6 text-center
+                                bg-white border border-slate-200 rounded-2xl
+                                shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+                    <span className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center mb-4">
+                        <Inbox className="w-7 h-7 text-slate-400" />
+                    </span>
+                    <p className="text-base font-bold tracking-tight text-slate-900">
+                        No {activeFilter} applications
+                    </p>
+                    <p className="text-sm text-slate-500 mt-1 max-w-sm">
                         {activeFilter === 'pending' ? copy.waitingOn : 'Nothing to show in this bucket yet.'}
                     </p>
                 </div>

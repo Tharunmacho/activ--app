@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
     MapPin, Clock, Users, Phone, Mail, CalendarDays, BadgeCheck, Lock,
-    ExternalLink, Bell, Loader2, User,
+    ExternalLink, Bell, Loader2, User, ShieldCheck, Ticket, ChevronRight,
 } from 'lucide-react';
 import MemberPageShell from '@/pages/member/MemberPageShell';
 import { EmptyState, RowsSkeleton, SectionCard } from '@/features/member/components/MemberUI';
@@ -12,9 +12,9 @@ import {
     type RegistrationGate,
 } from '@/features/member/components/eventFormat';
 import {
-    getMemberEvent, registerForEvent, cancelEventRegistration, type MemberEvent,
+    getMemberEvent, cancelEventRegistration, type MemberEvent,
 } from '@/services/memberHubApi';
-import { errorMessage, getMyProfile } from '@/services/activApi';
+import { errorMessage } from '@/services/activApi';
 import { resolveMediaUrl } from '@/config/api.config';
 
 /**
@@ -42,9 +42,6 @@ export default function MemberEventDetail() {
     const [error, setError] = useState('');
     const [working, setWorking] = useState(false);
 
-    /** Pre-filled from the member's own record — nobody enjoys retyping this. */
-    const [form, setForm] = useState({ memberName: '', phone: '', organization: '', note: '' });
-    const [showForm, setShowForm] = useState(false);
 
     const load = useCallback(async () => {
         try {
@@ -60,28 +57,28 @@ export default function MemberEventDetail() {
 
     useEffect(() => { load(); }, [load]);
 
-    useEffect(() => {
-        let cancelled = false;
-
-        // Settled, not awaited alongside the event: a profile that 404s must not
-        // stop the event from rendering.
-        getMyProfile()
-            .then((profile: any) => {
-                if (cancelled || !profile) return;
-                setForm((current) => ({
-                    ...current,
-                    memberName: current.memberName || profile.fullName || '',
-                    phone: current.phone || profile.phoneNumber || '',
-                }));
-            })
-            .catch(() => null);
-
-        return () => { cancelled = true; };
-    }, []);
 
     const registration = event?.myRegistration && event.myRegistration.status !== 'cancelled'
         ? event.myRegistration
         : null;
+
+    /**
+     * A seat that is held but not paid for.
+     *
+     * Deliberately its own state and not folded into `registration`. The two
+     * mean opposite things to a member: one is "you are going", the other is
+     * "you are not going yet and here is why". Showing the confirmation card for
+     * a pending seat is the failure that would actually cost somebody their
+     * place — they would close the tab, and the hold does not count against
+     * capacity, so the seat goes to whoever pays first.
+     */
+    const awaitingPayment = !!registration && registration.payment?.status === 'pending';
+
+    /** What a seat costs. 0 is free — there is no third state. See the model. */
+    const fee = Number(event?.registrationFee || 0);
+
+    /** The questions the super admin designed for this event. */
+    const customFields = useMemo(() => event?.registrationFields || [], [event]);
 
     const gate: RegistrationGate = useMemo(
         () => (event ? registrationGate(event) : { open: false, reason: '' }),
@@ -90,31 +87,6 @@ export default function MemberEventDetail() {
     const left = event ? seatsLeft(event) : null;
     const banner = resolveMediaUrl(event?.bannerUrl);
 
-    const register = async () => {
-        if (!event) return;
-
-        setWorking(true);
-        try {
-            const seat = await registerForEvent(event.id, form);
-
-            if (seat?.alreadyRegistered) {
-                toast.info('You were already registered for this event');
-            } else if (seat?.status === 'waitlist') {
-                toast.success('The event is full — you are on the waiting list');
-            } else {
-                toast.success('You are registered');
-            }
-
-            setShowForm(false);
-            // Re-read rather than patching state: the seat count and any
-            // waitlist promotion are the server's to decide.
-            await load();
-        } catch (err) {
-            toast.error(errorMessage(err, 'Could not register you for this event'));
-        } finally {
-            setWorking(false);
-        }
-    };
 
     const cancel = async () => {
         if (!event) return;
@@ -181,7 +153,7 @@ export default function MemberEventDetail() {
             <div className="space-y-5">
                 {/* ---------- the poster, whole ---------- */}
                 {banner ? (
-                    <div className="rounded-2xl border border-slate-200 bg-slate-100 overflow-hidden shadow-sm">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-100 overflow-hidden shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                         <img
                             src={banner}
                             alt={event.bannerAlt || event.title}
@@ -214,7 +186,7 @@ export default function MemberEventDetail() {
                             </div>
 
                             {event.description ? (
-                                <p className="text-[0.90625rem] text-slate-700 leading-relaxed whitespace-pre-line">
+                                <p className="text-[0.9375rem] text-slate-700 leading-relaxed whitespace-pre-line">
                                     {event.description}
                                 </p>
                             ) : (
@@ -254,25 +226,25 @@ export default function MemberEventDetail() {
                                                 <span className="absolute -left-[5px] top-1.5 w-2.5 h-2.5
                                                                  rounded-full bg-blue-600" />
 
-                                                <p className="text-[0.875rem] font-semibold text-slate-900 leading-snug">
+                                                <p className="text-sm font-semibold text-slate-900 leading-snug">
                                                     {item.title || 'Session'}
                                                 </p>
 
                                                 {item.speaker ? (
-                                                    <p className="text-[0.78125rem] text-blue-700 mt-0.5 font-medium">
+                                                    <p className="text-[0.8125rem] text-blue-700 mt-0.5 font-medium">
                                                         {item.speaker}
                                                     </p>
                                                 ) : null}
 
                                                 {item.location ? (
-                                                    <p className="text-[0.75rem] text-slate-500 mt-0.5
+                                                    <p className="text-xs text-slate-500 mt-0.5
                                                                   inline-flex items-center gap-1">
                                                         <MapPin className="w-3 h-3" /> {item.location}
                                                     </p>
                                                 ) : null}
 
                                                 {item.description ? (
-                                                    <p className="text-[0.78125rem] text-slate-600 mt-1 leading-relaxed">
+                                                    <p className="text-[0.8125rem] text-slate-600 mt-1 leading-relaxed">
                                                         {item.description}
                                                     </p>
                                                 ) : null}
@@ -314,21 +286,21 @@ export default function MemberEventDetail() {
                                                 )}
 
                                                 <div className="min-w-0">
-                                                    <p className="text-[0.875rem] font-semibold text-slate-900 truncate">
+                                                    <p className="text-sm font-semibold text-slate-900 truncate">
                                                         {speaker.name}
                                                     </p>
                                                     {speaker.role ? (
-                                                        <p className="text-[0.78125rem] text-slate-600 truncate">
+                                                        <p className="text-[0.8125rem] text-slate-600 truncate">
                                                             {speaker.role}
                                                         </p>
                                                     ) : null}
                                                     {speaker.organization ? (
-                                                        <p className="text-[0.75rem] text-slate-400 truncate">
+                                                        <p className="text-xs text-slate-400 truncate">
                                                             {speaker.organization}
                                                         </p>
                                                     ) : null}
                                                     {speaker.bio ? (
-                                                        <p className="text-[0.75rem] text-slate-600 mt-1 leading-relaxed">
+                                                        <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                                                             {speaker.bio}
                                                         </p>
                                                     ) : null}
@@ -349,7 +321,7 @@ export default function MemberEventDetail() {
                                     <dt className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-400">
                                         Date and time
                                     </dt>
-                                    <dd className="text-[0.875rem] text-slate-900 font-medium mt-0.5">
+                                    <dd className="text-sm text-slate-900 font-medium mt-0.5">
                                         {formatWhen(event)}
                                     </dd>
                                 </div>
@@ -359,7 +331,7 @@ export default function MemberEventDetail() {
                                         <dt className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-400">
                                             Venue
                                         </dt>
-                                        <dd className="text-[0.875rem] text-slate-900 font-medium mt-0.5">
+                                        <dd className="text-sm text-slate-900 font-medium mt-0.5">
                                             {event.venue}
                                             {event.venueAddress ? (
                                                 <span className="block text-[0.8125rem] text-slate-600 font-normal mt-0.5">
@@ -373,7 +345,7 @@ export default function MemberEventDetail() {
                                                 href={event.venueMapUrl}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="mt-1.5 inline-flex items-center gap-1 text-[0.78125rem]
+                                                className="mt-1.5 inline-flex items-center gap-1 text-[0.8125rem]
                                                            font-semibold text-blue-600 hover:underline"
                                             >
                                                 Open in maps <ExternalLink className="w-3.5 h-3.5" />
@@ -387,7 +359,7 @@ export default function MemberEventDetail() {
                                         <dt className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-400">
                                             Region
                                         </dt>
-                                        <dd className="text-[0.875rem] text-slate-700 mt-0.5">
+                                        <dd className="text-sm text-slate-700 mt-0.5">
                                             {[event.block, event.district, event.state].filter(Boolean).join(', ')}
                                         </dd>
                                     </div>
@@ -398,7 +370,7 @@ export default function MemberEventDetail() {
                                         <dt className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-400">
                                             Contact
                                         </dt>
-                                        <dd className="text-[0.84375rem] text-slate-700 mt-0.5 space-y-1">
+                                        <dd className="text-sm text-slate-700 mt-0.5 space-y-1">
                                             {event.contactName ? <p>{event.contactName}</p> : null}
                                             {event.contactPhone ? (
                                                 <a
@@ -427,7 +399,75 @@ export default function MemberEventDetail() {
                             title={registration ? 'Your seat' : 'Registration'}
                             icon={<Users className="w-5 h-5" />}
                         >
-                            {registration ? (
+                            {awaitingPayment ? (
+                                /*
+                                 * CHECKOUT.
+                                 *
+                                 * Its own branch above "your seat", because a held
+                                 * seat is not a registration and the screen must
+                                 * not congratulate the member on one. Everything
+                                 * here is about the one action left to them.
+                                 */
+                                <div className="space-y-4">
+                                    <div className="rounded-2xl bg-blue-600
+                                                    text-white p-5 shadow-lg">
+                                        <p className="text-[0.6875rem] font-bold uppercase tracking-wider
+                                                      text-blue-200">
+                                            Amount due
+                                        </p>
+                                        <p className="text-4xl font-extrabold mt-1 tabular-nums">
+                                            ₹{registration.payment.amount.toLocaleString('en-IN')}
+                                        </p>
+                                        <p className="text-xs text-blue-100 mt-2 leading-snug">
+                                            Your seat is held. It is confirmed the moment this is paid.
+                                        </p>
+
+                                        {registration.payment.reference ? (
+                                            <p className="mt-4 pt-3 border-t border-white/20 text-[0.6875rem]
+                                                          text-blue-200">
+                                                Reference{' '}
+                                                <span className="font-semibold tracking-wider text-white">
+                                                    {registration.payment.reference}
+                                                </span>
+                                            </p>
+                                        ) : null}
+                                    </div>
+
+                                    {/*
+                                      * Paying happens on the registration screen,
+                                      * at the step this seat is already on.
+                                      *
+                                      * One checkout, in one place. Two — one here
+                                      * and one there — is two things to keep in
+                                      * step, and the member who used the smaller
+                                      * one would never see the order summary.
+                                      */}
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate(`/member/events/${event.id}/register`)}
+                                        className="w-full h-12 rounded-xl bg-emerald-600 text-white text-sm
+                                                   font-bold hover:bg-emerald-700
+                                                   transition-colors inline-flex items-center justify-center gap-2
+                                                   shadow-sm"
+                                    >
+                                        <ShieldCheck className="w-4 h-4" />
+                                        Pay ₹{registration.payment.amount.toLocaleString('en-IN')} and confirm
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+
+                                    {!past ? (
+                                        <button
+                                            type="button"
+                                            onClick={cancel}
+                                            disabled={working}
+                                            className="w-full h-10 rounded-xl text-[0.8125rem] font-semibold
+                                                       text-slate-500 hover:text-slate-700 disabled:opacity-60"
+                                        >
+                                            Give up this seat instead
+                                        </button>
+                                    ) : null}
+                                </div>
+                            ) : registration ? (
                                 <div className="space-y-3">
                                     <div className={`rounded-xl p-4 ${
                                         registration.status === 'waitlist'
@@ -443,19 +483,60 @@ export default function MemberEventDetail() {
                                                 ? 'You are on the waiting list'
                                                 : 'You are registered'}
                                         </p>
-                                        <p className="text-[0.78125rem] text-slate-600 mt-1">
+                                        <p className="text-[0.8125rem] text-slate-600 mt-1">
                                             {registration.status === 'waitlist'
                                                 ? 'You will move into a seat automatically if one is given up.'
                                                 : `Registered on ${formatDate(registration.registeredAt)}.`}
                                         </p>
                                     </div>
 
+                                    {/*
+                                      The receipt, for a seat that was paid for.
+
+                                      The reference is the thing a member quotes to
+                                      the organiser, so it is on the screen rather
+                                      than only in an email nobody can find.
+                                    */}
+                                    {registration.payment?.status === 'paid' ? (
+                                        <div className="rounded-xl border border-slate-200 p-4">
+                                            <p className="text-[0.6875rem] font-bold uppercase tracking-wide
+                                                          text-slate-500 flex items-center gap-1.5">
+                                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                                Payment received
+                                            </p>
+                                            <div className="mt-2.5 space-y-1.5">
+                                                <ReceiptRow
+                                                    label="Amount"
+                                                    value={`₹${registration.payment.amount.toLocaleString('en-IN')}`}
+                                                />
+                                                {registration.payment.method ? (
+                                                    <ReceiptRow
+                                                        label="Method"
+                                                        value={registration.payment.method.toUpperCase()}
+                                                    />
+                                                ) : null}
+                                                {registration.payment.reference ? (
+                                                    <ReceiptRow
+                                                        label="Reference"
+                                                        value={registration.payment.reference}
+                                                    />
+                                                ) : null}
+                                                {registration.payment.paidAt ? (
+                                                    <ReceiptRow
+                                                        label="Paid on"
+                                                        value={formatDate(registration.payment.paidAt)}
+                                                    />
+                                                ) : null}
+                                            </div>
+                                        </div>
+                                    ) : null}
+
                                     {!past ? (
                                         <button
                                             type="button"
                                             onClick={cancel}
                                             disabled={working}
-                                            className="w-full h-11 rounded-xl border border-slate-200 text-[0.84375rem]
+                                            className="w-full h-11 rounded-xl border border-slate-200 text-sm
                                                        font-semibold text-slate-600 hover:bg-slate-50
                                                        disabled:opacity-60 transition-colors
                                                        inline-flex items-center justify-center gap-2"
@@ -466,57 +547,65 @@ export default function MemberEventDetail() {
                                     ) : null}
                                 </div>
                             ) : !gate.open ? (
-                                <p className="text-[0.8125rem] text-slate-500 py-2">{gate.reason}</p>
-                            ) : showForm ? (
-                                <form
-                                    onSubmit={(e) => { e.preventDefault(); register(); }}
-                                    className="space-y-3"
-                                >
-                                    <Field
-                                        label="Your name"
-                                        value={form.memberName}
-                                        onChange={(v) => setForm({ ...form, memberName: v })}
-                                        required
-                                    />
-                                    <Field
-                                        label="Phone"
-                                        value={form.phone}
-                                        onChange={(v) => setForm({ ...form, phone: v })}
-                                        placeholder="For the organiser to reach you on the day"
-                                    />
-                                    <Field
-                                        label="Organisation (optional)"
-                                        value={form.organization}
-                                        onChange={(v) => setForm({ ...form, organization: v })}
-                                    />
-                                    <Field
-                                        label="Anything the organiser should know (optional)"
-                                        value={form.note}
-                                        onChange={(v) => setForm({ ...form, note: v })}
-                                    />
+                                /*
+                                 * Closed, and said so as a state rather than a
+                                 * stray grey sentence.
+                                 *
+                                 * A section headed "Registration" followed by one
+                                 * faint line reads as a page that failed to load —
+                                 * which is exactly how it was reported. The
+                                 * organiser's contact details are offered here
+                                 * because "registration is not open" is the moment
+                                 * a member most wants to ask a person about it.
+                                 */
+                                <div className="py-6 text-center">
+                                    <span className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 mx-auto
+                                                     mb-3 flex items-center justify-center">
+                                        <Lock className="w-5 h-5" />
+                                    </span>
+                                    <p className="text-sm font-semibold text-slate-700">
+                                        Registration is not open
+                                    </p>
+                                    <p className="text-[0.8125rem] text-slate-500 mt-1 max-w-xs mx-auto
+                                                  leading-relaxed">
+                                        {gate.reason || 'The organiser has not opened registration for this event.'}
+                                    </p>
 
-                                    <div className="flex gap-2 pt-1">
-                                        <button
-                                            type="submit"
-                                            disabled={working || !form.memberName.trim()}
-                                            className="flex-1 h-11 rounded-xl bg-blue-600 text-white text-[0.84375rem]
-                                                       font-bold hover:bg-blue-700 disabled:opacity-60
-                                                       transition-colors inline-flex items-center
-                                                       justify-center gap-2"
-                                        >
-                                            {working ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                                            {left === 0 ? 'Join the waiting list' : 'Confirm registration'}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowForm(false)}
-                                            className="px-4 h-11 rounded-xl border border-slate-200 text-[0.84375rem]
-                                                       font-semibold text-slate-600 hover:bg-slate-50"
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
-                                </form>
+                                    {event.contactPhone || event.contactEmail ? (
+                                        <p className="text-[0.8125rem] text-slate-500 mt-3">
+                                            Contact{' '}
+                                            {event.contactName ? (
+                                                <span className="font-semibold text-slate-700">
+                                                    {event.contactName}
+                                                </span>
+                                            ) : 'the organiser'}
+                                            {event.contactPhone ? (
+                                                <>
+                                                    {' on '}
+                                                    <a
+                                                        href={`tel:${event.contactPhone}`}
+                                                        className="font-semibold text-blue-600 hover:underline"
+                                                    >
+                                                        {event.contactPhone}
+                                                    </a>
+                                                </>
+                                            ) : null}
+                                            {event.contactEmail ? (
+                                                <>
+                                                    {event.contactPhone ? ' or ' : ' at '}
+                                                    <a
+                                                        href={`mailto:${event.contactEmail}`}
+                                                        className="font-semibold text-blue-600 hover:underline
+                                                                   break-all"
+                                                    >
+                                                        {event.contactEmail}
+                                                    </a>
+                                                </>
+                                            ) : null}
+                                            .
+                                        </p>
+                                    ) : null}
+                                </div>
                             ) : (
                                 <div className="space-y-3">
                                     {event.registrationNote ? (
@@ -524,6 +613,35 @@ export default function MemberEventDetail() {
                                             {event.registrationNote}
                                         </p>
                                     ) : null}
+
+                                    {/*
+                                      What it costs, before anything else in the
+                                      card. It is the first thing a member wants to
+                                      know and the last thing the old layout said.
+                                    */}
+                                    {fee > 0 ? (
+                                        <div className="rounded-xl bg-slate-50 border border-slate-200 p-4
+                                                        flex items-center gap-3">
+                                            <span className="w-10 h-10 rounded-xl bg-blue-600 text-white
+                                                             flex items-center justify-center shrink-0">
+                                                <Ticket className="w-4 h-4" />
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block text-xl font-extrabold text-slate-900
+                                                                 tabular-nums leading-none">
+                                                    ₹{fee.toLocaleString('en-IN')}
+                                                </span>
+                                                <span className="block text-xs text-slate-500 mt-1">
+                                                    per seat
+                                                </span>
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <p className="text-[0.8125rem] font-semibold text-emerald-700
+                                                      inline-flex items-center gap-1.5">
+                                            <Ticket className="w-3.5 h-3.5" /> Free to attend
+                                        </p>
+                                    )}
 
                                     {left !== null ? (
                                         <p className={`text-[0.8125rem] font-semibold ${
@@ -536,24 +654,37 @@ export default function MemberEventDetail() {
                                     ) : null}
 
                                     {event.registrationDeadline ? (
-                                        <p className="text-[0.78125rem] text-slate-500">
+                                        <p className="text-[0.8125rem] text-slate-500">
                                             Registration closes {formatDate(event.registrationClosesAt)}.
                                         </p>
                                     ) : null}
 
+                                    {/*
+                                      * Registration opens its own screen.
+                                      *
+                                      * It used to expand into this column: six
+                                      * fields, a fee, a payment method and a
+                                      * receipt, in a third of the width beside the
+                                      * agenda. Registration is a transaction with
+                                      * steps and money in it, and the questions an
+                                      * organiser adds have no room here — eight of
+                                      * them turn the sidebar into a scroll.
+                                      */}
                                     <button
                                         type="button"
-                                        onClick={() => setShowForm(true)}
-                                        className="w-full h-11 rounded-xl bg-blue-600 text-white text-[0.84375rem]
-                                                   font-bold hover:bg-blue-700 transition-colors"
+                                        onClick={() => navigate(`/member/events/${event.id}/register`)}
+                                        className="w-full h-11 rounded-xl bg-blue-600 text-white text-sm
+                                                   font-bold hover:bg-blue-700 transition-colors
+                                                   inline-flex items-center justify-center gap-1.5"
                                     >
                                         {left === 0 ? 'Join the waiting list' : 'Register for this event'}
+                                        <ChevronRight className="w-4 h-4" />
                                     </button>
                                 </div>
                             )}
 
                             {reminders ? (
-                                <p className="mt-4 pt-3 border-t border-slate-100 text-[0.75rem] text-slate-500
+                                <p className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500
                                               inline-flex items-center gap-1.5">
                                     <Bell className="w-3.5 h-3.5" /> {reminders}
                                 </p>
@@ -567,38 +698,18 @@ export default function MemberEventDetail() {
 }
 
 /**
- * One labelled input.
+ * One line of a receipt.
  *
- * An inline expandable form, never a `<Modal>` — the same rule the member area
- * follows everywhere: a dialog inside a nested view is what the crash-proof
- * directive forbids on Android, and consistency between the two clients is
- * worth more here than a dialog would buy.
+ * Label left, value right, tabular figures — so an amount and a reference line
+ * up down the column rather than drifting with the width of their labels.
  */
-function Field({
-    label,
-    value,
-    onChange,
-    placeholder,
-    required,
-}: {
-    label: string;
-    value: string;
-    onChange: (value: string) => void;
-    placeholder?: string;
-    required?: boolean;
-}) {
+function ReceiptRow({ label, value }: { label: string; value: string }) {
     return (
-        <label className="block">
-            <span className="block text-[0.75rem] font-semibold text-slate-600 mb-1">{label}</span>
-            <input
-                type="text"
-                value={value}
-                required={required}
-                placeholder={placeholder}
-                onChange={(e) => onChange(e.target.value)}
-                className="w-full h-11 px-3 rounded-xl border border-slate-200 text-sm
-                           focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
-            />
-        </label>
+        <div className="flex items-baseline justify-between gap-3">
+            <span className="text-xs text-slate-500 shrink-0">{label}</span>
+            <span className="text-[0.8125rem] font-semibold text-slate-900 text-right break-all tabular-nums">
+                {value}
+            </span>
+        </div>
     );
 }

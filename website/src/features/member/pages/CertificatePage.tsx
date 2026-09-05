@@ -60,7 +60,7 @@ export default function CertificatePage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center gap-3 text-gray-500">
+            <div className="min-h-screen flex items-center justify-center gap-3 text-slate-500">
                 <Loader2 className="w-5 h-5 animate-spin" />
                 Preparing your certificate…
             </div>
@@ -71,7 +71,7 @@ export default function CertificatePage() {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center">
                 <AlertCircle className="w-10 h-10 text-amber-500" />
-                <p className="text-gray-700 max-w-md">{error || 'Nothing to show'}</p>
+                <p className="text-slate-700 max-w-md">{error || 'Nothing to show'}</p>
                 <button
                     onClick={() => navigate(-1)}
                     className="text-blue-600 hover:underline flex items-center gap-1.5"
@@ -86,12 +86,12 @@ export default function CertificatePage() {
     const region = [member.block, member.district, member.state].filter(Boolean).join(', ');
 
     return (
-        <div className="min-h-screen bg-gray-100 py-10 px-4 print:bg-white print:p-0">
+        <div className="min-h-screen bg-slate-100 py-10 px-4 print:bg-white print:p-0">
             {/* Chrome — on screen only. */}
             <div className="max-w-3xl mx-auto flex items-center justify-between mb-6 print:hidden">
                 <button
                     onClick={() => navigate(-1)}
-                    className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+                    className="flex items-center gap-2 text-slate-500 hover:text-slate-900"
                 >
                     <ArrowLeft className="w-4 h-4" /> Back
                 </button>
@@ -118,7 +118,7 @@ export default function CertificatePage() {
                         alt=""
                         className="h-16 mx-auto mb-4 object-contain"
                     />
-                    <p className="text-[0.6875rem] font-bold uppercase tracking-[0.2em] text-gray-500">
+                    <p className="text-[0.6875rem] font-bold uppercase tracking-[0.2em] text-slate-500">
                         {cert.issuedBy}
                     </p>
                 </div>
@@ -130,47 +130,47 @@ export default function CertificatePage() {
                     {cert.title || style.heading}
                 </h1>
 
-                <p className="text-center text-gray-500 mb-2">This is to certify that</p>
+                <p className="text-center text-slate-500 mb-2">This is to certify that</p>
 
-                <p className="text-3xl md:text-4xl font-serif text-center text-gray-900 mb-6">
+                <p className="text-3xl md:text-4xl font-serif text-center text-slate-900 mb-6">
                     {member.name || '—'}
                 </p>
 
-                <p className="text-center text-gray-600 leading-relaxed max-w-xl mx-auto mb-10">
+                <p className="text-center text-slate-500 leading-relaxed max-w-xl mx-auto mb-10">
                     {cert.body}
                 </p>
 
-                <div className="grid grid-cols-2 gap-6 text-sm border-t border-gray-200 pt-6">
+                <div className="grid grid-cols-2 gap-6 text-sm border-t border-slate-200 pt-6">
                     <div>
-                        <p className="text-[0.625rem] uppercase tracking-wider text-gray-400 mb-1">
+                        <p className="text-[0.625rem] uppercase tracking-wider text-slate-400 mb-1">
                             Membership number
                         </p>
-                        <p className="font-semibold text-gray-900">{member.membershipNumber}</p>
+                        <p className="font-semibold text-slate-900">{member.membershipNumber}</p>
                     </div>
 
                     {region && (
                         <div>
-                            <p className="text-[0.625rem] uppercase tracking-wider text-gray-400 mb-1">Region</p>
-                            <p className="font-semibold text-gray-900">{region}</p>
+                            <p className="text-[0.625rem] uppercase tracking-wider text-slate-400 mb-1">Region</p>
+                            <p className="font-semibold text-slate-900">{region}</p>
                         </div>
                     )}
 
                     {formatDate(cert.memberSince) && (
                         <div>
-                            <p className="text-[0.625rem] uppercase tracking-wider text-gray-400 mb-1">
+                            <p className="text-[0.625rem] uppercase tracking-wider text-slate-400 mb-1">
                                 Member since
                             </p>
-                            <p className="font-semibold text-gray-900">{formatDate(cert.memberSince)}</p>
+                            <p className="font-semibold text-slate-900">{formatDate(cert.memberSince)}</p>
                         </div>
                     )}
 
                     <div>
-                        <p className="text-[0.625rem] uppercase tracking-wider text-gray-400 mb-1">Issued</p>
-                        <p className="font-semibold text-gray-900">{formatDate(cert.issuedAt)}</p>
+                        <p className="text-[0.625rem] uppercase tracking-wider text-slate-400 mb-1">Issued</p>
+                        <p className="font-semibold text-slate-900">{formatDate(cert.issuedAt)}</p>
                     </div>
                 </div>
 
-                <p className="text-center text-[0.625rem] text-gray-400 mt-10">
+                <p className="text-center text-[0.625rem] text-slate-400 mt-10">
                     Issued electronically by {cert.issuedBy}. No signature is required.
                 </p>
             </div>

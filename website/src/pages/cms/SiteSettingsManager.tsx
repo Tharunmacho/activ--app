@@ -16,7 +16,7 @@ import {
     cmsSaved,
     cmsFailed,
 } from './components/CmsUI';
-import { RepeatableList, LinkList, LineList, IconPicker } from './components/CmsEditors';
+import { RepeatableList, LinkList, LineList, IconPicker , ExtraFieldsEditor } from './components/CmsEditors';
 import MediaPicker from './components/MediaPicker';
 
 /**
@@ -412,6 +412,12 @@ export default function SiteSettingsManager() {
                             </CmsField>
                         </div>
                     </CmsSection>
+                    <ExtraFieldsEditor
+                        items={site.extraFields || []}
+                        onChange={extraFields => setSite({ ...site, extraFields })}
+                        hint="Extra lines in the footer — a registration number, an office that is not the head office, anything else."
+                    />
+
                 </div>
 
                 <SaveRow block="footer" label="Save footer" />

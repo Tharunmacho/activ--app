@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, Trash2, Users, Clock, Lock, Globe, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
-import { CmsField, CmsInput, CmsTextarea, CmsSection } from './CmsUI';
+import RegistrationFormBuilder, { type RegistrationField } from './RegistrationFormBuilder';
+import { CmsField, CmsInput, CmsTextarea, CmsSection, CmsChoice } from './CmsUI';
 import { listEventRegistrations, type EventRegistration } from '@/services/memberHubApi';
 import { errorMessage } from '@/services/activApi';
 import type { CmsAgendaItem, CmsSpeaker } from '@/services/cmsApi';
@@ -32,7 +33,11 @@ export interface EventDetail {
     registrationEnabled: boolean;
     registrationDeadline: string;
     capacity: string;
+    /** Rupees, as typed. Blank and "0" both mean a free event. */
+    registrationFee: string;
     registrationNote: string;
+    /** The questions THIS event asks, on top of the four standing ones. */
+    registrationFields: RegistrationField[];
     reminderOffsetsHours: number[];
 }
 
@@ -45,10 +50,28 @@ export const BLANK_DETAIL: EventDetail = {
     contactName: '',
     contactPhone: '',
     contactEmail: '',
-    registrationEnabled: false,
+    /*
+     * NEW EVENTS ACCEPT REGISTRATIONS.
+     *
+     * This defaulted to `false`, which is the wrong way round for an
+     * association: an event is posted so that members attend it, and one nobody
+     * can register for is the exception rather than the rule. The whole
+     * registration block — capacity, fee, deadline, the form builder — is hidden
+     * behind this one tick, so an editor who never found it published seven
+     * events in a row with no way to attend any of them and nothing on any
+     * screen saying why. Measured against the live database: seven events, all
+     * seven with registration off.
+     *
+     * Only the DEFAULT for a new event changes. Opening an existing event still
+     * shows whatever it was saved with, and the tick still turns it off for the
+     * events that genuinely are announcements.
+     */
+    registrationEnabled: true,
     registrationDeadline: '',
     capacity: '',
+    registrationFee: '',
     registrationNote: '',
+    registrationFields: [],
     reminderOffsetsHours: [],
 };
 
@@ -97,7 +120,22 @@ export default function EventDetailFields({
     /** Present only when editing — there are no registrations for a draft row. */
     eventId?: string | null;
 }) {
-    const [open, setOpen] = useState(false);
+    /*
+     * OPEN BY DEFAULT.
+     *
+     * This panel holds the audience cards, the capacity, the fee and the
+     * registration form builder — and it was collapsed, so an editor filling in
+     * a new event saw a title, a date and a banner and reasonably concluded that
+     * was the whole form. Reported as "I am not satisfied with the event fields"
+     * and "customise fields should be there": they were there, behind a chevron
+     * nothing drew the eye to.
+     *
+     * It still collapses, because an editor who only wants to fix a typo in the
+     * title should be able to fold away four screens of programme detail. The
+     * default is what changed, and it is the right way round: everything the
+     * form can do is visible until someone chooses otherwise.
+     */
+    const [open, setOpen] = useState(true);
     const set = (patch: Partial<EventDetail>) => onChange({ ...value, ...patch });
 
     const updateAgenda = (index: number, patch: Partial<CmsAgendaItem>) => {
@@ -146,22 +184,28 @@ export default function EventDetailFields({
                         title="Who can see it"
                         hint="Separate from the draft/published control: that is whether it is ready, this is who it is for."
                     >
-                        <div className="grid gap-3 sm:grid-cols-2">
-                            <AudienceOption
-                                selected={value.audience === 'all'}
-                                onSelect={() => set({ audience: 'all' })}
-                                icon={<Globe className="w-4 h-4" />}
-                                title="Everyone"
-                                detail="On the public site and visible to every signed-in member."
-                            />
-                            <AudienceOption
-                                selected={value.audience === 'paid'}
-                                onSelect={() => set({ audience: 'paid' })}
-                                icon={<Lock className="w-4 h-4" />}
-                                title="Members only"
-                                detail="Only members with an active membership. Kept off the public site entirely."
-                            />
-                        </div>
+                        {/* Exclusive by construction — `audience` is one field —
+                            and now exclusive to a keyboard and a screen reader
+                            too. See `CmsChoice`. */}
+                        <CmsChoice<'all' | 'paid'>
+                            label="Who can see this event"
+                            value={value.audience === 'paid' ? 'paid' : 'all'}
+                            onChange={(audience) => set({ audience })}
+                            options={[
+                                {
+                                    value: 'all',
+                                    icon: <Globe className="w-4 h-4" />,
+                                    title: 'Everyone',
+                                    detail: 'On the public site and visible to every signed-in member.',
+                                },
+                                {
+                                    value: 'paid',
+                                    icon: <Lock className="w-4 h-4" />,
+                                    title: 'Members only',
+                                    detail: 'Only members with an active membership. Kept off the public site entirely.',
+                                },
+                            ]}
+                        />
                     </CmsSection>
 
                     {/* ---------------------------------------------- agenda */}
@@ -414,6 +458,29 @@ export default function EventDetailFields({
                                     />
                                 </CmsField>
 
+                                {/*
+                                  * The fee, beside the capacity it interacts with.
+                                  *
+                                  * A priced event takes registration in two steps:
+                                  * the seat is held, then paid for. A waitlisted
+                                  * member is never charged — there is no seat yet
+                                  * to charge for — which is decided on the server,
+                                  * not here.
+                                  */}
+                                <CmsField
+                                    label="Registration fee (₹)"
+                                    hint="Blank or zero is a free event. A fee adds a payment step before the seat is confirmed."
+                                >
+                                    <CmsInput
+                                        type="number"
+                                        min={0}
+                                        step={1}
+                                        placeholder="0"
+                                        value={value.registrationFee}
+                                        onChange={(e) => set({ registrationFee: e.target.value })}
+                                    />
+                                </CmsField>
+
                                 <CmsField
                                     label="Registration closes"
                                     hint="Blank closes it when the event starts."
@@ -433,6 +500,22 @@ export default function EventDetailFields({
                                             onChange={(e) => set({ registrationNote: e.target.value })}
                                         />
                                     </CmsField>
+                                </div>
+
+                                {/*
+                                  * The form this event asks, built here.
+                                  *
+                                  * Inside the `registrationEnabled` branch on
+                                  * purpose: questions for a form nobody can
+                                  * submit are questions nobody will ever answer,
+                                  * and showing the builder anyway invites an
+                                  * editor to spend ten minutes on one.
+                                  */}
+                                <div className="sm:col-span-2">
+                                    <RegistrationFormBuilder
+                                        fields={value.registrationFields}
+                                        onChange={(registrationFields) => set({ registrationFields })}
+                                    />
                                 </div>
 
                                 <div className="sm:col-span-2">
@@ -487,36 +570,6 @@ function summarise(detail: EventDetail): string {
     return parts.join(' · ');
 }
 
-// ---------------------------------------------------------------- audience
-
-function AudienceOption({
-    selected, onSelect, icon, title, detail,
-}: {
-    selected: boolean;
-    onSelect: () => void;
-    icon: React.ReactNode;
-    title: string;
-    detail: string;
-}) {
-    return (
-        <button
-            type="button"
-            onClick={onSelect}
-            className={`text-left rounded-lg border p-3 transition-colors ${
-                selected
-                    ? 'border-blue-500 bg-blue-500/5'
-                    : 'border-slate-200 dark:border-[#2a2a2a] hover:border-slate-300'
-            }`}
-        >
-            <span className={`inline-flex items-center gap-2 text-sm font-semibold ${
-                selected ? 'text-blue-600 dark:text-blue-400' : 'text-slate-800 dark:text-neutral-200'
-            }`}>
-                {icon} {title}
-            </span>
-            <span className="block text-xs text-neutral-500 dark:text-neutral-400 mt-1">{detail}</span>
-        </button>
-    );
-}
 
 // ---------------------------------------------------------------- attendees
 
@@ -530,6 +583,32 @@ function AudienceOption({
 function RegistrationList({ eventId }: { eventId: string }) {
     const [rows, setRows] = useState<EventRegistration[]>([]);
     const [counts, setCounts] = useState<Record<string, number>>({});
+
+    /**
+     * One column per question anyone has actually answered.
+     *
+     * Derived from the ANSWERS, not from the event's current form. The organiser
+     * can add, rename or delete a question after people have registered, and
+     * every one of those cases breaks a table whose headings come from the live
+     * form: a deleted question silently drops a column of real data, and a
+     * renamed one relabels answers that were given under the old wording.
+     *
+     * Each answer carries the label it was captured under (see `responses` in
+     * the registration model), so the first row to mention a key names the
+     * column — and a question renamed halfway through keeps both spellings
+     * visible rather than pretending everyone answered the new one.
+     */
+    const answerColumns = useMemo(() => {
+        const seen = new Map<string, string>();
+
+        (rows || []).forEach((row) => {
+            (row.responses || []).forEach((answer) => {
+                if (answer.key && !seen.has(answer.key)) seen.set(answer.key, answer.label || answer.key);
+            });
+        });
+
+        return [...seen].map(([key, label]) => ({ key, label }));
+    }, [rows]);
     const [loaded, setLoaded] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -582,6 +661,22 @@ function RegistrationList({ eventId }: { eventId: string }) {
                                         <th className="pb-2 pr-3 font-medium">Name</th>
                                         <th className="pb-2 pr-3 font-medium">Phone</th>
                                         <th className="pb-2 pr-3 font-medium">Region</th>
+                                        {/*
+                                          One column per question, from the
+                                          ANSWERS rather than from the current
+                                          form. The organiser can delete a
+                                          question after people have answered it,
+                                          and those answers still have to appear
+                                          — reading the headings from the live
+                                          form would silently drop a column of
+                                          data that exists.
+                                        */}
+                                        {answerColumns.map((column) => (
+                                            <th key={column.key} className="pb-2 pr-3 font-medium">
+                                                {column.label}
+                                            </th>
+                                        ))}
+                                        <th className="pb-2 pr-3 font-medium">Paid</th>
                                         <th className="pb-2 font-medium">Status</th>
                                     </tr>
                                 </thead>
@@ -595,6 +690,31 @@ function RegistrationList({ eventId }: { eventId: string }) {
                                             <td className="py-2 pr-3 text-neutral-500">
                                                 {[row.block, row.district].filter(Boolean).join(', ') || '—'}
                                             </td>
+
+                                            {answerColumns.map((column) => (
+                                                <td key={column.key} className="py-2 pr-3 text-neutral-500">
+                                                    {(row.responses || [])
+                                                        .find((r) => r.key === column.key)?.value || '—'}
+                                                </td>
+                                            ))}
+
+                                            {/*
+                                              A seat can be held and unpaid, and
+                                              on the day that is the difference
+                                              between letting someone in and not.
+                                            */}
+                                            <td className="py-2 pr-3">
+                                                {row.payment?.status === 'paid' ? (
+                                                    <span className="text-emerald-600 font-medium">
+                                                        ₹{row.payment.amount}
+                                                    </span>
+                                                ) : row.payment?.status === 'pending' ? (
+                                                    <span className="text-amber-600 font-medium">Unpaid</span>
+                                                ) : (
+                                                    <span className="text-neutral-400">Free</span>
+                                                )}
+                                            </td>
+
                                             <td className="py-2 text-neutral-500 capitalize">{row.status}</td>
                                         </tr>
                                     ))}

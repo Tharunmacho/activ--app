@@ -1,9 +1,9 @@
 import { useState, type ReactNode } from 'react';
 import { Plus, Trash2, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react';
-import { CmsInput, CmsTextarea, CmsField } from './CmsUI';
+import { CmsInput, CmsTextarea, CmsField, CmsSection } from './CmsUI';
 import RichTextEditor from './RichTextEditor';
 import { CmsIcon } from '@/components/shared/CmsIcon';
-import { ICON_GROUPS, type CmsLink, type CmsStat, type CmsBullet } from '@/services/cmsApi';
+import { ICON_GROUPS, type CmsLink, type CmsStat, type CmsBullet, type CmsExtraField } from '@/services/cmsApi';
 
 /**
  * Editors for the repeating parts of a page.
@@ -319,16 +319,28 @@ export function BulletList({ items, onChange }: {
  * `label` is optional: inside a section that already names the field, a second
  * identical label above the box is noise rather than guidance.
  */
-export function LineList({ label = '', hint, value, onChange, rows = 4, placeholder }: {
+export function LineList({ label = '', hint, value, onChange, rows = 4, placeholder, clearable = false }: {
     label?: string;
     hint?: string;
     value: string[];
     onChange: (next: string[]) => void;
     rows?: number;
     placeholder?: string;
+    /** Offer a Clear button when the list holds anything. */
+    clearable?: boolean;
 }) {
+    // A list of empty strings is an empty list — the textarea leaves one behind
+    // after the last newline, so `length` alone would keep offering to clear a
+    // list that is already blank.
+    const hasContent = (value || []).some(line => (line || '').trim());
+
     return (
-        <CmsField label={label} hint={hint || 'One per line.'}>
+        <CmsField
+            label={label}
+            hint={hint || 'One per line.'}
+            onClear={clearable ? () => onChange([]) : undefined}
+            canClear={hasContent}
+        >
             <CmsTextarea
                 rows={rows}
                 value={(value || []).join('\n')}
@@ -338,5 +350,61 @@ export function LineList({ label = '', hint, value, onChange, rows = 4, placehol
                 placeholder={placeholder}
             />
         </CmsField>
+    );
+}
+
+/**
+ * The editor's own fields, on any page.
+ *
+ * Every page in this CMS declares the fields its LAYOUT depends on — a heading
+ * is set in the heading's type, a hero image fills the hero — and no schema can
+ * enumerate what an association will want to say next. This is the escape
+ * hatch: name a field, write its content, and the page renders it. Delete the
+ * row and it is gone.
+ *
+ * One component rather than one per screen, so "your own fields" means the same
+ * thing, looks the same and is edited the same way on Home, About, Events,
+ * Gallery, Contact and the footer.
+ */
+export function ExtraFieldsEditor({ items, onChange, hint }: {
+    items: CmsExtraField[];
+    onChange: (next: CmsExtraField[]) => void;
+    /** Where these appear on the public page, in the editor's words. */
+    hint?: string;
+}) {
+    return (
+        <CmsSection
+            title="Your own fields"
+            hint={hint || 'Add anything this form does not already ask for. Each row shows as a labelled '
+                + 'line on the page, in this order. Delete a row to remove it.'}
+        >
+            <RepeatableList<CmsExtraField>
+                items={items || []}
+                onChange={onChange}
+                noun="field"
+                blank={() => ({ label: '', value: '' })}
+                row={(field, update) => (
+                    /* Stacked below `sm`: a long value must never push the row
+                       wider than the card it sits in. */
+                    <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] gap-3">
+                        <CmsField label="Field name">
+                            <CmsInput
+                                value={field.label}
+                                onChange={e => update({ label: e.target.value })}
+                                placeholder="Registration desk"
+                            />
+                        </CmsField>
+                        <CmsField label="Content">
+                            <CmsTextarea
+                                rows={2}
+                                value={field.value}
+                                onChange={e => update({ value: e.target.value })}
+                                placeholder="Open 9am–5pm, Monday to Friday"
+                            />
+                        </CmsField>
+                    </div>
+                )}
+            />
+        </CmsSection>
     );
 }

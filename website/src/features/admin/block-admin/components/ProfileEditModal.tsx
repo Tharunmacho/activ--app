@@ -325,7 +325,7 @@ const ProfileEditModal = ({ open, onClose, adminData, onProfileUpdate }: Profile
                                 {avatarPreview ? (
                                     <AvatarImage src={avatarPreview} className="object-cover" />
                                 ) : (
-                                    <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold text-2xl">
+                                    <AvatarFallback className="bg-blue-600 text-white font-bold text-2xl">
                                         {avatarInitials}
                                     </AvatarFallback>
                                 )}
@@ -345,7 +345,7 @@ const ProfileEditModal = ({ open, onClose, adminData, onProfileUpdate }: Profile
                             onChange={handleAvatarChange}
                             className="hidden"
                         />
-                        <p className="text-xs text-gray-500 text-center">
+                        <p className="text-xs text-slate-500 text-center">
                             Click avatar or camera icon to change photo<br />
                             (Max 2MB, JPG/PNG)
                         </p>
@@ -423,7 +423,7 @@ const ProfileEditModal = ({ open, onClose, adminData, onProfileUpdate }: Profile
                                     onChange={handleChange}
                                     placeholder={`Enter your ${regionKey}`}
                                 />
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-slate-500">
                                     This decides which applications reach your queue.
                                 </p>
                             </div>
@@ -476,7 +476,7 @@ const ProfileEditModal = ({ open, onClose, adminData, onProfileUpdate }: Profile
                                 placeholder="Enter new password"
                                 autoComplete="new-password"
                             />
-                            <p className="text-xs text-gray-500">Must be at least 6 characters</p>
+                            <p className="text-xs text-slate-500">Must be at least 6 characters</p>
                         </div>
 
                         {/* Confirm Password */}
@@ -498,7 +498,7 @@ const ProfileEditModal = ({ open, onClose, adminData, onProfileUpdate }: Profile
                         <Button
                             type="button"
                             onClick={handleUpdatePassword}
-                            className="w-full bg-purple-600 hover:bg-purple-700"
+                            className="w-full bg-blue-600 hover:bg-blue-700"
                             disabled={loading}
                         >
                             {loading ? "Updating Password..." : "Update Password"}

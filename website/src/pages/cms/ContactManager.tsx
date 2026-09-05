@@ -17,7 +17,7 @@ import {
     CmsPage,
     CmsSection,
 } from './components/CmsUI';
-import { LineList, IconPicker } from './components/CmsEditors';
+import { LineList, IconPicker , ExtraFieldsEditor } from './components/CmsEditors';
 import MediaPicker from './components/MediaPicker';
 
 /**
@@ -475,6 +475,14 @@ export default function ContactManager() {
                         </CmsField>
                     ))}
                 </div>
+            <CmsCard title="Your own fields" description="Extra rows in the details card on the public page.">
+                <ExtraFieldsEditor
+                    items={info.extraFields || []}
+                    onChange={extraFields => set({ extraFields })}
+                    hint="A WhatsApp number, a registration desk, opening times for a second office — anything the four details above do not cover."
+                />
+            </CmsCard>
+
             </CmsCard>
 
             <SaveButton loading={saving} label="Save contact page" />

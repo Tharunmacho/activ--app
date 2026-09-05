@@ -124,12 +124,20 @@ export default function ApplicationStatus() {
     const completedCount = stages.filter(s => s.completed).length;
     const progress = Math.round((completedCount / stages.length) * 100);
 
-    // The gradient is the outcome, readable before a word is.
-    const heroGradient = isRejected
-        ? 'from-[#EF4444] to-[#B91C1C]'
+    /**
+     * The colour is the outcome, readable before a word is.
+     *
+     * A solid fill rather than the two-stop gradient this was: the member area
+     * uses one flat blue everywhere else, and a gradient beside it shows two
+     * nearly-identical blues on one page — which reads as a rendering fault
+     * rather than as a choice. The named tokens also keep it on the same ramp as
+     * every other status colour in the product, where the hex pairs did not.
+     */
+    const heroSolid = isRejected
+        ? 'bg-rose-600'
         : isApproved
-            ? 'from-[#22C55E] to-[#15803D]'
-            : 'from-[#3B6FF5] to-[#1E3FA8]';
+            ? 'bg-emerald-600'
+            : 'bg-blue-600';
 
     const heroHeadline = isRejected ? 'Application Rejected'
         : isApproved ? 'Application Approved' : 'Under Review';
@@ -146,7 +154,7 @@ export default function ApplicationStatus() {
         return (
             <MemberPageShell title="Application Status" subtitle="Track your membership approval progress" width="wide" sidebar={false} backTo={dashboard}>
                 <div className="flex flex-col items-center justify-center py-24 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#3B6FF5] to-[#1E3FA8]
+                    <div className="w-16 h-16 rounded-2xl bg-blue-600
                                     flex items-center justify-center mb-5 shadow-lg shadow-blue-500/30">
                         <Loader2 className="w-8 h-8 animate-spin text-white" />
                     </div>
@@ -181,7 +189,10 @@ export default function ApplicationStatus() {
                                 Try Again
                             </Button>
                         ) : (
-                            <Button onClick={() => navigate('/member/profile')} className="bg-[#1E50E6] hover:bg-[#1a45c9] font-semibold">
+                            /* Step 1 — see the note on the dashboard's hero
+                               button. A control named "Complete Your Profile"
+                               opens the profile. */
+                            <Button onClick={() => navigate('/member/profile?step=1')} className="bg-[#1E50E6] hover:bg-[#1a45c9] font-semibold">
                                 Complete Your Profile
                             </Button>
                         )}
@@ -227,10 +238,10 @@ export default function ApplicationStatus() {
                     </Button>
             }
         >
-            <div className="mx-auto w-full max-w-[87.5rem] space-y-6">
+            <div className="w-full space-y-6">
 
                 {/* ---------------- gradient status hero ---------------- */}
-                <div className={`rounded-3xl bg-gradient-to-br ${heroGradient} p-6 lg:p-8
+                <div className={`rounded-2xl ${heroSolid} p-6 lg:p-8
                                  text-white shadow-xl shadow-blue-900/20`}>
                     <div className="flex items-center justify-between gap-4">
                         <span className="inline-flex items-center gap-1.5 rounded-xl bg-white/20
@@ -351,13 +362,13 @@ export default function ApplicationStatus() {
                                                      transition-shadow ${
                                         stage.active
                                             ? 'border-[#1E50E6] shadow-lg shadow-blue-500/10'
-                                            : 'border-[#E8EEF6] shadow-sm'
+                                            : 'border-[#E8EEF6] shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]'
                                     }`}>
                                         <div className="flex items-center justify-between gap-3">
                                             <p className="font-display text-[0.9375rem] font-bold text-[#0F172A] truncate">
                                                 {stage.name}
                                             </p>
-                                            <span className={`shrink-0 rounded-lg px-2.5 py-1 text-[0.65625rem]
+                                            <span className={`shrink-0 rounded-lg px-2.5 py-1 text-[0.6875rem]
                                                               font-extrabold ${tone.soft} ${tone.text}`}>
                                                 {tone.label}
                                             </span>
@@ -389,7 +400,7 @@ export default function ApplicationStatus() {
                       * screen rather than two.
                       */}
                     <div className="space-y-6 lg:sticky lg:top-6">
-                        <div className="rounded-2xl bg-white border border-[#E8EEF6] p-5 shadow-sm">
+                        <div className="rounded-2xl bg-white border border-[#E8EEF6] p-5 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                             <p className="font-display text-[0.8125rem] font-extrabold uppercase tracking-[0.08em]
                                           text-[#64748B] mb-4">
                                 Applicant
@@ -445,7 +456,7 @@ const StripCell = ({ label, value, className = '', title }: {
 const MetaLine = ({ icon, text }: { icon: React.ReactNode; text: string }) => (
     <div className="flex items-center gap-1.5 mt-2 text-[#64748B]">
         <span className="shrink-0">{icon}</span>
-        <span className="text-[0.78125rem] truncate">{text}</span>
+        <span className="text-[0.8125rem] truncate">{text}</span>
     </div>
 );
 

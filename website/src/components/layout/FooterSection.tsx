@@ -119,8 +119,15 @@ export function FooterSection() {
                                                 <a
                                                     key={i}
                                                     href={`tel:${p.replace(/\s+/g, '')}`}
-                                                    className="block text-[0.9375rem] font-medium text-white/85
-                                                               hover:text-white transition-colors"
+                                                    /*
+                                                      `py-2 -my-1` grows the touch area to
+                                                      ~40px without opening a gap between the
+                                                      two numbers: the padding is what a finger
+                                                      hits, the negative margin pulls the line
+                                                      box back to where the design had it.
+                                                    */
+                                                    className="block py-2.5 -my-1.5 text-[0.9375rem] font-medium
+                                                               text-white/85 hover:text-white transition-colors"
                                                 >
                                                     {p}
                                                 </a>
@@ -134,7 +141,7 @@ export function FooterSection() {
                                         <IconPlate><Mail size={15} /></IconPlate>
                                         <a
                                             href={`mailto:${footer.email}`}
-                                            className="pt-1.5 text-[0.9375rem] font-medium text-white/85
+                                            className="block py-2.5 -my-1 text-[0.9375rem] font-medium text-white/85
                                                        hover:text-white transition-colors break-all"
                                         >
                                             {footer.email}
@@ -152,7 +159,7 @@ export function FooterSection() {
                                             target={s.href?.startsWith('http') ? '_blank' : undefined}
                                             rel="noreferrer"
                                             aria-label={s.icon}
-                                            className="w-10 h-10 rounded-full bg-white/10 ring-1 ring-white/15
+                                            className="w-11 h-11 rounded-full bg-white/10 ring-1 ring-white/15
                                                        flex items-center justify-center text-white
                                                        hover:bg-white hover:text-brand-800 hover:-translate-y-0.5
                                                        transition-all duration-300"
@@ -235,12 +242,21 @@ export function FooterSection() {
                                     {renderLink(
                                         item.label,
                                         item.href,
-                                        'px-5 text-[0.9375rem] font-medium text-white/80 hover:text-white transition-colors',
+                                        'px-5 py-2.5 text-[0.9375rem] font-medium text-white/80 '
+                                        + 'hover:text-white transition-colors',
                                         `nav-${i}`,
                                     )}
-                                    {/* Separators between, never after the last. */}
+                                    {/*
+                                      Separators between, never after the last —
+                                      and never on a phone at all. The row wraps
+                                      to two lines there, and a rule drawn
+                                      between items in DOM order then dangles off
+                                      the end of the first line with nothing
+                                      after it. The links carry their own padding,
+                                      so spacing alone reads fine at that size.
+                                    */}
                                     {i < navLinks.length - 1 && (
-                                        <span aria-hidden="true" className="h-4 w-px bg-white/25" />
+                                        <span aria-hidden="true" className="hidden sm:block h-4 w-px bg-white/25" />
                                     )}
                                 </li>
                             ))}
@@ -280,7 +296,8 @@ export function FooterSection() {
  */
 function ColumnHeading({ children }: { children: React.ReactNode }) {
     return (
-        <h4 className="text-[0.6875rem] font-extrabold uppercase tracking-[0.16em] text-white mb-5">
+        <h4 className="text-xs sm:text-[0.6875rem] font-extrabold uppercase tracking-[0.16em]
+                       text-white mb-5">
             {children}
             <span className="mt-2.5 block h-0.5 w-9 rounded-full bg-white/40" />
         </h4>

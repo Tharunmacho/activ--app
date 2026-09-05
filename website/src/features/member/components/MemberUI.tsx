@@ -39,10 +39,10 @@ export function SectionCard({
     className?: string;
 }) {
     return (
-        <section className={`bg-white rounded-2xl border border-slate-200 shadow-sm ${className}`}>
+        <section className={`bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] ${className}`}>
             <header className="flex items-start gap-3 px-5 lg:px-6 pt-5 pb-4">
                 {icon ? (
-                    <span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center
+                    <span className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center
                                      justify-center shrink-0">
                         {icon}
                     </span>
@@ -193,7 +193,7 @@ export function StatTile({
         </>
     );
 
-    const className = 'bg-white rounded-xl border border-slate-200 p-4 shadow-sm min-w-0';
+    const className = 'bg-white rounded-2xl border border-slate-200 p-5 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] min-w-0';
 
     return to ? (
         <Link to={to} className={`${className} block hover:border-blue-400 transition-colors`}>{body}</Link>
@@ -212,5 +212,110 @@ export function RowsSkeleton({ rows = 3 }: { rows?: number }) {
                 <div key={i} className="h-16 rounded-xl bg-slate-100 animate-pulse" />
             ))}
         </div>
+    );
+}
+
+// ---------------------------------------------------------------- membership gate
+
+/**
+ * A feature that opens when the membership does — shown, explained, and sold.
+ *
+ * The difference between this and `PlanLockedCard` above is which question it
+ * answers. That one says "your membership does not include this"; this one says
+ * "your membership is not active yet, and here is the one step that changes
+ * that". Only the second has a button, because only the second has something
+ * the member can do about it right now.
+ *
+ * `cta` comes from `membershipCta(access)` so the button names the step this
+ * account is actually on. Offering "Activate membership" to someone whose
+ * application has not been reviewed points at a payment screen that will refuse
+ * them, and a member who is refused once stops pressing the button.
+ */
+export function MembershipGate({
+    icon,
+    title,
+    detail,
+    cta,
+    children,
+}: {
+    icon?: ReactNode;
+    title: string;
+    detail: string;
+    cta: { label: string; to: string; detail: string };
+    /** What the member CAN do meanwhile. Rendered under the call to action. */
+    children?: ReactNode;
+}) {
+    return (
+        <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-6 lg:p-8 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+            <div className="flex items-start gap-4">
+                <span className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center
+                                 justify-center shrink-0 shadow-sm">
+                    {icon || <Lock className="w-5 h-5" />}
+                </span>
+
+                <div className="min-w-0 flex-1">
+                    <h3 className="text-lg font-bold text-slate-900 leading-tight">{title}</h3>
+                    <p className="text-sm text-slate-600 mt-2 leading-relaxed max-w-2xl">{detail}</p>
+
+                    {cta.detail ? (
+                        <p className="text-[0.8125rem] text-blue-700 font-medium mt-3">{cta.detail}</p>
+                    ) : null}
+
+                    <Link
+                        to={cta.to}
+                        className="inline-flex items-center gap-1.5 mt-4 bg-blue-600 hover:bg-blue-700
+                                   text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-sm
+                                   transition-colors"
+                    >
+                        {cta.label} <ChevronRight className="w-4 h-4" />
+                    </Link>
+
+                    {children ? <div className="mt-6">{children}</div> : null}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * One line of what an active membership adds, for the list under a gate.
+ *
+ * Deliberately not a link and not a button. Everything named here is either
+ * already open to the member — in which case it is in the rail — or it is the
+ * thing the gate above is selling. A control here would be a third answer, and
+ * the member area has had enough of those.
+ */
+export function GateBenefit({
+    icon,
+    title,
+    detail,
+    open = false,
+}: {
+    icon: ReactNode;
+    title: string;
+    detail: string;
+    /** Already available before payment — marked, so the list is honest. */
+    open?: boolean;
+}) {
+    return (
+        <li className="flex items-start gap-3">
+            <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                open ? 'bg-emerald-50 text-emerald-600' : 'bg-white border border-blue-100 text-blue-600'
+            }`}>
+                {icon}
+            </span>
+            <span className="min-w-0">
+                <span className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-slate-900 leading-tight">{title}</span>
+                    {open ? (
+                        <span className="text-[0.625rem] font-bold uppercase tracking-wide text-emerald-700
+                                         bg-emerald-100 rounded-full px-1.5 py-0.5 shrink-0">
+                            Open now
+                        </span>
+                    ) : null}
+                </span>
+                <span className="block text-[0.8125rem] text-slate-500 mt-0.5 leading-snug">{detail}</span>
+            </span>
+        </li>
     );
 }

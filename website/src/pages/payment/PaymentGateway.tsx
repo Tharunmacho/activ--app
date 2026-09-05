@@ -165,7 +165,7 @@ export default function PaymentGateway() {
             </div>
           </div>
           <h1 className="text-3xl font-bold mb-2">Payment Gateway</h1>
-          <p className="text-gray-500">Choose your preferred payment method</p>
+          <p className="text-slate-500">Choose your preferred payment method</p>
         </div>
 
         {/* Payment Amount Summary */}
@@ -173,14 +173,14 @@ export default function PaymentGateway() {
           <CardContent className="p-6">
             <div className="flex justify-between items-center">
               <div>
-                <p className="text-gray-600 mb-1">Total Amount to Pay</p>
+                <p className="text-slate-600 mb-1">Total Amount to Pay</p>
                 <p className="text-3xl font-bold text-blue-600">₹{paymentDetails.totalAmount}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-gray-600">{paymentDetails.planType === 'annual' ? 'Annual' : 'Lifetime'} Membership</p>
-                <p className="text-sm text-gray-600">₹{paymentDetails.planAmount}</p>
+                <p className="text-sm text-slate-600">{paymentDetails.planType === 'annual' ? 'Annual' : 'Lifetime'} Membership</p>
+                <p className="text-sm text-slate-600">₹{paymentDetails.planAmount}</p>
                 {paymentDetails.supportAmount > 0 && (
-                  <p className="text-sm text-gray-600">+ Support: ₹{paymentDetails.supportAmount}</p>
+                  <p className="text-sm text-slate-600">+ Support: ₹{paymentDetails.supportAmount}</p>
                 )}
               </div>
             </div>
@@ -228,7 +228,7 @@ export default function PaymentGateway() {
             {paymentMethod === 'card' && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Card Number
                   </label>
                   <Input
@@ -241,7 +241,7 @@ export default function PaymentGateway() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Cardholder Name
                   </label>
                   <Input
@@ -253,7 +253,7 @@ export default function PaymentGateway() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
                       Expiry Date
                     </label>
                     <Input
@@ -265,7 +265,7 @@ export default function PaymentGateway() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
                       CVV
                     </label>
                     <Input
@@ -284,7 +284,7 @@ export default function PaymentGateway() {
             {paymentMethod === 'upi' && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     UPI ID
                   </label>
                   <Input
@@ -310,11 +310,11 @@ export default function PaymentGateway() {
             {paymentMethod === 'netbanking' && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Select Your Bank
                   </label>
                   <select
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     value={selectedBank}
                     onChange={(e) => setSelectedBank(e.target.value)}
                   >

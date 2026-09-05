@@ -467,38 +467,93 @@ export const restoreSession = async () => {
  */
 const REGION_CACHE_TTL_MS = 60_000;
 
-let regionCache: { at: number; tree: { coverageAvailable: boolean; states: any[] } } | null = null;
-let regionInFlight: Promise<{ coverageAvailable: boolean; states: any[] }> | null = null;
+export interface RegionTree { coverageAvailable: boolean; states: any[] }
 
-export const getRegionTree = async (force = false) => {
-    if (!force && regionCache && Date.now() - regionCache.at < REGION_CACHE_TTL_MS) {
-        return regionCache.tree;
-    }
-    if (!force && regionInFlight) return regionInFlight;
+/**
+ * WHICH REGIONS THE ANSWER COVERS. Two different questions, two listings.
+ *
+ *   selectable  regions an APPLICANT may pick, pruned bottom-up: a block needs
+ *               a block admin, a district needs such a block, a state needs
+ *               such a district. Pruned that way so a dropdown cannot offer a
+ *               state the applicant is unable to finish choosing through.
+ *   all         every region the admin database knows, staffing counts and all.
+ *               A state carrying only a state admin is in here, with no
+ *               districts under it.
+ *
+ * `selectable` stays the default: it is what every registration screen was
+ * already asking for, and widening that silently would put dead ends in the
+ * applicant's dropdowns.
+ */
+export type RegionScope = 'selectable' | 'all';
 
-    regionInFlight = (async () => {
+/*
+ * ONE CACHE SLOT PER SCOPE.
+ *
+ * A single slot would have the two listings evict each other — an event form
+ * asking for `all` would fill the cache, and the registration screen mounting
+ * next would read the wider tree out of it and offer an applicant a state with
+ * no blocks beneath it. Keyed, they are simply two answers.
+ */
+const regionCache: Partial<Record<RegionScope, { at: number; tree: RegionTree }>> = {};
+const regionInFlight: Partial<Record<RegionScope, Promise<RegionTree>>> = {};
+
+export const getRegionTree = async (
+    force = false,
+    include: RegionScope = 'selectable',
+): Promise<RegionTree> => {
+    const cached = regionCache[include];
+    if (!force && cached && Date.now() - cached.at < REGION_CACHE_TTL_MS) return cached.tree;
+
+    const inFlight = regionInFlight[include];
+    if (!force && inFlight) return inFlight;
+
+    const request = (async (): Promise<RegionTree> => {
         try {
-            const payload = unwrap<any>(await api.get(ENDPOINTS.REGIONS.TREE), {});
-            const tree = {
+            const payload = unwrap<any>(await api.get(ENDPOINTS.REGIONS.TREE, {
+                // Sent only for the wider listing, so the request the
+                // registration screens make is byte-for-byte the one they always
+                // made and cannot be affected by a change made for the other.
+                params: include === 'all' ? { include: 'all' } : undefined,
+            }), {});
+
+            const tree: RegionTree = {
                 // False means the platform has no staffed region at all — a
                 // different thing from "the request failed", and the two need
                 // different messages on screen.
                 coverageAvailable: !!payload.coverageAvailable,
                 states: Array.isArray(payload.states) ? payload.states : [],
             };
-            regionCache = { at: Date.now(), tree };
+            /*
+             * An empty tree is not cached.
+             *
+             * Every region dropdown on the platform reads this one answer, so a
+             * single empty response — a request that raced the session, a
+             * momentary blip — would blank every one of them for the whole TTL
+             * with nothing on screen to explain it. That is precisely how "I
+             * cannot see the states" gets reported. A real empty answer (no
+             * block admin anywhere yet) simply costs one more request until
+             * there is something to cache.
+             */
+            if (tree.states.length) regionCache[include] = { at: Date.now(), tree };
             return tree;
         } finally {
-            regionInFlight = null;
+            delete regionInFlight[include];
         }
     })();
 
-    return regionInFlight;
+    regionInFlight[include] = request;
+    return request;
 };
 
-/** Drop the cache — call after an admin is created, so a new region appears. */
+/**
+ * Drop the cache — call after an admin is created, so a new region appears.
+ *
+ * BOTH scopes, always. A new block admin can change either listing, and the one
+ * that is not cleared is the one showing a region tree from before the account
+ * existed — which reads, on screen, as the admin not having been created.
+ */
 export const invalidateRegionCache = () => {
-    regionCache = null;
+    (Object.keys(regionCache) as RegionScope[]).forEach(scope => { delete regionCache[scope]; });
 };
 
 const sameName = (a?: string | null, b?: string | null) =>
@@ -507,9 +562,30 @@ const sameName = (a?: string | null, b?: string | null) =>
 /**
  * The three list helpers all read the one cached tree rather than calling their
  * own endpoint, so filling in a registration form costs a single request.
+ *
+ * THEY READ THE FULL TREE, NOT THE PRUNED ONE.
+ *
+ * The pruned listing keeps only regions staffed all the way down to a block
+ * admin. As a rule for opening a region to registration that is sound; as the
+ * answer to "which states exist" it is wrong, and it was reaching the applicant
+ * as the second. A platform with two staffed states offered one, and the state
+ * the Super Admin had just created was missing from the form with nothing on
+ * screen to explain it.
+ *
+ * Showing it is safe because THE APPLICATION STILL ROUTES. `tierRouting`
+ * computes ownership from live staffing at read time — `effectiveTier` walks up
+ * from the tier the status names to the first one that has an admin, and falls
+ * back to `super` when none does — so an application filed in a state with no
+ * block admin lands in the state admin's queue rather than in nobody's. That
+ * machinery exists precisely for the region tree being uneven, and pruning the
+ * dropdown as well only hid the region from the person trying to join it.
+ *
+ * District and block stay optional on the form, so a state with nothing beneath
+ * it is not a dead end: the applicant picks the state, leaves the rest blank,
+ * and their file goes to whoever is actually there.
  */
 export const getStates = async () => {
-    const tree = await getRegionTree();
+    const tree = await getRegionTree(false, 'all');
     return {
         states: tree.states.map((s: any) => ({ name: s.name, admins: s.admins })) as RegionNode[],
         coverageAvailable: tree.coverageAvailable,
@@ -517,7 +593,7 @@ export const getStates = async () => {
 };
 
 export const getDistricts = async (state: string) => {
-    const tree = await getRegionTree();
+    const tree = await getRegionTree(false, 'all');
     const node = tree.states.find((s: any) => sameName(s.name, state));
     return {
         districts: (node?.districts || []).map((d: any) => ({ name: d.name, admins: d.admins })) as RegionNode[],
@@ -526,7 +602,7 @@ export const getDistricts = async (state: string) => {
 };
 
 export const getBlocks = async (state: string, district: string) => {
-    const tree = await getRegionTree();
+    const tree = await getRegionTree(false, 'all');
     const stateNode = tree.states.find((s: any) => sameName(s.name, state));
     const districtNode = (stateNode?.districts || []).find((d: any) => sameName(d.name, district));
     return {
@@ -822,11 +898,25 @@ export const listApplications = async (params: Record<string, any> = {}) =>
 export const memberAction = async (id: string, action: 'activate' | 'suspend' | 'delete') =>
     unwrap<any>(await api.post(ENDPOINTS.ADMIN.USER_ACTION(id, action), {}), {});
 
-export const approveApplication = async (id: string) =>
-    unwrap<any>(await api.post(ENDPOINTS.APPLICATIONS.APPROVE(id), {}), {});
+/**
+ * Approve or reject, keeping the server's own sentence.
+ *
+ * The API answers with the outcome in words — "Application approved. Forwarded
+ * to District Admin.", or "Member profile created successfully." at the last
+ * tier — and `unwrap` returns only `data`, so every caller was throwing that
+ * away and inventing its own "Approved". The message is the one place that
+ * knows WHERE the file went, which is exactly what an admin wants told back to
+ * them after pressing the button.
+ */
+export const approveApplication = async (id: string) => {
+    const res = await api.post(ENDPOINTS.APPLICATIONS.APPROVE(id), {});
+    return { ...unwrap<any>(res, {}), message: res?.data?.message || '' };
+};
 
-export const rejectApplication = async (id: string, rejectionReason: string) =>
-    unwrap<any>(await api.post(ENDPOINTS.APPLICATIONS.REJECT(id), { rejectionReason }), {});
+export const rejectApplication = async (id: string, rejectionReason: string) => {
+    const res = await api.post(ENDPOINTS.APPLICATIONS.REJECT(id), { rejectionReason });
+    return { ...unwrap<any>(res, {}), message: res?.data?.message || '' };
+};
 
 /** Explicit per-tier review, when the caller wants to name the tier. */
 export const reviewApplication = async (
@@ -1201,6 +1291,28 @@ export const previewAdminRemoval = async (id: string) =>
     unwrap<any>(await api.get(ENDPOINTS.ADMIN.SUPER_ADMIN_REMOVAL_PREVIEW(id)), {});
 export const suggestAdminRegions = async (params: Record<string, any> = {}) =>
     unwrap<any>(await api.get(ENDPOINTS.ADMIN.SUPER_ADMIN_REGIONS, { params }), {});
+/*
+ * The same six calls, for a district or state admin staffing the regions
+ * beneath them.
+ *
+ * Separate functions rather than a flag on the six above, so the super admin's
+ * screen keeps calling the endpoints it always called and cannot be affected by
+ * a change made for another tier. The server enforces the delegation either
+ * way; this split is about blast radius, not about permission.
+ */
+export const listTeamAdmins = async (params: Record<string, unknown> = {}) =>
+    unwrap<any>(await api.get(ENDPOINTS.ADMIN.TEAM_ADMINS, { params }), {});
+export const createTeamAdmin = async (payload: Record<string, unknown>) =>
+    unwrap<any>(await api.post(ENDPOINTS.ADMIN.TEAM_ADMINS, payload), {});
+export const updateTeamAdmin = async (id: string, payload: Record<string, unknown>) =>
+    unwrap<any>(await api.put(ENDPOINTS.ADMIN.TEAM_ADMIN_BY_ID(id), payload), {});
+export const deleteTeamAdmin = async (id: string) =>
+    unwrap<any>(await api.delete(ENDPOINTS.ADMIN.TEAM_ADMIN_BY_ID(id)), {});
+export const previewTeamAdminRemoval = async (id: string) =>
+    unwrap<any>(await api.get(ENDPOINTS.ADMIN.TEAM_ADMIN_REMOVAL_PREVIEW(id)), {});
+export const suggestTeamAdminRegions = async (params: Record<string, unknown> = {}) =>
+    unwrap<any>(await api.get(ENDPOINTS.ADMIN.TEAM_ADMIN_REGIONS, { params }), {});
+
 export const bulkTemplate = async () => unwrap<any>(await api.get(ENDPOINTS.ADMIN.SUPER_BULK_TEMPLATE), {});
 export const bulkValidate = async (csv: string) =>
     unwrap<any>(await api.post(ENDPOINTS.ADMIN.SUPER_BULK_VALIDATE, { csv }), {});
@@ -1317,3 +1429,132 @@ export interface BulkReport {
     emailConfigured: boolean;
     rows: BulkRow[];
 }
+
+// ============================================================ membership plans
+
+/**
+ * Membership pricing.
+ *
+ * The Super Admin owns the amounts and the commencement-year bands, and the
+ * rows they edit are the same rows the payment order charges from. That is the
+ * point of routing this through the API rather than keeping a table in the
+ * bundle: there is one price, and it is the association's to set.
+ */
+
+export interface MembershipPlanRow {
+    key: string;
+    name: string;
+    description: string;
+    /** Rupees. The server stores paise and converts at the edge. */
+    price: number;
+    audience: 'business' | 'aspirant';
+    minYears: number;
+    /** `null` is the open-ended top band — "10 and above". */
+    maxYears: number | null;
+    /** Derived from the band, never stored beside it. */
+    experience: string;
+    features: string[];
+    popular: boolean;
+    active: boolean;
+    order: number;
+}
+
+export interface MembershipSettings {
+    /** Offer every plan instead of the one the applicant's band earns them. */
+    showAllPlans: boolean;
+}
+
+/** The plans this member is offered, resolved from their commencement year. */
+export const getMyMembershipPlans = async () =>
+    unwrap<{
+        plans: MembershipPlanRow[];
+        matched: MembershipPlanRow | null;
+        years: number | null;
+        reason: 'band' | 'aspirant' | 'all' | 'no-year' | 'no-band';
+        showAllPlans: boolean;
+    }>(await api.get('/membership/plans/mine'), {
+        plans: [], matched: null, years: null, reason: 'no-year', showAllPlans: false,
+    });
+
+/** Every plan, retired ones included — the Super Admin's editor. */
+export const listMembershipPlans = async () =>
+    unwrap<{ plans: MembershipPlanRow[]; settings: MembershipSettings }>(
+        await api.get('/admin/super/membership/plans'),
+        { plans: [], settings: { showAllPlans: false } },
+    );
+
+export const createMembershipPlan = async (payload: Partial<MembershipPlanRow>) =>
+    unwrap<MembershipPlanRow>(await api.post('/admin/super/membership/plans', payload), {} as MembershipPlanRow);
+
+export const updateMembershipPlan = async (key: string, payload: Partial<MembershipPlanRow>) =>
+    unwrap<MembershipPlanRow>(
+        await api.put(`/admin/super/membership/plans/${encodeURIComponent(key)}`, payload),
+        {} as MembershipPlanRow,
+    );
+
+/** Retires rather than deletes — a paid membership still points at it. */
+export const retireMembershipPlan = async (key: string) =>
+    unwrap<MembershipPlanRow>(
+        await api.post(`/admin/super/membership/plans/${encodeURIComponent(key)}/retire`, {}),
+        {} as MembershipPlanRow,
+    );
+
+export const updateMembershipSettings = async (settings: Partial<MembershipSettings>) =>
+    unwrap<MembershipSettings>(
+        await api.put('/admin/super/membership/settings', settings),
+        { showAllPlans: false },
+    );
+
+/**
+ * The published plans, for a screen that needs the bands rather than a price
+ * for one person — the commencement-year hint on the business form.
+ *
+ * Reads the PUBLIC listing: an applicant filling in that form may not yet have
+ * the record `/plans/mine` resolves against, and the bands are not private.
+ * Shapes the legacy response (`amount`, `entitlements`) into the same row every
+ * other caller here uses, so one screen cannot end up reading paise while
+ * another reads rupees.
+ */
+export const getMembershipPlanCatalogue = async (): Promise<MembershipPlanRow[]> => {
+    const data = unwrap<{ plans: any[] }>(await api.get('/membership/plans'), { plans: [] });
+
+    return (data.plans || []).map((row) => ({
+        key: String(row.key || ''),
+        name: String(row.name || ''),
+        description: String(row.tagline || row.description || ''),
+        price: Number(row.amount ?? (Number(row.amountPaise || 0) / 100)),
+        audience: row.audience === 'aspirant' ? 'aspirant' : 'business',
+        minYears: Number(row.minYears || 0),
+        maxYears: row.maxYears === null || row.maxYears === undefined ? null : Number(row.maxYears),
+        experience: String(row.experience || ''),
+        features: Array.isArray(row.entitlements) ? row.entitlements : [],
+        popular: row.popular === true,
+        active: row.isActive !== false,
+        order: Number(row.displayOrder || 0),
+    }));
+};
+
+/**
+ * Snap the commencement-year bands into one continuous run.
+ *
+ * One request rather than a series of plan updates, because the intermediate
+ * states of such a series are exactly the overlaps the server rejects.
+ */
+export const alignMembershipBands = async () =>
+    unwrap<{ changed: number; plans: MembershipPlanRow[] }>(
+        await api.post('/admin/super/membership/plans/align', {}),
+        { changed: 0, plans: [] },
+    );
+
+/**
+ * Delete a plan outright.
+ *
+ * Refused by the server, with a count, when payments reference it — deleting
+ * then would leave those receipts describing a plan that does not exist. The
+ * caller offers `retireMembershipPlan` at that point.
+ */
+export const deleteMembershipPlan = async (key: string) =>
+    unwrap<{ deleted: boolean; key: string; name: string; orders: number }>(
+        await api.delete(`/admin/super/membership/plans/${encodeURIComponent(key)}`),
+        { deleted: false, key, name: '', orders: 0 },
+    );

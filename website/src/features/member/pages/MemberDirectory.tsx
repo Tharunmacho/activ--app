@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, MapPin, Building2, Package, Users, X, SlidersHorizontal } from 'lucide-react';
+import { Search, MapPin, Building2, Package, Users, X, SlidersHorizontal, ImageOff } from 'lucide-react';
 import MemberPageShell from '@/pages/member/MemberPageShell';
 import { EmptyState, RowsSkeleton } from '@/features/member/components/MemberUI';
 import {
@@ -39,6 +39,23 @@ export default function MemberDirectory() {
     const [total, setTotal] = useState(0);
     const [pages, setPages] = useState(0);
     const [loading, setLoading] = useState(true);
+
+    /**
+     * The screen opens on the viewer's own block.
+     *
+     * A member searching a trade directory is almost always looking for someone
+     * they can actually deal with, and "my block" is the answer they would have
+     * typed anyway. Applying it as a DEFAULT rather than a rule is the whole
+     * point: the dropdowns show it, the chip below says so, and one click on
+     * "Search the whole association" widens it. A filter the server applied
+     * invisibly would be one the member could neither see nor undo, and what
+     * they would report is that the directory is empty.
+     *
+     * Applied once, on the first response, and never again — re-applying it
+     * would fight the member every time they cleared a dropdown.
+     */
+    const regionDefaulted = useRef(false);
+    const [homeRegion, setHomeRegion] = useState({ state: '', district: '', block: '' });
     const [error, setError] = useState('');
     const [showFilters, setShowFilters] = useState(false);
 
@@ -141,6 +158,36 @@ export default function MemberDirectory() {
             const data = await searchDirectory({ ...filters, page, limit: PAGE_SIZE });
             if (requestId.current !== id) return;
 
+            const region = data?.viewerRegion;
+            if (region) setHomeRegion(region);
+
+            /*
+             * Narrow to the viewer's own region, once.
+             *
+             * Deliberately after the first search rather than before it: the
+             * region has to come from the server (the token often carries no
+             * location claims — see `resolveMemberContext`), so the alternative
+             * is a blocking round trip before the screen can show anything. One
+             * unfiltered search, then a narrowed one, is the cheaper order and
+             * it degrades correctly — a member whose record has no block simply
+             * stays on the association-wide view.
+             */
+            if (!regionDefaulted.current) {
+                regionDefaulted.current = true;
+
+                const narrowed = {
+                    state: region?.state || '',
+                    district: region?.district || '',
+                    block: region?.block || '',
+                };
+
+                if (narrowed.state) {
+                    setFilters((current) => ({ ...current, ...narrowed }));
+                    setPage(1);
+                    return;   // the effect re-runs with the narrowed filters
+                }
+            }
+
             setMembers(data?.members || []);
             setTotal(data?.pagination?.total || 0);
             setPages(data?.pagination?.pages || 0);
@@ -182,6 +229,15 @@ export default function MemberDirectory() {
         setPage(1);
     };
 
+    /** True while the screen is showing its automatic "my own region" default. */
+    const onHomeRegion = !!homeRegion.state
+        && filters.state === homeRegion.state
+        && filters.district === homeRegion.district
+        && filters.block === homeRegion.block;
+
+    const homeLabel = [homeRegion.block, homeRegion.district].filter(Boolean).join(', ')
+        || homeRegion.state;
+
     return (
         <MemberPageShell
             title="Member Directory"
@@ -190,7 +246,7 @@ export default function MemberDirectory() {
         >
             <div className="space-y-5">
                 {/* ---------- search and filters ---------- */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-4 space-y-3">
                     <div className="flex gap-2">
                         <div className="relative flex-1 min-w-0">
                             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -218,7 +274,7 @@ export default function MemberDirectory() {
                             <SlidersHorizontal className="w-4 h-4" />
                             <span className="hidden sm:inline">Filters</span>
                             {activeCount > 0 ? (
-                                <span className="bg-blue-600 text-white text-[0.65625rem] font-bold w-4 h-4
+                                <span className="bg-blue-600 text-white text-[0.6875rem] font-bold w-4 h-4
                                                  rounded-full flex items-center justify-center">
                                     {activeCount}
                                 </span>
@@ -269,7 +325,7 @@ export default function MemberDirectory() {
                                 <button
                                     type="button"
                                     onClick={clearAll}
-                                    className="inline-flex items-center gap-1 text-[0.78125rem] font-semibold
+                                    className="inline-flex items-center gap-1 text-[0.8125rem] font-semibold
                                                text-slate-500 hover:text-slate-700"
                                 >
                                     <X className="w-3.5 h-3.5" /> Clear all filters
@@ -300,10 +356,42 @@ export default function MemberDirectory() {
                     />
                 ) : (
                     <>
-                        <p className="text-[0.78125rem] text-slate-500 px-1">
-                            {total} {total === 1 ? 'member' : 'members'}
-                            {activeCount > 0 || term ? ' matching' : ''}
-                        </p>
+                        {/*
+                          * Say WHY this list is short before the member concludes
+                          * the association is.
+                          *
+                          * The screen opens narrowed to their own block, which is
+                          * the right default and a completely invisible one
+                          * unless it is stated. The escape is right here rather
+                          * than three clicks into the filter panel.
+                          */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                            <p className="text-[0.8125rem] text-slate-500">
+                                {total} {total === 1 ? 'member' : 'members'}
+                                {activeCount > 0 || term ? ' matching' : ''}
+                                {onHomeRegion && homeLabel ? (
+                                    <span className="text-slate-400"> in {homeLabel}</span>
+                                ) : null}
+                            </p>
+
+                            {onHomeRegion ? (
+                                <button
+                                    type="button"
+                                    onClick={() => set({ state: '', district: '', block: '' })}
+                                    className="text-[0.8125rem] font-semibold text-blue-600 hover:underline"
+                                >
+                                    Search the whole association
+                                </button>
+                            ) : homeRegion.state ? (
+                                <button
+                                    type="button"
+                                    onClick={() => set(homeRegion)}
+                                    className="text-[0.8125rem] font-semibold text-blue-600 hover:underline"
+                                >
+                                    Back to {homeLabel}
+                                </button>
+                            ) : null}
+                        </div>
 
                         <div className="grid gap-3 sm:grid-cols-2">
                             {members.map((member) => <DirectoryRow key={member.id} member={member} />)}
@@ -322,7 +410,7 @@ export default function MemberDirectory() {
                                     Previous
                                 </button>
 
-                                <span className="text-[0.78125rem] text-slate-500 tabular-nums">
+                                <span className="text-[0.8125rem] text-slate-500 tabular-nums">
                                     Page {page} of {pages}
                                 </span>
 
@@ -347,15 +435,30 @@ export default function MemberDirectory() {
 
 // ---------------------------------------------------------------- row
 
+/**
+ * One member, led by what they sell.
+ *
+ * The row used to print a name, a business name, an address line and a product
+ * COUNT — "7 listed". Someone searching a trade directory is searching for a
+ * product, and a count tells them something exists without telling them whether
+ * it is the thing they need, so twenty rows meant twenty cards to open.
+ *
+ * The address is gone entirely: the server no longer sends `city` or the
+ * companies' `location`/`area`, because a directory that says where a member's
+ * premises are is the mailing list DIR-001 exists not to be. The block is kept
+ * as a small chip — it is the region the search is filtered on, and a buyer
+ * does need to know whether a supplier is in their own block.
+ */
 function DirectoryRow({ member }: { member: DirectoryEntry }) {
     const photo = resolveMediaUrl(member.profilePhoto);
-    const where = [member.block, member.district, member.state].filter(Boolean).join(', ');
+    const where = [member.block, member.district].filter(Boolean).join(', ');
     const primary = member.companies[0];
+    const products = member.products || [];
 
     return (
         <Link
             to={`/member/directory/${member.id}`}
-            className="group bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex gap-3
+            className="group bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-4 flex gap-3
                        hover:border-blue-400 hover:shadow-md transition-all"
         >
             {photo ? (
@@ -374,44 +477,90 @@ function DirectoryRow({ member }: { member: DirectoryEntry }) {
             )}
 
             <div className="min-w-0 flex-1">
-                <p className="text-[0.90625rem] font-bold text-slate-900 truncate
+                <p className="text-[0.9375rem] font-bold text-slate-900 truncate
                               group-hover:text-blue-700 transition-colors">
                     {member.fullName}
                 </p>
 
                 {primary ? (
-                    <p className="text-[0.78125rem] text-slate-600 truncate flex items-center gap-1.5 mt-0.5">
+                    <p className="text-[0.8125rem] text-slate-600 truncate flex items-center gap-1.5 mt-0.5">
                         <Building2 className="w-3.5 h-3.5 shrink-0" />
                         {primary.businessName}
                     </p>
                 ) : null}
 
-                {where ? (
-                    <p className="text-[0.75rem] text-slate-400 truncate flex items-center gap-1.5 mt-0.5">
-                        <MapPin className="w-3 h-3 shrink-0" />
-                        {where}
-                    </p>
-                ) : null}
-
                 <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                    {where ? (
+                        <span className="text-[0.6875rem] font-semibold text-slate-500 bg-slate-100
+                                         px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                            <MapPin className="w-2.5 h-2.5" />
+                            {where}
+                        </span>
+                    ) : null}
+
                     {member.sectors.map((sector) => (
                         <span
                             key={sector}
-                            className="text-[0.65625rem] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full"
+                            className="text-[0.6875rem] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full"
                         >
                             {sector}
                         </span>
                     ))}
-
-                    {member.productCount > 0 ? (
-                        <span className="text-[0.65625rem] text-slate-500 inline-flex items-center gap-1">
-                            <Package className="w-3 h-3" />
-                            {member.productCount} listed
-                        </span>
-                    ) : null}
                 </div>
+
+                {/*
+                  * What they sell, as pictures.
+                  *
+                  * Four at most — that is what the server sends — and the count
+                  * of the rest as a fifth tile, so the row says both "here is
+                  * what they do" and "there is more behind this card".
+                  */}
+                {products.length > 0 ? (
+                    <div className="mt-3 grid grid-cols-4 gap-1.5">
+                        {products.map((product) => (
+                            <ProductTile key={product.id} name={product.name} imageUrl={product.imageUrl} />
+                        ))}
+                    </div>
+                ) : null}
+
+                {member.productCount > products.length ? (
+                    <p className="text-[0.6875rem] text-slate-400 mt-1.5 inline-flex items-center gap-1">
+                        <Package className="w-3 h-3" />
+                        +{member.productCount - products.length} more in their catalogue
+                    </p>
+                ) : null}
             </div>
         </Link>
+    );
+}
+
+/**
+ * One product: its picture and its name, and nothing else.
+ *
+ * No price. A price on a search row reads as a quotation, and in this trade it
+ * is negotiated and goes stale — the member's own card carries the full line.
+ *
+ * The name sits UNDER the image rather than over it. A caption band across a
+ * photograph is unreadable against a pale product on a pale background, which
+ * is most of a catalogue, and a two-line name simply covers the picture.
+ */
+function ProductTile({ name, imageUrl }: { name: string; imageUrl: string }) {
+    const src = resolveMediaUrl(imageUrl);
+
+    return (
+        <div className="min-w-0">
+            <div className="aspect-square rounded-lg bg-slate-100 overflow-hidden flex items-center
+                            justify-center">
+                {src ? (
+                    <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
+                ) : (
+                    <ImageOff className="w-4 h-4 text-slate-300" />
+                )}
+            </div>
+            <p className="text-[0.625rem] text-slate-600 mt-1 leading-tight line-clamp-2" title={name}>
+                {name}
+            </p>
+        </div>
     );
 }
 

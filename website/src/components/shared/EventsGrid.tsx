@@ -207,10 +207,11 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                                             </div>
                                         </div>
 
+                                        {/* Its own page, not the list it is already on. */}
                                         <Link
-                                            to="/events"
+                                            to={`/events/${event.id}`}
                                             aria-label={`More about ${event.title}`}
-                                            className="w-10 h-10 rounded-full bg-gray-50 hover:bg-brand-800 hover:text-white
+                                            className="w-11 h-11 rounded-full bg-gray-50 hover:bg-brand-800 hover:text-white
                                                        flex items-center justify-center transition-colors shrink-0 group"
                                         >
                                             <ArrowRight size={18} className="text-gray-400 group-hover:text-white transition-colors" />

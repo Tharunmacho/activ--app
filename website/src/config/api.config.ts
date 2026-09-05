@@ -261,6 +261,18 @@ export const ENDPOINTS = {
         SUPER_APPLICATIONS: '/admin/super/applications',
         SUPER_DIRECTORY: '/admin/super/directory',
         SUPER_ADMINS: '/admin/super/admins',
+
+        /*
+         * The same admin management, for every tier that staffs a region.
+         *
+         * Super, state and district all call these; the server decides who may
+         * manage whom from the token. The `/super/*` paths above stay for the
+         * mobile app, which is super-admin only.
+         */
+        TEAM_ADMINS: '/admin/team/admins',
+        TEAM_ADMIN_BY_ID: (id: string) => `/admin/team/admins/${id}`,
+        TEAM_ADMIN_REMOVAL_PREVIEW: (id: string) => `/admin/team/admins/${id}/removal-preview`,
+        TEAM_ADMIN_REGIONS: '/admin/team/admins/regions',
         SUPER_ADMIN_BY_ID: (id: string) => `/admin/super/admins/${id}`,
         SUPER_ADMIN_REGIONS: '/admin/super/admins/regions',
         SUPER_ADMIN_REMOVAL_PREVIEW: (id: string) => `/admin/super/admins/${id}/removal-preview`,
@@ -287,7 +299,12 @@ export const ENDPOINTS = {
         // declared by the router above `/:id`, or it reads as an event id.
         MY_REGISTRATIONS: '/events/my-registrations',
         REGISTER: (id: string) => `/events/${id}/register`,
+        // Paying for a held seat is a second step, not a flag on the first: a
+        // seat can be held now and paid for later, and a payment can be retried.
+        PAY_REGISTRATION: (id: string) => `/events/${id}/register/pay`,
         REGISTRATIONS: (id: string) => `/events/${id}/registrations`,
+        // The audience preview. A literal path, declared above `/:id` server-side.
+        REACH: '/events/reach',
     },
 
     /** Association Updates (MEM-001) — news targeted at a member's region. */

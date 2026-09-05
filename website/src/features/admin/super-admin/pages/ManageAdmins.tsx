@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
     Plus, Search, Pencil, Trash2, Loader2, Users,
-    AlertTriangle, X, ShieldCheck,
+    AlertTriangle, X, ShieldCheck, Eye, EyeOff,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import AdminSidebar from './AdminSidebar';
@@ -52,6 +52,14 @@ export default function ManageAdmins() {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [formOpen, setFormOpen] = useState(false);
     const [saving, setSaving] = useState(false);
+    /**
+     * Which password fields are currently readable, keyed by field name.
+     *
+     * Never persisted and reset with the form, so closing and reopening the
+     * dialog starts masked again — a revealed field left open on a shared screen
+     * is a different problem from the one the eye solves.
+     */
+    const [reveal, setReveal] = useState<Record<string, boolean>>({});
 
     const [removing, setRemoving] = useState<{ admin: ManagedAdmin; preview: any } | null>(null);
     /**
@@ -117,10 +125,10 @@ export default function ManageAdmins() {
      * Which names exist at this level, and which are merely known to the
      * reference data.
      *
-     * The endpoint answers `{ states, districts, blocks, referenceStates }` — it
-     * takes no `level` and returns no `regions` key. `districts` and `blocks`
-     * are already scoped by the state and district passed in, which is why
-     * those are sent rather than filtered here.
+     * The endpoint answers six lists — `states`, `districts`, `blocks` and a
+     * `reference*` counterpart for each — and takes no `level`. Everything
+     * below a state is already scoped by the `state` and `district` passed in,
+     * which is why those are sent rather than filtered here.
      */
     const loadSuggestions = async (level: 'state' | 'district' | 'block') => {
         const data = await suggestAdminRegions({
@@ -130,22 +138,47 @@ export default function ManageAdmins() {
 
         setInUse(prev => ({ ...prev, [level]: data[`${level}s`] || [] }));
 
-        // A reference list exists for states only; districts and blocks are
-        // known from what has actually been staffed.
+        /*
+         * THE REFERENCE EXISTS AT ALL THREE LEVELS, AND ONLY STATES WERE ASKED
+         * FOR.
+         *
+         * `referenceDistricts` and `referenceBlocks` have been in this
+         * endpoint's response since it was written — scoped by the state and
+         * district already chosen — and this read them as `[]`. So the State
+         * box suggested all 36 states of India while District and Block
+         * suggested only what somebody had already staffed: on a brand-new
+         * state, nothing at all. Every district and block in the country had to
+         * be typed from memory, which is precisely how one region becomes two
+         * spellings and one queue becomes two half-queues.
+         *
+         * Keyed per level rather than fetched per level: one call answers all
+         * three, so the district list is already correct by the time the block
+         * box is reached.
+         */
+        const REFERENCE_KEY = {
+            state: 'referenceStates',
+            district: 'referenceDistricts',
+            block: 'referenceBlocks',
+        } as const;
+
         setReference(prev => ({
             ...prev,
-            [level]: level === 'state' ? (data.referenceStates || []) : [],
+            [level]: data[REFERENCE_KEY[level]] || [],
         }));
     };
 
     const openNew = () => {
         setEditingId(null);
         setForm({ ...BLANK });
+        // Masked again on every open: a field left readable from the last
+        // account created is a credential sitting on screen.
+        setReveal({});
         setFormOpen(true);
     };
 
     const openEdit = (a: ManagedAdmin) => {
         setEditingId(a.id);
+        setReveal({});
         setForm({
             fullName: a.fullName || '',
             email: a.email || '',
@@ -230,35 +263,82 @@ export default function ManageAdmins() {
     const field = (
         name: keyof typeof BLANK, label: string, type = 'text', hint?: string,
         list?: string, placeholder?: string,
-    ) => (
-        <div className="space-y-1.5">
-            <label htmlFor={name} className="block text-sm font-medium text-gray-700">{label}</label>
-            <input
-                id={name}
-                name={name}
-                type={type}
-                value={(form as any)[name]}
-                list={list}
-                placeholder={placeholder}
-                onChange={(e) => setForm({ ...form, [name]: e.target.value })}
-                /**
-                 * This form creates an account for SOMEBODY ELSE.
-                 *
-                 * Without this the browser helpfully fills Email with the
-                 * signed-in super admin's own address and Password with their
-                 * saved one — so "Create admin" submits credentials nobody
-                 * typed. `new-password` is the value browsers honour on a
-                 * password field; `off` alone is widely ignored there.
-                 */
-                autoComplete={type === 'password' ? 'new-password' : 'off'}
-                autoCorrect="off"
-                spellCheck={false}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm
-                           focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-            />
-            {hint && <p className="text-xs text-gray-500">{hint}</p>}
-        </div>
-    );
+    ) => {
+        /*
+         * A PASSWORD SET FOR SOMEBODY ELSE HAS TO BE READABLE BACK.
+         *
+         * The usual argument for masking is shoulder-surfing your own password,
+         * which you know. This field is different: the super admin is inventing
+         * a credential they must then pass to another person, and they get
+         * exactly one chance to read it — it is stored as a bcrypt hash and
+         * cannot be shown again afterwards. Masked, the only way to check what
+         * was typed is to type it twice and trust the confirm box, and a
+         * mistyped-then-confirmed password locks the new admin out of an account
+         * that reports itself as created successfully.
+         *
+         * Per-field state, keyed by name, so revealing the password does not
+         * also reveal the confirm box — they are compared by eye and two
+         * independently readable values is the point.
+         */
+        const isPassword = type === 'password';
+        const revealed = !!reveal[name];
+        const inputType = isPassword && revealed ? 'text' : type;
+
+        return (
+            <div className="space-y-1.5 min-w-0">
+                <label htmlFor={name} className="block text-sm font-semibold text-slate-700 mb-2">{label}</label>
+
+                <div className="relative">
+                    <input
+                        id={name}
+                        name={name}
+                        type={inputType}
+                        value={(form as any)[name]}
+                        list={list}
+                        placeholder={placeholder}
+                        onChange={(e) => setForm({ ...form, [name]: e.target.value })}
+                        /**
+                         * This form creates an account for SOMEBODY ELSE.
+                         *
+                         * Without this the browser helpfully fills Email with the
+                         * signed-in super admin's own address and Password with their
+                         * saved one — so "Create admin" submits credentials nobody
+                         * typed. `new-password` is the value browsers honour on a
+                         * password field; `off` alone is widely ignored there.
+                         *
+                         * Kept keyed off `type`, not `inputType`: revealing the
+                         * field must not turn it into an ordinary text box that
+                         * the browser then offers to autofill and remember.
+                         */
+                        autoComplete={isPassword ? 'new-password' : 'off'}
+                        autoCorrect="off"
+                        spellCheck={false}
+                        className={`h-11 w-full px-3.5 rounded-xl border border-slate-200 text-sm outline-none transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10
+                                    focus:outline-none focus:ring-2 focus:ring-blue-600
+                                    focus:border-transparent ${isPassword ? 'pr-10' : ''}`}
+                    />
+
+                    {isPassword && (
+                        <button
+                            type="button"
+                            onClick={() => setReveal(prev => ({ ...prev, [name]: !prev[name] }))}
+                            /* The label says what pressing it DOES, which is what a
+                               screen reader user needs; the icon shows the same. */
+                            aria-label={revealed ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+                            aria-pressed={revealed}
+                            title={revealed ? 'Hide' : 'Show'}
+                            className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 rounded-md
+                                       text-slate-400 hover:text-slate-700 hover:bg-slate-50"
+                        >
+                            {revealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                    )}
+                </div>
+
+                {hint && <p className="text-xs text-slate-500">{hint}</p>}
+            </div>
+        );
+    };
 
     const regionField = (level: 'state' | 'district' | 'block') => {
         // A district cannot be chosen before its state, nor a block before its
@@ -291,14 +371,14 @@ export default function ManageAdmins() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex">
+        <div className="min-h-screen bg-white flex">
             <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
             <div className="flex-1 min-w-0">
-                <header className="bg-white border-b px-6 py-4 flex items-center justify-between gap-4">
+                <header className="bg-white border-b border-slate-200 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Manage Admins</h1>
-                        <p className="text-sm text-gray-600 mt-0.5">
+                        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900">Manage Admins</h1>
+                        <p className="text-sm text-slate-600 mt-0.5">
                             Creating a block admin is what opens a region for registration.
                         </p>
                     </div>
@@ -306,24 +386,24 @@ export default function ManageAdmins() {
                     <div className="flex gap-2 shrink-0">
                         <button
                             onClick={openNew}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600
-                                       text-white text-sm font-medium hover:bg-blue-700"
+                            className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-blue-600
+                                       text-white text-sm font-semibold transition-colors hover:bg-blue-700"
                         >
                             <Plus className="w-4 h-4" /> Add admin
                         </button>
                     </div>
                 </header>
 
-                <main className="p-6 space-y-5">
+                <main className="p-6 space-y-6 max-w-[90rem]">
                     {/* Filters */}
                     <div className="flex flex-wrap items-center gap-3">
                         <div className="relative flex-1 min-w-[13.75rem]">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 placeholder="Name, email or region"
-                                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm
+                                className="h-11 w-full pl-9 pr-3.5 rounded-xl border border-slate-200 text-sm outline-none transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10
                                            focus:outline-none focus:ring-2 focus:ring-blue-600"
                             />
                         </div>
@@ -341,7 +421,7 @@ export default function ManageAdmins() {
                                     className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                                         role === t.key
                                             ? 'bg-blue-600 text-white'
-                                            : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
                                     }`}
                                 >
                                     {t.label}
@@ -351,16 +431,16 @@ export default function ManageAdmins() {
                     </div>
 
                     {/* List */}
-                    <div className="bg-white rounded-xl border overflow-hidden">
+                    <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] overflow-hidden">
                         {loading ? (
-                            <div className="flex items-center justify-center gap-3 py-16 text-gray-500">
+                            <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] flex items-center justify-center gap-3 py-16 text-slate-500">
                                 <Loader2 className="w-5 h-5 animate-spin" /> Loading admins…
                             </div>
                         ) : admins.length === 0 ? (
-                            <div className="text-center py-16">
-                                <Users className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                                <p className="text-gray-900 font-medium">No admins match</p>
-                                <p className="text-sm text-gray-500 mt-1">
+                            <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] text-center py-16 px-6">
+                                <Users className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                                <p className="text-slate-900 font-medium">No admins match</p>
+                                <p className="text-sm text-slate-500 mt-1">
                                     {query || role !== 'all'
                                         ? 'Try a different filter.'
                                         : 'Add one to open a region for registration.'}
@@ -369,7 +449,7 @@ export default function ManageAdmins() {
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
-                                    <thead className="bg-gray-50 text-left text-gray-500">
+                                    <thead className="bg-slate-50 text-left text-slate-500">
                                         <tr>
                                             <th className="px-5 py-3 font-medium">Name</th>
                                             <th className="px-5 py-3 font-medium">Role</th>
@@ -382,13 +462,13 @@ export default function ManageAdmins() {
                                         {admins.map(a => (
                                             <tr key={a.id} className={a.active ? '' : 'opacity-60'}>
                                                 <td className="px-5 py-3">
-                                                    <p className="font-medium text-gray-900">{a.fullName || '—'}</p>
-                                                    <p className="text-xs text-gray-500">{a.email}</p>
+                                                    <p className="font-medium text-slate-900">{a.fullName || '—'}</p>
+                                                    <p className="text-xs text-slate-500">{a.email}</p>
                                                 </td>
-                                                <td className="px-5 py-3 text-gray-700">
+                                                <td className="px-5 py-3 text-slate-700">
                                                     {ROLES.find(r => r.value === a.role)?.label || a.role}
                                                 </td>
-                                                <td className="px-5 py-3 text-gray-700">{a.region || '—'}</td>
+                                                <td className="px-5 py-3 text-slate-700">{a.region || '—'}</td>
                                                 <td className="px-5 py-3">
                                                     {/* Nothing is assigned to an admin id — queries are
                                                         geofenced by region string — so admins on one
@@ -398,14 +478,14 @@ export default function ManageAdmins() {
                                                             shared with {a.coAdmins}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-xs text-gray-500">sole owner</span>
+                                                        <span className="text-xs text-slate-500">sole owner</span>
                                                     )}
                                                 </td>
                                                 <td className="px-5 py-3 text-right whitespace-nowrap">
                                                     <button
                                                         onClick={() => openEdit(a)}
                                                         aria-label={`Edit ${a.fullName}`}
-                                                        className="p-2 rounded text-gray-500 hover:bg-gray-100"
+                                                        className="p-2 rounded text-slate-500 hover:bg-slate-100"
                                                     >
                                                         <Pencil className="w-4 h-4" />
                                                     </button>
@@ -430,14 +510,14 @@ export default function ManageAdmins() {
             {/* ---------------------------------------------------- the form */}
             {formOpen && (
                 <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center overflow-y-auto p-4">
-                    <form onSubmit={submit} className="bg-white rounded-2xl shadow-xl w-full max-w-lg my-8">
+                    <form onSubmit={submit} className="bg-white rounded-2xl shadow-xl w-full max-w-lg border border-slate-200 my-8">
                         <header className="flex items-center justify-between px-6 py-5 border-b">
-                            <h2 className="text-lg font-bold text-gray-900">
+                            <h2 className="text-lg font-bold tracking-tight text-slate-900">
                                 {editingId ? 'Edit admin' : 'Add admin'}
                             </h2>
                             <button
                                 type="button" onClick={() => setFormOpen(false)}
-                                aria-label="Close" className="text-gray-400 hover:text-gray-700"
+                                aria-label="Close" className="text-slate-400 hover:text-slate-700"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -445,7 +525,7 @@ export default function ManageAdmins() {
 
                         <div className="p-6 space-y-4">
                             <div className="space-y-1.5">
-                                <label htmlFor="role" className="block text-sm font-medium text-gray-700">Role</label>
+                                <label htmlFor="role" className="block text-sm font-semibold text-slate-700 mb-2">Role</label>
                                 <select
                                     id="role"
                                     value={form.role}
@@ -462,14 +542,14 @@ export default function ManageAdmins() {
                                             block: keeps.includes('block') ? form.block : '',
                                         });
                                     }}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                    className="h-11 w-full px-3.5 rounded-xl border border-slate-200 text-sm outline-none transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                                 >
                                     {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                                 </select>
                                 {/* Mobile shows this too. Which collection an account
                                     lands in is not incidental — it is how the platform
                                     finds it again. */}
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-slate-500">
                                     Saved into the{' '}
                                     <span className="font-mono">{form.role.replace('_admin', '')}admins</span>{' '}
                                     collection.
@@ -480,7 +560,7 @@ export default function ManageAdmins() {
                                 of the form hangs off, and the one that opens a region
                                 for registration. */}
                             <div className="space-y-4 pb-2 border-b">
-                                <p className="text-sm font-semibold text-gray-800">Region</p>
+                                <p className="text-sm font-semibold text-slate-800">Region</p>
                                 {needs.map(regionField)}
                             </div>
 
@@ -507,7 +587,7 @@ export default function ManageAdmins() {
                             <button
                                 type="button"
                                 onClick={() => setFormOpen(false)}
-                                className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium"
+                                className="h-11 px-5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300"
                             >
                                 Cancel
                             </button>
@@ -532,10 +612,10 @@ export default function ManageAdmins() {
                         <div className="flex items-start gap-3 mb-4">
                             <AlertTriangle className="w-6 h-6 text-red-500 shrink-0" />
                             <div>
-                                <h2 className="text-lg font-bold text-gray-900">
+                                <h2 className="text-lg font-bold tracking-tight text-slate-900">
                                     Delete {removing.admin.fullName}?
                                 </h2>
-                                <p className="text-sm text-gray-600 mt-1">
+                                <p className="text-sm text-slate-500 mt-1">
                                     This removes the account permanently.
                                 </p>
                             </div>
@@ -555,8 +635,8 @@ export default function ManageAdmins() {
                         )}
 
                         {removing.admin.coAdmins === 0 && (
-                            <div className="flex items-start gap-2 text-sm text-gray-600 mb-4">
-                                <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-gray-400" />
+                            <div className="flex items-start gap-2 text-sm text-slate-500 mb-4">
+                                <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-slate-400" />
                                 <p>
                                     Ownership is worked out at read time, so adding a replacement later
                                     hands them the full queue rather than an empty one.
@@ -567,7 +647,7 @@ export default function ManageAdmins() {
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setRemoving(null)}
-                                className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm font-medium"
+                                className="flex-1 py-2.5 rounded-lg border border-slate-200 text-sm font-medium"
                             >
                                 Keep
                             </button>

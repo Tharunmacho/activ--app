@@ -36,6 +36,18 @@ export interface CmsMedia {
     position: string;
 }
 
+/**
+ * A field the editor named themselves.
+ *
+ * Every page carries a list of these. The fields a page declares are the ones
+ * its layout depends on; this is everything else an association wants to say,
+ * rendered as a labelled line in the order it was entered.
+ */
+export interface CmsExtraField {
+    label: string;
+    value: string;
+}
+
 export const EMPTY_MEDIA: CmsMedia = { url: '', type: 'image', alt: '', fit: 'cover', position: 'center' };
 
 /** A label and where it goes. Nav entries, footer links and buttons all use it. */
@@ -73,6 +85,8 @@ export interface SiteSettings {
         legalLinks: CmsLink[];
         note: string;
     };
+    /** Fields the editor named themselves. Rendered as a labelled list. */
+    extraFields: CmsExtraField[];
 }
 
 // ---------------------------------------------------------------- home
@@ -93,6 +107,18 @@ export interface HomeCarousel {
     secondaryCtaLabel: string;
     secondaryCtaHref: string;
     secondaryCtaIcon: string;
+    /**
+     * Recent gallery posters carried by the banner itself.
+     *
+     * The slides are NOT stored here — they are the gallery's own items, read
+     * at render time, each linking to its own page.
+     */
+    galleryPosters: {
+        enabled: boolean;
+        limit: number;
+        /** Before or after the authored slides above. */
+        position: 'after' | 'before';
+    };
     highlightCard: {
         enabled: boolean;
         icon: string;
@@ -116,6 +142,8 @@ export interface HomeAbout {
     linkLabel: string;
     linkHref: string;
     statsBar: CmsStat[];
+    /** Fields the editor named themselves. Rendered as a labelled list. */
+    extraFields: CmsExtraField[];
 }
 
 /**
@@ -144,6 +172,8 @@ export interface AboutContent {
     media: CmsMedia;
     logoOverlay: CmsMedia;
     statsBar: CmsStat[];
+    /** Fields the editor named themselves. Rendered as a labelled list. */
+    extraFields: CmsExtraField[];
 }
 
 // ---------------------------------------------------------------- events page
@@ -186,6 +216,8 @@ export interface EventsSettings {
         enabled: boolean; icon: string; title: string;
         subtitle: string; ctaLabel: string; ctaHref: string;
     };
+    /** Fields the editor named themselves. Rendered as a labelled list. */
+    extraFields: CmsExtraField[];
 }
 
 // ---------------------------------------------------------------- gallery
@@ -203,6 +235,22 @@ export interface GallerySettings {
     emptyText: string;
     /** `{category}` is replaced with the chip the visitor picked. */
     emptyFilterText: string;
+    /** The copy on one poster's own page. */
+    detail: GalleryDetailCopy;
+    /** Fields the editor named themselves. Rendered as a labelled list. */
+    extraFields: CmsExtraField[];
+}
+
+export interface GalleryDetailCopy {
+    backLabel: string;
+    aboutHeading: string;
+    highlightsHeading: string;
+    photosHeading: string;
+    relatedHeading: string;
+    ctaLabel: string;
+    ctaHref: string;
+    /** Shown when a link points at an item that is gone or hidden. */
+    missingText: string;
 }
 
 export interface GalleryItem {
@@ -213,7 +261,31 @@ export interface GalleryItem {
     category: string;
     eventDate: string;
     location: string;
+    /**
+     * The write-up on the item's own page. Absent from the landing strip's
+     * payload — that request projects the long fields away.
+     */
+    description?: string;
+    /** Bullet points beside the write-up. */
+    highlights?: string[];
+    /** Further photographs from the same event, under the poster. */
+    photos?: CmsMedia[];
+    /**
+     * Fields the editor named themselves — chief guest, host chapter, sponsor,
+     * anything this schema does not know about. Rendered as a labelled list on
+     * the item's own page, in the order they were entered.
+     */
+    customFields?: { label: string; value: string }[];
     featured: boolean;
+    /**
+     * Leads both the banner and the gallery grid.
+     *
+     * Ordering is the server's job — this is here so the CMS can show which
+     * items are pinned, not so a page can re-sort them.
+     */
+    pinned?: boolean;
+    /** Rides in the landing page banner. Undefined on rows predating the field. */
+    showOnHome?: boolean;
     sortOrder: number;
     visible: boolean;
 }
@@ -247,6 +319,8 @@ export interface ContactInfo {
     mapEmbedUrl: string;
     social: { facebook: string; instagram: string; linkedin: string; youtube: string };
     banner: { enabled: boolean; icon: string; title: string; subtitle: string; ctaLabel: string; ctaHref: string };
+    /** Fields the editor named themselves — extra rows in the details card. */
+    extraFields: CmsExtraField[];
 }
 
 export interface CmsEvent {
@@ -256,6 +330,51 @@ export interface CmsEvent {
     startAt: string | null;
     endAt: string | null;
     location: string;
+    /** The hall or building, where the API distinguishes it from . */
+    venue?: string;
+    /** Region targeting: empty means everyone. */
+    state?: string;
+    district?: string;
+    block?: string;
+    /*
+     * Every region this event is aimed at. The three fields above are the
+     * legacy single-region form, mirrored by the server from the first entry so
+     * the mobile app keeps working; this is the real audience.
+     */
+    targets?: { state: string; district: string; block: string }[];
+    /**
+     * Whether this event was posted to the onboarding site's events section.
+     *
+     * Optional, and `false` does NOT mean "not on the public site" on its own:
+     * the field postdates every event in the collection, so read it together
+     * with `channel` the way the server's `isOnboardingContent` does.
+     */
+    showOnOnboarding?: boolean;
+    /**
+     * Which site the event was authored for — `public` is the CMS's onboarding
+     * programme, `members` the association's own. Optional for the same reason.
+     */
+    channel?: 'public' | 'members';
+    /**
+     * "Everyone in the association", stored beside `targets` rather than as a
+     * shorthand for an empty one. Optional: a row written before the field
+     * existed says the same thing with an empty target list.
+     */
+    reachEveryone?: boolean;
+    /** Rupees. 0 is free. A fee adds a payment step before the seat confirms. */
+    registrationFee?: number;
+    /** The questions this event asks, designed per event by the super admin. */
+    registrationFields?: {
+        key: string;
+        label: string;
+        type: 'text' | 'textarea' | 'number' | 'email' | 'phone' | 'date' | 'select' | 'checkbox';
+        required: boolean;
+        placeholder: string;
+        helpText: string;
+        options: string[];
+    }[];
+    /** "Tamil Nadu › Sivaganga", or empty for everyone. Derived by the server. */
+    targetLabel?: string;
     /** The raw banner path. Kept because the mobile app reads only this. */
     imageUrl: string;
     /** The same media shape as every other section, so the frame can honour fit. */
@@ -361,6 +480,7 @@ export const EMPTY_SITE: SiteSettings = {
         addressLines: [], linkColumns: [], contactHeading: '', phones: [], email: '',
         socials: [], copyright: '', legalLinks: [], note: '',
     },
+    extraFields: [],
 };
 
 export const EMPTY_HOME: HomeContent = {
@@ -368,12 +488,13 @@ export const EMPTY_HOME: HomeContent = {
         slides: [], headline: '', headlineHighlight: '', subheadline: '',
         ctaLabel: '', ctaHref: '', ctaIcon: 'heart',
         secondaryCtaLabel: '', secondaryCtaHref: '', secondaryCtaIcon: 'play',
+        galleryPosters: { enabled: true, limit: 6, position: 'after' },
         highlightCard: { enabled: true, icon: 'users', eyebrow: '', value: '', caption: '', stats: [] },
     },
     about: {
         badgeIcon: 'users', badgeText: '', heading: '', headingHighlight: '', eyebrow: '',
         body: '', bullets: [], media: { ...EMPTY_MEDIA }, logoOverlay: { ...EMPTY_MEDIA },
-        linkLabel: '', linkHref: '', statsBar: [],
+        linkLabel: '', linkHref: '', statsBar: [], extraFields: [],
     },
 };
 
@@ -381,6 +502,7 @@ export const EMPTY_ABOUT: AboutContent = {
     badgeIcon: 'users', badgeText: '', heading: '', headingHighlight: '',
     body: '', bullets: [], bulletPoints: [],
     media: { ...EMPTY_MEDIA }, logoOverlay: { ...EMPTY_MEDIA }, statsBar: [],
+    extraFields: [],
 };
 
 export const EMPTY_EVENTS_SETTINGS: EventsSettings = {
@@ -396,12 +518,23 @@ export const EMPTY_EVENTS_SETTINGS: EventsSettings = {
         enabled: true, icon: 'calendar-days', title: '',
         subtitle: '', ctaLabel: '', ctaHref: '',
     },
+    extraFields: [],
 };
 
 export const EMPTY_GALLERY_SETTINGS: GallerySettings = {
     badgeIcon: 'image', badgeText: '', heading: '', headingHighlight: '', description: '',
     noteLines: [], categories: [], viewMoreLabel: '', pageSize: 8,
     emptyText: '', emptyFilterText: '',
+    detail: {
+        backLabel: 'Back to Gallery',
+        aboutHeading: 'About this event',
+        highlightsHeading: 'Highlights',
+        photosHeading: 'More photographs',
+        relatedHeading: 'More from the gallery',
+        ctaLabel: '', ctaHref: '',
+        missingText: 'This item is no longer available.',
+    },
+    extraFields: [],
 };
 
 export const EMPTY_CONTACT: ContactInfo = {
@@ -420,6 +553,7 @@ export const EMPTY_CONTACT: ContactInfo = {
     addressLines: [], phone: '', alternatePhone: '', email: '', workingHours: [], mapEmbedUrl: '',
     social: { facebook: '', instagram: '', linkedin: '', youtube: '' },
     banner: { enabled: true, icon: 'users', title: '', subtitle: '', ctaLabel: '', ctaHref: '' },
+    extraFields: [],
 };
 
 /** Anchor a stored `/uploads/...` path to the API origin we are talking to. */
@@ -531,6 +665,7 @@ const getSiteSettingsUncached = async (): Promise<SiteSettings> => {
             },
             header: { ...EMPTY_SITE.header, ...(data.header || {}) },
             footer: { ...EMPTY_SITE.footer, ...(data.footer || {}) },
+            extraFields: data.extraFields || [],
         };
     } catch {
         return EMPTY_SITE;
@@ -554,6 +689,10 @@ const getHomeUncached = async (): Promise<HomeContent> => {
                     media: withResolvedUrl(slide.media),
                     caption: slide.caption || '',
                 })),
+                galleryPosters: {
+                    ...EMPTY_HOME.carousel.galleryPosters,
+                    ...(carousel.galleryPosters || {}),
+                },
                 highlightCard: {
                     ...EMPTY_HOME.carousel.highlightCard,
                     ...(carousel.highlightCard || {}),
@@ -611,7 +750,15 @@ export const getEventsSettings = () => cached('events-settings', getEventsSettin
 const getGallerySettingsUncached = async (): Promise<GallerySettings> => {
     try {
         const data = unwrap<any>(await api.get('/cms/gallery-settings'), EMPTY_GALLERY_SETTINGS);
-        return { ...EMPTY_GALLERY_SETTINGS, ...data, categories: data.categories || [] };
+        return {
+            ...EMPTY_GALLERY_SETTINGS,
+            ...data,
+            categories: data.categories || [],
+            // Merged a level deeper than the spread above reaches: a document
+            // saved before this block existed carries none of it, and the poster
+            // page would otherwise get `undefined`.
+            detail: { ...EMPTY_GALLERY_SETTINGS.detail, ...(data.detail || {}) },
+        };
     } catch {
         return EMPTY_GALLERY_SETTINGS;
     }
@@ -620,13 +767,22 @@ const getGallerySettingsUncached = async (): Promise<GallerySettings> => {
 /** Cached; see `cached()` above. */
 export const getGallerySettings = () => cached('gallery-settings', getGallerySettingsUncached);
 
+/** Every stored URL on an item — the poster and each extra photograph. */
+const resolveItemMedia = (g: GalleryItem): GalleryItem => ({
+    ...g,
+    media: withResolvedUrl(g.media),
+    // Absent on the landing strip's payload, which projects them away — and an
+    // empty `photos: []` written over a list is not the same as leaving it out.
+    ...(g.photos ? { photos: g.photos.map(withResolvedUrl) } : {}),
+});
+
 const getGalleryUncached = async (includeHidden = false): Promise<GalleryItem[]> => {
     try {
         const data = unwrap<GalleryItem[]>(
             await api.get('/cms/gallery', { params: includeHidden ? { includeHidden: 'true' } : {} }),
             [],
         );
-        return (data || []).map((g: any) => ({ ...g, media: withResolvedUrl(g.media) }));
+        return (data || []).map(resolveItemMedia);
     } catch {
         return [];
     }
@@ -640,6 +796,43 @@ const getGalleryUncached = async (includeHidden = false): Promise<GalleryItem[]>
  */
 export const getGallery = (includeHidden = false) =>
     cached(includeHidden ? 'gallery:all' : 'gallery', () => getGalleryUncached(includeHidden));
+
+const getHomeGalleryUncached = async (): Promise<GalleryItem[]> => {
+    try {
+        const data = unwrap<GalleryItem[]>(
+            await api.get('/cms/gallery', { params: { home: 'true', limit: 12 } }),
+            [],
+        );
+        return (data || []).map(resolveItemMedia);
+    } catch {
+        return [];
+    }
+};
+
+/**
+ * The landing page's strip: what an editor flagged for the home page, newest
+ * first, and nothing else.
+ *
+ * Its own request rather than a slice of `getGallery()`. The landing page is
+ * the one page on the site whose payload is worth defending, and this answer is
+ * a dozen rows without the write-ups or the extra photographs. The server caps
+ * it at twelve; the section renders as many of those as the CMS limit allows,
+ * so changing that number needs no new request.
+ */
+export const getHomeGallery = () => cached('gallery:home', getHomeGalleryUncached);
+
+/**
+ * One item, for its own page.
+ *
+ * Throws where the list readers swallow: a poster page that cannot load its
+ * poster has nothing to render, and telling the visitor the link is dead is
+ * better than an empty page that looks broken.
+ */
+export const getGalleryItem = async (id: string): Promise<GalleryItem> => {
+    const data = unwrap<GalleryItem | null>(await api.get(`/cms/gallery/${id}`), null);
+    if (!data || !data._id) throw new Error('Gallery item not found');
+    return resolveItemMedia(data);
+};
 
 const getContactInfoUncached = async (): Promise<ContactInfo> => {
     try {
@@ -676,6 +869,19 @@ const getCmsEventsUncached = async (): Promise<CmsEvent[]> => {
 
 /** Cached; see `cached()` above. */
 export const getCmsEvents = () => cached('events', getCmsEventsUncached);
+
+/**
+ * One event, for its own page.
+ *
+ * Throws where the list readers swallow: an event page that cannot load its
+ * event has nothing to render, and telling the visitor the link is dead beats
+ * an empty page that looks broken.
+ */
+export const getCmsEvent = async (id: string): Promise<CmsEvent> => {
+    const data = unwrap<CmsEvent | null>(await api.get(`/cms/events/${id}`), null);
+    if (!data || !data.id) throw new Error('Event not found');
+    return { ...data, imageUrl: resolveMediaUrl(data.imageUrl), media: withResolvedUrl(data.media) };
+};
 
 /**
  * Submit the public contact form.
@@ -762,6 +968,20 @@ export const uploadMedia = async (file: File): Promise<{ url: string; type: 'ima
     return { url: data.url || '', type: data.type === 'video' ? 'video' : 'image' };
 };
 
+/**
+ * Drop every cached view of the gallery.
+ *
+ * Three of them now: the public grid, the admin grid including hidden images,
+ * and the landing page's strip. They are separate entries because they are
+ * separate answers, which means a save that cleared only the first left an
+ * edited poster showing its old title on the home page.
+ */
+const invalidateGallery = () => {
+    invalidateCmsCache('gallery');
+    invalidateCmsCache('gallery:all');
+    invalidateCmsCache('gallery:home');
+};
+
 /** `image` is a file upload; the server prefers it over a pasted `imageUrl`. */
 const withImage = (fields: Record<string, any>, image?: File | null) => {
     if (!image) return fields;
@@ -776,22 +996,19 @@ const withImage = (fields: Record<string, any>, image?: File | null) => {
 
 export const addGalleryItem = async (fields: Record<string, any>, image?: File | null) => {
     const result = unwrap<GalleryItem>(await api.post('/cms/gallery', withImage(fields, image)), null as any);
-    // Both gallery scopes, or the events list, now answer differently.
-    invalidateCmsCache('gallery'); invalidateCmsCache('gallery:all');
+    invalidateGallery();
     return result;
 };
 
 export const updateGalleryItem = async (id: string, fields: Record<string, any>, image?: File | null) => {
     const result = unwrap<GalleryItem>(await api.put(`/cms/gallery/${id}`, withImage(fields, image)), null as any);
-    // Both gallery scopes, or the events list, now answer differently.
-    invalidateCmsCache('gallery'); invalidateCmsCache('gallery:all');
+    invalidateGallery();
     return result;
 };
 
 export const deleteGalleryItem = async (id: string) => {
     const result = unwrap<any>(await api.delete(`/cms/gallery/${id}`), null);
-    // Both gallery scopes, or the events list, now answer differently.
-    invalidateCmsCache('gallery'); invalidateCmsCache('gallery:all');
+    invalidateGallery();
     return result;
 };
 
@@ -829,3 +1046,26 @@ export const deleteContactMessage = async (id: string) =>
     unwrap<any>(await api.delete(`/cms/contact-messages/${id}`), null);
 
 export { errorMessage };
+
+/**
+ * How many members a piece of targeting would actually reach.
+ *
+ * Super admin only. Called by `RegionTargetPicker` on every change to the
+ * region list or the members-only switch, because what an editor is choosing is
+ * the INTERSECTION of those two and neither control shows it — an event aimed
+ * at one block and marked members-only, in a block whose only member had not
+ * paid, reached nobody while every screen called it published.
+ *
+ * `targets` goes over the wire as JSON in a query parameter: it is a read, and
+ * a GET keeps it cacheable and de-duplicated like every other read here.
+ */
+export const getEventReach = async (
+    targets: { state: string; district: string; block: string }[],
+    audience: 'all' | 'paid' = 'all',
+) =>
+    unwrap<{ members: number; excludedByAudience: number }>(
+        await api.get('/events/reach', {
+            params: { targets: JSON.stringify(targets || []), audience },
+        }),
+        { members: 0, excludedByAudience: 0 },
+    );

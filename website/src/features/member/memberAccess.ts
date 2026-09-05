@@ -115,9 +115,20 @@ export interface MemberNavItem {
 /**
  * The member sidebar, in the finished design's order.
  *
- * The starting set is Dashboard, My Profile and Business Account — the three
- * screens a brand-new account can actually use. Help & Support is listed too,
- * but as an upcoming feature rather than a link: see the note on that entry.
+ * Every association feature is in this rail from the day an account exists.
+ * That is a deliberate reversal: the table used to hold Events, Association
+ * Updates and Settings behind `membershipActive`, so an applicant saw a list of
+ * padlocked names and no way to judge whether any of it was worth paying for.
+ * An applicant who can read the programme, register for a meeting and follow
+ * the association's notices is the one who completes a membership; one who is
+ * shown a locked door is the one who leaves.
+ *
+ * Two screens are deliberately NOT in this table: Messages and Documents. They
+ * exist and they are routable, but they are reached from the icon strip at the
+ * top of the member area rather than from the rail — messages and alerts are
+ * things a member checks in passing, from wherever they happen to be, and a rail
+ * entry pulls them out of the screen they are working on to do it. See
+ * `MemberTopBar`.
  *
  * Ordering is the *finished* sidebar's ordering, so entries appear in place as
  * they unlock rather than being appended to the end and reshuffling what the
@@ -160,6 +171,10 @@ export const MEMBER_NAV: MemberNavItem[] = [
      *
      * A paid member has no such card — their dashboard is a different screen —
      * so for them the entry resolves to the dedicated page instead.
+     *
+     * This is the one entry still gated on a milestone, and the milestone is
+     * the entry's own subject: before an application exists there is no status
+     * to show, and a tracker of four empty stages is not information.
      */
     {
         key: 'application',
@@ -173,14 +188,6 @@ export const MEMBER_NAV: MemberNavItem[] = [
         unlock: 'applicationSubmitted',
         requirement: 'Submit your application',
     },
-    {
-        key: 'documents',
-        label: 'Documents',
-        to: null,
-        icon: 'file',
-        unlock: 'applicationSubmitted',
-        requirement: 'Coming soon',
-    },
     /*
      * The directory, not the old Explore page.
      *
@@ -190,22 +197,19 @@ export const MEMBER_NAV: MemberNavItem[] = [
      * asks the server, which is the only place those filters can be applied
      * against the whole membership. The old path still resolves to the new
      * screen so that a bookmark does not 404.
+     *
+     * Open to an applicant. Browsing is not contacting — the directory exposes
+     * no email address and no phone number to anybody (see `directory.service`)
+     * — and seeing who is already a member is the most persuasive thing an
+     * association can show someone deciding whether to join.
      */
     {
         key: 'explore',
         label: 'Member Directory',
         to: '/member/directory',
         icon: 'search',
-        unlock: 'applicationSubmitted',
-        requirement: 'Submit your application',
-    },
-    {
-        key: 'messages',
-        label: 'Messages',
-        to: null,
-        icon: 'message',
-        unlock: 'membershipActive',
-        requirement: 'Coming soon',
+        unlock: null,
+        requirement: '',
     },
     /*
      * The member events screen, not the public marketing page.
@@ -214,45 +218,56 @@ export const MEMBER_NAV: MemberNavItem[] = [
      * "Register" call to action for an account this member already has, and it
      * cannot show a members-only event or a seat they hold — both of which are
      * the point of the paid programme.
+     *
+     * Open before payment. The server already decides what an applicant may
+     * see — `event.service` hides `audience: 'paid'` events from anyone whose
+     * membership is not active — and registration has never required a paid
+     * membership. Gating the screen only hid the events they were entitled to
+     * attend, and attending one is how an applicant meets the association.
      */
     {
         key: 'events',
         label: 'Events',
         to: '/member/events',
         icon: 'calendar',
-        unlock: 'membershipActive',
-        requirement: 'Activate your membership',
+        unlock: null,
+        requirement: '',
     },
+    /*
+     * Same argument as Events, same server-side rule.
+     *
+     * `announcement.service` restricts an unpaid reader to `audience: 'all'`
+     * updates, so opening this screen cannot leak a members-only notice.
+     */
     {
         key: 'updates',
         label: 'Association Updates',
         to: '/member/updates',
         icon: 'megaphone',
-        unlock: 'membershipActive',
-        requirement: 'Activate your membership',
+        unlock: null,
+        requirement: '',
     },
 
     /*
-     * Not a link to the public Contact page.
+     * Support inside the member area, not a link to the public Contact page.
      *
      * `/contact` is part of the marketing site: it carries the public header,
      * the onboarding navigation and a "Register" call to action. Sending a
      * signed-in member there drops them out of the member area and invites them
-     * to sign up for an account they already have. Until there is a support
-     * screen inside the member area, this is an upcoming feature — and the
-     * dashboard's Need Help card carries the real phone number and address in
-     * the meantime.
+     * to sign up for an account they already have. `/member/help` shows the
+     * same CMS support details inside the member area's own shell.
      */
-    { key: 'help', label: 'Help & Support', to: null, icon: 'help', unlock: null, requirement: 'Coming soon' },
+    { key: 'help', label: 'Help & Support', to: '/member/help', icon: 'help', unlock: null, requirement: '' },
 
     {
         key: 'settings',
         label: 'Settings',
         to: '/member/settings',
         icon: 'settings',
-        unlock: 'membershipActive',
-        requirement: 'Activate your membership',
+        unlock: null,
+        requirement: '',
     },
+
 ];
 
 /** Has this member earned the entry? Says nothing about whether a screen exists. */
@@ -465,3 +480,77 @@ export const nextMilestone = (access: MemberAccess): string => {
     if (!access.membershipActive) return 'Activate your membership';
     return '';
 };
+
+/**
+ * The one button that changes an applicant's answer, wherever it is offered.
+ *
+ * Every locked surface in the member area — the Messages screen, the documents
+ * that need an active membership, the dashboard's closing card — ends in the
+ * same call to action, and it must name the step this account is actually on.
+ * "Activate membership" shown to someone whose application has not been
+ * reviewed yet points at a payment screen that will refuse them, and a member
+ * who is refused once stops pressing the button.
+ *
+ * Ordered by what has to happen first, exactly like `nextMilestone` above —
+ * that function says what the step IS, this one says where it happens.
+ */
+export interface MembershipCta {
+    label: string;
+    to: string;
+    /** One line of context above the button. Empty for an active membership. */
+    detail: string;
+}
+
+export const membershipCta = (access: MemberAccess): MembershipCta => {
+    if (access.membershipActive) {
+        return { label: 'Your membership', to: '/payment/member-dashboard', detail: '' };
+    }
+    if (access.applicationApproved) {
+        return {
+            label: 'Activate membership',
+            to: '/member/payment',
+            detail: 'Your application is approved. One payment activates everything.',
+        };
+    }
+    if (access.applicationSubmitted) {
+        return {
+            label: 'Track your application',
+            to: '/member/application-status',
+            detail: 'Your application is with the review team. Activation opens once it is approved.',
+        };
+    }
+    if (access.profileComplete) {
+        return {
+            label: 'Submit your application',
+            to: '/member/profile-view',
+            detail: 'Your profile is complete. Submitting it starts the review.',
+        };
+    }
+    return {
+        label: 'Complete your profile',
+        // Step 1: a milestone that says "complete your profile" opens the
+        // profile. Bare `/member/profile` resumes at the first unanswered step,
+        // which is right for picking work back up and wrong for a control whose
+        // words name the beginning. Same rule as the dashboard's hero button.
+        to: '/member/profile?step=1',
+        detail: 'Finish your profile to start the membership review.',
+    };
+};
+
+/**
+ * What an active membership adds, in the words shown on a locked surface.
+ *
+ * Kept here rather than in each screen because the same promise is made in
+ * three places — the Messages screen, the directory's connect action and the
+ * dashboard — and three copies of a promise drift into three different
+ * promises.
+ */
+export const MEMBERS_ONLY_COPY = {
+    title: 'Messaging is part of an active membership',
+    detail:
+        'Direct messages and member-to-member connections open the moment your membership is '
+        + 'active. Everything else the association publishes — the events programme, updates and '
+        + 'the member directory — is open to you right now.',
+    /** Said beside a Connect or Message control that will not act yet. */
+    short: 'Connecting with members needs an active membership.',
+} as const;

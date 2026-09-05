@@ -110,7 +110,17 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       } else if (!error.response) {
         errorMessage = 'Cannot connect to server. Please check your internet connection.';
       }
-      Alert.alert('Login Failed', errorMessage);
+
+      /*
+       * A blocked account is not a failed login attempt.
+       *
+       * The server answers 403 with its own sentence for someone the
+       * association has blocked, and heading that "Login Failed" invites them to
+       * try again and again with credentials that are perfectly correct. The
+       * title names the real state; the message beneath is the server's.
+       */
+      const blocked = error.response?.status === 403;
+      Alert.alert(blocked ? 'Account Blocked' : 'Login Failed', errorMessage);
     } finally {
       setIsLoading(false);
     }

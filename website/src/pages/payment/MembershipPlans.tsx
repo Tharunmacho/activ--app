@@ -54,54 +54,17 @@ const decorate = (plan: MembershipPlan): Plan => ({
   ...(DECOR[plan.id] || DECOR.basic),
 });
 
-const legacyPlans: Plan[] = [
-  {
-    id: 'basic',
-    name: 'Starter',
-    description: 'For companies less than 5 years',
-    price: 5000,
-    experience: '< 5 years',
-    icon: Sparkles,
-    accentColor: '#0ea5e9',
-    bgGradient: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
-    features: [
-      'Compliance and documentation guidance',
-      'Access to networking forums',
-      'Standard email support'
-    ]
-  },
-  {
-    id: 'intermediate',
-    name: 'Professional',
-    description: 'For companies 5 – 10 years',
-    price: 10000,
-    experience: '5 - 10 years',
-    popular: true,
-    icon: Crown,
-    accentColor: '#8b5cf6',
-    bgGradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-    features: [
-      'All Starter benefits',
-      'Priority event invitations',
-      'Growth and scaling advisory sessions'
-    ]
-  },
-  {
-    id: 'ideal',
-    name: 'Enterprise',
-    description: 'For companies 10+ years',
-    price: 20000,
-    experience: '10+ years',
-    icon: Award,
-    accentColor: '#f59e0b',
-    bgGradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-    features: [
-      'All Professional benefits',
-      'Premium advisory and consulting',
-      'Featured listing and special recognition'
-    ]
-  }
-];
+/*
+ * NO PLACEHOLDER PLANS.
+ *
+ * A hardcoded list here was the initial state, so the screen painted three
+ * cards at 5,000 / 10,000 / 20,000 for as long as the fetch took and then
+ * replaced them. Every one of those numbers stops being true the moment the
+ * Super Admin edits a price, and a member who reads the flash and looks away
+ * has been shown a figure the association did not set. The screen starts
+ * empty and says it is loading instead.
+ */
+
 
 export default function MembershipPlans() {
   const navigate = useNavigate();
@@ -114,9 +77,18 @@ export default function MembershipPlans() {
    * mobile offers them — so the two clients disagreed about the price of the
    * same membership.
    */
-  const [plans, setPlans] = useState<Plan[]>(legacyPlans);
-  const [selectedPlan, setSelectedPlan] = useState<Plan>(legacyPlans[1]);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  /**
+   * Null until the prices arrive.
+   *
+   * It held a placeholder plan before, which is how a stale price reached the
+   * screen: every reader of `selectedPlan` had a number to print before anyone
+   * had asked the server what the number was. Null forces each of them to wait.
+   */
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [planLocked, setPlanLocked] = useState(false);
+  /** The prices could not be read at all — distinct from "no plans exist". */
+  const [loadFailed, setLoadFailed] = useState(false);
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -131,8 +103,9 @@ export default function MembershipPlans() {
 
       const offered = eligibility.plans.map(decorate);
       setPlans(offered);
-      setSelectedPlan(decorate(eligibility.selected));
+      setSelectedPlan(eligibility.selected ? decorate(eligibility.selected) : null);
       setPlanLocked(eligibility.locked);
+      setLoadFailed(eligibility.failed);
 
       setUserData({
         memberType: eligibility.isCompany ? 'Company' : 'Aspirant',
@@ -150,9 +123,14 @@ export default function MembershipPlans() {
        * a fabricated application id is not.
        */
       console.error('Error loading user data:', error);
+      // No plans and no invented price — the screen says it could not load
+      // rather than offering a figure nobody set.
+      setLoadFailed(true);
+      setPlans([]);
+      setSelectedPlan(null);
       setUserData({
         memberType: 'Company',
-        experience: '5 - 10 years',
+        experience: '',
         applicationId: '',
       });
     } finally {
@@ -178,6 +156,19 @@ export default function MembershipPlans() {
    * `/payment/complete`. This is that same step.
    */
   const handlePayment = async () => {
+    /*
+     * No plan, no payment.
+     *
+     * `selectedPlan` is null until the prices load, and this project builds
+     * with `strictNullChecks: false` — so nothing but this line stops a click
+     * during a failed load from reading `.price` off null and taking the screen
+     * down on the way to the gateway.
+     */
+    if (!selectedPlan) {
+      toast.error('The membership prices have not loaded yet. Please try again.');
+      return;
+    }
+
     setProcessing(true);
     try {
       navigate('/payment/gateway', {
@@ -216,10 +207,47 @@ export default function MembershipPlans() {
           >
             <Loader2 className="w-8 h-8 animate-spin text-white" />
           </div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">Loading Plans</h2>
-          <p className="text-gray-500 text-sm">Please wait...</p>
+          <h2 className="text-lg font-semibold text-slate-900 mb-1">Loading Plans</h2>
+          <p className="text-slate-500 text-sm">Please wait...</p>
         </div>
       </div>
+    );
+  }
+
+  /*
+   * NO PRICE, NO PAGE.
+   *
+   * Everything below reads `selectedPlan` — the summary, the total, the Pay
+   * button's label. With `strictNullChecks` off, the compiler will not stop any
+   * of that from running against null, so the guard has to be here.
+   *
+   * It says which of the two situations it is. "We could not reach the server"
+   * is worth retrying; "no plans are being offered" is not, and a member who
+   * retries that one forever has been misled about whose problem it is.
+   */
+  if (!selectedPlan || plans.length === 0) {
+    return (
+      <MemberPageShell title="Membership">
+        <div className="max-w-md mx-auto py-20 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
+            <FileText className="w-6 h-6 text-amber-600" />
+          </div>
+          <h2 className="text-lg font-semibold text-slate-900 mb-1">
+            {loadFailed ? 'Could not load the plans' : 'No membership plans are available'}
+          </h2>
+          <p className="text-slate-500 text-sm mb-6">
+            {loadFailed
+              ? 'The membership prices could not be read just now. Nothing has been charged.'
+              : 'The association has not published a plan for your membership yet. '
+                + 'Please contact the office.'}
+          </p>
+          {loadFailed && (
+            <Button onClick={() => { setLoading(true); loadUserData(); }}>
+              Try again
+            </Button>
+          )}
+        </div>
+      </MemberPageShell>
     );
   }
 
@@ -230,7 +258,7 @@ export default function MembershipPlans() {
       width="standard"
       sidebar={false}
       actions={
-        <div className="flex items-center gap-2 text-xs text-gray-500 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
+        <div className="flex items-center gap-2 text-xs text-slate-500 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
           <Lock className="w-3.5 h-3.5 text-emerald-500" />
           <span className="hidden sm:inline font-medium text-emerald-700">Secure Checkout</span>
         </div>
@@ -246,16 +274,42 @@ export default function MembershipPlans() {
             <Star className="w-3.5 h-3.5 text-violet-500" />
             <span className="text-xs font-medium text-violet-600">Membership Plans</span>
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-            Simple, Transparent Pricing
+          {/*
+            THE HEADING FOLLOWS THE ANSWER, because there are now two different
+            answers on one screen.
+
+            When the association prices by commencement year, an applicant is
+            shown ONE plan — theirs — and "choose a plan that fits your business
+            needs" invites them to look for the other two and conclude the page
+            is broken. When every plan is offered, the original wording is
+            right. Neither is a different screen; they differ by a sentence.
+          */}
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
+            {planLocked ? 'Your Membership' : 'Simple, Transparent Pricing'}
           </h1>
-          <p className="text-gray-500 text-sm max-w-md mx-auto">
-            Choose a plan that fits your business needs
+          <p className="text-slate-500 text-sm max-w-md mx-auto">
+            {planLocked
+              ? userData?.memberType === 'Aspirant'
+                ? 'This is the plan for an applicant without a registered business.'
+                : `Set for a business trading ${userData?.experience || 'this long'}.`
+              : 'Choose a plan that fits your business needs'}
           </p>
         </div>
 
-        {/* Plan Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+        {/*
+          Plan Cards.
+
+          The grid narrows to the number of plans actually offered. One card in
+          a three-column grid sits in the left third of an empty row, which reads
+          as two cards that failed to load rather than as the only plan there is.
+        */}
+        <div className={`grid gap-5 mb-10 ${
+          plans.length === 1
+            ? 'grid-cols-1 max-w-md mx-auto'
+            : plans.length === 2
+              ? 'grid-cols-1 md:grid-cols-2 max-w-3xl mx-auto'
+              : 'grid-cols-1 md:grid-cols-3'
+        }`}>
           {plans.map((plan) => {
             const Icon = plan.icon;
             const isSelected = selectedPlan.id === plan.id;
@@ -303,8 +357,8 @@ export default function MembershipPlans() {
                         <Icon className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-gray-900">{plan.name}</h3>
-                        <p className="text-xs text-gray-500">{plan.description}</p>
+                        <h3 className="font-bold text-slate-900">{plan.name}</h3>
+                        <p className="text-xs text-slate-500">{plan.description}</p>
                       </div>
                     </div>
 
@@ -314,7 +368,7 @@ export default function MembershipPlans() {
                       style={{ background: '#f8fafc' }}
                     >
                       <div className="flex items-baseline justify-center gap-0.5">
-                        <span className="text-lg text-gray-500">₹</span>
+                        <span className="text-lg text-slate-500">₹</span>
                         <span
                           className="text-3xl font-bold"
                           style={{ color: plan.accentColor }}
@@ -322,7 +376,7 @@ export default function MembershipPlans() {
                           {plan.price.toLocaleString()}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">per year</p>
+                      <p className="text-xs text-slate-500 mt-1">per year</p>
                     </div>
 
                     {/* Features */}
@@ -335,7 +389,7 @@ export default function MembershipPlans() {
                           >
                             <CheckCircle className="w-2.5 h-2.5 text-white" />
                           </div>
-                          <span className="text-xs text-gray-600 leading-relaxed">{feature}</span>
+                          <span className="text-xs text-slate-600 leading-relaxed">{feature}</span>
                         </div>
                       ))}
                     </div>
@@ -412,7 +466,7 @@ export default function MembershipPlans() {
               style={{ borderRadius: '20px', boxShadow: '0 4px 16px -4px rgba(0, 0, 0, 0.08)' }}
             >
               <CardContent className="p-5">
-                <h3 className="text-base font-bold text-gray-900 mb-4">What's Next?</h3>
+                <h3 className="text-base font-bold text-slate-900 mb-4">What's Next?</h3>
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { icon: Zap, text: 'Instant activation', color: '#f59e0b' },
@@ -431,7 +485,7 @@ export default function MembershipPlans() {
                       >
                         <item.icon className="w-4 h-4" style={{ color: item.color }} />
                       </div>
-                      <span className="text-xs font-medium text-gray-700">{item.text}</span>
+                      <span className="text-xs font-medium text-slate-700">{item.text}</span>
                     </div>
                   ))}
                 </div>
@@ -466,15 +520,15 @@ export default function MembershipPlans() {
                     className="flex justify-between items-center p-3 rounded-xl"
                     style={{ background: '#f8fafc' }}
                   >
-                    <span className="text-xs text-gray-500">Type</span>
-                    <span className="text-sm font-semibold text-gray-900">{userData.memberType}</span>
+                    <span className="text-xs text-slate-500">Type</span>
+                    <span className="text-sm font-semibold text-slate-900">{userData.memberType}</span>
                   </div>
                   <div
                     className="flex justify-between items-center p-3 rounded-xl"
                     style={{ background: '#f8fafc' }}
                   >
-                    <span className="text-xs text-gray-500">Experience</span>
-                    <span className="text-sm font-semibold text-gray-900">{selectedPlan.experience}</span>
+                    <span className="text-xs text-slate-500">Experience</span>
+                    <span className="text-sm font-semibold text-slate-900">{selectedPlan.experience}</span>
                   </div>
                   <div
                     className="flex justify-between items-center p-3 rounded-xl"
@@ -494,15 +548,15 @@ export default function MembershipPlans() {
                   style={{ background: '#f8fafc' }}
                 >
                   <div className="flex justify-between items-center mb-1.5">
-                    <span className="text-xs text-gray-500">Subtotal</span>
-                    <span className="text-sm text-gray-900">₹{selectedPlan.price.toLocaleString()}</span>
+                    <span className="text-xs text-slate-500">Subtotal</span>
+                    <span className="text-sm text-slate-900">₹{selectedPlan.price.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center mb-3">
-                    <span className="text-xs text-gray-500">Tax</span>
+                    <span className="text-xs text-slate-500">Tax</span>
                     <span className="text-sm text-emerald-600">₹0</span>
                   </div>
-                  <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
-                    <span className="text-sm font-bold text-gray-900">Total</span>
+                  <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
+                    <span className="text-sm font-bold text-slate-900">Total</span>
                     <span
                       className="text-2xl font-bold"
                       style={{ color: selectedPlan.accentColor }}
@@ -535,8 +589,8 @@ export default function MembershipPlans() {
                 </Button>
 
                 {/* Trust */}
-                <div className="mt-5 pt-4 border-t border-gray-100 text-center">
-                  <div className="flex items-center justify-center gap-4 text-gray-400">
+                <div className="mt-5 pt-4 border-t border-slate-100 text-center">
+                  <div className="flex items-center justify-center gap-4 text-slate-400">
                     <div className="flex items-center gap-1">
                       <Shield className="w-3 h-3" />
                       <span className="text-xs">Secure</span>

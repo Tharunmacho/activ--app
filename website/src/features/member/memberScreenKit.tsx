@@ -68,7 +68,7 @@ export const ScreenSubtitle = ({ children }: { children: ReactNode }) => (
 
 /** The white card every section on these screens sits in. */
 export const KitCard = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
-    <div className={`rounded-2xl bg-white border p-5 shadow-sm ${className}`}
+    <div className={`rounded-2xl bg-white border p-5 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] ${className}`}
          style={{ borderColor: PALETTE.border }}>
         {children}
     </div>

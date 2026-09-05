@@ -32,13 +32,26 @@ export default function EventCard({
 
     const registered = event.myRegistration && event.myRegistration.status !== 'cancelled';
     const waitlisted = event.myRegistration?.status === 'waitlist';
+    /*
+     * A held-but-unpaid seat, called what it is.
+     *
+     * "Registered" on a card whose seat is still awaiting payment is the badge
+     * that would cost somebody their place: they see it in the list, believe
+     * they are going, and never open the event again. The hold does not count
+     * against capacity, so the seat goes to whoever pays first.
+     */
+    const awaitingPayment = event.myRegistration?.payment?.status === 'pending';
+
+    const seatLabel = awaitingPayment
+        ? 'Payment due'
+        : waitlisted ? 'Waiting list' : 'Registered';
 
     const banner = resolveMediaUrl(event.bannerUrl);
 
     return (
         <Link
             to={`/member/events/${event.id}`}
-            className={`group block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden
+            className={`group block bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] overflow-hidden
                         hover:border-blue-400 hover:shadow-md transition-all ${past ? 'opacity-75' : ''}`}
         >
             {!compact && banner ? (
@@ -66,11 +79,16 @@ export default function EventCard({
                     ) : null}
 
                     {registered ? (
-                        <span className="absolute top-3 right-3 inline-flex items-center gap-1
-                                         bg-emerald-600 text-white text-[0.6875rem] font-bold uppercase
-                                         tracking-wide px-2.5 py-1 rounded-full shadow-sm">
-                            <BadgeCheck className="w-3 h-3" />
-                            {waitlisted ? 'Waiting list' : 'Registered'}
+                        // Amber, not green, while the fee is outstanding: a green
+                        // badge reading "Payment due" says two opposite things at
+                        // once, and the colour is what gets read at card size.
+                        <span className={`absolute top-3 right-3 inline-flex items-center gap-1
+                                          text-white text-[0.6875rem] font-bold uppercase
+                                          tracking-wide px-2.5 py-1 rounded-full shadow-sm ${
+                            awaitingPayment ? 'bg-amber-500' : 'bg-emerald-600'
+                        }`}>
+                            {awaitingPayment ? <Clock className="w-3 h-3" /> : <BadgeCheck className="w-3 h-3" />}
+                            {seatLabel}
                         </span>
                     ) : null}
                 </div>
@@ -90,13 +108,13 @@ export default function EventCard({
                         {event.title}
                     </h3>
 
-                    <p className="text-[0.78125rem] text-slate-500 mt-1 flex items-center gap-1.5">
+                    <p className="text-[0.8125rem] text-slate-500 mt-1 flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 shrink-0" />
                         <span className="truncate">{formatWhen(event)}</span>
                     </p>
 
                     {event.venue ? (
-                        <p className="text-[0.78125rem] text-slate-500 mt-0.5 flex items-center gap-1.5">
+                        <p className="text-[0.8125rem] text-slate-500 mt-0.5 flex items-center gap-1.5">
                             <MapPin className="w-3.5 h-3.5 shrink-0" />
                             <span className="truncate">{event.venue}</span>
                         </p>
@@ -111,10 +129,16 @@ export default function EventCard({
                         ) : null}
 
                         {compact && registered ? (
-                            <span className="inline-flex items-center gap-1 text-[0.6875rem] font-semibold
-                                             text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                                <BadgeCheck className="w-3 h-3" />
-                                {waitlisted ? 'Waiting list' : 'Registered'}
+                            <span className={`inline-flex items-center gap-1 text-[0.6875rem] font-semibold
+                                              px-2 py-0.5 rounded-full ${
+                                awaitingPayment
+                                    ? 'text-amber-700 bg-amber-50'
+                                    : 'text-emerald-700 bg-emerald-50'
+                            }`}>
+                                {awaitingPayment
+                                    ? <Clock className="w-3 h-3" />
+                                    : <BadgeCheck className="w-3 h-3" />}
+                                {seatLabel}
                             </span>
                         ) : null}
 

@@ -18,7 +18,7 @@ import {
     cmsSaved,
     cmsFailed,
 } from './components/CmsUI';
-import { RepeatableList, StatList, BulletList, IconPicker } from './components/CmsEditors';
+import { RepeatableList, StatList, BulletList, IconPicker , ExtraFieldsEditor } from './components/CmsEditors';
 import MediaPicker from './components/MediaPicker';
 import RichTextEditor from './components/RichTextEditor';
 
@@ -241,6 +241,65 @@ export default function HomeManager() {
                         )}
                     </CmsSection>
 
+                    {/*
+                      The posters are not slides you edit here on purpose: they
+                      are the gallery's own images, read when the page renders.
+                      Post an event once at /cms/gallery and it appears in the
+                      banner; delete it there and it leaves. Nothing to keep in
+                      step, and nothing uploaded twice.
+                    */}
+                    <CmsSection
+                        title="Gallery posters in the banner"
+                        hint="Recent gallery images ride in this banner alongside the slides above, and clicking one
+                              opens that event's page. Manage which images qualify at /cms/gallery — the house button
+                              on a row keeps it out of the banner."
+                        actions={
+                            <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-neutral-300 shrink-0">
+                                <input
+                                    type="checkbox"
+                                    checked={carousel.galleryPosters.enabled}
+                                    onChange={e => setCarousel({
+                                        galleryPosters: { ...carousel.galleryPosters, enabled: e.target.checked },
+                                    })}
+                                    className="rounded border-slate-400"
+                                />
+                                Shown
+                            </label>
+                        }
+                    >
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <CmsField label="How many posters" hint="Newest first. Ten at most.">
+                                <CmsInput
+                                    type="number" min={1} max={10}
+                                    value={String(carousel.galleryPosters.limit)}
+                                    onChange={e => setCarousel({
+                                        galleryPosters: {
+                                            ...carousel.galleryPosters,
+                                            limit: Number(e.target.value) || 0,
+                                        },
+                                    })}
+                                />
+                            </CmsField>
+
+                            <CmsField label="Where they sit" hint="Which a visitor sees first: your message, or your events.">
+                                <select
+                                    value={carousel.galleryPosters.position}
+                                    onChange={e => setCarousel({
+                                        galleryPosters: {
+                                            ...carousel.galleryPosters,
+                                            position: e.target.value === 'before' ? 'before' : 'after',
+                                        },
+                                    })}
+                                    className="w-full bg-slate-50 dark:bg-black border border-slate-300 dark:border-[#2a2a2a]
+                                               rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-neutral-100"
+                                >
+                                    <option value="after">After the slides above</option>
+                                    <option value="before">Before the slides above</option>
+                                </select>
+                            </CmsField>
+                        </div>
+                    </CmsSection>
+
                     <CmsSection
                         title="Highlight card"
                         hint="Overlaps the bottom edge of the banner."
@@ -300,6 +359,7 @@ export default function HomeManager() {
                 </div>
 
                 <SaveRow block="carousel" label="Save banner" />
+
             </CmsCard>
 
             {/* ============================================== 2. ABOUT */}
@@ -383,6 +443,12 @@ export default function HomeManager() {
                             max={6}
                         />
                     </CmsSection>
+
+                    <ExtraFieldsEditor
+                        items={about.extraFields || []}
+                        onChange={extraFields => setAbout({ extraFields })}
+                        hint="Anything else this block should say. Each row shows as a labelled line under the figures bar."
+                    />
                 </div>
 
                 <SaveRow block="about" label="Save About block" />
