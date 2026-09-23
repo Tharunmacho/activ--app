@@ -12,6 +12,8 @@
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
+    /* The NIC catalogue ships as JSON and is loaded with a dynamic import. */
+    "resolveJsonModule": true,
     "jsx": "react-jsx",
 
     /* Linting */

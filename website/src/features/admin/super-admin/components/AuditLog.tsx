@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Loader2, ShieldAlert, Search } from 'lucide-react';
 import { apiFetch } from '@/services/activApi';
 
+import { CARD_TITLE } from '@/components/layout/appTypography';
 /**
  * The audit stream — who did what, across the whole platform.
  *
@@ -106,8 +107,8 @@ export default function AuditLog() {
     return (
         <div className="bg-white rounded-xl border">
             <header className="px-6 py-5 border-b">
-                <h2 className="text-lg font-bold text-slate-900">Audit log</h2>
-                <p className="text-sm text-slate-500 mt-0.5">
+                <h2 className={`${CARD_TITLE} text-slate-900`}>Audit log</h2>
+                <p className="text-[1.25rem] text-slate-500 mt-0.5">
                     {counts.all !== undefined
                         ? `${counts.all} recorded action(s) — every approval, rejection and admin change.`
                         : 'Every approval, rejection and admin change, with who did it.'}
@@ -121,7 +122,7 @@ export default function AuditLog() {
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="Who did what — name, email or applicant"
-                        className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm
+                        className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-[1.25rem]
                                    focus:outline-none focus:ring-2 focus:ring-blue-600"
                     />
                 </div>
@@ -131,7 +132,7 @@ export default function AuditLog() {
                         <button
                             key={c.key}
                             onClick={() => setCategory(c.key)}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            className={`px-3 py-2 rounded-lg text-[1.25rem] font-medium transition-colors ${
                                 category === c.key
                                     ? 'bg-blue-600 text-white'
                                     : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -156,8 +157,8 @@ export default function AuditLog() {
                         <div key={e.id} className="px-6 py-4">
                             <div className="flex items-start justify-between gap-4">
                                 <div className="min-w-0">
-                                    <p className="text-sm text-slate-900">{e.summary || e.action}</p>
-                                    <p className="text-xs text-slate-500 mt-1">
+                                    <p className="text-[1.25rem] text-slate-900">{e.summary || e.action}</p>
+                                    <p className="text-[1.1875rem] text-slate-500 mt-1">
                                         {e.actorName || e.actorEmail}
                                         {e.actorRoleLabel && ` · ${e.actorRoleLabel}`}
                                         {e.location && ` · ${e.location}`}
@@ -165,11 +166,11 @@ export default function AuditLog() {
                                 </div>
 
                                 <div className="text-right shrink-0">
-                                    <p className="text-xs text-slate-400 whitespace-nowrap">{when(e.createdAt)}</p>
+                                    <p className="text-[1.1875rem] text-slate-400 whitespace-nowrap">{when(e.createdAt)}</p>
                                     {/* A super admin acting on a tier's behalf is worth
                                         marking: the decision was not the region's own. */}
                                     {e.proxy && (
-                                        <span className="inline-flex items-center gap-1 mt-1 text-[0.625rem]
+                                        <span className="inline-flex items-center gap-1 mt-1 text-[1.0625rem]
                                                          bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">
                                             <ShieldAlert className="w-3 h-3" /> proxy
                                         </span>
@@ -187,7 +188,7 @@ export default function AuditLog() {
                         onClick={() => load(page + 1, false)}
                         disabled={loading}
                         className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg
-                                   border border-slate-200 text-sm font-medium disabled:opacity-60"
+                                   border border-slate-200 text-[1.25rem] font-medium disabled:opacity-60"
                     >
                         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                         {loading ? 'Loading…' : 'Load more'}

@@ -200,7 +200,12 @@ export const BlockAdminProvider: React.FC<{ children: ReactNode }> = ({ children
         const nextPending = (prev.pending || []).filter(a => a.id !== applicant.id);
         const updatedApplicant: any = {
           ...applicant,
-          status: action === 'approve' ? 'Pending-District' : 'Rejected',
+          // One decision ends the review, so an approval is THE approval: the
+          // member profile has been created and there is no next tier for the
+          // file to move to. This used to stamp `Pending-District`, which would
+          // now leave the card claiming a stage that no longer exists until the
+          // next refetch corrected it.
+          status: action === 'approve' ? 'Approved' : 'Rejected',
           stage: action === 'approve' ? 'approved' : 'rejected',
           statusLabel: action === 'approve' ? 'Approved' : 'Rejected',
           approvedByText: action === 'approve' ? `Approved by ${dynamicRoleTitle}` : `Rejected by ${dynamicRoleTitle}`,

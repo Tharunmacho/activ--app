@@ -13,6 +13,7 @@ import { apiFetch } from "@/services/activApi";
 import { resolveMediaUrl } from "@/config/api.config";
 import { useActiveCompanyStore } from "@/contexts/ActiveCompanyContext";
 
+import { CARD_TITLE } from '@/components/layout/appTypography';
 const Products = () => {
     const navigate = useNavigate();
     const [products, setProducts] = useState<any[]>([]);
@@ -102,13 +103,20 @@ const Products = () => {
      * that takes down the page.
      */
     const query = (searchQuery || '').toLowerCase();
+    /*
+     * Name and description, not category.
+     *
+     * Category is inherited from the company now and is neither shown on the
+     * card nor typed by anyone, so offering it as a search term meant the field
+     * said "or category" while the only thing a member could match on was a
+     * word they never wrote. The description is on the card in front of them
+     * and is theirs.
+     */
     const filteredProducts = products.filter(product =>
         (product?.name || '').toLowerCase().includes(query) ||
-        (product?.category || '').toLowerCase().includes(query)
+        (product?.description || '').toLowerCase().includes(query)
     );
 
-    const stockTone = (stock: number) =>
-        stock > 10 ? 'text-green-600' : stock > 0 ? 'text-amber-600' : 'text-red-600';
 
     return (
         <BusinessPageShell
@@ -149,10 +157,10 @@ const Products = () => {
                                 </span>
                             )}
                             <div className="min-w-0">
-                                <p className="text-xs text-blue-600 font-semibold uppercase tracking-wider">
+                                <p className="text-[1.1875rem] text-blue-600 font-semibold uppercase tracking-wider">
                                     Active catalog
                                 </p>
-                                <p className="text-sm font-bold text-slate-800 truncate">
+                                <p className="text-[1.25rem] font-bold text-slate-800 truncate">
                                     {activeCompany.businessName}
                                 </p>
                             </div>
@@ -162,10 +170,10 @@ const Products = () => {
                     <div className="flex-1 relative">
                         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <Input
-                            placeholder="Search products by name or category…"
+                            placeholder="Search products by name or description…"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-10 border-slate-200 focus-visible:ring-blue-500"
+                            className="pl-11 h-12 !text-[1.25rem] bg-slate-50 border-slate-200 placeholder:text-slate-400 focus-visible:bg-white focus-visible:ring-blue-500"
                         />
                     </div>
 
@@ -251,48 +259,42 @@ const Products = () => {
                                             <Package className="h-14 w-14 text-slate-300" strokeWidth={1.5} />
                                         </div>
                                     )}
-                                    <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-white/95 shadow-sm text-xs font-semibold text-blue-600">
+                                    <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-white/95 shadow-sm text-[1.1875rem] font-semibold text-blue-600">
                                         ₹{Number(product.price || 0).toLocaleString('en-IN')}
                                     </span>
                                 </div>
 
                                 <div className="p-5 flex flex-col flex-1">
-                                    <h3 className="font-bold text-base text-slate-900 line-clamp-1 mb-1.5">
+                                    <h3 className={`${CARD_TITLE} text-slate-900 line-clamp-1 mb-1.5`}>
                                         {product.name}
                                     </h3>
-                                    <p className="text-sm text-slate-500 mb-4 line-clamp-2 flex-1">
+                                    <p className="text-[1.25rem] text-slate-500 mb-4 line-clamp-2 flex-1">
                                         {product.description || 'No description'}
                                     </p>
 
-                                    <dl className="space-y-1.5 text-sm mb-4">
-                                        <div className="flex items-center justify-between">
-                                            <dt className="text-slate-500">Category</dt>
-                                            <dd className="font-medium text-slate-700 text-xs truncate ml-2">
-                                                {product.category}
-                                            </dd>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            <dt className="text-slate-500">Stock</dt>
-                                            {/*
-                                                `stock`, not `stockQuantity` — the schema field.
-                                                Reading the missing name rendered "undefined
-                                                units" and, since every comparison against
-                                                undefined is false, painted every product red as
-                                                though the whole catalog were out of stock.
-                                            */}
-                                            <dd className={`font-medium text-xs ${stockTone(Number(product.stock || 0))}`}>
-                                                {Number(product.stock || 0)} units
-                                            </dd>
-                                        </div>
-                                        {product.sku && (
-                                            <div className="flex items-center justify-between">
-                                                <dt className="text-slate-500">SKU</dt>
-                                                <dd className="font-medium text-slate-700 text-xs truncate ml-2">
-                                                    {product.sku}
-                                                </dd>
-                                            </div>
-                                        )}
-                                    </dl>
+                                    {/*
+                                        NEITHER CATEGORY NOR SKU IS PRINTED HERE.
+
+                                        Nobody types them any more: the category is
+                                        inherited from the company's own NIC
+                                        classification and the SKU is generated
+                                        (`SKU-<timestamp>`). Printing a value the
+                                        member never chose, on the card they use to
+                                        recognise their own product, is a row of
+                                        machine bookkeeping crowding out the two
+                                        things they actually scan for — what it costs
+                                        and how many are left. Both are still stored,
+                                        and search still matches on them.
+                                    */}
+                                    {/*
+                                      NO STOCK LINE.
+
+                                      The field came off the product form, so nothing
+                                      sets it any more — and the card went on printing
+                                      "Stock 0 units" in red on every row, which says a
+                                      catalogue is out of stock when it is simply not
+                                      something this association tracks.
+                                    */}
 
                                     <div className="flex gap-2">
                                         <Button
@@ -323,7 +325,7 @@ const Products = () => {
                         List view as a real table.
 
                         This was a `space-y-4` stack of full-width cards — a table's
-                        worth of data (name, category, price, stock, SKU) rendered as
+                        worth of data (name, price, stock) rendered as
                         rows ~1100px wide holding ~120px of content, so the middle of
                         every row was empty. Every action was also keyed off
                         `product.id`, which Mongo documents do not have, so Edit
@@ -337,10 +339,7 @@ const Products = () => {
                                     <TableRow className="hover:bg-transparent">
                                         <TableHead className="w-[4.375rem]">Image</TableHead>
                                         <TableHead>Product</TableHead>
-                                        <TableHead className="hidden md:table-cell">Category</TableHead>
-                                        <TableHead className="hidden lg:table-cell">SKU</TableHead>
                                         <TableHead className="text-right">Price</TableHead>
-                                        <TableHead className="text-right">Stock</TableHead>
                                         <TableHead className="text-right w-[10rem]">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -362,21 +361,12 @@ const Products = () => {
                                             </TableCell>
                                             <TableCell className="max-w-xs">
                                                 <p className="font-semibold text-slate-900 truncate">{product.name}</p>
-                                                <p className="text-xs text-slate-500 truncate">
+                                                <p className="text-[1.1875rem] text-slate-500 truncate">
                                                     {product.description || 'No description'}
                                                 </p>
                                             </TableCell>
-                                            <TableCell className="hidden md:table-cell text-slate-600">
-                                                {product.category}
-                                            </TableCell>
-                                            <TableCell className="hidden lg:table-cell text-slate-500 text-xs">
-                                                {product.sku || '—'}
-                                            </TableCell>
                                             <TableCell className="text-right font-semibold text-blue-600 tabular-nums">
                                                 ₹{Number(product.price || 0).toLocaleString('en-IN')}
-                                            </TableCell>
-                                            <TableCell className={`text-right tabular-nums font-medium ${stockTone(Number(product.stock || 0))}`}>
-                                                {Number(product.stock || 0)}
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-2">

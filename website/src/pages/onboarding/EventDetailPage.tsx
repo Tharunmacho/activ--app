@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
     ArrowLeft, ArrowRight, Calendar, Clock, MapPin, Phone, Mail, User, Users, ExternalLink,
+    Timer, Lock, Video,
 } from 'lucide-react';
 import {
     getCmsEvent, getCmsEvents, getEventsSettings,
@@ -10,8 +11,16 @@ import {
 import { HeaderSection } from '../../components/layout/HeaderSection';
 import { FooterSection } from '../../components/layout/FooterSection';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
-import { PAGE_CONTAINER } from '@/components/layout/pageContainer';
-import { SECTION_HEADING, SECTION_LEDE, EYEBROW, CARD_BODY, MICRO_LABEL } from '@/components/layout/typography';
+import EventPriceTiers from '@/components/shared/EventPriceTiers';
+import EventActions from '@/components/shared/EventActions';
+import { countdownLabel, eventPhase } from '@/lib/eventCalendar';
+import { getBookableEvent, type BookableEvent } from '@/services/eventBookingApi';
+import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
+import { SECTION_HEADING, SECTION_LEDE, MICRO_LABEL } from '@/components/layout/typography';
+import {
+    SHEET, BIZ_CARD, BIZ_CARD_TITLE, BIZ_BADGE, BIZ_WELL,
+    BIZ_DETAIL_LABEL, BIZ_DETAIL_VALUE,
+} from '@/components/layout/surface';
 import { Reveal } from '@/components/shared/Reveal';
 
 /**
@@ -26,12 +35,30 @@ import { Reveal } from '@/components/shared/Reveal';
  * The same shape as the gallery poster page on purpose: a visitor who has
  * opened one knows how to read the other, and the two pages share their
  * skeleton, their missing-item state and their related row.
+ *
+ * ------------------------------------------------------------ the surface
+ *
+ * Everything below the banner sits on the tinted `SHEET` in white `BIZ_CARD`s —
+ * the same surface the booking flow this page hands off to uses, and the same
+ * one the member meets creating their business account. See
+ * `components/layout/surface.ts`.
+ *
+ * It was white panels on a white page before, separated by a `brand-100/70`
+ * hairline at 70% opacity, which at reading distance is no separation at all:
+ * the side card, the speaker boxes and the document were one continuous sheet
+ * of white and the page read as unfinished rather than as calm.
  */
 
-/** The side card's button, shared by its internal and external forms. */
+/**
+ * The side card's button, shared by its internal and external forms.
+ *
+ * The navy pill the booking flow opens with, so pressing this and landing on
+ * "Continue as guest" is one control repeated rather than two that resemble
+ * each other.
+ */
 const CTA_CLASS =
-    'mt-6 w-full inline-flex items-center justify-center gap-2 bg-brand-800 hover:bg-brand-700 ' +
-    'text-white px-6 py-3.5 rounded-full font-bold text-[0.8125rem] uppercase tracking-[0.1em] transition-colors';
+    'mt-5 w-full inline-flex items-center justify-center gap-2 bg-brand-800 hover:bg-brand-700 ' +
+    'text-white px-6 py-3.5 rounded-full font-bold text-[1rem] uppercase tracking-[0.1em] transition-colors';
 
 /** "Tue, 20 Jan 2024" — the date as it reads on the page. */
 const formatDay = (iso?: string | null): string => {
@@ -51,12 +78,25 @@ const formatTime = (iso?: string | null): string => {
     return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 };
 
+/** The facts list joins multi-line values with this. */
+const NEWLINE = String.fromCharCode(10);
+
 export default function EventDetailPage() {
     const { id } = useParams<{ id: string }>();
 
     const [event, setEvent] = useState<CmsEvent | null>(null);
     const [related, setRelated] = useState<CmsEvent[]>([]);
     const [settings, setSettings] = useState<EventsSettings | null>(null);
+    /**
+     * The LIVE booking position - seats taken, seats left, whether the deadline
+     * has passed, and what THIS reader would be charged.
+     *
+     * A second call rather than more fields on the CMS event, because it is the
+     * same resolver the booking page uses. Two endpoints answering "how many
+     * seats are left" is how a page comes to promise a seat the checkout then
+     * refuses. Null until it lands, and null for ever if it fails.
+     */
+    const [availability, setAvailability] = useState<BookableEvent | null>(null);
     const [loading, setLoading] = useState(true);
     const [missing, setMissing] = useState(false);
 
@@ -86,6 +126,13 @@ export default function EventDetailPage() {
                 setLoading(false);
             });
 
+        // Silent by design: the page was complete before this existed, and an
+        // availability call that fails must not blank an event listing.
+        setAvailability(null);
+        getBookableEvent(String(id || ''))
+            .then((live) => { if (!cancelled) setAvailability(live); })
+            .catch(() => { /* the seat meter is simply not drawn */ });
+
         // Only for the row at the foot of the page, so its failure is silent.
         getCmsEvents()
             .then((list) => { if (!cancelled) setRelated(list || []); })
@@ -98,9 +145,9 @@ export default function EventDetailPage() {
 
     if (loading) {
         return (
-            <div className="flex flex-col min-h-screen font-sans bg-white">
+            <div className="flex flex-col min-h-screen font-sans dot-band">
                 <HeaderSection />
-                <div className={`${PAGE_CONTAINER} py-20 animate-pulse flex-grow`}>
+                <div className={`${SCREEN_CONTAINER} py-20 animate-pulse flex-grow`}>
                     <div className="h-4 w-32 bg-slate-200 rounded mb-10" />
                     <div className="h-[22rem] md:h-[30rem] bg-slate-200 rounded-3xl mb-10" />
                     <div className="h-8 w-2/3 bg-slate-200 rounded mb-4" />
@@ -114,9 +161,9 @@ export default function EventDetailPage() {
 
     if (missing || !event) {
         return (
-            <div className="flex flex-col min-h-screen font-sans bg-white">
+            <div className="flex flex-col min-h-screen font-sans dot-band">
                 <HeaderSection />
-                <div className={`${PAGE_CONTAINER} py-24 flex-grow text-center`}>
+                <div className={`${SCREEN_CONTAINER} py-24 flex-grow text-center`}>
                     <h1 className={`${SECTION_HEADING} text-brand-800 mb-4`}>Not found</h1>
                     <p className={`${SECTION_LEDE} text-gray-500 mb-8`}>
                         This event is no longer listed.
@@ -124,7 +171,7 @@ export default function EventDetailPage() {
                     <Link
                         to="/events"
                         className="inline-flex items-center gap-2 bg-brand-800 hover:bg-brand-700 text-white
-                                   px-8 py-3.5 rounded-full font-bold text-[0.8125rem] uppercase tracking-[0.1em]
+                                   px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase tracking-[0.1em]
                                    transition-colors"
                     >
                         <ArrowLeft size={15} /> Back to Events
@@ -137,17 +184,58 @@ export default function EventDetailPage() {
 
     // ---------------------------------------------------------------- content
 
+    /*
+     * ONLINE OR IN PERSON. Anything but an explicit `online` is in person,
+     * which is every event written before the field existed.
+     */
+    const isOnline = event.mode === 'online';
+
     const agenda = (event.agenda || []).filter(row => row && (row.title || row.startTime));
     const speakers = (event.speakers || []).filter(person => person && person.name);
     const day = formatDay(event.startAt);
+    /*
+     * The last day, and only when it is a DIFFERENT day.
+     *
+     * `endAt` carries the finishing time of a single-day event as well, so
+     * comparing the formatted days rather than the instants is what keeps a
+     * one-day conference from reading as "12 Oct - 12 Oct".
+     */
+    const lastDay = formatDay(event.endAt);
+    const runsOverDays = !!lastDay && lastDay !== day;
     const startTime = formatTime(event.startAt);
     const endTime = formatTime(event.endAt);
+
+    /* ------------------------------------------------- the booking position
+     *
+     * Derived ABOVE the facts list because the list needs it: "Book by" is a
+     * fact about the event like the date and the venue, and it is drawn only
+     * while the deadline is still ahead. It used to hang below the seat meter
+     * in markup of its own, one indent out of step with the four rows above it.
+     */
+    const capacity = Number(availability?.capacity || 0);
+    const capped = capacity > 0;
+    const seatsLeft = capped ? Math.max(0, Number(availability?.seatsLeft || 0)) : null;
+    const soldOut = capped && seatsLeft === 0;
+    // `closed` is the server's answer about the deadline; it is not derived
+    // here, because the deadline is applied in the timezone the server keeps.
+    const bookingClosed = !!availability?.closed;
+    const takenPercent = capped
+        ? Math.min(100, Math.round(((capacity - Number(seatsLeft)) / capacity) * 100))
+        : 0;
+    // Under a quarter left is worth saying out loud. Above it, a bar is enough
+    // - an urgency line on a half-empty hall is the kind of claim that stops
+    // being believed the second time somebody reads it.
+    const fillingFast = capped && !soldOut && Number(seatsLeft) <= Math.max(1, capacity * 0.25);
+
+    const deadline = formatDay(event.registrationDeadline);
 
     const facts = [
         day ? {
             icon: <Calendar size={16} />,
-            label: 'Date',
-            value: day,
+            label: runsOverDays ? 'Dates' : 'Date',
+            /* A three-day conclave says so here. Printing only the first day
+               tells somebody booking travel they need one night. */
+            value: runsOverDays ? `${day} – ${lastDay}` : day,
         } : null,
         startTime ? {
             icon: <Clock size={16} />,
@@ -155,7 +243,22 @@ export default function EventDetailPage() {
             // An end time is optional — many events are announced without one.
             value: endTime ? `${startTime} – ${endTime}` : startTime,
         } : null,
-        (event.venue || event.location) ? {
+        /*
+         * WHERE, AND IT IS TWO DIFFERENT ANSWERS.
+         *
+         * An online event has no venue row — printing one would have a reader
+         * looking for an address that does not exist — and an offline one has
+         * no platform row. The mode decides which, not the presence of the
+         * fields: an event switched from in-person to online keeps whatever
+         * address was typed before, and reading the fields would show both.
+         */
+        isOnline ? {
+            icon: <Video size={16} />,
+            label: 'Online event',
+            value: event.onlinePlatform
+                ? `Joining link on ${event.onlinePlatform}`
+                : 'Attend from anywhere — a joining link is sent to everyone who books',
+        } : (event.venue || event.location) ? {
             icon: <MapPin size={16} />,
             label: 'Venue',
             value: event.venueAddress
@@ -167,12 +270,42 @@ export default function EventDetailPage() {
             label: 'Contact',
             value: [event.contactName, event.contactPhone, event.contactEmail].filter(Boolean).join('\n'),
         } : null,
-        event.capacity ? {
+        /*
+         * The static capacity, ONLY until the live meter arrives.
+         *
+         * Once `availability` has landed the side card draws seats taken
+         * against seats left, which says everything this row said and more.
+         * Printing both puts "60" three centimetres above "12 of 60 left" and
+         * asks the reader to work out that they are the same event.
+         */
+        (event.capacity && !availability) ? {
             icon: <Users size={16} />,
             label: 'Seats',
             value: String(event.capacity),
         } : null,
+        /*
+         * WHEN BOOKING SHUTS — a fact, in the facts list.
+         *
+         * The deadline was captured in the CMS and shown to nobody, so the
+         * first a visitor heard of it was the checkout turning them away. Not
+         * drawn once it has passed: the button says so by then, and a date that
+         * has gone reads as an invitation.
+         */
+        (deadline && !bookingClosed) ? {
+            icon: <Clock size={16} />,
+            label: 'Book by',
+            value: deadline,
+        } : null,
     ].filter(Boolean) as { icon: React.ReactNode; label: string; value: string }[];
+
+    const countdown = countdownLabel(event.startAt);
+    /*
+     * Ahead, on, or over - and an end time is respected where there is one.
+     * Deciding this from the start time alone called a running event finished.
+     */
+    const phase = eventPhase(event);
+    const hasPassed = phase === 'past';
+    const isLive = phase === 'live';
 
     /* Same category first, then anything else — and never this event itself. */
     const others = (related || []).filter(e => e.id !== event.id);
@@ -180,30 +313,46 @@ export default function EventDetailPage() {
     const moreEvents = [...sameCategory, ...others.filter(e => !sameCategory.includes(e))].slice(0, 4);
 
     return (
-        <div className="flex flex-col min-h-screen font-sans bg-white">
+        <div className="flex flex-col min-h-screen font-sans dot-band">
             <HeaderSection />
 
             <main className="flex-grow">
                 <section className="w-full pt-10 pb-16 md:pt-14 md:pb-24 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-96 h-96 bg-brand-50/60 rounded-full blur-3xl
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-brand-50/60 rounded-full blur-3xl transform-gpu
                                     -z-10 translate-x-1/3 -translate-y-1/3 transform-gpu pointer-events-none" />
 
-                    <div className={`${PAGE_CONTAINER} relative z-10`}>
+                    <div className={`${SCREEN_CONTAINER} relative z-10`}>
 
+                        {/* A control, not a caption — the booking flow's own
+                            "Back to event" link, so the two steps offer the same
+                            way out. */}
                         <Link
                             to="/events"
-                            className="inline-flex items-center gap-2 text-gray-500 hover:text-brand-700
-                                       font-bold text-[0.8125rem] uppercase tracking-[0.1em] transition-colors mb-8"
+                            className="inline-flex items-center gap-2 -ml-3 px-3 py-2 rounded-lg
+                                       text-[1.125rem] font-bold text-slate-600 hover:text-brand-800
+                                       hover:bg-brand-50 transition-colors mb-6"
                         >
-                            <ArrowLeft size={15} /> Back to Events
+                            <ArrowLeft size={16} /> Back to Events
                         </Link>
 
                         {/* ---- the banner ---- */}
                         {event.media?.url && (
                             <Reveal>
-                                <div className="rounded-[1.75rem] overflow-hidden border border-brand-100/70 bg-gray-50
-                                                shadow-[0_18px_60px_-24px_rgb(28_46_104/0.35)]">
-                                    <div className="w-full h-[18rem] sm:h-[24rem] lg:h-[30rem]">
+                                <div className={`${BIZ_CARD} overflow-hidden p-0 rounded-[1.75rem]`}>
+                                    {/*
+                                      * 16/9, not a fixed 30rem strip.
+                                      *
+                                      * A tall poster or a screenshot dropped
+                                      * into a 480px band is cropped through its
+                                      * middle — the live page was showing the
+                                      * top third of somebody's screenshot with
+                                      * the heading sliced off, which reads as a
+                                      * broken image rather than as a crop. An
+                                      * aspect ratio keeps the same shape at
+                                      * every width and matches the card the
+                                      * visitor clicked to get here.
+                                      */}
+                                    <div className="w-full aspect-[16/9] max-h-[30rem]">
                                         <CmsMediaFrame media={event.media} priority width={1100} />
                                     </div>
                                 </div>
@@ -211,29 +360,103 @@ export default function EventDetailPage() {
                         )}
 
                         {/* ---- title and facts ---- */}
-                        <div className="mt-10 grid gap-10 lg:grid-cols-[1.6fr_1fr] items-start">
+                        {/*
+                          * THE SHEET THE CARDS STAND ON.
+                          *
+                          * Everything from here down was white on white with a
+                          * 70%-opacity hairline between the layers, which is not
+                          * a layer. One tinted sheet, and the cards on it have an
+                          * edge without any of them being outlined more heavily.
+                          */}
+                        <div className={`${SHEET} mt-10`}>
+                        <div className="grid gap-4 sm:gap-5 lg:gap-6 lg:grid-cols-[1.6fr_1fr] items-start">
 
-                            <div>
+                            <div className={`${BIZ_CARD} p-6 sm:p-8`}>
                                 {event.category && (
-                                    <div className="inline-flex items-center space-x-2 bg-brand-50 text-brand-600 px-4 py-1.5
-                                                    rounded-full mb-5 border border-brand-100">
-                                        <span className={EYEBROW}>{event.category}</span>
+                                    <span className={`${BIZ_BADGE} bg-brand-50 text-brand-700 border border-brand-100 mb-5`}>
+                                        {event.category}
+                                    </span>
+                                )}
+
+                                <h1 className={`${SECTION_HEADING} text-brand-800 mb-5`}>
+                                    {/* Never an empty heading - the same fallback
+                                        the cards use, because nothing on the
+                                        event form is required. */}
+                                    {event.title || 'Untitled event'}
+                                </h1>
+
+                                {/*
+                                  * HOW SOON, AND HOW FULL - one line, above the
+                                  * description.
+                                  *
+                                  * A date in a sidebar is a fact to be looked
+                                  * up; "In 6 days" beside the title is a fact
+                                  * that has already been read. The two chips
+                                  * answer the questions somebody skims for
+                                  * before deciding whether to read the rest,
+                                  * and each is drawn only when it has something
+                                  * to say.
+                                  */}
+                                {(countdown || hasPassed || isLive || fillingFast || soldOut) && (
+                                    <div className="flex flex-wrap items-center gap-2 mb-6">
+                                        {hasPassed ? (
+                                            <span className={`${BIZ_BADGE} bg-slate-100 text-slate-500 normal-case tracking-normal`}>
+                                                <Timer size={13} /> This event has taken place
+                                            </span>
+                                        ) : isLive ? (
+                                            /* A live event gets the one chip on
+                                               the page that moves, because
+                                               "happening now" is the only state
+                                               a reader might act on this
+                                               minute. */
+                                            <span className={`${BIZ_BADGE} bg-emerald-50 text-emerald-700 border border-emerald-100 normal-case tracking-normal`}>
+                                                <span className="relative flex h-2 w-2">
+                                                    <span className="absolute inline-flex h-full w-full animate-ping
+                                                                     rounded-full bg-emerald-400 opacity-75" />
+                                                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                                                </span>
+                                                Happening now
+                                            </span>
+                                        ) : countdown && (
+                                            <span className={`${BIZ_BADGE} bg-brand-50 text-brand-700 border border-brand-100 normal-case tracking-normal`}>
+                                                <Timer size={13} /> {countdown}
+                                            </span>
+                                        )}
+                                        {soldOut ? (
+                                            <span className={`${BIZ_BADGE} bg-rose-50 text-rose-700 border border-rose-100 normal-case tracking-normal`}>
+                                                <Users size={13} /> Fully booked
+                                            </span>
+                                        ) : fillingFast && (
+                                            <span className={`${BIZ_BADGE} bg-amber-50 text-amber-800 border border-amber-100 normal-case tracking-normal`}>
+                                                <Users size={13} /> Only {seatsLeft} seats left
+                                            </span>
+                                        )}
                                     </div>
                                 )}
 
-                                <h1 className={`${SECTION_HEADING} text-brand-800 mb-5`}>{event.title}</h1>
-
                                 {event.description && (
-                                    <p className={`${CARD_BODY} text-gray-600 whitespace-pre-line mb-8`}>
+                                    <p className="text-[1.25rem] sm:text-[1.375rem] leading-relaxed font-medium text-slate-600
+                                                  whitespace-pre-line mb-6">
                                         {event.description}
                                     </p>
                                 )}
 
+                                {/*
+                                  * DIARY, SHARE, DIRECTIONS.
+                                  *
+                                  * Under the description and above the
+                                  * programme, which is where a reader is when
+                                  * they have decided they are interested and
+                                  * have not decided they are ready to book.
+                                  * That reader used to have nothing to press.
+                                  */}
+                                <EventActions event={event} className="mb-8" />
+
                                 {/* ---- agenda ---- */}
                                 {agenda.length > 0 && (
-                                    <div className="mb-10">
-                                        <h2 className="text-lg font-black text-brand-800 mb-4">Programme</h2>
-                                        <ol className="border-l-2 border-brand-100 pl-5 space-y-6">
+                                    <div className="mt-8 pt-8 border-t border-slate-100">
+                                        <h2 className={`${BIZ_CARD_TITLE} mb-5`}>Programme</h2>
+                                        <ol className="border-l-2 border-slate-200 pl-5 space-y-6">
                                             {agenda.map((row, i) => (
                                                 <li key={row.id || i} className="relative">
                                                     {/* The dot sits on the rule, so the times read as a timeline
@@ -241,18 +464,18 @@ export default function EventDetailPage() {
                                                     <span className="absolute -left-[1.6875rem] top-1.5 w-3 h-3 rounded-full
                                                                      bg-brand-600 ring-4 ring-white" />
                                                     {(row.startTime || row.endTime) && (
-                                                        <p className={`${MICRO_LABEL} text-brand-500 mb-1`}>
+                                                        <p className={`${BIZ_DETAIL_LABEL} mb-1`}>
                                                             {row.startTime}{row.endTime ? ` – ${row.endTime}` : ''}
                                                         </p>
                                                     )}
-                                                    <p className="text-[0.9375rem] font-extrabold text-brand-800">{row.title}</p>
+                                                    <p className="text-[1.25rem] font-bold text-slate-900">{row.title}</p>
                                                     {row.description && (
-                                                        <p className="text-sm text-gray-500 mt-1 whitespace-pre-line">
+                                                        <p className="text-[1.25rem] text-slate-500 mt-1 whitespace-pre-line">
                                                             {row.description}
                                                         </p>
                                                     )}
                                                     {(row.speaker || row.location) && (
-                                                        <p className={`${MICRO_LABEL} text-gray-400 mt-1.5`}>
+                                                        <p className={`${BIZ_DETAIL_LABEL} mt-1.5`}>
                                                             {[row.speaker, row.location].filter(Boolean).join(' · ')}
                                                         </p>
                                                     )}
@@ -264,30 +487,45 @@ export default function EventDetailPage() {
 
                                 {/* ---- speakers ---- */}
                                 {speakers.length > 0 && (
-                                    <div className="mb-8">
-                                        <h2 className="text-lg font-black text-brand-800 mb-4">Speakers</h2>
-                                        <div className="grid gap-4 sm:grid-cols-2">
+                                    <div className="mt-8 pt-8 border-t border-slate-100">
+                                        <h2 className={`${BIZ_CARD_TITLE} mb-5`}>Speakers</h2>
+                                        {/*
+                                          * `auto-fit` rather than a fixed two
+                                          * columns.
+                                          *
+                                          * A single speaker took half the width
+                                          * and left the other half empty — a
+                                          * bordered box with one name in it,
+                                          * which reads as a card that failed to
+                                          * fill. The track collapses to the
+                                          * content when there is one, and still
+                                          * gives two or three a row.
+                                          */}
+                                        <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(15rem,max-content))]">
                                             {speakers.map((person, i) => (
                                                 <div
                                                     key={person.id || i}
-                                                    className="flex items-start gap-4 rounded-2xl border border-brand-100/70
-                                                               bg-[#fafbfc] p-4"
+                                                    /* A tinted well inside the card, not a second
+                                                       card: `slate-50` on white is the same step
+                                                       down the sheet is from the page. */
+                                                    className="flex items-start gap-4 rounded-xl border border-slate-200
+                                                               bg-slate-50 p-4"
                                                 >
                                                     <div className="w-14 h-14 rounded-full overflow-hidden bg-white border
-                                                                    border-brand-100 shrink-0 flex items-center justify-center">
+                                                                    border-slate-200 shrink-0 flex items-center justify-center">
                                                         {person.photoUrl
                                                             ? <CmsMediaFrame media={{ url: person.photoUrl }} width={80} />
-                                                            : <User size={20} className="text-brand-500" />}
+                                                            : <User size={20} className="text-slate-400" />}
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className="text-[0.9375rem] font-extrabold text-brand-800">{person.name}</p>
+                                                        <p className="text-[1.25rem] font-bold text-slate-900">{person.name}</p>
                                                         {(person.role || person.organization) && (
-                                                            <p className="text-xs text-gray-500 mt-0.5">
+                                                            <p className="text-[1.1875rem] font-semibold text-slate-500 mt-0.5">
                                                                 {[person.role, person.organization].filter(Boolean).join(', ')}
                                                             </p>
                                                         )}
                                                         {person.bio && (
-                                                            <p className="text-sm text-gray-500 mt-2">{person.bio}</p>
+                                                            <p className="text-[1.25rem] text-slate-500 mt-2">{person.bio}</p>
                                                         )}
                                                     </div>
                                                 </div>
@@ -298,81 +536,273 @@ export default function EventDetailPage() {
                             </div>
 
                             {/* ---- the side card ---- */}
-                            <aside className="rounded-[1.5rem] border border-brand-100/70 bg-[#fafbfc] p-6 sm:p-8
-                                              shadow-[0_10px_36px_-18px_rgb(28_46_104/0.25)] lg:sticky lg:top-28">
+                            <aside className={`${BIZ_CARD} p-6 sm:p-7 lg:sticky lg:top-28`}>
+                                {/*
+                                  * ONE ROW SHAPE, REPEATED.
+                                  *
+                                  * Each fact was its own `flex … mb-5` block and
+                                  * "Book by" was a fourth variation of the same
+                                  * markup further down the card, so the rows sat
+                                  * at four different rhythms and the labels did
+                                  * not line up with each other. One list, one
+                                  * padding, one divider — and the deadline is a
+                                  * fact in it like the rest.
+                                  */}
+                                <ul className="divide-y divide-slate-100">
                                 {facts.map((fact, i) => (
-                                    <div key={`${fact.label}-${i}`} className="flex items-start gap-3 mb-5 last:mb-0">
-                                        <span className="w-10 h-10 rounded-full bg-white border border-brand-100
-                                                         text-brand-600 flex items-center justify-center shrink-0">
+                                    <li key={`${fact.label}-${i}`}
+                                        className="flex items-start gap-3.5 py-3.5 first:pt-0 last:pb-0">
+                                        <span className="mt-0.5 h-9 w-9 rounded-xl bg-slate-100 text-slate-600
+                                                         flex items-center justify-center shrink-0">
                                             {fact.icon}
                                         </span>
-                                        <div className="min-w-0">
-                                            <p className={`${MICRO_LABEL} text-gray-400`}>{fact.label}</p>
-                                            <p className="text-[0.9375rem] font-extrabold text-brand-800
-                                                          break-words whitespace-pre-line">
-                                                {fact.value}
+                                        <div className="min-w-0 flex-1">
+                                            <p className={BIZ_DETAIL_LABEL}>{fact.label}</p>
+                                            {/*
+                                              * A NUMBER AND AN ADDRESS ARE
+                                              * TAPPABLE, in the one place they
+                                              * are printed.
+                                              *
+                                              * The duplicate rows below the
+                                              * Book button existed because this
+                                              * list rendered plain text and
+                                              * somebody wanted a link. Removing
+                                              * the duplicate without adding the
+                                              * links here would have taken a
+                                              * working feature away — so each
+                                              * line of the Contact fact is
+                                              * matched and wrapped, and every
+                                              * other fact prints as before.
+                                              */}
+                                            <p className={`${BIZ_DETAIL_VALUE} mt-1 break-words whitespace-pre-line`}>
+                                                {fact.label === 'Contact'
+                                                    ? fact.value.split(NEWLINE).map((line, n) => {
+                                                        const isPhone = /^[+\d][\d\s()-]{6,}$/.test(line.trim());
+                                                        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(line.trim());
+                                                        return (
+                                                            <span key={n} className="block">
+                                                                {isPhone || isEmail ? (
+                                                                    <a
+                                                                        href={`${isPhone ? 'tel:' : 'mailto:'}${line.trim()}`}
+                                                                        className="hover:text-brand-700 transition-colors"
+                                                                    >
+                                                                        {line}
+                                                                    </a>
+                                                                ) : line}
+                                                            </span>
+                                                        );
+                                                    })
+                                                    : fact.value}
                                             </p>
                                         </div>
-                                    </div>
+                                    </li>
                                 ))}
+                                </ul>
 
-                                {event.venueMapUrl && (
-                                    <a
-                                        href={event.venueMapUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="mt-2 inline-flex items-center gap-1.5 text-brand-600 hover:text-brand-800
-                                                   text-[0.8125rem] font-bold transition-colors"
-                                    >
-                                        Open in maps <ExternalLink size={13} />
-                                    </a>
+                                {/*
+                                  * SEATS, DRAWN RATHER THAN STATED.
+                                  *
+                                  * "60" told a reader the size of the room.
+                                  * This tells them whether they can still get
+                                  * in, which is the only thing the number was
+                                  * ever being read for. The bar is the part
+                                  * that is understood without being read.
+                                  *
+                                  * Only on a capped event: a bar on an uncapped
+                                  * one would be a progress meter with no end,
+                                  * and `seatsLeft` there is MAX_SAFE_INTEGER.
+                                  */}
+                                {capped && (
+                                    <div className={`${BIZ_WELL} mt-5`}>
+                                        <div className="flex items-baseline justify-between gap-3">
+                                            <p className={BIZ_DETAIL_LABEL}>Availability</p>
+                                            <p className={`text-[1.1875rem] font-bold ${
+                                                soldOut ? 'text-rose-600'
+                                                    : fillingFast ? 'text-amber-700' : 'text-slate-900'
+                                            }`}>
+                                                {soldOut ? 'Fully booked' : `${seatsLeft} of ${capacity} left`}
+                                            </p>
+                                        </div>
+                                        <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                                            <div
+                                                className={`h-full rounded-full transition-all duration-700 ${
+                                                    soldOut ? 'bg-rose-500'
+                                                        : fillingFast ? 'bg-amber-500' : 'bg-emerald-500'
+                                                }`}
+                                                style={{ width: `${Math.max(3, takenPercent)}%` }}
+                                            />
+                                        </div>
+                                        <p className="mt-2 text-[1.1875rem] font-semibold text-slate-500">
+                                            {capacity - Number(seatsLeft)} booked so far
+                                        </p>
+                                    </div>
                                 )}
 
+                                {/* "Book by" is a row in the facts list above now — see the
+                                    note on that list. It used to be a fourth variation of the
+                                    same row shape, three blocks further down the card. */}
+
+                                {/*
+                                  * The map link lives on the Directions button
+                                  * under the description now.
+                                  *
+                                  * It was printed here as well, three
+                                  * centimetres below the address it opens - the
+                                  * same "telling the reader twice" the contact
+                                  * rows were cleaned up for. One control, in the
+                                  * row where the other two actions are.
+                                  */}
+
+                                {/*
+                                  * The organiser's note, LABELLED.
+                                  *
+                                  * It rendered as a bare grey line above the
+                                  * price — "membership id" floating between the
+                                  * seat count and the fee, reading as debris
+                                  * rather than as an instruction to the person
+                                  * booking. A heading is what makes one short
+                                  * phrase legible as a note.
+                                  */}
                                 {event.registrationNote && (
-                                    <p className="mt-5 text-sm text-gray-500 whitespace-pre-line">{event.registrationNote}</p>
+                                    <div className="mt-5 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3.5">
+                                        <p className="text-[0.9375rem] font-extrabold uppercase tracking-widest
+                                                      text-amber-700">
+                                            Please note
+                                        </p>
+                                        <p className="mt-1.5 text-[1.25rem] font-semibold text-amber-900 whitespace-pre-line">
+                                            {event.registrationNote}
+                                        </p>
+                                    </div>
                                 )}
 
                                 {/*
-                                  Registration happens inside the member area, so
-                                  this sends a visitor to sign in rather than
-                                  pretending to take a booking it cannot take.
+                                  "Book Now", and it goes to the booking flow
+                                  rather than to the sign-in page.
+
+                                  It used to read "Register" and link to /login,
+                                  because taking a booking needed an account. It
+                                  does not any more: `/events/:id/book` opens the
+                                  guest checkout, offers signing in as the
+                                  alternative rather than the requirement, and
+                                  offers membership afterwards. Sending a visitor
+                                  who wants a seat to a password field first is
+                                  the step the association asked us to remove.
                                 */}
                                 {event.registrationEnabled && (
-                                    <Link to="/login" className={CTA_CLASS}>
-                                        Register <ArrowRight size={15} />
-                                    </Link>
+                                    <>
+                                        {/*
+                                          THE PRICE, DIRECTLY ABOVE THE BUTTON —
+                                          and the membership offer with it.
+
+                                          This was a figure and a small green
+                                          caption saying other people pay less.
+                                          `EventPriceTiers` shows the two prices
+                                          against each other and carries the link
+                                          to join, because a visitor about to book
+                                          is the best-qualified audience the
+                                          association has for a membership.
+                                        */}
+                                        {/*
+                                          * PRICES FROM THE BOOKING RESOLVER when
+                                          * it has answered, from the listing
+                                          * until then.
+                                          *
+                                          * `memberRateApplied` is the half that
+                                          * cannot be worked out here: it is the
+                                          * server's answer about THIS reader's
+                                          * membership, and it is what turns the
+                                          * panel from an offer into a
+                                          * confirmation for somebody who has
+                                          * already joined. Deriving it in the
+                                          * browser would be a second copy of a
+                                          * rule that decides what is charged.
+                                          */}
+                                        <EventPriceTiers
+                                            price={Number(availability?.price ?? event.registrationFee) || 0}
+                                            memberPrice={Number(availability?.memberPrice ?? event.memberPrice) || 0}
+                                            hasMemberRate={!!(availability?.hasMemberRate ?? event.hasMemberRate)}
+                                            memberRateApplies={!!availability?.memberRateApplied}
+                                        />
+
+                                        {/*
+                                          * THE BUTTON STOPS BEING A BUTTON when
+                                          * there is nothing behind it.
+                                          *
+                                          * A sold-out or closed event used to
+                                          * link straight into the booking form,
+                                          * and the refusal came after the
+                                          * participant names had been typed.
+                                          * Saying it here costs one line and
+                                          * saves that whole journey - and it
+                                          * says WHICH of the two it is, because
+                                          * "full" and "closed" have different
+                                          * answers ("ask about the next one"
+                                          * versus "call and ask").
+                                          */}
+                                        {soldOut || bookingClosed || hasPassed ? (
+                                            <div className="mt-5">
+                                                <div className="w-full inline-flex items-center justify-center gap-2
+                                                                rounded-full bg-slate-100 px-6 py-3.5 text-[1rem]
+                                                                font-bold uppercase tracking-[0.1em] text-slate-400">
+                                                    <Lock size={15} />
+                                                    {hasPassed ? 'Event has ended'
+                                                        : soldOut ? 'Fully booked' : 'Booking closed'}
+                                                </div>
+                                                <p className="mt-3 text-center text-[1.1875rem] font-semibold text-slate-500">
+                                                    {hasPassed
+                                                        ? 'This event has already taken place.'
+                                                        : soldOut
+                                                            ? 'Every seat has been taken.'
+                                                            : 'The booking deadline for this event has passed.'}
+                                                    {(event.contactPhone || event.contactEmail) && (
+                                                        <> Contact the organiser{' '}
+                                                            <a
+                                                                href={event.contactPhone
+                                                                    ? `tel:${event.contactPhone}`
+                                                                    : `mailto:${event.contactEmail}`}
+                                                                className="font-bold text-brand-600 hover:text-brand-800"
+                                                            >
+                                                                {event.contactPhone || event.contactEmail}
+                                                            </a>{' '}
+                                                            about the next one.
+                                                        </>
+                                                    )}
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <Link to={`/events/${id}/book`} className={CTA_CLASS}>
+                                                Book Now <ArrowRight size={15} />
+                                            </Link>
+                                        )}
+                                    </>
                                 )}
 
-                                {/* Contact rows already sit in the facts above; the
-                                    two below are the ones worth being able to tap. */}
-                                <div className="mt-5 space-y-2">
-                                    {event.contactPhone && (
-                                        <a
-                                            href={`tel:${event.contactPhone}`}
-                                            className="flex items-center gap-2 text-sm font-semibold text-brand-700
-                                                       hover:text-brand-600 transition-colors"
-                                        >
-                                            <Phone size={14} /> {event.contactPhone}
-                                        </a>
-                                    )}
-                                    {event.contactEmail && (
-                                        <a
-                                            href={`mailto:${event.contactEmail}`}
-                                            className="flex items-center gap-2 text-sm font-semibold text-brand-700
-                                                       hover:text-brand-600 transition-colors break-all"
-                                        >
-                                            <Mail size={14} /> {event.contactEmail}
-                                        </a>
-                                    )}
-                                </div>
+                                {/*
+                                  * THE CONTACT IS PRINTED ONCE, in the facts
+                                  * list above.
+                                  *
+                                  * These two rows repeated the same number and
+                                  * the same address a few centimetres below it,
+                                  * on the grounds that a tappable copy was worth
+                                  * having. It is — so the facts list carries the
+                                  * links now, and the reader is not asked to
+                                  * work out why the page is telling them twice.
+                                  */}
                             </aside>
+                        </div>
                         </div>
 
                         {/* ---- more events ---- */}
+                        {/*
+                          * The related row gets the sheet too.
+                          *
+                          * Left on the white page these four tiles were white
+                          * cards on white again — the same fault the block above
+                          * was fixed for, three centimetres below the fix.
+                          */}
                         {moreEvents.length > 0 && (
-                            <div className={`${agenda.length || speakers.length ? 'mt-20 pt-12' : 'mt-10 pt-10'}
-                                             border-t border-gray-100`}>
-                                <h2 className="text-xl font-black text-brand-800 mb-6">
+                            <div className={`${SHEET} mt-6`}>
+                                <h2 className={`${BIZ_CARD_TITLE} mb-5`}>
                                     {settings?.viewAllLabel ? 'More events' : 'More events'}
                                 </h2>
                                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -380,25 +810,47 @@ export default function EventDetailPage() {
                                         <Link
                                             key={other.id}
                                             to={`/events/${other.id}`}
-                                            className="group block rounded-2xl overflow-hidden bg-white border border-brand-100/70
-                                                       shadow-[0_10px_30px_-16px_rgb(28_46_104/0.25)]
-                                                       hover:shadow-[0_22px_48px_-20px_rgb(28_46_104/0.4)]
-                                                       transition-shadow duration-500"
+                                            className={`${BIZ_CARD} group block overflow-hidden
+                                                        transition-all duration-300 hover:-translate-y-0.5
+                                                        hover:border-slate-300
+                                                        hover:shadow-[0_4px_8px_-2px_rgba(16,24,40,0.12),0_16px_32px_-8px_rgba(16,24,40,0.16)]`}
                                         >
-                                            <div className="w-full h-40 overflow-hidden bg-gray-50">
-                                                <CmsMediaFrame
-                                                    media={other.media}
-                                                    width={340}
-                                                    className="group-hover:scale-105 transition-transform duration-700 transform-gpu"
-                                                />
+                                            {/*
+                                              * A TILE WITH NO BANNER GETS A
+                                              * PLACEHOLDER, not an empty box.
+                                              *
+                                              * Banners are optional, so an event
+                                              * without one rendered as 160px of
+                                              * blank grey above a title — which
+                                              * on a row of four photographs reads
+                                              * as an image that failed to load.
+                                              */}
+                                            <div className="w-full h-40 overflow-hidden bg-slate-50
+                                                            flex items-center justify-center">
+                                                {other.media?.url ? (
+                                                    <CmsMediaFrame
+                                                        media={other.media}
+                                                        width={340}
+                                                        className="group-hover:scale-105 transition-transform duration-700 transform-gpu"
+                                                    />
+                                                ) : (
+                                                    <Calendar size={28} className="text-slate-300" />
+                                                )}
                                             </div>
                                             <div className="p-4">
-                                                <p className="text-[0.8125rem] font-extrabold text-brand-800 line-clamp-2
-                                                              group-hover:text-brand-600 transition-colors">
-                                                    {other.title}
+                                                {/* A FIXED TWO-LINE BOX, so the dates line up
+                                                    across the row. `line-clamp-2` caps a long
+                                                    title but does nothing for a short one, so a
+                                                    one-line title pulled its date 24px up and the
+                                                    four tiles read as four different cards. */}
+                                                <p className="min-h-[3rem] text-[1.25rem] font-bold text-slate-900 line-clamp-2
+                                                              group-hover:text-brand-700 transition-colors">
+                                                    {/* Never an empty line — the same
+                                                        fallback every other card uses. */}
+                                                    {other.title || 'Untitled event'}
                                                 </p>
                                                 {formatDay(other.startAt) && (
-                                                    <p className={`${MICRO_LABEL} text-gray-400 mt-2`}>
+                                                    <p className={`${BIZ_DETAIL_LABEL} mt-2`}>
                                                         {formatDay(other.startAt)}
                                                     </p>
                                                 )}

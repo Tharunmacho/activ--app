@@ -3,6 +3,12 @@ import { Menu, ArrowLeft } from 'lucide-react';
 import MemberSidebar from './MemberSidebar';
 import MemberTopBar from '@/features/member/components/MemberTopBar';
 import { useNavigate } from 'react-router-dom';
+/*
+ * The same two constants the dashboard's header band uses. This shell draws the
+ * band for every OTHER member screen, so reading the title and subtitle from
+ * here is what stops the band changing size as the member moves between them.
+ */
+import { PAGE_SUBTITLE, PAGE_TITLE } from '@/components/layout/appTypography';
 
 export type ShellWidth = 'wide' | 'standard' | 'narrow';
 
@@ -60,14 +66,25 @@ const RAILLESS: Record<ShellWidth, string> = {
  */
 export default function MemberPageShell({
     title,
+    shortTitle,
     subtitle,
     actions,
     width = 'standard',
     sidebar = true,
     backTo = '/member/unpaid-dashboard',
+    onBack,
     children,
 }: {
     title: string;
+    /**
+     * The title below `sm`, when the full one does not fit.
+     *
+     * "Welcome back, Rajeshwari 👋" truncates to "Welcome back, …" on a 360px
+     * screen — the member's own name, which is the entire content of the line,
+     * is the part thrown away. A screen with a long title passes a short form
+     * for that width; everything else leaves this unset and keeps one title.
+     */
+    shortTitle?: string;
     subtitle?: string;
     actions?: ReactNode;
     width?: ShellWidth;
@@ -75,6 +92,14 @@ export default function MemberPageShell({
     sidebar?: boolean;
     /** Where the back arrow goes when there is no sidebar. */
     backTo?: string;
+    /**
+     * What the back arrow does instead, when a path is the wrong answer.
+     *
+     * A screen reached from three different places cannot name one path that
+     * is right for all of them; it passes a handler that steps back through
+     * history and falls back to `backTo` on a direct visit.
+     */
+    onBack?: () => void;
     children: ReactNode;
 }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -87,7 +112,24 @@ export default function MemberPageShell({
             ) : null}
 
             <div className="flex-1 min-w-0 flex flex-col relative">
-                <header className="h-[5.5rem] shrink-0 bg-white border-b border-slate-200 flex items-center gap-3 px-6 sticky top-0 z-10">
+                {/*
+                  * `px-4` on a phone, `px-6` from `sm`.
+                  *
+                  * Two 40px icon buttons and a hamburger already take 130px out
+                  * of a 390px bar; 24px of padding on each side of that is what
+                  * pushed the title into an ellipsis after nine characters.
+                  */}
+                {/*
+                  `z-30`, not `z-10`.
+
+                  The page content was lifted to `z-10` so it would sit above
+                  the decorative layer behind it — and that put it level with
+                  this header, which comes EARLIER in the document. Equal
+                  z-index is decided by document order, so the cards painted
+                  over the sticky header and scrolled across the title. The
+                  header outranks the page it heads.
+                */}
+                <header className="h-[5.5rem] shrink-0 bg-white border-b border-slate-200 flex items-center gap-2 sm:gap-3 px-4 sm:px-6 sticky top-0 z-30">
                     {sidebar ? (
                         <button
                             type="button"
@@ -103,19 +145,39 @@ export default function MemberPageShell({
                             type="button"
                             className="shrink-0 w-9 h-9 rounded-lg border border-slate-200 flex items-center
                                        justify-center text-slate-600 hover:bg-slate-50 transition-colors"
-                            onClick={() => navigate(backTo)}
+                            onClick={() => (onBack ? onBack() : navigate(backTo))}
                             aria-label="Back"
                         >
                             <ArrowLeft className="w-5 h-5" />
                         </button>
                     )}
 
-                    <div className="min-w-0">
-                        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900 truncate">
-                            {title}
+                    {/*
+                      * `flex-1`, and a title that steps down on a phone.
+                      *
+                      * The heading was `text-[2rem]` at every width with
+                      * `truncate` on it, so "Welcome back, Rajeshwari" read as
+                      * "Welcome ba…" on a 390px screen — the member's own name,
+                      * which is the entire content of the line, was the part
+                      * that got cut. 1.25rem on a phone fits it; the desktop
+                      * size is unchanged from `sm` up.
+                      *
+                      * Without `flex-1` the block is sized by its content and
+                      * the icon group on the right is pushed off instead.
+                      */}
+                    <div className="min-w-0 flex-1">
+                        {/* Two spans rather than a JS width check: a media query
+                            has no re-render and no flash of the wrong one. */}
+                        <h1 className={`${PAGE_TITLE} text-slate-900 truncate`}>
+                            {shortTitle ? (
+                                <>
+                                    <span className="sm:hidden">{shortTitle}</span>
+                                    <span className="hidden sm:inline">{title}</span>
+                                </>
+                            ) : title}
                         </h1>
                         {subtitle ? (
-                            <p className="text-sm text-slate-500 mt-0.5 truncate hidden sm:block">{subtitle}</p>
+                            <p className={`${PAGE_SUBTITLE} text-slate-500 mt-0.5 truncate hidden sm:block`}>{subtitle}</p>
                         ) : null}
                     </div>
 
@@ -146,8 +208,71 @@ export default function MemberPageShell({
                   * given the rail's width back — see RAILLESS above — so the
                   * page fills the window to the same place either way.
                   */}
-                <main className="flex-1 overflow-y-auto p-6">
-                    <div className={`w-full ${sidebar ? WIDTHS[width] : `${RAILLESS[width]} mx-auto`}`}>
+                {/* `p-4` on a phone: 24px gutters on a 390px screen leave a
+                    342px column, and every card inside adds its own padding on
+                    top of that. */}
+                {/*
+                  * THE SHEET. The member area's cards stand ON something now.
+                  *
+                  * This was white, inside a shell that is also white, under
+                  * cards that are white. Three layers of the same colour, with
+                  * nothing between a card and the page but a `slate-200`
+                  * hairline — and a hairline is not a layer. Every panel read as
+                  * dim and slightly unfinished, which is exactly the complaint.
+                  *
+                  * `#f3f6fb` is not a new colour: it is `SHEET` from
+                  * `components/layout/surface.ts`, lifted from the Business
+                  * Account form — the densest screen in the product and the one
+                  * place the house style has already been argued through. The
+                  * association asked for this area to read the same way, and
+                  * using the same value is the only way to be sure it does.
+                  */}
+                {/*
+                  * THE PAGE THE CARDS STAND ON — plain, and deliberately so.
+                  *
+                  * This had borrowed the PUBLIC site's surface: a 22px dot
+                  * field, two out-of-focus brand blooms and a set of slowly
+                  * rotating orbit rings. The argument was that a flat page
+                  * gives a card nothing to be on top of, and half of it is
+                  * right — a white card on a white page has only its shadow to
+                  * prove it is a card.
+                  *
+                  * But a dot field and a moving ring are the marketing site's
+                  * voice, and this is the screen somebody does an hour's work
+                  * on. Texture that is charming behind a hero is noise behind a
+                  * table of members, a message thread or a catalogue. The
+                  * association read it as unfinished, and on a screen this
+                  * dense they are right.
+                  *
+                  * So the depth stays and the decoration goes. `slate-100` is
+                  * two steps off white — enough for a white card to read as a
+                  * card — and it is the exact value the Business Account
+                  * screens have always used, which is the house style this
+                  * product argued through once already.
+                  *
+                  * The public pages keep `.dot-band`. It is still their voice.
+                  */}
+                <main className="relative flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6">
+                    {/*
+                      * `mx-auto` IN BOTH CASES, and that is the load-bearing half.
+                      *
+                      * `mx-auto` IN BOTH CASES — the column is CENTRED in the pane.
+                      *
+                      * The railless branch had it and the sidebar branch did not, so a
+                      * capped column with no centring stayed pinned to the left and the
+                      * whole surplus piled up on the right: measured on a 1920px window,
+                      * 24px of gutter beside the rail and about 120px of dead space at
+                      * the far edge. It reads as a page that has come loose from its own
+                      * margin, and it is the same fault `ADMIN_PAGE` in
+                      * `features/admin/components/AdminUI.tsx` carries a note about —
+                      * fixed there, missed here.
+                      *
+                      * The cap sits on this INNER div rather than on `<main>`, which is
+                      * what keeps the fix off the scroll bar: centring the scroll
+                      * container itself would drag the bar in from the window edge and
+                      * leave a strip of page beside it.
+                      */}
+                    <div className={`relative z-10 w-full mx-auto ${sidebar ? WIDTHS[width] : RAILLESS[width]}`}>
                         {children}
                     </div>
                 </main>

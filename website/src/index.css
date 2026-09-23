@@ -1,6 +1,24 @@
 @import './components/ui/mobile-styles.css';
 @import './components/ui/background.css';
 
+/*
+ * A4, AND THE MARGIN IS 8MM RATHER THAN NONE.
+ *
+ * The browser's own default margin is what made a certificate laid out at
+ * exactly 210mm print as a smaller certificate floating in a white border, so
+ * this rule has to exist. But zero is the wrong answer to that: almost no
+ * office printer can lay ink on the last few millimetres of a sheet, and the
+ * first thing inside the edge here is the certificate's own navy border — which
+ * would come out clipped along one side, or along all four.
+ *
+ * 8mm is inside every common unprintable area and still small enough that the
+ * sheet reads as the page rather than as something pasted onto it.
+ */
+@page {
+    size: A4;
+    margin: 8mm;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -45,6 +63,25 @@ All colors MUST be HSL.
     --brand-700: 226 52% 30%;
     --brand-800: 226 58% 26%; /* the mark, #1C2E68 */
     --brand-900: 226 58% 19%;
+
+    /*
+     * ------------------------------------------------------------------
+     * THE MEMBER AREA'S BLUE
+     * ------------------------------------------------------------------
+     *
+     * The dashboard is built in Tailwind's blue — `bg-blue-600` buttons, blue
+     * links, blue icon tiles — while the public site is the logo navy. The
+     * booking flow is now drawn in BOTH: the same page renders inside the
+     * public shell and inside the member shell (see `EventBookingPage`), and
+     * in the member one its navy headings and buttons looked like a piece of
+     * another product.
+     *
+     * Rather than fork the page's classes, the brand scale is re-pointed at
+     * blue for anything inside `.member-chrome`. Every `text-brand-800`,
+     * `bg-brand-600` and `border-brand-100` on that subtree resolves to the
+     * dashboard's colour, and the public copy of the same component is
+     * untouched — which is the point: one implementation, two palettes.
+     */
 
     /*
      * The on-dark highlight — the Events hero, and anything else that sets a
@@ -201,6 +238,28 @@ All colors MUST be HSL.
 
   /* Onboarding opts out — see the note above. Higher specificity, so the
      public pages keep their own fluid scale and are untouched by the above. */
+
+  /**
+   * THE PUBLIC SITE'S PAGE SURFACE — a tinted band with a dot field on it.
+   *
+   * Several screens were drawing their own dot pattern as an inline SVG, each
+   * with its own id, its own opacity and its own half-width placement, so the
+   * field stopped at a section edge and restarted somewhere else. As one
+   * class it is the same grid at the same density down the whole page, and a
+   * new section gets it by being tinted rather than by remembering to add an
+   * SVG.
+   *
+   * `background-attachment: fixed` is deliberately NOT set: on iOS a fixed
+   * attachment repaints the whole layer on every scroll frame, and a 22px
+   * grid across a 14,000px page is the worst case for it.
+   */
+  .dot-band {
+    background-color: #f3f6fb;
+    background-image: radial-gradient(circle, rgb(28 46 104 / 0.10) 1px, transparent 1.2px);
+    background-size: 22px 22px;
+    background-position: 0 0;
+  }
+
   html.fluid-scale {
     font-size: clamp(1rem, 0.833vw, 1.25rem);
   }
@@ -273,13 +332,215 @@ All colors MUST be HSL.
 }
 
 /*
+ * A dropdown that is longer than it is tall.
+
+ * Radix hides the scrollbar on a Select and offers two chevron buttons instead,
+ * one at each end of the list. That works when the list is a handful of items
+ * long and falls apart on the commencement-year field, which is one row per
+ * year back to 1950: the chevron says "there is more" without saying how much
+ * more, there is nothing to drag, and a mouse wheel is the only way through
+ * seventy-odd rows. The list read as running off the bottom of the screen.
+ *
+ * So the viewport scrolls natively and the scrollbar is visible. Slim and only
+ * present when there is something to scroll, exactly as `.member-rail-scroll`
+ * above — the two are the same decision about the same problem, and a dropdown
+ * with a heavier scrollbar than the sidebar would look like a different app.
+ */
+/*
+ * RADIX HIDES THIS SCROLLBAR, AND IT HAS TO BE OUT-SPECIFIED.
+ *
+ * `Select.Viewport` injects its own stylesheet into the portal:
+ *
+ *     [data-radix-select-viewport]{scrollbar-width:none;...}
+ *     [data-radix-select-viewport]::-webkit-scrollbar{display:none}
+ *
+ * An attribute selector and a class carry the SAME specificity, and that
+ * stylesheet is injected into the portal — later in the document than this
+ * file — so on a tie Radix wins and the bar stays hidden. Hence
+ * `.select-scroll.select-scroll`: the same class named twice is a legitimate
+ * way to buy one more class's worth of specificity without an `!important`
+ * that would then have to be fought in turn.
+ *
+ * It is the STANDARD properties here rather than `::-webkit-scrollbar`,
+ * because Chromium treats the two as alternatives — once `scrollbar-width` is
+ * specified (and Radix specifies it, as `none`) the webkit pseudo-elements are
+ * ignored entirely. Overriding the property Radix actually set is the only
+ * thing that reaches. `thin` matches `.member-rail-scroll` above; the colours
+ * are the same gray so the two scrollbars in this app look like one decision.
+ */
+.select-scroll.select-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: theme('colors.gray.300') transparent;
+}
+
+/* For engines that do not implement the standard properties. */
+.select-scroll.select-scroll::-webkit-scrollbar {
+  display: block;
+  width: 6px;
+}
+
+.select-scroll.select-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.select-scroll.select-scroll::-webkit-scrollbar-thumb {
+  background-color: theme('colors.gray.300');
+  border-radius: 9999px;
+}
+
+.select-scroll.select-scroll:hover::-webkit-scrollbar-thumb {
+  background-color: theme('colors.gray.400');
+}
+
+
+/* ===================================================================
+ * APPLICATION SUBMITTED — the confirmation screen's own presentation.
+ *
+ * Prefixed `as-` and used by exactly one screen. It is here rather than in a
+ * <style> tag because keyframes in JSX are re-parsed on every render, and here
+ * they are also subject to the reduced-motion block at the bottom, which a
+ * scattered set of inline animations would each have to repeat.
+ *
+ * The motion is doing a job, not decorating. This screen is the end of a long
+ * form: the tick DRAWS rather than appearing, so the eye is told the thing
+ * completed just now, and the sections arrive in reading order so the page
+ * resolves into a sequence instead of landing all at once.
+ * =================================================================== */
+
+/* The hero. A deep blue field so the white confirmation card below reads as
+   lifted off it — flat white on flat white was the whole problem. */
+.as-hero {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(90rem 40rem at 15% -20%, rgba(59, 130, 246, 0.55), transparent 60%),
+    radial-gradient(70rem 34rem at 95% 0%, rgba(37, 99, 235, 0.45), transparent 55%),
+    linear-gradient(135deg, #0A225C 0%, #123A9E 48%, #1E50E6 100%);
+}
+
+/* A faint grid, the way a printed certificate has a ground rather than a
+   blank. Masked out towards the bottom so it never competes with the text. */
+.as-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 3rem 3rem;
+  -webkit-mask-image: radial-gradient(60% 60% at 50% 30%, #000 0%, transparent 100%);
+  mask-image: radial-gradient(60% 60% at 50% 30%, #000 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* The tick, drawn rather than shown. */
+.as-mark-ring {
+  animation: as-halo 2.8s ease-out infinite;
+}
+
+.as-mark-ring--slow {
+  animation-delay: 0.9s;
+}
+
+@keyframes as-halo {
+  0%   { transform: scale(0.82); opacity: 0.55; }
+  70%  { transform: scale(1.35); opacity: 0; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+.as-check-circle {
+  stroke-dasharray: 151;
+  stroke-dashoffset: 151;
+  animation: as-draw 0.55s cubic-bezier(0.65, 0, 0.35, 1) 0.1s forwards;
+}
+
+.as-check-tick {
+  stroke-dasharray: 44;
+  stroke-dashoffset: 44;
+  animation: as-draw 0.35s cubic-bezier(0.65, 0, 0.35, 1) 0.55s forwards;
+}
+
+@keyframes as-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Sections arrive in reading order. `--as-delay` is set per element. */
+.as-rise {
+  animation: as-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--as-delay, 0s);
+}
+
+@keyframes as-rise {
+  from { opacity: 0; transform: translateY(0.75rem); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* A card that answers the pointer. Small — these are surfaces, not buttons. */
+.as-lift {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.as-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px -12px rgba(15, 23, 42, 0.22);
+}
+
+/* The active review node, still breathing while the file waits. */
+.as-pulse::after {
+  content: '';
+  position: absolute;
+  inset: -0.25rem;
+  border-radius: 9999px;
+  border: 2px solid currentColor;
+  opacity: 0;
+  animation: as-halo 2.4s ease-out infinite;
+}
+
+/*
+ * Motion is an enhancement and never the only signal: every element above is
+ * legible at its finished state, so switching the animation off loses nothing
+ * but the movement.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .as-mark-ring,
+  .as-check-circle,
+  .as-check-tick,
+  .as-rise,
+  .as-pulse::after {
+    animation: none !important;
+  }
+
+  .as-check-circle,
+  .as-check-tick {
+    stroke-dashoffset: 0;
+  }
+
+  .as-lift:hover {
+    transform: none;
+  }
+}
+
+/*
  * Typography defaults.
  *
- * `tnum` is the one that earns its place on this product: without tabular
- * figures, "100%" and "33%" are different widths, so the progress figure in the
- * profile card and the percentage pill in the tracker shift sideways every time
- * the number changes. `cv11` gives Inter the single-storey lowercase l, which is
- * what stops "Il1" being three identical strokes in an application id.
+ * BOTH OF THESE ARE INTER FEATURES, AND INTER IS NO LONGER THE FACE. Poppins
+ * ships neither `tnum` nor `cv11`, so both settings are inert — kept, not
+ * deleted, because Inter is still second in the stack and renders while Poppins
+ * is in flight, and because the next face may well carry them again.
+ *
+ * What they were for, so the reason survives the face change:
+ *
+ * `tnum` is tabular figures. Without them "100%" and "33%" are different
+ * widths, so the progress figure in the profile card and the percentage pill in
+ * the tracker shift sideways every time the number changes. Poppins draws its
+ * digits at a uniform width by default, so the figures still hold still — that
+ * is the family's own drawing doing it, not this line.
+ *
+ * `cv11` gave Inter the single-storey lowercase l, which stopped "Il1" being
+ * three identical strokes in an application id. Poppins has no equivalent, and
+ * its `I`, `l` and `1` ARE close — so an application id shown in a face this
+ * geometric is worth reading twice. `.tabular` and the copy button beside every
+ * id are what carry that now.
  *
  * `antialiased` because these faces are drawn for screen and render heavy under
  * the default subpixel smoothing on Windows.
@@ -302,7 +563,21 @@ All colors MUST be HSL.
    */
   h1, h2, h3, h4 {
     font-family: theme('fontFamily.display');
-    letter-spacing: -0.018em;
+    /*
+     * Back to -0.025em, because the face is Poppins.
+     *
+     * This has moved with the face each time and is not a matter of taste. A
+     * geometric face with round, wide letterforms leaves visible gaps between
+     * the letters of a two-word heading at the default spacing, so it needs
+     * pulling in — Poppins especially, since its `o`, `e` and `c` are close to
+     * true circles and sit further apart than the flatter forms in a grotesque.
+     * It was eased to -0.02em for Manrope, which is tightly spaced by its own
+     * designer and closed its counters up under the full value.
+     *
+     * If the face changes again, look at this line. A single global value is
+     * right for exactly one family at a time.
+     */
+    letter-spacing: -0.025em;
   }
 
   /* Numbers in a column should never be a proportional face. */
@@ -310,3 +585,12 @@ All colors MUST be HSL.
     font-variant-numeric: tabular-nums;
   }
 }
+
+/*
+ * The member area uses the SAME navy as the public site.
+ *
+ * There was a `.member-chrome` block here that re-pointed the brand scale at
+ * Tailwind's blue, so the shared booking flow matched the dashboard's buttons.
+ * The association preferred the navy: one palette, both surfaces, and nothing
+ * for a reader to reconcile when they move between them.
+ */

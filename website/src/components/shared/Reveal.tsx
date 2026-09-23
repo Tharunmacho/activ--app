@@ -80,11 +80,42 @@ const prefersReducedMotion = (): boolean => {
     }
 };
 
-/* ----------------------------------------------------------- shared observer */
+/* ----------------------------------------------- what is already on screen */
 
-type Fire = () => void;
+/**
+ * ==========================================================================
+ * IF IT IS ALREADY ON SCREEN WHEN IT APPEARS, IT DOES NOT ANIMATE IN
+ * ==========================================================================
+ *
+ * An entrance effect is for something a reader ARRIVES AT. Run it on what is
+ * already in front of them and it is not an entrance — it is the page
+ * assembling itself in front of somebody who has not asked for anything.
+ *
+ * ------------------------------------------------- and the timer was wrong
+ *
+ * This was a module-level "we are still opening" flag that a scroll, or two
+ * and a half seconds, turned off. Both were the wrong question.
+ *
+ * These pages FETCH. The band paints immediately and the leadership board
+ * mounts when the API answers, which on a slow link is well past any timer —
+ * so by the time the portraits existed the flag said "not opening any more",
+ * the block was handed to the observer, and the observer’s root is
+ * deliberately 28% shorter than the viewport. At about 600px of an 830px
+ * window the board was BELOW that line and above the fold at the same time:
+ * no entry, no reveal, four hundred pixels of nothing under a heading. That
+ * is what "I only get the leaders when I scroll down" was.
+ *
+ * There is no flag and no timer now. Each block asks one question about
+ * ITSELF, when it mounts, against the REAL viewport: am I on screen? If yes
+ * it is simply there, whenever it arrives and whatever the rest of the page
+ * is doing. If no, it waits for the observer and animates on the way in,
+ * which is the case the effect was written for.
+ */
+
+type Fire = (instant: boolean) => void;
 
 let observer: IntersectionObserver | null = null;
+
 const callbacks = new WeakMap<Element, Fire>();
 
 const getObserver = (): IntersectionObserver | null => {
@@ -115,19 +146,57 @@ const getObserver = (): IntersectionObserver | null => {
                  * up.
                  */
                 if (!entry.isIntersecting && entry.boundingClientRect.bottom > 0) continue;
-                callbacks.get(entry.target)?.();
+
+                const fire = callbacks.get(entry.target);
                 callbacks.delete(entry.target);
                 observer?.unobserve(entry.target);
+                if (!fire) continue;
+
+                /*
+                 * An entry means the block crossed into view, which is the
+                 * case the effect exists for. The on-screen-at-mount case is
+                 * settled before the observer is ever reached.
+                 */
+                fire(false);
             }
         },
         {
             /*
-             * A negative bottom margin means a block is considered "in view"
-             * only once it is properly on screen rather than one pixel past the
-             * fold, so the animation is something the visitor watches happen
-             * instead of something already finished by the time they get there.
+             * TOP: +9999px. BOTTOM: -14%.
+             *
+             * The bottom margin is the effect itself — a block counts as "in
+             * view" only once it is properly on screen rather than one pixel
+             * past the fold, so the animation is something the visitor watches
+             * happen instead of something already finished by the time they get
+             * there.
+             *
+             * IT IS -28%, NOT -14%. At fourteen per cent a section heading whose
+             * first line had just cleared the fold was already released, so on a
+             * tall window the heading under the hero — "STATE / Tamil Nadu
+             * Leaders" — fired during the page load and a reader scrolling down
+             * to it found it already there. Twenty-eight is a little over a
+             * quarter of the window: enough that a block has to be properly
+             * arrived at, and still short of the half that would make a reader
+             * scroll past something before it appears.
+             *
+             * THE TOP MARGIN IS THE FIX FOR THE SKIP. An
+             * IntersectionObserver reports threshold CROSSINGS, and a scroll can
+             * move a block from below the fold to above the viewport inside a
+             * single frame — End, a jump to an anchor, a restored scroll
+             * position on reload, a hard flick on a trackpad. It never
+             * intersects on either sample, so no entry is ever delivered and the
+             * block stays at `opacity: 0` for the rest of the visit. Scrolling
+             * back up then shows a hole where a section should be. (The
+             * `bottom <= 0` branch above cannot save it: that runs on an entry,
+             * and the whole problem is that there is no entry.)
+             *
+             * Extending the root far above the viewport means anything the
+             * visitor has already scrolled PAST is intersecting, so the observer
+             * does deliver an entry and the block is shown outright — which is
+             * what they would want on the way back up anyway. Blocks still below
+             * the fold are unaffected: the bottom edge is where it always was.
              */
-            rootMargin: '0px 0px -14% 0px',
+            rootMargin: '9999px 0px -28% 0px',
             threshold: 0.06,
         },
     );
@@ -145,6 +214,15 @@ interface Props {
     className?: string;
     /** Rendered element. `div` unless a section or list item is what belongs here. */
     as?: ElementType;
+    /**
+     * An anchor on the rendered element.
+     *
+     * Forwarded rather than left to a wrapper: this component owns the element,
+     * and a `<div id>` wrapped around a revealed `<section>` is an extra box in
+     * every grid it is dropped into — one of which is a `grid` whose children
+     * are its tracks.
+     */
+    id?: string;
 }
 
 export function Reveal({
@@ -154,6 +232,7 @@ export function Reveal({
     duration = 820,
     className = '',
     as: Tag = 'div',
+    id,
 }: Props) {
     const ref = useRef<HTMLElement | null>(null);
 
@@ -177,17 +256,47 @@ export function Reveal({
      */
     const [shown, setShown] = useState<boolean>(reduced);
 
+    /*
+     * Shown WITHOUT an entrance — the opening screen, and the reduced-motion
+     * setting, which has always worked this way and is the same requirement:
+     * be there, do not perform.
+     */
+    const [instant, setInstant] = useState<boolean>(reduced);
+
     useEffect(() => {
         if (shown) return;
         const el = ref.current;
         if (!el) return;
+
+        /*
+         * ON SCREEN ALREADY? THEN IT IS SIMPLY THERE.
+         *
+         * Measured against the real viewport, in an effect, after layout —
+         * not asked of the observer, whose root is 28% shorter and which
+         * therefore reports nothing about a block sitting just below that
+         * line and just above the fold. See the note at the head of the file.
+         *
+         * `bottom > 0` as well as `top < innerHeight`: a block the reader has
+         * already scrolled past has no entrance left to play either, and
+         * fading it in behind them is worse than not animating it at all.
+         */
+        try {
+            const box = el.getBoundingClientRect();
+            if (box.top < window.innerHeight && box.bottom > 0) {
+                setInstant(true);
+                setShown(true);
+                return;
+            }
+        } catch {
+            /* No layout to measure: fall through to the observer. */
+        }
 
         const io = getObserver();
         // No IntersectionObserver (very old browser): show it rather than
         // leaving the page permanently blank below the fold.
         if (!io) { setShown(true); return; }
 
-        callbacks.set(el, () => setShown(true));
+        callbacks.set(el, (instant) => { setInstant(instant); setShown(true); });
         io.observe(el);
 
         return () => {
@@ -199,11 +308,12 @@ export function Reveal({
     return (
         <Tag
             ref={ref as never}
+            id={id}
             className={className}
             style={{
                 opacity: shown ? 1 : 0,
                 transform: shown ? 'none' : (narrow ? NARROW_OFFSETS : OFFSETS)[variant],
-                transition: reduced
+                transition: reduced || instant
                     ? undefined
                     : `opacity ${duration}ms cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms, ` +
                       `transform ${duration}ms cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms`,

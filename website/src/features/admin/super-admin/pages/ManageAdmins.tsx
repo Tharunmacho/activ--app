@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import {
     Plus, Search, Pencil, Trash2, Loader2, Users,
-    AlertTriangle, X, ShieldCheck, Eye, EyeOff,
+    AlertTriangle, X, ShieldCheck, Eye, EyeOff, Menu,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import AdminSidebar from './AdminSidebar';
 import RegionInput from '../components/RegionInput';
+import { AdminBackButton, ADMIN_PAGE } from '@/features/admin/components/AdminUI';
+import { PAGE_SUBTITLE, PAGE_TITLE, CARD_TITLE } from '@/components/layout/appTypography';
 import {
     listAdmins, createAdmin, updateAdmin, deleteAdmin,
     previewAdminRemoval, suggestAdminRegions, errorMessage,
@@ -286,7 +288,7 @@ export default function ManageAdmins() {
 
         return (
             <div className="space-y-1.5 min-w-0">
-                <label htmlFor={name} className="block text-sm font-semibold text-slate-700 mb-2">{label}</label>
+                <label htmlFor={name} className="block text-[1.25rem] font-semibold text-slate-700 mb-2">{label}</label>
 
                 <div className="relative">
                     <input
@@ -313,7 +315,7 @@ export default function ManageAdmins() {
                         autoComplete={isPassword ? 'new-password' : 'off'}
                         autoCorrect="off"
                         spellCheck={false}
-                        className={`h-11 w-full px-3.5 rounded-xl border border-slate-200 text-sm outline-none transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10
+                        className={`h-11 w-full px-3.5 rounded-xl border border-slate-200 text-[1.25rem] outline-none transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10
                                     focus:outline-none focus:ring-2 focus:ring-blue-600
                                     focus:border-transparent ${isPassword ? 'pr-10' : ''}`}
                     />
@@ -335,7 +337,7 @@ export default function ManageAdmins() {
                     )}
                 </div>
 
-                {hint && <p className="text-xs text-slate-500">{hint}</p>}
+                {hint && <p className="text-[1.1875rem] text-slate-500">{hint}</p>}
             </div>
         );
     };
@@ -375,26 +377,63 @@ export default function ManageAdmins() {
             <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
             <div className="flex-1 min-w-0">
-                <header className="bg-white border-b border-slate-200 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900">Manage Admins</h1>
-                        <p className="text-sm text-slate-600 mt-0.5">
-                            Creating a block admin is what opens a region for registration.
-                        </p>
+                {/*
+                  * THE MENU BUTTON AND THE WAY BACK.
+                  *
+                  * Neither was here. Below `lg` the rail is a drawer, so this
+                  * screen — reached from the Hub, and the one that decides which
+                  * regions exist — had no navigation on it at all on a phone:
+                  * no menu, no back, only the browser's own chrome.
+                  */}
+                {/*
+                  * STACKED ON A PHONE, ONE ROW FROM `sm`.
+                  *
+                  * `flex-wrap` alone does not do this: the title block is
+                  * `flex-1`, so it shrinks to make room for the button rather
+                  * than pushing it to a second line — which left "Manage
+                  * Admins" wrapping over two lines beside a paragraph squeezed
+                  * into a 150px column. A column at this width gives the
+                  * heading and its explanation the whole bar and puts the one
+                  * action underneath, full width, where a thumb reaches it.
+                  */}
+                <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-4
+                                   flex flex-col sm:flex-row sm:flex-wrap sm:items-center
+                                   sm:justify-between gap-3 sm:gap-4">
+                    <div className="flex items-start gap-2 min-w-0 sm:flex-1">
+                        <button
+                            type="button"
+                            className="lg:hidden shrink-0 mt-1 text-slate-500 hover:text-slate-900"
+                            onClick={() => setSidebarOpen(true)}
+                            aria-label="Open menu"
+                        >
+                            <Menu className="w-5 h-5" />
+                        </button>
+                        <div className="shrink-0 mt-0.5">
+                            <AdminBackButton />
+                        </div>
+                        <div className="min-w-0">
+                            <h1 className={`${PAGE_TITLE} text-slate-900`}>
+                                Manage Admins
+                            </h1>
+                            <p className={`${PAGE_SUBTITLE} text-slate-600 mt-0.5`}>
+                                Creating a block admin is what opens a region for registration.
+                            </p>
+                        </div>
                     </div>
 
                     <div className="flex gap-2 shrink-0">
                         <button
                             onClick={openNew}
-                            className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-blue-600
-                                       text-white text-sm font-semibold transition-colors hover:bg-blue-700"
+                            className="inline-flex flex-1 sm:flex-none items-center justify-center gap-2 h-11
+                                       px-4 sm:px-5 rounded-xl bg-blue-600
+                                       text-white text-[1.25rem] font-semibold transition-colors hover:bg-blue-700"
                         >
                             <Plus className="w-4 h-4" /> Add admin
                         </button>
                     </div>
                 </header>
 
-                <main className="p-6 space-y-6 max-w-[90rem]">
+                <main className={ADMIN_PAGE}>
                     {/* Filters */}
                     <div className="flex flex-wrap items-center gap-3">
                         <div className="relative flex-1 min-w-[13.75rem]">
@@ -403,7 +442,7 @@ export default function ManageAdmins() {
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 placeholder="Name, email or region"
-                                className="h-11 w-full pl-9 pr-3.5 rounded-xl border border-slate-200 text-sm outline-none transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10
+                                className="h-11 w-full pl-9 pr-3.5 rounded-xl border border-slate-200 text-[1.25rem] outline-none transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10
                                            focus:outline-none focus:ring-2 focus:ring-blue-600"
                             />
                         </div>
@@ -418,7 +457,7 @@ export default function ManageAdmins() {
                                 <button
                                     key={t.key}
                                     onClick={() => setRole(t.key)}
-                                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                    className={`px-3 py-2 rounded-lg text-[1.25rem] font-medium transition-colors ${
                                         role === t.key
                                             ? 'bg-blue-600 text-white'
                                             : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -440,7 +479,7 @@ export default function ManageAdmins() {
                             <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] text-center py-16 px-6">
                                 <Users className="w-10 h-10 text-slate-300 mx-auto mb-3" />
                                 <p className="text-slate-900 font-medium">No admins match</p>
-                                <p className="text-sm text-slate-500 mt-1">
+                                <p className="text-[1.25rem] text-slate-500 mt-1">
                                     {query || role !== 'all'
                                         ? 'Try a different filter.'
                                         : 'Add one to open a region for registration.'}
@@ -448,14 +487,14 @@ export default function ManageAdmins() {
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-slate-50 text-left text-slate-500">
+                                <table className="w-full text-[1.25rem]">
+                                    <thead className="bg-slate-50 text-left border-b border-slate-200">
                                         <tr>
-                                            <th className="px-5 py-3 font-medium">Name</th>
-                                            <th className="px-5 py-3 font-medium">Role</th>
-                                            <th className="px-5 py-3 font-medium">Region</th>
-                                            <th className="px-5 py-3 font-medium">Queue</th>
-                                            <th className="px-5 py-3 font-medium text-right">Actions</th>
+                                            <th className="px-5 py-4 text-[1.0625rem] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">Name</th>
+                                            <th className="px-5 py-4 text-[1.0625rem] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">Role</th>
+                                            <th className="px-5 py-4 text-[1.0625rem] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">Region</th>
+                                            <th className="px-5 py-4 text-[1.0625rem] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">Queue</th>
+                                            <th className="px-5 py-4 text-[1.0625rem] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap text-right">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y">
@@ -463,7 +502,7 @@ export default function ManageAdmins() {
                                             <tr key={a.id} className={a.active ? '' : 'opacity-60'}>
                                                 <td className="px-5 py-3">
                                                     <p className="font-medium text-slate-900">{a.fullName || '—'}</p>
-                                                    <p className="text-xs text-slate-500">{a.email}</p>
+                                                    <p className="text-[1.1875rem] text-slate-500">{a.email}</p>
                                                 </td>
                                                 <td className="px-5 py-3 text-slate-700">
                                                     {ROLES.find(r => r.value === a.role)?.label || a.role}
@@ -474,11 +513,11 @@ export default function ManageAdmins() {
                                                         geofenced by region string — so admins on one
                                                         region share one queue by construction. */}
                                                     {a.coAdmins > 0 ? (
-                                                        <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
+                                                        <span className="text-[1.1875rem] bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
                                                             shared with {a.coAdmins}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-xs text-slate-500">sole owner</span>
+                                                        <span className="text-[1.1875rem] text-slate-500">sole owner</span>
                                                     )}
                                                 </td>
                                                 <td className="px-5 py-3 text-right whitespace-nowrap">
@@ -512,7 +551,7 @@ export default function ManageAdmins() {
                 <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center overflow-y-auto p-4">
                     <form onSubmit={submit} className="bg-white rounded-2xl shadow-xl w-full max-w-lg border border-slate-200 my-8">
                         <header className="flex items-center justify-between px-6 py-5 border-b">
-                            <h2 className="text-lg font-bold tracking-tight text-slate-900">
+                            <h2 className={`${CARD_TITLE} text-slate-900`}>
                                 {editingId ? 'Edit admin' : 'Add admin'}
                             </h2>
                             <button
@@ -525,7 +564,7 @@ export default function ManageAdmins() {
 
                         <div className="p-6 space-y-4">
                             <div className="space-y-1.5">
-                                <label htmlFor="role" className="block text-sm font-semibold text-slate-700 mb-2">Role</label>
+                                <label htmlFor="role" className="block text-[1.25rem] font-semibold text-slate-700 mb-2">Role</label>
                                 <select
                                     id="role"
                                     value={form.role}
@@ -542,14 +581,14 @@ export default function ManageAdmins() {
                                             block: keeps.includes('block') ? form.block : '',
                                         });
                                     }}
-                                    className="h-11 w-full px-3.5 rounded-xl border border-slate-200 text-sm outline-none transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                                    className="h-11 w-full px-3.5 rounded-xl border border-slate-200 text-[1.25rem] outline-none transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                                 >
                                     {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                                 </select>
                                 {/* Mobile shows this too. Which collection an account
                                     lands in is not incidental — it is how the platform
                                     finds it again. */}
-                                <p className="text-xs text-slate-500">
+                                <p className="text-[1.1875rem] text-slate-500">
                                     Saved into the{' '}
                                     <span className="font-mono">{form.role.replace('_admin', '')}admins</span>{' '}
                                     collection.
@@ -560,7 +599,7 @@ export default function ManageAdmins() {
                                 of the form hangs off, and the one that opens a region
                                 for registration. */}
                             <div className="space-y-4 pb-2 border-b">
-                                <p className="text-sm font-semibold text-slate-800">Region</p>
+                                <p className="text-[1.25rem] font-semibold text-slate-800">Region</p>
                                 {needs.map(regionField)}
                             </div>
 
@@ -587,7 +626,7 @@ export default function ManageAdmins() {
                             <button
                                 type="button"
                                 onClick={() => setFormOpen(false)}
-                                className="h-11 px-5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300"
+                                className="h-11 px-5 rounded-xl border border-slate-200 text-[1.25rem] font-semibold text-slate-700 transition-colors hover:border-slate-300"
                             >
                                 Cancel
                             </button>
@@ -595,7 +634,7 @@ export default function ManageAdmins() {
                                 type="submit"
                                 disabled={saving}
                                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg
-                                           bg-blue-600 text-white text-sm font-medium disabled:opacity-60"
+                                           bg-blue-600 text-white text-[1.25rem] font-medium disabled:opacity-60"
                             >
                                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                                 {editingId ? 'Save changes' : 'Create admin'}
@@ -612,10 +651,10 @@ export default function ManageAdmins() {
                         <div className="flex items-start gap-3 mb-4">
                             <AlertTriangle className="w-6 h-6 text-red-500 shrink-0" />
                             <div>
-                                <h2 className="text-lg font-bold tracking-tight text-slate-900">
+                                <h2 className={`${CARD_TITLE} text-slate-900`}>
                                     Delete {removing.admin.fullName}?
                                 </h2>
-                                <p className="text-sm text-slate-500 mt-1">
+                                <p className="text-[1.25rem] text-slate-500 mt-1">
                                     This removes the account permanently.
                                 </p>
                             </div>
@@ -624,7 +663,7 @@ export default function ManageAdmins() {
                         {/* What it costs, from the server, before the decision. */}
                         {removing.preview?.pendingApplications > 0 && (
                             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-                                <p className="text-sm text-amber-900">
+                                <p className="text-[1.25rem] text-amber-900">
                                     <strong>{removing.preview.pendingApplications}</strong> pending
                                     application(s) sit in this region's queue.
                                     {removing.admin.coAdmins > 0
@@ -635,7 +674,7 @@ export default function ManageAdmins() {
                         )}
 
                         {removing.admin.coAdmins === 0 && (
-                            <div className="flex items-start gap-2 text-sm text-slate-500 mb-4">
+                            <div className="flex items-start gap-2 text-[1.25rem] text-slate-500 mb-4">
                                 <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-slate-400" />
                                 <p>
                                     Ownership is worked out at read time, so adding a replacement later
@@ -647,13 +686,13 @@ export default function ManageAdmins() {
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setRemoving(null)}
-                                className="flex-1 py-2.5 rounded-lg border border-slate-200 text-sm font-medium"
+                                className="flex-1 py-2.5 rounded-lg border border-slate-200 text-[1.25rem] font-medium"
                             >
                                 Keep
                             </button>
                             <button
                                 onClick={confirmRemove}
-                                className="flex-1 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700"
+                                className="flex-1 py-2.5 rounded-lg bg-red-600 text-white text-[1.25rem] font-medium hover:bg-red-700"
                             >
                                 Delete permanently
                             </button>

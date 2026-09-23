@@ -26,17 +26,36 @@ interface Application {
   district: string;
   block: string;
 
-  /** Canonical: Pending-Block | Pending-District | Pending-State | Approved | Rejected. */
+  /**
+   * Canonical: Pending | Approved | Rejected.
+   *
+   * Legacy rows still carry `PENDING`, `Pending-Block`, `Pending-District` and
+   * `Pending-State`, and every one of them means Pending — the review is no
+   * longer a relay through the tiers. Normalise before comparing; `activApi`'s
+   * `deriveApprovalFlags` is the one place that does it.
+   */
   status: string;
 
-  /** A tier has signed off exactly when its timestamp is set. */
+  /**
+   * The approval timestamps.
+   *
+   * `stateApprovedAt` is set by EVERY approval, whichever tier signed it, so a
+   * member-facing screen has one field to read as "the day this was approved".
+   * The other two are set only when that tier was the one that acted.
+   */
   blockApprovedAt?: string | null;
   districtApprovedAt?: string | null;
   stateApprovedAt?: string | null;
 
+  /** Who signed it. One tier does; the other two never see it again. */
+  approvedBy?: {
+    adminType?: 'BlockAdmin' | 'DistrictAdmin' | 'StateAdmin' | 'SuperAdmin';
+    approvedAt?: string | null;
+  };
+
   rejectionReason?: string;
   rejectedBy?: {
-    adminType?: 'BlockAdmin' | 'DistrictAdmin' | 'StateAdmin';
+    adminType?: 'BlockAdmin' | 'DistrictAdmin' | 'StateAdmin' | 'SuperAdmin';
     rejectedAt?: string | null;
   };
 
@@ -212,9 +231,9 @@ export const getUserApplication = async (): Promise<Application | null> => {
           const member = await getMyProfile().catch(() => null);
 
           // The most ADVANCED application, not the newest. A member can hold
-          // more than one row, and date order can put a stale Pending-Block
-          // record ahead of one already at the State tier — telling someone
-          // nobody had looked at their application when it was nearly done.
+          // more than one row, and date order can put an untouched record ahead
+          // of one that has already been decided — telling someone nobody had
+          // looked at their application when it had been approved.
           return decorate(pickMostAdvancedApplication(list), member);
         }
       }
@@ -244,6 +263,17 @@ export const getUserApplication = async (): Promise<Application | null> => {
   }
 };
 
+/**
+ * THREE forms, for every applicant, business or aspirant.
+ *
+ * It was four, with Financial & Compliance dropping out for an aspirant — so
+ * the denominator moved depending on an answer given in the middle of the flow,
+ * and a member who changed that answer watched their percentage jump. Financial
+ * details are asked in the Business Creation Account now, which is not part of
+ * the application at all, so the count is the same for everybody.
+ */
+const TOTAL_FORMS = 3;
+
 // Check if user has completed their profile
 export const checkProfileCompletion = async (): Promise<{
   isComplete: boolean;
@@ -257,7 +287,7 @@ export const checkProfileCompletion = async (): Promise<{
     return {
       isComplete: false,
       completedForms: [],
-      totalFormsRequired: 4,
+      totalFormsRequired: TOTAL_FORMS,
       memberType: 'business'
     };
   }
@@ -265,7 +295,6 @@ export const checkProfileCompletion = async (): Promise<{
   try {
     const completed: string[] = [];
     let isDoingBusiness = true;
-    let totalForms = 4;
 
     // Check Personal Form
     const personalRes = await apiFetch(`${API_BASE_URL}/members/my-profile`, {
@@ -285,25 +314,11 @@ export const checkProfileCompletion = async (): Promise<{
     if (businessRes.ok) {
       const data = await businessRes.json();
       if (data.data) {
-        if (data.data.doingBusiness === 'no') {
+        if (data.data.doingBusiness === 'no' || data.data.doingBusiness === false) {
           isDoingBusiness = false;
-          totalForms = 3;
         }
         if (data.data.doingBusiness) {
           completed.push('Business Information');
-        }
-      }
-    }
-
-    // Check Financial Form (only if doing business)
-    if (isDoingBusiness) {
-      const financialRes = await apiFetch(`${API_BASE_URL}/members/financial-info`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (financialRes.ok) {
-        const data = await financialRes.json();
-        if (data.data && data.data.pan) {
-          completed.push('Financial Details');
         }
       }
     }
@@ -320,9 +335,9 @@ export const checkProfileCompletion = async (): Promise<{
     }
 
     return {
-      isComplete: completed.length === totalForms,
+      isComplete: completed.length === TOTAL_FORMS,
       completedForms: completed,
-      totalFormsRequired: totalForms,
+      totalFormsRequired: TOTAL_FORMS,
       memberType: isDoingBusiness ? 'business' : 'aspirant'
     };
   } catch (error) {
@@ -330,7 +345,7 @@ export const checkProfileCompletion = async (): Promise<{
     return {
       isComplete: false,
       completedForms: [],
-      totalFormsRequired: 4,
+      totalFormsRequired: TOTAL_FORMS,
       memberType: 'business'
     };
   }

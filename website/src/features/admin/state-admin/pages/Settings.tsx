@@ -18,6 +18,9 @@ const Settings = () => {
         <AdminSettingsScreen
             tier="state"
             sidebar={<AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />}
+            /* Below `lg` the rail is a drawer and this screen had nothing that
+               could raise it — the state lives here, so the opener does too. */
+            onMenu={() => setSidebarOpen(true)}
         />
     );
 };

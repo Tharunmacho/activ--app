@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { resizeCompanyNames, toCount } from "@/lib/sisterConcerns";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -7,11 +8,12 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import {
   Check, FileText, ArrowLeft, ArrowRight, User, MapPin, KeyRound, UsersRound,
-  Building2, Receipt, Landmark, Award, ScrollText, type LucideIcon,
+  Building2, ScrollText, Trash2, type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import MemberPageShell from "./MemberPageShell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CARD_TITLE } from '@/components/layout/appTypography';
 import {
   apiFetch,
   getStates,
@@ -22,6 +24,7 @@ import {
   getFinancialInfo,
   getDeclarationInfo,
   submitApplication,
+  getMyApplication,
   errorMessage,
 } from "@/services/activApi";
 /**
@@ -30,10 +33,11 @@ import {
  * header of `memberFormOptions.ts`.
  */
 import {
-  CONSTITUTION_TYPES,
-  BUSINESS_TYPE_OPTIONS,
-  TURNOVER_RANGES,
   SOCIAL_CATEGORIES,
+  GENDERS,
+  religionsFor,
+  normalizeReligion,
+  commencementYears,
 } from "@/lib/memberFormOptions";
 
 type ProfileData = {
@@ -48,42 +52,30 @@ type ProfileData = {
   currentPassword?: string;
   password?: string;
   confirmPassword?: string;
-  religion?: string;
   socialCategory?: string;
+  religion?: string;
+  gender?: string;
 
-  // Step 2: Business Information
+  /*
+   * Step 2: Business Information — two questions.
+   *
+   * Organisation name, constitution, business types, activities, employee
+   * count, chamber membership and government bodies used to be asked here, and
+   * a whole Financial & Compliance step sat between this and the declaration.
+   * All of it describes a COMPANY rather than an applicant, so all of it is
+   * asked once per company in the Business Creation Account instead — a member
+   * trading through two companies had one answer each here, describing
+   * whichever was filled in last.
+   *
+   * `businessYear` is the exception and stays. It is what resolves the
+   * membership band and therefore the PRICE of the membership (see MEMBERSHIP
+   * PRICING in CLAUDE.md), so it has to have exactly one answer per applicant.
+   */
   doingBusiness?: string;
-  organization?: string;
-  constitution?: string;
-  businessTypes?: string[];
-  /* A field of its own. The Business Activities textarea was registered as
-     `businessYear`, so the description and the commencement year shared one
-     value and each overwrote the other. */
-  businessActivities?: string;
   businessYear?: string;
-  employees?: string;
-  chamber?: string;
-  chamberDetails?: string;
-  govtOrgs?: string[];
 
-  // Step 3: Financial & Compliance
-  pan?: string;
-  gst?: string;
-  udyam?: string;
-  filedITR?: string;
-  itrYears?: string;
-  turnoverRange?: string;
-  turnover1?: string;
-  turnover2?: string;
-  turnover3?: string;
-  govtSchemes?: string;
-  scheme1?: string;
-  scheme2?: string;
-  scheme3?: string;
-
-  // Step 4: Declaration
+  // Step 3: Declaration
   sisterConcerns?: string;
-  companyNames?: string;
   declarationAccepted?: boolean;
 };
 
@@ -98,64 +90,81 @@ const defaultProfile: ProfileData = {
   currentPassword: "",
   password: "",
   confirmPassword: "",
-  religion: "",
   socialCategory: "",
+  religion: "",
+  gender: "",
   doingBusiness: "",
-  organization: "",
-  constitution: "",
-  businessTypes: [],
-  businessActivities: "",
   businessYear: "",
-  employees: "",
-  chamber: "",
-  chamberDetails: "",
-  govtOrgs: [],
-  pan: "",
-  gst: "",
-  udyam: "",
-  filedITR: "",
-  itrYears: "",
-  turnoverRange: "",
-  turnover1: "",
-  turnover2: "",
-  turnover3: "",
-  govtSchemes: "",
-  scheme1: "",
-  scheme2: "",
-  scheme3: "",
   sisterConcerns: "",
-  companyNames: "",
   declarationAccepted: false,
 };
 
 /**
- * The four steps, as the left rail names them.
+ * The three steps, as the left rail names them.
  *
  * `hint` is what the step is actually for, in the member's words. A rail that
  * lists "Business" and nothing else asks someone to guess what is behind it.
+ *
+ * `Financial` used to sit third. It is asked per company in the Business
+ * Creation Account now — see the note on `ProfileData` — so the application
+ * itself is three steps for everybody, business and aspirant alike.
  */
 const RAIL = [
   { n: 1, name: 'Personal', hint: 'Who you are and where' },
-  { n: 2, name: 'Business', hint: 'Your organisation' },
-  { n: 3, name: 'Financial', hint: 'Tax and compliance' },
-  { n: 4, name: 'Declaration', hint: 'Confirm and submit' },
+  { n: 2, name: 'Business', hint: 'Whether you trade, and since when' },
+  { n: 3, name: 'Declaration', hint: 'Confirm and submit' },
 ] as const;
+
+/** "Three steps" reads better than "3 steps" in a sentence; the rail decides. */
+/**
+ * THE BUSINESS ACCOUNT FORM'S FIELD, on the application form too.
+ *
+ * The shared `Input` ships `border-black` on a white ground — a hard 1px
+ * rule that reads as a wireframe beside the slate-50 well `CompanyForm`
+ * uses on every control. Two forms a member fills in the same week should
+ * not look like two products, and this is the one the association asked to
+ * be matched.
+ *
+ * Applied per call site rather than by changing `Input` itself: that
+ * component is used by the admin panels and the CMS, which were built
+ * against the bordered look.
+ */
+const FIELD =
+  'mt-1.5 h-[3.25rem] w-full rounded-xl border border-slate-200 bg-slate-50 px-4 ' +
+  'text-[1.1875rem] font-medium text-slate-900 placeholder:font-medium placeholder:text-slate-400 ' +
+  'transition-colors hover:border-slate-300 focus:bg-white focus:border-transparent ' +
+  'focus:ring-2 focus:ring-blue-600 disabled:bg-slate-100 disabled:text-slate-500';
+
+/** Its label — the size `Label` has always been on this form. */
+const FIELD_LABEL = 'block text-[1.1875rem] font-medium text-slate-800';
+
+const STEP_WORDS: Record<number, string> = { 2: 'Two', 3: 'Three', 4: 'Four', 5: 'Five' };
 
 const STEP_HEADING: Record<number, { title: string; blurb: string }> = {
   1: { title: 'Personal details', blurb: 'Your name, how we reach you, and the region your application is reviewed in.' },
-  2: { title: 'Business details', blurb: 'Tell us about your organisation. Not running a business? Answer “No” and we will skip ahead.' },
-  3: { title: 'Financial & compliance', blurb: 'Registration numbers and turnover. Nothing here is shown in the public directory.' },
-  4: { title: 'Declaration', blurb: 'A last look, then confirm the undertaking and submit for review.' },
+  2: { title: 'Business details', blurb: 'Whether you are trading today, and the year you started. Everything else about a company is asked in your Business Account.' },
+  3: { title: 'Declaration', blurb: 'A last look, then confirm the undertaking and submit for review.' },
 };
 
 /**
- * One titled block of fields.
+ * One titled block of fields — a SECTION, not a card.
  *
  * Each step used to be an unbroken run of inputs under a single heading — ten
  * deep on step 1, with the password boxes sitting between "Email" and
- * "Religion" as though they were the same thought. Small captioned cards are
- * what make a long form scannable: you can tell what a block is for before
- * reading a single label.
+ * "Religion" as though they were the same thought. Captioned blocks are what
+ * make a long form scannable: you can tell what a block is for before reading
+ * a single label.
+ *
+ * THEY WERE CARDS, AND FOUR OF THEM ON ONE STEP WAS THREE TOO MANY. "About
+ * you", "Location", "Change your password" and "Demographic details" are four
+ * parts of ONE form about ONE person, and four bordered, shadowed rectangles
+ * down a page say the opposite — that these are four separate things that
+ * happen to be stacked. The chrome also cost a border, a shadow and a gap
+ * between every pair of headings, which is a lot of furniture to walk past on
+ * the way to a text box.
+ *
+ * The blocks are unchanged; only the frame moved out to `SectionGroup`, which
+ * draws it once for all of them.
  */
 function Section({
   icon: Icon,
@@ -169,18 +178,42 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl bg-white border border-[#E8EEF6] shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-5 lg:p-6">
+    <section className="p-5 lg:p-6">
       <div className="flex items-start gap-3 pb-4 mb-5 border-b border-[#F1F5F9]">
         <span className="w-10 h-10 rounded-xl bg-[#EEF3FE] flex items-center justify-center shrink-0">
           <Icon className="w-[1.125rem] h-[1.125rem] text-[#1E50E6]" />
         </span>
         <div className="min-w-0">
-          <h3 className="font-display text-[0.9375rem] font-bold text-[#0F172A] leading-tight">{title}</h3>
-          {subtitle ? <p className="text-[0.8125rem] text-[#64748B] mt-1 leading-snug">{subtitle}</p> : null}
+          <h3 className={`${CARD_TITLE} text-[#0F172A]`}>{title}</h3>
+          {subtitle ? <p className="text-[1.0625rem] text-[#64748B] mt-1 leading-snug">{subtitle}</p> : null}
         </div>
       </div>
       {children}
     </section>
+  );
+}
+
+/**
+ * THE CARD. One per step, holding every section in it.
+ *
+ * `divide-y` rather than a border on each section: sections are conditional —
+ * step 3 drops "Sister concerns" for an aspirant — and `first:border-t-0`
+ * picks the first ELEMENT, which is not the first RENDERED one once a
+ * condition removes it. A rule would then be drawn above nothing. `divide-y`
+ * only ever draws between siblings that actually rendered.
+ *
+ * The step's action bar stays OUTSIDE this card, deliberately. It is the same
+ * control in the same place on every step, and putting it inside would let it
+ * move as a section above it grows or a conditional block opens — which is the
+ * exact thing the note on that bar says it exists to prevent.
+ */
+function SectionGroup({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl bg-white border border-[#E8EEF6] overflow-hidden
+                    shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]
+                    divide-y divide-[#F1F5F9]">
+      {children}
+    </div>
   );
 }
 
@@ -215,8 +248,89 @@ export default function Profile() {
    * `loadUserProfile`.
    */
   const [noMemberRecord, setNoMemberRecord] = useState(false);
+
+  /**
+   * WHETHER THE APPLICATION HAS ALREADY BEEN DECIDED.
+   *
+   * A member whose application three admins have approved still comes to
+   * this screen to correct a phone number — and it showed them a wizard
+   * ending in "Submit Application", which would lodge a SECOND application
+   * for somebody who is already a member. The screen is the same form either
+   * way; what changes is the last button and what it does.
+   */
+  const [alreadyApplied, setAlreadyApplied] = useState(false);
+  /*
+   * The company-name rows. ONE source of truth, and that is the fix.
+   *
+   * There were two. A react-hook-form field called `companyNames` held a single
+   * typed string and was what the form showed by default; this array held the
+   * rows and was what `handleFinalSubmit` actually sent. A `showSeparateFields`
+   * checkbox switched the view between them. Two consequences, both silent:
+   *
+   *   - "Add Another Company" pushed a row onto an array that the default view
+   *     did not render, so the button appeared to do nothing at all.
+   *   - A name typed into that default field was never in this array, so it was
+   *     filtered out at submit and the company was lost. No error, and the
+   *     applicant had watched themselves type it.
+   *
+   * So there is no mode switch now and no form field — just the rows, rendered
+   * one per company, each removable. Same shape as `Settings.tsx` and
+   * `DeclarationForm.tsx`, which ask this question the same way.
+   */
   const [companyNames, setCompanyNames] = useState<string[]>([""]);
-  const [showSeparateFields, setShowSeparateFields] = useState(false);
+
+  const updateCompanyName = (index: number, value: string) => {
+    setCompanyNames((rows) => rows.map((row, i) => (i === index ? value : row)));
+  };
+
+  /*
+   * ==========================================================================
+   * THE COUNT AND THE BOXES ARE ONE ANSWER, SO THEY MOVE TOGETHER
+   * ==========================================================================
+   *
+   * "No. of Sister Concerns: 3" beside one name box is a form contradicting
+   * itself, and the applicant has no way to know which half the association
+   * will read. Typing a number now builds that many boxes; adding or removing a
+   * box moves the number. Neither can be left behind by the other.
+   *
+   * SHRINKING DROPS BLANKS BEFORE IT DROPS TYPED NAMES. Going 3 -> 2 with
+   * ["Acme", "", "Baker"] keeps both companies rather than deleting Baker for
+   * being last — the blank row is the one carrying nothing. Only when there are
+   * no blanks left does a typed name go, which at that point is the honest
+   * consequence of answering "2".
+   */
+  /* `resizeCompanyNames` lives in `lib/sisterConcerns.ts` — see the note there. */
+
+  /** The number field. Digits only — a count cannot be negative or fractional. */
+  const handleSisterCountChange = (raw: string) => {
+    const digits = toCount(raw);
+    setValue("sisterConcerns", digits, { shouldDirty: true });
+    // `''` while the box is being cleared is not zero: it is "no answer yet".
+    // Wiping the rows on the way past an empty string would throw away typed
+    // names every time somebody selected the number and retyped it.
+    if (digits === "") return;
+    setCompanyNames((rows) => resizeCompanyNames(rows, Number(digits)));
+  };
+
+  const addCompanyName = () => setCompanyNames((rows) => {
+    const next = [...rows, ""];
+    setValue("sisterConcerns", String(next.length), { shouldDirty: true });
+    return next;
+  });
+
+  /*
+   * Removing a row takes the count down with it. The list may now be empty —
+   * unlike before, when it kept one box back — because the count is what says
+   * whether there are any: a member who answers 0 should not be left looking at
+   * a company field, and one who answers 1 gets the box straight back.
+   */
+  const removeCompanyName = (index: number) => {
+    setCompanyNames((rows) => {
+      const next = rows.filter((_, i) => i !== index);
+      setValue("sisterConcerns", String(next.length), { shouldDirty: true });
+      return next;
+    });
+  };
   /**
    * The member's actual consent, which used to be a decorative ✓ glyph with no
    * value behind it. It gates `handleFinalSubmit` and is sent as
@@ -225,7 +339,7 @@ export default function Profile() {
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
   const navigate = useNavigate();
   /**
-   * `?step=3` — "open this application AT the financial step".
+   * `?step=2` — "open this application AT the business step".
    *
    * My Profile and My Documents list the four sections with a "Complete now"
    * against each, and those pointed at `/member/forms/financial` — the
@@ -233,7 +347,7 @@ export default function Profile() {
    * questions. A member filling one of those is not filling in this
    * application: different screen, different stepper, and nothing carries them
    * on to the step after it. The links come here now and name the step, so
-   * "Complete now" against Financial opens the financial step of the
+   * "Complete now" against Business opens the business step of the
    * application the member is actually completing.
    *
    * A hint, not a command: the loader below still resolves where the member
@@ -244,7 +358,7 @@ export default function Profile() {
   const [searchParams] = useSearchParams();
   const requestedStep = (() => {
     const raw = Number(searchParams.get('step'));
-    return Number.isInteger(raw) && raw >= 1 && raw <= 4 ? raw : 0;
+    return Number.isInteger(raw) && raw >= 1 && raw <= RAIL.length ? raw : 0;
   })();
 
   const {
@@ -253,6 +367,7 @@ export default function Profile() {
     control,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<ProfileData>({ defaultValues: defaultProfile });
 
@@ -272,8 +387,29 @@ export default function Profile() {
    * called ONCE at the end with everything merged, so React Hook Form gets one
    * new baseline rather than four partial ones racing each other.
    */
+  /**
+   * WHETHER THE RECORD HAS ARRIVED YET, AND WHETHER IT ARRIVED AT ALL.
+   *
+   * The screen had neither. It rendered the form immediately and filled it in
+   * when three reads came back — so for as long as those took, a member who
+   * navigated here (or came back to the tab) saw their own profile as a page
+   * of EMPTY BOXES. That is the "profile not showing" fault: nothing was
+   * broken, the screen simply showed the blank state of a form that was still
+   * loading, and looked identical to a member who had filled nothing in.
+   *
+   * Worse, a failed read was swallowed by a `catch` that only logged: the
+   * boxes then stayed empty for good, and pressing Save would overwrite a
+   * real record with them. `loadFailed` stops that by keeping the form off
+   * the screen entirely until the record is in hand.
+   */
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+
   useEffect(() => {
     const loadUserProfile = async () => {
+      setLoadingProfile(true);
+      setLoadFailed(false);
       try {
         const token = localStorage.getItem("token");
 
@@ -299,10 +435,14 @@ export default function Profile() {
           }
         };
 
-        const [personal, business, financial, declaration] = await Promise.all([
+        /*
+          Three reads. The financial record is no longer a step of this
+          application — it is filled in per company, in the Business Creation
+          Account — so there is nothing on this form for it to populate.
+        */
+        const [personal, business, declaration] = await Promise.all([
           read("/members/my-profile"),
           read("/members/business-info"),
-          read("/members/financial-info"),
           read("/members/declaration-info"),
         ]);
 
@@ -325,6 +465,60 @@ export default function Profile() {
           return;
         }
 
+        /*
+         * `status: 0` is the shape `read` returns when the request threw —
+         * no network, a dropped connection, a CORS failure. Anything 500 and
+         * up is the server saying it could not answer. Either way the form
+         * must not be shown: an empty box a member then saves over is how a
+         * filled-in profile becomes a blank one.
+         */
+        if (personal.status === 0 || personal.status >= 500) {
+          setLoadFailed(true);
+          return;
+        }
+
+        /*
+         * HAS THIS MEMBER ALREADY APPLIED?
+         *
+         * ASK THE APPLICATIONS COLLECTION. Nothing on the profile record can
+         * answer this, and one field on it looked like it could:
+         *
+         *     || personal.data?.membershipNumber
+         *
+         * `GET /members/my-profile` does not return `membershipNumber` as a
+         * stored value. It returns
+         *
+         *     member.membershipNumber || String(member._id).slice(-8).toUpperCase()
+         *
+         * — a DERIVED id that every member has, applied or not. (It is the
+         * "ID 49C436C6" printed on the profile screen.) So the test was true
+         * for everybody, always. The consequences ran the whole length of the
+         * screen and every one of them looked deliberate:
+         *
+         *   - the last button read "Save changes", never "Submit Application"
+         *   - the step subtitle read "Your declaration", not "Step 3 of 3"
+         *   - `createApplicationFromStoredForms` returned at its
+         *     `if (alreadyApplied)` guard BEFORE calling `submitApplication`,
+         *     and reported "Your details have been updated" on the way out
+         *
+         * So the form saved perfectly and lodged nothing, with a success
+         * toast over it. A member reached 100%, appeared in no admin queue at
+         * any tier, and had no way to tell.
+         *
+         * `getMyApplication()` is the same call the dashboard derives
+         * `applicationSubmitted` from, so the two screens cannot disagree
+         * about whether this member has applied.
+         *
+         * The other two tests are kept because both are real: a stored
+         * `applicationId` is written when an application is lodged, and an
+         * ACTIVE membership cannot exist without one.
+         */
+        const existingApplication = await getMyApplication().catch(() => null);
+        const already = !!(existingApplication
+            || personal.data?.applicationId
+            || String(personal.data?.membershipStatus || '').toLowerCase() === 'active');
+        setAlreadyApplied(already);
+
         /** "yes" / "no" — the shape the radio groups are registered with. */
         const yesNo = (value: unknown): string => {
           if (value === true) return "yes";
@@ -335,7 +529,7 @@ export default function Profile() {
 
         const merged: Record<string, unknown> = {};
         /** Which steps actually came back answered — drives the rail below. */
-        const answered = { personal: false, business: false, financial: false };
+        const answered = { personal: false, business: false };
 
         // ------------------------------------------------- step 1: personal
         if (personal.data) {
@@ -352,8 +546,13 @@ export default function Profile() {
             district: d.district || "",
             block: d.block || "",
             city: d.city || "",
-            religion: d.religion || "",
             socialCategory: d.socialCategory || "",
+            // Old spellings are mapped onto the list's current wording, so
+            // a returning member is not handed a blank select and asked to
+            // answer a question they already answered. Anything with no
+            // equivalent comes back '' — see `normalizeReligion`.
+            religion: normalizeReligion(d.religion),
+            gender: d.gender || "",
             // Never restored: these are not stored, and a prefilled password box
             // is a password box the member cannot tell is empty.
             password: "",
@@ -379,12 +578,10 @@ export default function Profile() {
 
         // ------------------------------------------------- step 2: business
         /*
-         * Read the names `GET /members/business-info` actually returns —
-         * `organizationName`, `constitutionType`, `businessCommencementYear`,
-         * `numberOfEmployees`, `memberOfOtherChamber`, `otherChamber`,
-         * `govtOrganizations`. The form's own shorthand is kept as a fallback so
-         * a cached or older response shape still populates rather than blanking
-         * the step.
+         * Two fields. `businessCommencementYear` is the name
+         * `GET /members/business-info` returns; the form's own `businessYear`
+         * shorthand is kept as a fallback so an older cached response shape
+         * still populates the step rather than blanking it.
          */
         if (business.data) {
           const d = business.data;
@@ -392,60 +589,11 @@ export default function Profile() {
 
           Object.assign(merged, {
             doingBusiness: yesNo(d.doingBusiness),
-            organization: d.organizationName || d.organization || "",
-            constitution: d.constitutionType || d.constitution || "",
-            businessTypes: d.businessTypes || [],
-            businessActivities: d.businessActivities || "",
-            businessYear: String(d.businessCommencementYear || d.businessYear || ""),
-            employees: String(d.numberOfEmployees || d.employees || ""),
-            chamber: yesNo(d.memberOfOtherChamber ?? d.chamber),
-            chamberDetails: d.otherChamber || d.chamberDetails || "",
-            govtOrgs: d.govtOrganizations || d.govtOrgs || []
+            businessYear: String(d.businessCommencementYear || d.businessYear || "")
           });
         }
 
-        // ------------------------------------------------ step 3: financial
-        if (financial.data) {
-          const d = financial.data;
-          answered.financial = Boolean(
-            d.panNumber || d.gstNumber || d.udyamNumber || d.turnoverRange
-          );
-
-          /*
-           * `schemeDetails` is one stored string behind three inputs, joined
-           * with ", " on the way out. Split on the same separator so the three
-           * boxes come back the way they were typed. A fourth entry would be
-           * lost, so the remainder is kept on the third rather than dropped.
-           */
-          const schemes = String(d.schemeDetails || "")
-            .split(",")
-            .map((part: string) => part.trim())
-            .filter(Boolean);
-
-          const turnovers: string[] = Array.isArray(d.turnoverLast3Years)
-            ? d.turnoverLast3Years.map((value: unknown) => String(value ?? ""))
-            : [];
-
-          Object.assign(merged, {
-            pan: d.panNumber || "",
-            gst: d.gstNumber || "",
-            udyam: d.udyamNumber || "",
-            filedITR: yesNo(d.filedITR),
-            itrYears: d.itrYears === null || d.itrYears === undefined ? "" : String(d.itrYears),
-            turnoverRange: d.turnoverRange || "",
-            turnover1: turnovers[0] || "",
-            turnover2: turnovers[1] || "",
-            turnover3: turnovers[2] || "",
-            // The radio asks "have you benefited from a scheme" — that answer is
-            // `govtSchemeBenefit`, not the list of scheme names.
-            govtSchemes: yesNo(d.govtSchemeBenefit),
-            scheme1: schemes[0] || "",
-            scheme2: schemes[1] || "",
-            scheme3: schemes.slice(2).join(", ")
-          });
-        }
-
-        // ---------------------------------------------- step 4: declaration
+        // ---------------------------------------------- step 3: declaration
         if (declaration.data) {
           const d = declaration.data;
           const names: string[] = Array.isArray(d.companyNames)
@@ -456,7 +604,6 @@ export default function Profile() {
             sisterConcerns: d.sisterConcerns === null || d.sisterConcerns === undefined
               ? ""
               : String(d.sisterConcerns),
-            companyNames: names.join(", ")
           });
 
           /*
@@ -464,7 +611,14 @@ export default function Profile() {
            * The row list keeps one empty box when there is nothing stored, or
            * the member is left with an "Add" button and nowhere to type.
            */
-          setCompanyNames(names.length ? names : [""]);
+          /*
+           * The saved NAMES are the authority on load, and the count is set to
+           * match them. They can disagree on a record written before the two
+           * were tied together, and a stored count of 2 must not silently
+           * delete a third company the member actually entered.
+           */
+          setCompanyNames(names);
+          setValue("sisterConcerns", String(names.length), { shouldDirty: false });
           setDeclarationAccepted(d.agreeToDeclaration === true);
         }
 
@@ -478,28 +632,31 @@ export default function Profile() {
          *
          * A member who had filled two steps and came back landed on step 1 with
          * no way forward: the rail only lets you click a step you have already
-         * passed, and `currentStep` always started at 1, so steps 2, 3 and 4
-         * were unreachable until step 1 was submitted again. Resuming where they
+         * passed, and `currentStep` always started at 1, so steps 2 and 3 were
+         * unreachable until step 1 was submitted again. Resuming where they
          * stopped is also simply what "come back later" means for a form whose
          * own strapline is "everything saves as you go".
          *
          * `furthestStep` is remembered separately so the rail stays walkable in
          * BOTH directions afterwards — going back to check step 2 must not make
-         * steps 3 and 4 unreachable again.
+         * step 3 unreachable again.
          */
-        const firstUnanswered = [answered.personal, answered.business, answered.financial]
+        const firstUnanswered = [answered.personal, answered.business]
           .findIndex((done) => !done);
-        const resumeAt = firstUnanswered === -1 ? 4 : firstUnanswered + 1;
+        const resumeAt = firstUnanswered === -1 ? RAIL.length : firstUnanswered + 1;
         setFurthestStep(resumeAt);
         // `?step=` may only pick a step at or before the one they have reached.
         setCurrentStep(requestedStep && requestedStep <= resumeAt ? requestedStep : resumeAt);
       } catch (error) {
         console.error("Error loading profile:", error);
+        setLoadFailed(true);
+      } finally {
+        setLoadingProfile(false);
       }
     };
 
     loadUserProfile();
-  }, [reset, requestedStep]);
+  }, [reset, requestedStep, loadAttempt]);
 
   /**
    * Selectable states come from the admin database, never a bundled list.
@@ -634,13 +791,31 @@ export default function Profile() {
       return false;
     }
 
+    if (!data.socialCategory || !data.socialCategory.trim()) {
+      toast.error("Social Category is required");
+      return false;
+    }
+
     if (!data.religion || !data.religion.trim()) {
       toast.error("Religion is required");
       return false;
     }
 
-    if (!data.socialCategory || !data.socialCategory.trim()) {
-      toast.error("Social Category is required");
+    /*
+      Checked, not merely collected.
+
+      Social category narrows the religions on offer, and the control clears an
+      incompatible answer when the category changes — but a value can also
+      arrive from a saved record written before the rule existed. Saving it
+      would store a combination the form itself will not let anyone pick.
+    */
+    if (!religionsFor(data.socialCategory).includes(data.religion)) {
+      toast.error(`Please choose a religion recognised for ${data.socialCategory}`);
+      return false;
+    }
+
+    if (!data.gender || !data.gender.trim()) {
+      toast.error("Gender is required");
       return false;
     }
 
@@ -700,8 +875,9 @@ export default function Profile() {
           district: data.district,
           block: data.block,
           city: data.city,
-          religion: data.religion,
           socialCategory: data.socialCategory,
+          religion: data.religion,
+          gender: data.gender,
           isLocked: true
         };
 
@@ -747,234 +923,84 @@ export default function Profile() {
         advanceTo(2);
       }
     } else if (currentStep === 2) {
-      if (data.doingBusiness === "no") {
-        // Check if declaration is accepted
-        if (!data.declarationAccepted) {
-          toast.error("Please accept the declaration to continue");
-          return;
-        }
-
-        // Save business form with "no" status (Aspirant)
-        const token = localStorage.getItem("token");
-        if (!token) {
-          toast.error("Authentication required");
-          return;
-        }
-
-        try {
-
-          const businessResponse = await apiFetch("/members/profile", {
-            method: 'PUT',
-            headers: {
-              "Authorization": `Bearer ${token}`,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ doingBusiness: "no" })
-          });
-
-          const businessResult = await businessResponse.json();
-
-          if (!businessResponse.ok) {
-            console.error("❌ Failed to save business form:", businessResult);
-            toast.error("Failed to save business information");
-            return;
-          }
-
-
-          // Also save declaration form for aspirant
-
-          const declarationResponse = await apiFetch("/members/profile", {
-            method: 'PUT',
-            headers: {
-              "Authorization": `Bearer ${token}`,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              remarks: "Aspirant application",
-              declarationAccepted: true
-            })
-          });
-
-          const declarationResult = await declarationResponse.json();
-
-          if (!declarationResponse.ok) {
-            console.error("❌ Failed to save declaration:", declarationResult);
-            toast.error("Failed to submit declaration");
-            return;
-          }
-
-
-        } catch (error) {
-          console.error("❌ Error saving forms:", error);
-          toast.error("Failed to save information");
-          return;
-        }
-
-        saveCurrentStepData(data);
-
-        // The same call the business branch makes. This used to invent an id
-        // and navigate, creating nothing.
-        if (!(await createApplicationFromStoredForms())) return;
-
-        toast.success("Application submitted successfully!");
-
-        // Dispatch events to refresh profile completion immediately
-        window.dispatchEvent(new CustomEvent('formSubmitted'));
-        window.dispatchEvent(new CustomEvent('profileUpdated'));
-
-        navigate('/member/application-submitted');
+      if (!data.doingBusiness) {
+        toast.error("Please select if you are doing business");
         return;
-      } else if (data.doingBusiness === "yes") {
-        if (!data.organization || !data.constitution || !data.businessTypes?.length) {
-          toast.error("Please fill in all required business information");
-          return;
-        }
+      }
 
-        // Save business form to business_profiles collection
-        try {
-          const token = localStorage.getItem("token");
-          if (token) {
-            /*
-             * The names the schema actually stores.
-             *
-             * This sent `organization`, `constitution`, `businessYear`,
-             * `employees`, `chamber` and `govtOrgs` — none of which
-             * `updateMember` reads. Mongoose strict mode dropped every one of
-             * them, the request answered 200 and the toast said "saved", so a
-             * member filled in eight fields and got two back. The server now
-             * also accepts the short names (see `FIELD_ALIASES`), but sending
-             * the real ones is the fix; the aliases are there for the clients
-             * that cannot be corrected retroactively.
-             */
-            const businessData = {
-              doingBusiness: data.doingBusiness,
-              organizationName: data.organization,
-              constitutionType: data.constitution,
-              businessTypes: data.businessTypes,
-              businessActivities: data.businessActivities,
-              businessCommencementYear: data.businessYear,
-              numberOfEmployees: data.employees,
-              memberOfOtherChamber: data.chamber,
-              otherChamber: data.chamberDetails || "",
-              govtOrganizations: data.govtOrgs || []
-            };
+      const isAspirant = data.doingBusiness === "no";
 
+      if (!isAspirant && !data.businessYear) {
+        toast.error("Please select the year your business commenced");
+        return;
+      }
 
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Authentication required");
+        return;
+      }
 
-            const response = await apiFetch("/members/profile", {
-              method: 'PUT',
-              headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify(businessData)
-            });
+      try {
+        /*
+         * The names the schema actually stores.
+         *
+         * This block used to send `organization`, `constitution`,
+         * `businessYear`, `employees`, `chamber` and `govtOrgs` — none of which
+         * `updateMember` reads. Mongoose strict mode dropped every one, the
+         * request answered 200 and the toast said "saved", so a member filled
+         * in eight fields and got two back. Two fields are asked here now, and
+         * both are sent under the names the record uses.
+         *
+         * An aspirant sends no commencement year at all. `""` would overwrite a
+         * stored year with a blank — and the membership band, and the price,
+         * with it.
+         */
+        const businessData: Record<string, unknown> = {
+          doingBusiness: data.doingBusiness,
+          registrationType: isAspirant ? "aspirant" : "business",
+        };
+        if (!isAspirant) businessData.businessCommencementYear = data.businessYear;
 
-            const result = await response.json();
+        const response = await apiFetch("/members/profile", {
+          method: 'PUT',
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(businessData)
+        });
 
-            if (!response.ok) {
-              console.error("❌ Failed to save:", result);
-              toast.error("Failed to save business information");
-              return;
-            }
-
-            toast.success("Business information saved!");
-            
-            // Dispatch event to refresh profile completion
-            window.dispatchEvent(new CustomEvent('formSubmitted'));
-            window.dispatchEvent(new CustomEvent('profileUpdated'));
-          }
-        } catch (error) {
-          console.error("Error saving business form:", error);
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({}));
+          console.error("Failed to save business information:", result);
           toast.error("Failed to save business information");
           return;
         }
 
-        saveCurrentStepData(data);
-        advanceTo(3);
-      } else {
-        toast.error("Please select if you are doing business");
-      }
-    } else if (currentStep === 3) {
-      // Save financial form to "additional form for financial 3" collection
-      try {
-        const token = localStorage.getItem("token");
-        if (token) {
-          /*
-           * `panNumber`, not `pan` — same story as the business block above.
-           *
-           * The three identifiers a member is most likely to check afterwards
-           * were the three being dropped. `scheme1..3` are three inputs behind
-           * one stored field, so they are joined here rather than sent as
-           * three keys the schema has never had.
-           */
-          const schemeDetails = [data.scheme1, data.scheme2, data.scheme3]
-            .map((value: unknown) => String(value || "").trim())
-            .filter(Boolean)
-            .join(", ");
+        toast.success("Business information saved!");
 
-          /*
-           * `govtSchemes` is a yes/no RADIO on this form, not a list.
-           *
-           * It was being sent as `govtSchemes` (a `[String]` field, so "no"
-           * stored as `["no"]`) and the derived flag was
-           * `(data.govtSchemes || []).length > 0` — `.length` on a string. "no"
-           * is two characters, so a member answering NO was recorded as a
-           * scheme beneficiary, and the form read that back as "yes" the next
-           * time they opened it. The question the radio actually asks is the
-           * one `govtSchemeBenefit` stores; the scheme names live in
-           * `schemeDetails`, from the three boxes below it.
-           */
-          const turnoverLast3Years = [data.turnover1, data.turnover2, data.turnover3]
-            .map((value: unknown) => String(value || "").trim());
-
-          const financialData = {
-            panNumber: data.pan,
-            gstNumber: data.gst,
-            udyamNumber: data.udyam,
-            filedITR: data.filedITR,
-            // Blank means "not answered" to the server, which leaves whatever
-            // is stored alone — the field is only shown once ITR is answered
-            // yes, so a member who never sees it cannot blank it by accident.
-            itrYears: data.itrYears ?? "",
-            turnoverRange: data.turnoverRange,
-            // Sent even when all three are blank — that is how a member clears
-            // them. Trailing blanks are trimmed so an untouched form does not
-            // store three empty strings.
-            turnoverLast3Years: turnoverLast3Years.some(Boolean)
-              ? turnoverLast3Years
-              : [],
-            govtSchemeBenefit: data.govtSchemes === "yes",
-            schemeDetails
-          };
-
-          const response = await apiFetch("/members/profile", {
-            method: 'PUT',
-            headers: {
-              "Authorization": `Bearer ${token}`,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify(financialData)
-          });
-
-          if (!response.ok) {
-            toast.error("Failed to save financial information");
-            return;
-          }
-
-          toast.success("Financial information saved!");
-          // Dispatch event to refresh profile completion
-          window.dispatchEvent(new CustomEvent('formSubmitted'));
-          window.dispatchEvent(new CustomEvent('profileUpdated'));
-        }
+        // Dispatch event to refresh profile completion
+        window.dispatchEvent(new CustomEvent('formSubmitted'));
+        window.dispatchEvent(new CustomEvent('profileUpdated'));
       } catch (error) {
-        console.error("Error saving financial form:", error);
-        toast.error("Failed to save financial information");
+        console.error("Error saving business form:", error);
+        toast.error("Failed to save business information");
         return;
       }
 
       saveCurrentStepData(data);
-      advanceTo(4);
+
+      /*
+        BOTH kinds of applicant continue to the declaration.
+
+        An aspirant used to submit their whole application from this step,
+        through a checkbox inside an amber panel — so the two kinds of applicant
+        agreed to two differently-worded declarations on two different screens,
+        and only the one on step 4 was recorded in the declaration collection.
+        There is one declaration step and everybody signs it.
+      */
+      advanceTo(3);
     }
   };
 
@@ -992,9 +1018,19 @@ export default function Profile() {
       const token = localStorage.getItem("token");
       if (token) {
         // Save Step 4 to "additional form for declaration 4" collection
+        /*
+         * An aspirant has no sister concerns to report, and the fields
+         * are not on their screen — so nothing is sent for them rather
+         * than a "0" the form filled in on their behalf. A stored 0 and
+         * an unasked question read identically to every later report,
+         * and only one of them is something the applicant said.
+         */
+        const isBusinessApplicant = data.doingBusiness === "yes";
         const declarationData = {
-          sisterConcerns: data.sisterConcerns || "",
-          companyNames: companyNames.filter(name => name.trim() !== ""),
+          sisterConcerns: isBusinessApplicant ? (data.sisterConcerns || "") : "",
+          companyNames: isBusinessApplicant
+            ? companyNames.filter(name => name.trim() !== "")
+            : [],
           /**
            * `agreeToDeclaration`, not `declarationAccepted`.
            *
@@ -1095,6 +1131,24 @@ export default function Profile() {
         business?.doingBusiness === "no" ||
         business?.registrationType === "aspirant";
 
+      /*
+       * ALREADY A MEMBER: save and stop.
+       *
+       * Everything above this line has written the three step records, which
+       * IS the edit. Lodging another application would put a second row in
+       * the admin queues for somebody already approved, and the tier reviews
+       * on the first one would have nothing to do with it.
+       */
+      if (alreadyApplied) {
+        toast.success('Your details have been updated');
+        window.dispatchEvent(new CustomEvent('profileUpdated'));
+        navigate('/member/profile-view');
+        // `false`, not a bare `return`. The signature is `Promise<boolean>`
+        // and the caller reads it as one; `undefined` happened to be falsy,
+        // which is the right answer here by luck rather than by statement.
+        return false;
+      }
+
       const application = await submitApplication({
         applicationType: "membership",
         fullName: profile.fullName || "",
@@ -1142,21 +1196,6 @@ export default function Profile() {
     return true;
   };
 
-  const toggleBusinessType = (type: string) => {
-    const currentTypes = watch("businessTypes") || [];
-    const updated = currentTypes.includes(type)
-      ? currentTypes.filter(t => t !== type)
-      : [...currentTypes, type];
-    return updated;
-  };
-
-  const toggleGovtOrg = (org: string) => {
-    const currentOrgs = watch("govtOrgs") || [];
-    const updated = currentOrgs.includes(org)
-      ? currentOrgs.filter(o => o !== org)
-      : [...currentOrgs, org];
-    return updated;
-  };
 
   /**
    * What this step is asking for.
@@ -1164,12 +1203,20 @@ export default function Profile() {
    * `getSubtitle()` was called here and defined nowhere — a ReferenceError the
    * moment the page mounted, so the whole profile form failed to render.
    */
-  const getSubtitle = () => ({
-    1: 'Step 1 of 4 — your personal details',
-    2: 'Step 2 of 4 — your business details',
-    3: 'Step 3 of 4 — your financial details',
-    4: 'Step 4 of 4 — your declaration',
-  }[currentStep] || 'Complete the four steps to submit your application');
+  const getSubtitle = () => {
+    if (alreadyApplied) {
+      return ({
+        1: 'Your personal details',
+        2: 'Your business details',
+        3: 'Your declaration',
+      }[currentStep] || 'Your details');
+    }
+    return ({
+      1: 'Step 1 of 3 — your personal details',
+      2: 'Step 2 of 3 — your business details',
+      3: 'Step 3 of 3 — your declaration',
+    }[currentStep] || 'Complete the three steps to submit your application');
+  };
 
   /**
    * The hero's node rail — one node per step, named as the header names it.
@@ -1181,9 +1228,73 @@ export default function Profile() {
   const progress = Math.round(((currentStep - 1) / RAIL.length) * 100);
   const heading = STEP_HEADING[currentStep] || STEP_HEADING[1];
 
+  /* ------------------------------------------------- still loading */
+
+  if (loadingProfile) {
+    return (
+      <MemberPageShell title="Profile Completion" subtitle="Loading your details…" width="wide">
+        <div className="grid gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">
+          <div className="h-[22rem] animate-pulse rounded-2xl bg-slate-200/70" />
+          <div className="space-y-4">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-16 animate-pulse rounded-2xl bg-slate-200/70" />
+            ))}
+          </div>
+        </div>
+      </MemberPageShell>
+    );
+  }
+
+  /* --------------------------------------------- the load failed */
+
+  if (loadFailed) {
+    return (
+      <MemberPageShell title="Profile Completion" subtitle="Your details could not be loaded" width="wide">
+        <div className="mx-auto max-w-xl rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center">
+          <p className="text-[1.5625rem] font-extrabold tracking-tight text-amber-900">
+            We could not load your profile
+          </p>
+          {/* The form is deliberately NOT rendered behind this. Empty boxes a
+              member fills in and saves would overwrite the record that failed
+              to load — the one outcome worse than showing nothing. */}
+          <p className="mt-2 text-[1.1875rem] font-semibold text-amber-800">
+            Nothing is shown here rather than an empty form, which you could
+            save over the details you already have.
+          </p>
+          <button
+            type="button"
+            onClick={() => setLoadAttempt((n) => n + 1)}
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-amber-600 px-6 py-3.5
+                       text-[1.1875rem] font-bold text-white transition-colors hover:bg-amber-700"
+          >
+            Try again
+          </button>
+        </div>
+      </MemberPageShell>
+    );
+  }
+
   return (
     <MemberPageShell
-      title="Profile Completion"
+      /* "Profile Completion" is what this is for somebody still applying.
+         For a member whose application is decided it is My Profile — the
+         screen they came to from a tile of that name, and a heading that
+         tells an approved member their profile is incomplete is simply
+         wrong. */
+      /*
+       * THE HEADING NAMES THE STEP BEING EDITED.
+       *
+       * It read "My Profile" on all three steps, which is the name of the
+       * screen you came FROM. Pressing Edit beside "Business Information"
+       * landed you on a page headed "My Profile" with no confirmation that
+       * the press had taken you anywhere in particular — and on a form whose
+       * fields are a scroll below the fold, the heading is the only thing on
+       * screen that can say which section you are in.
+       *
+       * `STEP_HEADING` is the same table the step's own hero is titled from,
+       * so the page heading and the hero cannot name the step differently.
+       */
+      title={heading.title}
       subtitle={getSubtitle()}
       /*
        * Laid out as the Application Status screen is, deliberately.
@@ -1202,25 +1313,31 @@ export default function Profile() {
     >
       <div className="w-full">
         {/*
-          THE STEP HEADING SPANS BOTH COLUMNS.
+          THE STEP'S BLURB, AND ONLY THE BLURB.
 
-          It used to be the first thing INSIDE the right-hand column, which is
-          why the two cards never lined up: the form column began with ~5rem of
-          heading and the membership card began with the card, so the card's top
-          edge landed level with the middle of the first form card. Nothing was
+          There was an `<h2>{heading.title}</h2>` above this line, and once the
+          page header started naming the step — so that pressing Edit beside a
+          section says which section you landed in — the step was titled twice,
+          six lines apart:
+
+              Personal details            <- the header band
+              Your personal details
+
+              Personal details            <- here
+              Your name, how we reach you…
+
+          The blurb stays because it is the only one of the four lines that says
+          something the others do not: what this step is actually for. One
+          heading, one description.
+
+          It stays ABOVE THE GRID rather than inside the right-hand column. It
+          used to be the first thing in that column, which is why the two
+          columns never lined up: the form column began with ~5rem of heading
+          and the membership card began with the card, so the card's top edge
+          landed level with the middle of the first form card. Nothing was
           mis-set — they were being measured from different starting points.
-
-          Above the grid, both columns start on the same line, and the heading
-          reads as what it is: the title of this step, not a caption for the
-          right-hand column.
         */}
-        <div className="mb-6">
-          <h2 className="font-display text-[1.375rem] lg:text-[1.5625rem] font-extrabold
-                         tracking-tight text-[#0F172A]">
-            {heading.title}
-          </h2>
-          <p className="text-sm text-[#64748B] mt-1 max-w-[68ch]">{heading.blurb}</p>
-        </div>
+        <p className="text-[1.1875rem] text-[#64748B] mb-6 max-w-[68ch]">{heading.blurb}</p>
 
         <div className="grid gap-6 lg:gap-7 lg:grid-cols-[23rem_minmax(0,1fr)] items-start">
 
@@ -1258,14 +1375,25 @@ export default function Profile() {
               {/* Brand and progress, in one block, so "how far am I" is answered
                   before the eye reaches the steps. */}
               <div className="shrink-0 bg-blue-600 text-white p-5 lg:p-6">
-                <p className="text-[0.625rem] font-bold uppercase tracking-[0.14em] text-white/70">
+                <p className="text-[1.0625rem] font-bold uppercase tracking-[0.14em] text-white/70">
                   Membership application
                 </p>
-                <h2 className="font-display text-xl font-extrabold mt-1.5 tracking-tight">
+                <h2 className={`${CARD_TITLE} mt-1.5`}>
                   ACTIV Membership
                 </h2>
-                <p className="text-[0.8125rem] text-white/80 mt-1 leading-snug">
-                  Four steps. Everything saves as you go.
+                {/*
+                  COUNTED FROM THE RAIL, not typed.
+
+                  It read "Four steps" beside a rail of three and a header
+                  saying "Step 3 of 3" — the form lost a step at some point and
+                  this line did not hear about it. Reading the number off
+                  `RAIL.length` means the sentence cannot disagree with the
+                  list underneath it again.
+                */}
+                <p className="text-[1.0625rem] text-white/80 mt-1 leading-snug">
+                  {alreadyApplied
+                    ? 'Your membership record. Everything saves as you go.'
+                    : `${STEP_WORDS[RAIL.length] || RAIL.length} steps. Everything saves as you go.`}
                 </p>
 
                 <div className="flex items-center gap-3 mt-5">
@@ -1275,7 +1403,7 @@ export default function Profile() {
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  <span className="font-display text-[0.8125rem] font-extrabold tabular shrink-0">
+                  <span className="font-display text-[1.0625rem] font-extrabold tabular shrink-0">
                     {progress}%
                   </span>
                 </div>
@@ -1320,7 +1448,7 @@ export default function Profile() {
                     >
                       <span className="flex flex-col items-center shrink-0 pt-2.5">
                         <span className={`w-7 h-7 rounded-full flex items-center justify-center
-                                          text-xs font-bold transition-colors ${done
+                                          text-[1.0625rem] font-bold transition-colors ${done
                             ? 'bg-[#16A34A] text-white'
                             : active
                               ? 'bg-[#1E50E6] text-white ring-4 ring-[#DBE6FD]'
@@ -1339,13 +1467,13 @@ export default function Profile() {
                           ? 'bg-[#EEF3FE]'
                           : reachable ? 'group-hover:bg-slate-50' : ''
                         }`}>
-                        <span className={`block text-sm font-bold leading-tight ${active
+                        <span className={`block text-[1.1875rem] font-bold leading-tight ${active
                             ? 'text-[#1E50E6]'
                             : done ? 'text-[#0F172A]' : 'text-[#94A3B8]'
                           }`}>
                           {s.name}
                         </span>
-                        <span className={`block text-xs mt-0.5 leading-snug ${active ? 'text-[#475569]' : 'text-[#94A3B8]'
+                        <span className={`block text-[1.0625rem] mt-0.5 leading-snug ${active ? 'text-[#475569]' : 'text-[#94A3B8]'
                           }`}>
                           {s.hint}
                         </span>
@@ -1356,14 +1484,14 @@ export default function Profile() {
               </nav>
 
               <div className="shrink-0 px-5 py-4 border-t border-[#F1F5F9] bg-slate-50/70">
-                <p className="text-[0.625rem] font-bold uppercase tracking-[0.08em] text-[#64748B]">
+                <p className="text-[1.0625rem] font-bold uppercase tracking-[0.08em] text-[#64748B]">
                   Need help?
                 </p>
                 <a
                   href="https://activ.org.in"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-[0.8125rem] font-semibold text-[#1E50E6] hover:underline"
+                  className="text-[1.0625rem] font-semibold text-[#1E50E6] hover:underline"
                 >
                   activ.org.in
                 </a>
@@ -1377,7 +1505,7 @@ export default function Profile() {
             {isLocked && currentStep === 1 && (
               <div className="rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] p-4
                               flex flex-wrap items-center justify-between gap-3">
-                <p className="font-display text-sm font-bold text-[#15803D]">
+                <p className="font-display text-[1.1875rem] font-bold text-[#15803D]">
                   Profile saved successfully
                 </p>
                 <Button
@@ -1398,10 +1526,10 @@ export default function Profile() {
             */}
             {noMemberRecord && (
               <div className="rounded-2xl border border-[#FDE68A] bg-[#FFFBEB] p-5">
-                <h3 className="font-display text-[0.9375rem] font-bold text-[#92400E] mb-1">
+                <h3 className={`${CARD_TITLE} text-[#92400E] mb-1`}>
                   This account has no member profile
                 </h3>
-                <p className="text-[0.8125rem] text-[#B45309] leading-relaxed">
+                <p className="text-[1.0625rem] text-[#B45309] leading-relaxed">
                   You are signed in with an administrator account, which is stored
                   separately from member records — so there are no personal details to
                   load here, and saving this form would not work. Use an admin dashboard
@@ -1412,45 +1540,46 @@ export default function Profile() {
 
             {currentStep === 1 && (
               <div className="space-y-5">
+                <SectionGroup>
 
                 <Section icon={User} title="About you" subtitle="The name and contact details your membership is issued against.">
                   <Fields>
                     <div>
-                      <Label htmlFor="name">Name *</Label>
+                      <Label htmlFor="name" className={FIELD_LABEL}>Name *</Label>
                       <Input
                         id="name"
                         placeholder="Enter your full name"
                         {...register("name", { required: true })}
-                        className="mt-1"
+                        className={FIELD}
                         disabled={isLocked}
                       />
-                      {errors.name && <p className="text-red-500 text-sm mt-1">Name is required</p>}
+                      {errors.name && <p className="mt-1.5 text-[1.1875rem] font-semibold text-red-600">Name is required</p>}
                     </div>
 
                     <div>
-                      <Label htmlFor="phone">Phone Number *</Label>
+                      <Label htmlFor="phone" className={FIELD_LABEL}>Phone Number *</Label>
                       <Input
                         id="phone"
                         type="tel"
                         placeholder="Enter phone number"
                         {...register("phone", { required: true })}
-                        className="mt-1"
+                        className={FIELD}
                         disabled={isLocked}
                       />
-                      {errors.phone && <p className="text-red-500 text-sm mt-1">Phone number is required</p>}
+                      {errors.phone && <p className="mt-1.5 text-[1.1875rem] font-semibold text-red-600">Phone number is required</p>}
                     </div>
 
                     <div>
-                      <Label htmlFor="email">Email ID *</Label>
+                      <Label htmlFor="email" className={FIELD_LABEL}>Email ID *</Label>
                       <Input
                         id="email"
                         type="email"
                         placeholder="Enter email"
                         {...register("email", { required: true })}
-                        className="mt-1"
+                        className={FIELD}
                         disabled={isLocked}
                       />
-                      {errors.email && <p className="text-red-500 text-sm mt-1">Email is required</p>}
+                      {errors.email && <p className="mt-1.5 text-[1.1875rem] font-semibold text-red-600">Email is required</p>}
                     </div>
                   </Fields>
                 </Section>
@@ -1458,7 +1587,7 @@ export default function Profile() {
                 <Section icon={MapPin} title="Location" subtitle="This decides which Block, District and State admins review your application.">
                   <Fields>
                     <div>
-                      <Label htmlFor="state">State *</Label>
+                      <Label htmlFor="state" className={FIELD_LABEL}>State *</Label>
                       <Controller
                         name="state"
                         control={control}
@@ -1473,7 +1602,7 @@ export default function Profile() {
                             value={field.value}
                             disabled={isLocked}
                           >
-                            <SelectTrigger className="mt-1">
+                            <SelectTrigger className={FIELD}>
                               <SelectValue placeholder="Select state" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1486,11 +1615,11 @@ export default function Profile() {
                           </Select>
                         )}
                       />
-                      {errors.state && <p className="text-red-500 text-sm mt-1">State is required</p>}
+                      {errors.state && <p className="mt-1.5 text-[1.1875rem] font-semibold text-red-600">State is required</p>}
                     </div>
 
                     <div>
-                      <Label htmlFor="district">District *</Label>
+                      <Label htmlFor="district" className={FIELD_LABEL}>District *</Label>
                       <Controller
                         name="district"
                         control={control}
@@ -1505,7 +1634,7 @@ export default function Profile() {
                             value={field.value}
                             disabled={!selectedState || isLocked}
                           >
-                            <SelectTrigger className="mt-1">
+                            <SelectTrigger className={FIELD}>
                               <SelectValue placeholder={selectedState ? "Select district" : "Select state first"} />
                             </SelectTrigger>
                             <SelectContent>
@@ -1518,18 +1647,18 @@ export default function Profile() {
                           </Select>
                         )}
                       />
-                      {errors.district && <p className="text-red-500 text-sm mt-1">District is required</p>}
+                      {errors.district && <p className="mt-1.5 text-[1.1875rem] font-semibold text-red-600">District is required</p>}
                     </div>
 
                     <div>
-                      <Label htmlFor="block">Block *</Label>
+                      <Label htmlFor="block" className={FIELD_LABEL}>Block *</Label>
                       <Controller
                         name="block"
                         control={control}
                         rules={{ required: true }}
                         render={({ field }) => (
                           <Select onValueChange={field.onChange} value={field.value} disabled={!selectedDistrict || isLocked}>
-                            <SelectTrigger className="mt-1">
+                            <SelectTrigger className={FIELD}>
                               <SelectValue placeholder={selectedDistrict ? "Select block" : "Select district first"} />
                             </SelectTrigger>
                             <SelectContent>
@@ -1540,25 +1669,25 @@ export default function Profile() {
                                   </SelectItem>
                                 ))
                               ) : (
-                                <div className="px-2 py-1.5 text-sm text-[#64748B]">No blocks available</div>
+                                <div className="px-2 py-1.5 text-[1.1875rem] text-[#64748B]">No blocks available</div>
                               )}
                             </SelectContent>
                           </Select>
                         )}
                       />
-                      {errors.block && <p className="text-red-500 text-sm mt-1">Block is required</p>}
+                      {errors.block && <p className="mt-1.5 text-[1.1875rem] font-semibold text-red-600">Block is required</p>}
                     </div>
 
                     <div>
-                      <Label htmlFor="city">City *</Label>
+                      <Label htmlFor="city" className={FIELD_LABEL}>City *</Label>
                       <Input
                         id="city"
                         placeholder="Enter city"
                         {...register("city", { required: true })}
-                        className="mt-1"
+                        className={FIELD}
                         disabled={isLocked}
                       />
-                      {errors.city && <p className="text-red-500 text-sm mt-1">City is required</p>}
+                      {errors.city && <p className="mt-1.5 text-[1.1875rem] font-semibold text-red-600">City is required</p>}
                     </div>
                   </Fields>
                 </Section>
@@ -1580,7 +1709,7 @@ export default function Profile() {
                 >
                   <Fields cols={3}>
                     <div>
-                      <Label htmlFor="currentPassword">Current Password</Label>
+                      <Label htmlFor="currentPassword" className={FIELD_LABEL}>Current Password</Label>
                       <PasswordInput
                         id="currentPassword"
                         placeholder="Enter your current login password"
@@ -1589,11 +1718,11 @@ export default function Profile() {
                         {...register("currentPassword")}
                         disabled={isLocked}
                       />
-                      <p className="text-xs text-[#64748B] mt-1">The password you use to sign in.</p>
+                      <p className="text-[1.0625rem] text-[#64748B] mt-1">The password you use to sign in.</p>
                     </div>
 
                     <div>
-                      <Label htmlFor="password">New Password</Label>
+                      <Label htmlFor="password" className={FIELD_LABEL}>New Password</Label>
                       <PasswordInput
                         id="password"
                         placeholder="Enter new password"
@@ -1602,11 +1731,11 @@ export default function Profile() {
                         {...register("password")}
                         disabled={isLocked}
                       />
-                      <p className="text-xs text-[#64748B] mt-1">At least 8 characters.</p>
+                      <p className="text-[1.0625rem] text-[#64748B] mt-1">At least 8 characters.</p>
                     </div>
 
                     <div>
-                      <Label htmlFor="confirmPassword">Confirm Password</Label>
+                      <Label htmlFor="confirmPassword" className={FIELD_LABEL}>Confirm Password</Label>
                       <PasswordInput
                         id="confirmPassword"
                         placeholder="Confirm new password"
@@ -1619,26 +1748,49 @@ export default function Profile() {
                   </Fields>
                 </Section>
 
-                <Section icon={UsersRound} title="Demographic details" subtitle="Optional. Used for association reporting only, never shown in the member directory.">
+                {/*
+                  THREE fields, and the order is the point.
+
+                  Social category comes FIRST because it decides the second: the
+                  religions on offer depend on it. Asked the other way round, a
+                  religion already chosen has to be rewritten the moment the
+                  category is answered, and a field that silently changes its own
+                  value reads as the form losing an answer.
+                */}
+                <Section
+                  icon={UsersRound}
+                  title="Demographic details"
+                  subtitle="Used for association reporting only, never shown in the member directory."
+                >
                   <Fields>
                     <div>
-                      <Label htmlFor="religion">Religion</Label>
-                      <Input
-                        id="religion"
-                        placeholder="Enter religion"
-                        {...register("religion")}
-                        className="mt-1"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="socialCategory">Social Category</Label>
+                      <Label htmlFor="socialCategory" className={FIELD_LABEL}>
+                        Social Category <span className="text-red-500">*</span>
+                      </Label>
                       <Controller
                         name="socialCategory"
                         control={control}
                         render={({ field }) => (
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger className="mt-1">
+                          <Select
+                            value={field.value}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              /*
+                                Clear a religion the new category does not admit.
+
+                                Cleared, not re-picked: choosing the first allowed
+                                religion for them would record an answer the member
+                                never gave, about their own faith. Only cleared when
+                                it is genuinely incompatible, so moving between two
+                                categories that both allow Hindu keeps a Hindu answer.
+                              */
+                              const religion = watch("religion");
+                              if (religion && !religionsFor(value).includes(religion)) {
+                                reset({ ...watch(), socialCategory: value, religion: "" });
+                              }
+                            }}
+                          >
+                            <SelectTrigger className={FIELD}>
                               <SelectValue placeholder="Select category" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1650,8 +1802,77 @@ export default function Profile() {
                         )}
                       />
                     </div>
+
+                    <div>
+                      <Label htmlFor="religion" className={FIELD_LABEL}>
+                        Religion <span className="text-red-500">*</span>
+                      </Label>
+                      {/*
+                        Religion, narrowed by the category above.
+
+                        Scheduled Caste status under the Constitution (Scheduled
+                        Castes) Order 1950 is confined to Hindu, Sikh and
+                        Buddhist members, so an SC applicant is shown those three and
+                        nothing else — offering the other two offers a combination
+                        that cannot be true.
+
+                        Disabled until the category is answered, rather than
+                        showing all five and shrinking the list afterwards.
+                        Somebody who picks Islam and then picks SC would watch
+                        their own answer disappear with no explanation; this way
+                        the question is simply not open yet.
+                      */}
+                      <Controller
+                        name="religion"
+                        control={control}
+                        render={({ field }) => (
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            disabled={!watch("socialCategory")}
+                          >
+                            <SelectTrigger className={FIELD}>
+                              <SelectValue placeholder="Select religion" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {religionsFor(watch("socialCategory")).map((r) => (
+                                <SelectItem key={r} value={r}>{r}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      {/* Only the disabled-state prompt — see PersonalForm. */}
+                      <p className="text-[1.0625rem] text-[#64748B] mt-1">
+                        {!watch("socialCategory") ? "Choose a social category first." : " "}
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="gender" className={FIELD_LABEL}>
+                        Gender <span className="text-red-500">*</span>
+                      </Label>
+                      <Controller
+                        name="gender"
+                        control={control}
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger className={FIELD}>
+                              <SelectValue placeholder="Select gender" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {GENDERS.map((g) => (
+                                <SelectItem key={g} value={g}>{g}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
                   </Fields>
                 </Section>
+
+                </SectionGroup>
 
                 {/*
                   The step's actions live in a bar of their own.
@@ -1662,7 +1883,7 @@ export default function Profile() {
                 */}
                 <div className="rounded-2xl bg-white border border-[#E8EEF6] shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]
                                 px-5 py-4 flex items-center gap-3">
-                  <p className="text-[0.8125rem] text-[#64748B] hidden sm:block">Step 1 of 4</p>
+                  <p className="text-[1.0625rem] text-[#64748B] hidden sm:block">Step 1 of 3</p>
                   <Button
                     type="button"
                     onClick={handleNext}
@@ -1687,145 +1908,23 @@ export default function Profile() {
 
             {currentStep === 2 && (
               <div className="space-y-5">
+                <SectionGroup>
                 <Section
                   icon={Building2}
                   title="Business information"
-                  subtitle="Answer “No” below if you are applying as an aspirant — the rest of this step disappears and you skip the financial forms entirely."
+                  subtitle="Two questions. Everything else about a company — constitution, activities, GSTIN, turnover, government registrations — is asked once in your Business Account."
                 >
-                <div className="space-y-6"><div>
-                  <Label className="text-sm font-medium">Doing Business</Label>
-                  <div className="flex gap-6 mt-2">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        value="yes"
-                        {...register("doingBusiness", { required: true })}
-                      />
-                      <span>Yes</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        value="no"
-                        {...register("doingBusiness", { required: true })}
-                      />
-                      <span>No</span>
-                    </label>
-                  </div>
-                </div>
-
-                {watch("doingBusiness") === "yes" && (
-                  <>
+                  <div className="space-y-6">
                     <div>
-                      <Label htmlFor="organization">Name of the Organization</Label>
-                      <Input
-                        id="organization"
-                        placeholder="Enter organization name"
-                        {...register("organization")}
-                        className="mt-1"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="constitution">Constitution of the Company</Label>
-                      <Controller
-                        name="constitution"
-                        control={control}
-                        render={({ field }) => (
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger className="mt-1">
-                              <SelectValue placeholder="Select constitution type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {CONSTITUTION_TYPES.map((c) => (
-                                <SelectItem key={c} value={c}>{c}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Type of Business</Label>
-                      <div className="mt-2 space-y-2">
-                        {BUSINESS_TYPE_OPTIONS.map((type) => (
-                          <label key={type} className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              value={type}
-                              checked={watch("businessTypes")?.includes(type)}
-                              onChange={(e) => {
-                                const updated = toggleBusinessType(type);
-                                reset({ ...watch(), businessTypes: updated });
-                              }}
-                            />
-                            <span>{type}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      {/*
-                        * Registered as `businessActivities`, not `businessYear`.
-                        *
-                        * This textarea and the Commencement Year dropdown below
-                        * it were bound to the SAME form field. Two questions,
-                        * one value: typing a description of the business
-                        * overwrote the year, picking a year overwrote the
-                        * description, and whichever survived was saved as both.
-                        */}
-                      <Label htmlFor="businessActivities">Business Activities</Label>
-                      <textarea
-                        id="businessActivities"
-                        placeholder="Describe your business activities"
-                        {...register("businessActivities")}
-                        className="w-full mt-1 px-3 py-2 border border-input bg-background rounded-md min-h-[6.25rem] text-sm"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="businessYear">Business Commencement Year</Label>
-                      <Controller
-                        name="businessYear"
-                        control={control}
-                        render={({ field }) => (
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger className="mt-1">
-                              <SelectValue placeholder="Select year" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Array.from({ length: 50 }, (_, i) => new Date().getFullYear() - i).map((year) => (
-                                <SelectItem key={year} value={year.toString()}>
-                                  {year}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="employees">Number of Employees</Label>
-                      <Input
-                        id="employees"
-                        type="number"
-                        placeholder="Enter number of employees"
-                        {...register("employees")}
-                        className="mt-1"
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-sm font-medium">Member of any other Chamber/Association</Label>
+                      <Label className="text-[1.1875rem] font-medium">
+                        Are you currently doing business? <span className="text-red-500">*</span>
+                      </Label>
                       <div className="flex gap-6 mt-2">
                         <label className="flex items-center gap-2">
                           <input
                             type="radio"
                             value="yes"
-                            {...register("chamber")}
+                            {...register("doingBusiness", { required: true })}
                           />
                           <span>Yes</span>
                         </label>
@@ -1833,97 +1932,94 @@ export default function Profile() {
                           <input
                             type="radio"
                             value="no"
-                            {...register("chamber")}
+                            {...register("doingBusiness", { required: true })}
                           />
                           <span>No</span>
                         </label>
                       </div>
                     </div>
 
-                    {watch("chamber") === "yes" && (
+                    {watch("doingBusiness") === "yes" && (
                       <div>
-                        <textarea
-                          placeholder="Please specify chamber/association details"
-                          {...register("chamberDetails")}
-                          className="w-full mt-1 px-3 py-2 border border-input bg-background rounded-md min-h-[5rem] text-sm"
+                        <Label htmlFor="businessYear" className={FIELD_LABEL}>
+                          Business Commencement Year <span className="text-red-500">*</span>
+                        </Label>
+                        <Controller
+                          name="businessYear"
+                          control={control}
+                          render={({ field }) => (
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <SelectTrigger className={FIELD}>
+                                <SelectValue placeholder="Select year" />
+                              </SelectTrigger>
+                              {/*
+                                1950 to this year, newest first.
+
+                                The list used to start at `currentYear - 49`, so a
+                                company trading since 1948 — and every one older
+                                than fifty years — had no year it could pick and
+                                the field was left blank. The floor is a fixed
+                                1950 now, and the length follows the calendar
+                                instead of being frozen at 50.
+                              */}
+                              <SelectContent className="max-h-72">
+                                {commencementYears().map((year) => (
+                                  <SelectItem key={year} value={year}>{year}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
                         />
+                        {/*
+                          NO PLAN OR PRICE UNDER THIS FIELD.
+
+                          `PlanHint` used to name the band and the amount here
+                          ("Enterprise, ₹20,000 · confirmed at the payment step").
+                          It is off both year fields now. The component is kept
+                          and still reads the live plan rows — it was never a
+                          hardcoded price, and MEMBERSHIP PRICING in CLAUDE.md
+                          still governs it — so restoring it is one line if the
+                          association wants the figure shown again.
+                        */}
                       </div>
                     )}
 
-                    <div>
-                      <Label>Registered with Govt. Organization</Label>
-                      <div className="mt-2 space-y-2">
-                        {["MSME", "KVIC", "NABARD", "None", "Others"].map((org) => (
-                          <label key={org} className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              value={org}
-                              checked={watch("govtOrgs")?.includes(org)}
-                              onChange={(e) => {
-                                const updated = toggleGovtOrg(org);
-                                reset({ ...watch(), govtOrgs: updated });
-                              }}
-                            />
-                            <span>{org}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
+                    {watch("doingBusiness") === "no" && (
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                        <div className="flex items-start gap-3">
+                          <div className="text-blue-600 mt-1">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-blue-900 mb-1">Registering as Aspirant</h4>
+                            {/*
+                              No declaration checkbox here any more.
 
-                {watch("doingBusiness") === "no" && (
-                  <>
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl mb-4">
-                      <div className="flex items-start gap-3">
-                        <div className="text-blue-600 mt-1">
-                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                          </svg>
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-blue-900 mb-1">Registering as Aspirant</h4>
-                          <p className="text-sm text-blue-800">
-                            You are registering as an Aspirant (Student / Non-business member). Financial information is not required.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-6 bg-amber-50 border-2 border-amber-200 rounded-xl">
-                      <div className="flex items-start gap-3 mb-4">
-                        <div className="text-amber-600 mt-1">
-                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-bold text-amber-900 mb-2">Declaration</h4>
-                          <p className="text-sm text-amber-800 mb-3">
-                            This application is under the Verification and Screening Process. We have every right to ACCEPT or REJECT this application according to our membership policy.
-                          </p>
-                          <div className="flex items-start gap-3 p-3 bg-white rounded-xl">
-                            <input
-                              type="checkbox"
-                              {...register("declarationAccepted")}
-                              className="mt-1 w-4 h-4 accent-[#1E50E6] rounded"
-                            />
-                            <label className="text-sm text-[#475569]">
-                              I hereby declare that all the information provided above is true and correct to the best of my knowledge. I understand that providing false information may result in rejection of my application.
-                            </label>
+                              An aspirant used to submit their whole application
+                              from this panel, agreeing to a differently-worded
+                              undertaking from the one on the declaration step —
+                              and only the declaration step's answer was ever
+                              recorded. Both kinds of applicant continue to step 3
+                              and sign the same thing.
+                            */}
+                            <p className="text-[1.1875rem] text-blue-800">
+                              You are registering as an Aspirant (student or non-business
+                              member). There is nothing further to fill in here — continue
+                              to the declaration to submit your application.
+                            </p>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </>
-                )}
-
-                </div>
+                    )}
+                  </div>
                 </Section>
+                </SectionGroup>
 
                 <div className="rounded-2xl bg-white border border-[#E8EEF6] shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]
                                 px-5 py-4 flex items-center gap-3">
-                  <p className="text-[0.8125rem] text-[#64748B] hidden sm:block">Step 2 of 4</p>
+                  <p className="text-[1.0625rem] text-[#64748B] hidden sm:block">Step 2 of 3</p>
                   <div className="ml-auto flex items-center gap-3">
                     <Button
                       type="button"
@@ -1949,282 +2045,116 @@ export default function Profile() {
 
             {currentStep === 3 && (
               <div className="space-y-5">
-                <Section icon={Receipt} title="Registration numbers" subtitle="Leave any of these blank if it does not apply to your business.">
-                  <Fields>
-                  <div>
-                    <Label htmlFor="pan">PAN Number</Label>
-                    <Input
-                      id="pan"
-                      placeholder="Enter PAN number"
-                      {...register("pan")}
-                      className="mt-1"
-                      maxLength={10}
-                    />
-                    <p className="text-xs text-[#64748B] mt-1">Validate PAN Number (10 chars Alphanumeric)</p>
-                  </div>
+                <SectionGroup>
+                {/*
+                  SISTER CONCERNS IS A BUSINESS QUESTION, and step 2 has
+                  already asked whether there is a business.
 
-                  <div>
-                    <Label htmlFor="gst">GST Number</Label>
-                    <Input
-                      id="gst"
-                      placeholder="Enter GST number"
-                      {...register("gst")}
-                      className="mt-1"
-                      maxLength={15}
-                    />
-                    <p className="text-xs text-[#64748B] mt-1">Validate GSTIN Number (15 chars)</p>
-                  </div>
+                  It was rendered unconditionally, so an applicant who
+                  answered "no" to trading was still asked how many OTHER
+                  companies they own — a question with no answer that is
+                  true, on the last screen before they sign a declaration
+                  that the information is correct. "Enter 0 if there are
+                  none" does not rescue it: the honest answer for an
+                  aspirant is that the question does not apply, and a form
+                  that will not accept that is a form asking them to
+                  certify a field they were made to invent.
 
-                  <div>
-                    <Label htmlFor="udyam">Udyam Number</Label>
-                    <Input
-                      id="udyam"
-                      placeholder="Enter Udyam number"
-                      {...register("udyam")}
-                      className="mt-1"
-                    />
-                    <p className="text-xs text-[#64748B] mt-1">Optional</p>
-                  </div>
-
-                  </Fields>
-                </Section>
-
-                <Section icon={Landmark} title="Income tax and turnover" subtitle="Your filing history and the turnover band the business falls into.">
-                  <Fields>
-                  <div>
-                    <Label className="text-sm font-medium">Filed Income Tax Returns</Label>
-                    <div className="flex gap-6 mt-2">
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          value="yes"
-                          {...register("filedITR")}
-                        />
-                        <span>Yes</span>
-                      </label>
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          value="no"
-                          {...register("filedITR")}
-                        />
-                        <span>No</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {watch("filedITR") === "yes" && (
-                    <div>
-                      <Label htmlFor="itrYears">How many continuous years have you filed ITR?</Label>
-                      <Input
-                        id="itrYears"
-                        type="number"
-                        placeholder="Enter number of years"
-                        {...register("itrYears")}
-                        className="mt-1"
-                      />
-                    </div>
-                  )}
-
-                  <div>
-                    <Label htmlFor="turnoverRange">Turnover</Label>
-                    <Controller
-                      name="turnoverRange"
-                      control={control}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger className="mt-1">
-                            <SelectValue placeholder="Select turnover range" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TURNOVER_RANGES.map((r) => (
-                              <SelectItem key={r} value={r}>{r}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium mb-3 block">Turnover for Last 3 Yrs</Label>
-
-                    <div className="space-y-4">
-                      <div>
-                        <Input
-                          placeholder="Enter turnover amount"
-                          {...register("turnover1")}
-                          className="mt-1"
-                        />
-                        <p className="text-xs text-[#64748B] mt-1">FY 2024-25</p>
-                      </div>
-
-                      <div>
-                        <Input
-                          placeholder="Enter turnover amount"
-                          {...register("turnover2")}
-                          className="mt-1"
-                        />
-                        <p className="text-xs text-[#64748B] mt-1">FY 2023-24</p>
-                      </div>
-
-                      <div>
-                        <Input
-                          placeholder="Enter turnover amount"
-                          {...register("turnover3")}
-                          className="mt-1"
-                        />
-                        <p className="text-xs text-[#64748B] mt-1">FY 2022-23</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  </Fields>
-                </Section>
-
-                <Section icon={Award} title="Government schemes" subtitle="Any central or state scheme your business has benefited from.">
-                  <Fields>
-                  <div>
-                    <Label className="text-sm font-medium">Have you got benefitted through any Govt. Schemes to your Business?</Label>
-                    <div className="flex gap-6 mt-2">
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          value="yes"
-                          {...register("govtSchemes")}
-                        />
-                        <span>Yes</span>
-                      </label>
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          value="no"
-                          {...register("govtSchemes")}
-                        />
-                        <span>No</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {watch("govtSchemes") === "yes" && (
-                    <div className="space-y-3">
-                      <Input
-                        placeholder="Scheme 1"
-                        {...register("scheme1")}
-                        className="mt-1"
-                      />
-                      <Input
-                        placeholder="Scheme 2"
-                        {...register("scheme2")}
-                        className="mt-1"
-                      />
-                      <Input
-                        placeholder="Scheme 3"
-                        {...register("scheme3")}
-                        className="mt-1"
-                      />
-                    </div>
-                  )}
-                  </Fields>
-                </Section>
-
-                <div className="rounded-2xl bg-white border border-[#E8EEF6] shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]
-                                px-5 py-4 flex items-center gap-3">
-                  <p className="text-[0.8125rem] text-[#64748B] hidden sm:block">Step 3 of 4</p>
-                  <div className="ml-auto flex items-center gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setCurrentStep(2)}
-                      className="font-semibold h-11"
-                    >
-                      <ArrowLeft className="w-4 h-4 mr-2" />
-                      Previous
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={handleNext}
-                      className="bg-[#1E50E6] hover:bg-[#1a45c9] font-bold h-11 min-w-[9rem]"
-                    >
-                      Next
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {currentStep === 4 && (
-              <div className="space-y-5">
+                  An aspirant now sees the undertaking alone, which is the
+                  whole of what step 3 means for them. Both kinds of
+                  applicant still sign the SAME undertaking on this same
+                  step — see the note on the aspirant panel in step 2.
+                */}
+                {watch("doingBusiness") === "yes" && (
                 <Section icon={Building2} title="Sister concerns" subtitle="Other companies under the same ownership. Enter 0 if there are none.">
                 <div className="space-y-6">
                 <div>
-                  <Label htmlFor="sisterConcerns">No. of Sister Concerns</Label>
+                  <Label htmlFor="sisterConcerns" className={FIELD_LABEL}>No. of Sister Concerns</Label>
+                  {/*
+                    Controlled, not `register`-and-forget: typing here has to
+                    build the boxes below, and a registered input hands its
+                    value to the form without telling this component.
+                  */}
                   <Input
                     id="sisterConcerns"
                     type="number"
                     placeholder="Enter number"
                     min={0}
-                    {...register("sisterConcerns")}
-                    className="mt-1"
+                    value={watch("sisterConcerns") ?? ""}
+                    onChange={(e) => handleSisterCountChange(e.target.value)}
+                    className={FIELD}
                   />
-                  <p className="text-xs text-[#64748B] mt-1">Positive integers only</p>
+                  <p className="text-[1.0625rem] text-[#64748B] mt-1">
+                    Positive integers only — a name box appears for each one
+                  </p>
                 </div>
 
+                {/*
+                  Nothing to show when the answer is none. A "Name(s) of
+                  Company" label over an empty list asks a question the member
+                  has already answered with 0.
+                */}
+                {companyNames.length > 0 && (
                 <div>
-                  <Label htmlFor="companyNames">Name(s) of Company</Label>
-                  {showSeparateFields ? (
-                    <div className="space-y-3 mt-2">
-                      {companyNames.map((_, index) => (
+                  <Label htmlFor="companyName0" className={FIELD_LABEL}>Name(s) of Company</Label>
+                  <div className="space-y-3 mt-2">
+                    {companyNames.map((value, index) => (
+                      <div key={index} className="flex gap-2">
                         <Input
-                          key={index}
-                          placeholder={`Enter company name ${index + 1}`}
-                          value={companyNames[index]}
-                          onChange={(e) => {
-                            const updated = [...companyNames];
-                            updated[index] = e.target.value;
-                            setCompanyNames(updated);
-                          }}
-                          className="mt-1"
+                          id={`companyName${index}`}
+                          placeholder={`Company ${index + 1}`}
+                          value={value}
+                          onChange={(e) => updateCompanyName(index, e.target.value)}
+                          className="flex-1"
                         />
-                      ))}
-                    </div>
-                  ) : (
-                    <Input
-                      id="companyNames"
-                      placeholder="Enter company name"
-                      {...register("companyNames")}
-                      className="mt-1"
-                    />
-                  )}
+                        {/*
+                          On EVERY row, including the first.
+
+                          Hiding it on a one-row list means the control is
+                          absent exactly when somebody is looking for it, and
+                          the row it would act on is right there. Deleting the
+                          last row clears it rather than leaving no field —
+                          `removeCompanyName` keeps one empty box — so the
+                          button is never a dead end.
+
+                          An icon, and therefore an `aria-label`: a bare icon
+                          is unreadable to a screen reader, and "Remove" alone
+                          would be three identical announcements on a
+                          three-company list.
+                        */}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Remove company ${index + 1}`}
+                          title="Remove"
+                          onClick={() => removeCompanyName(index)}
+                          className="shrink-0 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
 
                   <Button
                     type="button"
-                    onClick={() => setCompanyNames([...companyNames, ""])}
-                    className="mt-3 font-semibold"
+                    variant="outline"
+                    onClick={addCompanyName}
+                    className="mt-3 w-full font-semibold"
                   >
-                    Add Another Company
+                    + Add Another Company
                   </Button>
-
-                  <div className="mt-3">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={showSeparateFields}
-                        onChange={(e) => setShowSeparateFields(e.target.checked)}
-                        className="rounded"
-                      />
-                      <span className="text-sm text-[#475569]">Show one field per name entered above</span>
-                    </label>
-                  </div>
                 </div>
+                )}
 
                 </div>
                 </Section>
+                )}
 
                 <Section icon={ScrollText} title="The undertaking" subtitle="Read this before you submit — it is the agreement your application is reviewed under.">
                   <div className="rounded-xl bg-[#FFFBEB] border border-[#FDE68A] p-5">
-                    <p className="text-sm text-[#92400E] leading-relaxed">
+                    <p className="text-[1.1875rem] text-[#92400E] leading-relaxed">
                       This application is under the Verification and Screening Process. We have every
                       right to ACCEPT or REJECT this application according to our membership policy.
                     </p>
@@ -2237,22 +2167,25 @@ export default function Profile() {
                         onChange={(e) => setDeclarationAccepted(e.target.checked)}
                         className="mt-0.5 w-4 h-4 accent-[#B45309] shrink-0"
                       />
-                      <span className="text-sm font-semibold text-[#92400E]">
+                      <span className="text-[1.1875rem] font-semibold text-[#92400E]">
                         I confirm the above information is true and correct
                         <span className="text-red-600 ml-0.5">*</span>
                       </span>
                     </label>
                   </div>
                 </Section>
+                </SectionGroup>
 
                 <div className="rounded-2xl bg-white border border-[#E8EEF6] shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]
                                 px-5 py-4 flex items-center gap-3">
-                  <p className="text-[0.8125rem] text-[#64748B] hidden sm:block">Last step</p>
+                  <p className="text-[1.0625rem] text-[#64748B] hidden sm:block">
+                    {alreadyApplied ? 'Save your changes' : 'Last step'}
+                  </p>
                   <div className="ml-auto flex items-center gap-3">
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setCurrentStep(3)}
+                      onClick={() => setCurrentStep(2)}
                       className="font-semibold h-11"
                     >
                       <ArrowLeft className="w-4 h-4 mr-2" />
@@ -2264,7 +2197,7 @@ export default function Profile() {
                       className="bg-[#1E50E6] hover:bg-[#1a45c9] font-bold h-11 min-w-[11rem]"
                     >
                       <FileText className="w-4 h-4 mr-2" />
-                      Submit Application
+                      {alreadyApplied ? 'Save changes' : 'Submit Application'}
                     </Button>
                   </div>
                 </div>

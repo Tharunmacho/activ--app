@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, Building2, Package, Users, CalendarDays, MessageSquare, Lock } from 'lucide-react';
+import { MapPin, Building2, Package, Users, CalendarDays, MessageSquare, Lock, Loader2 } from 'lucide-react';
 import MemberPageShell from '@/pages/member/MemberPageShell';
 import { EmptyState, RowsSkeleton, SectionCard } from '@/features/member/components/MemberUI';
 import useMembershipGate from '@/features/member/useMembershipGate';
@@ -15,8 +15,10 @@ import {
     type DirectoryEntry, type DirectoryProduct,
 } from '@/services/memberHubApi';
 import { errorMessage } from '@/services/activApi';
+import { openConversationWith } from '@/services/messagesApi';
 import { resolveMediaUrl } from '@/config/api.config';
 
+import { CARD_TITLE } from '@/components/layout/appTypography';
 /**
  * One member's directory card.
  *
@@ -54,6 +56,72 @@ export default function DirectoryProfile() {
     const { isPaid } = useMembershipGate();
     const [application, setApplication] = useState<any>(null);
     const [askedToConnect, setAskedToConnect] = useState(false);
+    const [opening, setOpening] = useState(false);
+    const [openError, setOpenError] = useState('');
+
+    /**
+     * IS THIS THE MEMBER'S OWN CARD?
+     *
+     * The directory lists everybody, the reader included, so a member can and
+     * does land on their own profile — and it was offering them a "Message
+     * Tharun" button with their own name on it. Pressing it asked the server to
+     * open a conversation between one person and themselves, which it correctly
+     * refused; the applicant was then shown an error for doing the only thing
+     * the screen invited them to do.
+     *
+     * Read from storage rather than a fetch: the id is written at login
+     * (`activApi.login` stores `memberId`) and this only needs to compare two
+     * strings. `userId` is the fallback for a session that predates that key.
+     */
+    const isSelf = useMemo(() => {
+        try {
+            const me = localStorage.getItem('memberId') || localStorage.getItem('userId') || '';
+            return !!me && !!id && String(me) === String(id);
+        } catch {
+            // Storage unavailable (private window, blocked cookies). Falling
+            // back to "not me" leaves the button, which the server still
+            // refuses — the honest failure, not a hidden control.
+            return false;
+        }
+    }, [id]);
+
+    /**
+     * Open the thread with this member, then go to it.
+     *
+     * The conversation is created on the SERVER before navigating, so Messages
+     * opens on a real thread rather than on an inbox the member then has to
+     * find their way back out of. `openConversationWith` is idempotent — the
+     * participant pair is uniquely indexed — so pressing this twice reaches the
+     * same conversation rather than making a second one.
+     *
+     * The server refuses if either side's membership is not active, and its
+     * sentence is the one shown: it knows which of the two is the problem and
+     * this screen does not.
+     */
+    const startConversation = async () => {
+        if (!id || opening || isSelf) return;
+        setOpening(true);
+        setOpenError('');
+        try {
+            const conversation = await openConversationWith(id);
+            navigate(conversation?.id ? `/member/messages?c=${conversation.id}` : '/member/messages');
+        } catch (err) {
+            /*
+             * The same rule as the inbox: a member never sees the router's own
+             * 404. `Route /api/v1/messages not found` under a Message button
+             * reads as "this site is broken", when the honest answer is that
+             * the service is not reachable right now.
+             */
+            const raw = errorMessage(err, '');
+            setOpenError(
+                !raw || /route .* not found|network error|404|50\d|ECONNREFUSED/i.test(raw)
+                    ? 'Messaging is unavailable at the moment. Please try again in a few minutes.'
+                    : raw,
+            );
+        } finally {
+            setOpening(false);
+        }
+    };
 
     useEffect(() => {
         let cancelled = false;
@@ -103,7 +171,7 @@ export default function DirectoryProfile() {
                         <button
                             type="button"
                             onClick={() => navigate('/member/directory')}
-                            className="text-[0.8125rem] font-semibold text-blue-600 hover:underline"
+                            className="text-[1.0625rem] font-semibold text-blue-600 hover:underline"
                         >
                             Back to the directory
                         </button>
@@ -133,7 +201,7 @@ export default function DirectoryProfile() {
                 <button
                     type="button"
                     onClick={() => navigate('/member/directory')}
-                    className="text-[0.8125rem] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+                    className="text-[1.0625rem] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
                 >
                     All members
                 </button>
@@ -141,8 +209,12 @@ export default function DirectoryProfile() {
         >
             <div className="space-y-5">
                 {/* ---------- identity ---------- */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-5 lg:p-6
-                                flex flex-wrap items-start gap-4">
+                {/* `BIZ_CARD` — the Business Account form's card, which is what
+                    every other panel in the member area now wears. The flatter
+                    pair this carried made it the odd one out. */}
+                <div className="bg-white rounded-2xl border border-slate-200
+                                shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]
+                                p-5 lg:p-6 flex flex-wrap items-start gap-5">
                     {photo ? (
                         <img
                             src={photo}
@@ -151,39 +223,63 @@ export default function DirectoryProfile() {
                         />
                     ) : (
                         <span className="w-20 h-20 rounded-2xl bg-blue-600 text-white shrink-0
-                                         flex items-center justify-center text-xl font-bold">
+                                         flex items-center justify-center text-[1.5625rem] font-bold">
                             {(entry.fullName || '?').split(' ').filter(Boolean).slice(0, 2)
                                 .map((part) => part[0]).join('').toUpperCase()}
                         </span>
                     )}
 
                     <div className="min-w-0 flex-1">
-                        <h2 className="text-xl font-bold text-slate-900">{entry.fullName}</h2>
+                        <h2 className={`${CARD_TITLE} text-slate-900`}>{entry.fullName}</h2>
 
-                        {where ? (
-                            <p className="text-[0.8125rem] text-slate-500 mt-1 flex items-center gap-1.5">
-                                <MapPin className="w-3.5 h-3.5 shrink-0" /> {where}
-                            </p>
-                        ) : null}
-
-                        <div className="flex flex-wrap items-center gap-2 mt-3">
-                            {entry.sectors.map((sector) => (
-                                <span
-                                    key={sector}
-                                    className="text-[0.6875rem] font-semibold text-blue-700 bg-blue-50
-                                               px-2.5 py-1 rounded-full"
-                                >
-                                    {sector}
-                                </span>
-                            ))}
+                        {/*
+                          * REGION AND MEMBER-SINCE AS LABELLED FIELDS.
+                          *
+                          * They were 11px and 13px grey lines with an icon in
+                          * front — captions, floating under the name. The
+                          * Business Account form states a fact as a small
+                          * uppercase KEY over a bold VALUE (`BIZ_DETAIL_LABEL` /
+                          * `BIZ_DETAIL_VALUE` in `components/layout/surface.ts`),
+                          * and that is what these are.
+                          */}
+                        <div className="mt-4 grid gap-x-8 gap-y-4 grid-cols-1 sm:grid-cols-2">
+                            {where ? (
+                                <div className="min-w-0">
+                                    <p className="flex items-center gap-1.5 text-[1.0625rem] font-extrabold
+                                                  uppercase tracking-widest text-slate-400">
+                                        <MapPin className="w-3.5 h-3.5 shrink-0" /> Region
+                                    </p>
+                                    <p className="mt-1 text-[1.1875rem] font-bold text-slate-900 break-words">{where}</p>
+                                </div>
+                            ) : null}
 
                             {entry.memberSince ? (
-                                <span className="text-[0.6875rem] text-slate-500 inline-flex items-center gap-1">
-                                    <CalendarDays className="w-3 h-3" />
-                                    Member since {formatDate(entry.memberSince)}
-                                </span>
+                                <div className="min-w-0">
+                                    <p className="flex items-center gap-1.5 text-[1.0625rem] font-extrabold
+                                                  uppercase tracking-widest text-slate-400">
+                                        <CalendarDays className="w-3.5 h-3.5 shrink-0" /> Member since
+                                    </p>
+                                    <p className="mt-1 text-[1.1875rem] font-bold text-slate-900 tabular-nums">
+                                        {formatDate(entry.memberSince)}
+                                    </p>
+                                </div>
                             ) : null}
                         </div>
+
+                        {entry.sectors.length ? (
+                            <div className="flex flex-wrap items-center gap-2 mt-4">
+                                {entry.sectors.map((sector) => (
+                                    <span
+                                        key={sector}
+                                        className="inline-flex h-7 items-center rounded-full bg-blue-50 px-3
+                                                   text-[1.0625rem] font-bold uppercase tracking-[0.08em]
+                                                   text-blue-700"
+                                    >
+                                        {sector}
+                                    </span>
+                                ))}
+                            </div>
+                        ) : null}
 
                         {/*
                           * One control, two honest answers.
@@ -196,34 +292,58 @@ export default function DirectoryProfile() {
                           * click that does nothing, and a hidden one means an
                           * applicant never learns the feature exists.
                           */}
-                        <div className="mt-4">
+                        {/*
+                          * NOT ON YOUR OWN CARD.
+                          *
+                          * A line rather than a disabled button: a greyed-out
+                          * "Message Tharun" with Tharun's own name on it still
+                          * invites the click, and a control that cannot work is
+                          * better removed than dimmed. Everything else on the
+                          * card — the catalogue, the region — is exactly what
+                          * another member sees, which is the point of being
+                          * able to open it.
+                          */}
+                        <div className="mt-5">
+                            {isSelf ? (
+                                <p className="text-[1.0625rem] font-semibold text-slate-500">
+                                    This is how other members see your profile.
+                                </p>
+                            ) : (
                             <button
                                 type="button"
+                                disabled={opening}
                                 onClick={() => (access.membershipActive
-                                    ? navigate('/member/messages')
+                                    ? startConversation()
                                     : setAskedToConnect(true))}
-                                className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700
-                                           text-white text-[0.8125rem] font-bold px-4 py-2 rounded-xl
-                                           shadow-sm transition-colors"
+                                className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl
+                                           bg-blue-600 text-[1.1875rem] font-bold text-white shadow-sm
+                                           transition-colors hover:bg-blue-700 disabled:opacity-60"
                             >
-                                {access.membershipActive
-                                    ? <MessageSquare className="w-4 h-4" />
-                                    : <Lock className="w-3.5 h-3.5" />}
+                                {!access.membershipActive
+                                    ? <Lock className="w-3.5 h-3.5" />
+                                    : opening
+                                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                                        : <MessageSquare className="w-4 h-4" />}
                                 Message {(entry.fullName || '').split(' ').filter(Boolean)[0] || 'member'}
                             </button>
+                            )}
+
+                            {openError ? (
+                                <p className="mt-2 text-[1.0625rem] font-medium text-amber-700">{openError}</p>
+                            ) : null}
 
                             {askedToConnect && !access.membershipActive ? (
                                 <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-4">
-                                    <p className="text-[0.8125rem] font-bold text-slate-900">
+                                    <p className="text-[1.0625rem] font-bold text-slate-900">
                                         {MEMBERS_ONLY_COPY.title}
                                     </p>
-                                    <p className="text-[0.8125rem] text-slate-600 mt-1 leading-relaxed">
+                                    <p className="text-[1.0625rem] text-slate-600 mt-1 leading-relaxed">
                                         {MEMBERS_ONLY_COPY.short} {cta.detail}
                                     </p>
                                     <button
                                         type="button"
                                         onClick={() => navigate(cta.to)}
-                                        className="inline-flex items-center gap-1 mt-3 text-[0.8125rem]
+                                        className="inline-flex items-center gap-1 mt-3 text-[1.0625rem]
                                                    font-bold text-blue-700 hover:underline"
                                     >
                                         {cta.label} →
@@ -264,11 +384,11 @@ export default function DirectoryProfile() {
                                         )}
 
                                         <div className="min-w-0">
-                                            <p className="text-sm font-semibold text-slate-900 truncate">
+                                            <p className="text-[1.1875rem] font-semibold text-slate-900 truncate">
                                                 {company.businessName}
                                             </p>
                                             {company.businessType ? (
-                                                <p className="text-xs text-blue-700 font-medium">
+                                                <p className="text-[1.0625rem] text-blue-700 font-medium">
                                                     {company.businessType}
                                                 </p>
                                             ) : null}
@@ -328,14 +448,14 @@ export default function DirectoryProfile() {
                                         </div>
 
                                         <div className="p-2.5">
-                                            <p className="text-[0.8125rem] font-semibold text-slate-900 truncate">
+                                            <p className="text-[1.0625rem] font-semibold text-slate-900 truncate">
                                                 {product.name}
                                             </p>
-                                            <p className="text-[0.6875rem] text-slate-500 truncate">
+                                            <p className="text-[1.0625rem] text-slate-500 truncate">
                                                 {product.category}
                                             </p>
                                             {product.price > 0 ? (
-                                                <p className="text-[0.8125rem] font-bold text-blue-700 mt-0.5 tabular-nums">
+                                                <p className="text-[1.0625rem] font-bold text-blue-700 mt-0.5 tabular-nums">
                                                     ₹{product.price.toLocaleString('en-IN')}
                                                 </p>
                                             ) : null}

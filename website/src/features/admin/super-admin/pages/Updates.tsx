@@ -8,7 +8,9 @@ import {
 } from '@/services/memberHubApi';
 import { errorMessage, getStates, getDistricts, getBlocks } from '@/services/activApi';
 import { toast } from 'sonner';
+import { AdminPageHeader, ADMIN_PAGE } from '@/features/admin/components/AdminUI';
 
+import { CARD_TITLE } from '@/components/layout/appTypography';
 /**
  * Association Updates, authored (MEM-001).
  *
@@ -252,34 +254,27 @@ export default function SuperAdminUpdates() {
             <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
             <div className="flex-1 min-w-0">
-                <header className="bg-white border-b border-slate-200 px-6 py-4 flex flex-wrap items-center gap-3">
-                    <button
-                        className="lg:hidden text-slate-500"
-                        onClick={() => setSidebarOpen(true)}
-                        aria-label="Open menu"
-                    >
-                        <Menu className="w-5 h-5" />
-                    </button>
-                    <div className="min-w-0">
-                        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900">Association Updates</h1>
-                        <p className="text-sm text-slate-600 mt-0.5">
-                            News and notices, targeted by region and by membership.
-                        </p>
-                    </div>
+                {/* The one admin header — menu button, way back and the mobile
+                    stacking, shared with Events and Membership. */}
+                <AdminPageHeader
+                    title="Association Updates"
+                    subtitle="News and notices, targeted by region and by membership."
+                    onMenu={() => setSidebarOpen(true)}
+                    actions={
+                        <button
+                            type="button"
+                            onClick={openNew}
+                            className="inline-flex items-center justify-center gap-1.5 px-4 h-11 rounded-xl
+                                       bg-blue-600 text-white text-[1.25rem] font-semibold hover:bg-blue-700"
+                        >
+                            <Plus className="w-4 h-4" /> New update
+                        </button>
+                    }
+                />
 
-                    <button
-                        type="button"
-                        onClick={openNew}
-                        className="ml-auto shrink-0 inline-flex items-center gap-1.5 px-4 h-10 rounded-xl
-                                   bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700"
-                    >
-                        <Plus className="w-4 h-4" /> New update
-                    </button>
-                </header>
-
-                <main className="p-6 space-y-6 max-w-[90rem]">
+                <main className={ADMIN_PAGE}>
                     {error ? (
-                        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-[1.25rem] text-red-700">
                             {error}
                         </div>
                     ) : null}
@@ -291,7 +286,7 @@ export default function SuperAdminUpdates() {
                             className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-5 lg:p-6 space-y-6"
                         >
                             <div className="flex items-start justify-between gap-3">
-                                <h2 className="text-lg font-bold text-slate-900">
+                                <h2 className={`${CARD_TITLE} text-slate-900`}>
                                     {editing ? 'Edit update' : 'New update'}
                                 </h2>
                                 <button
@@ -393,8 +388,8 @@ export default function SuperAdminUpdates() {
 
                             {/* ---- who it reaches ---- */}
                             <div className="border-t border-slate-100 pt-5">
-                                <h3 className="text-sm font-bold text-slate-900">Who it reaches</h3>
-                                <p className="text-[0.78125rem] text-slate-500 mt-0.5 mb-4">
+                                <h3 className={`${CARD_TITLE} text-slate-900`}>Who it reaches</h3>
+                                <p className="text-[1.0625rem] text-slate-500 mt-0.5 mb-4">
                                     Leave a region blank to reach everyone below that level. A block-level
                                     update goes only to that block.
                                 </p>
@@ -502,14 +497,14 @@ export default function SuperAdminUpdates() {
                                         onChange={(e) => setForm({ ...form, pinned: e.target.checked })}
                                         className="w-4 h-4 rounded border-slate-300 text-blue-600"
                                     />
-                                    <span className="text-sm text-slate-700">Pin to the top of every feed</span>
+                                    <span className="text-[1.25rem] text-slate-700">Pin to the top of every feed</span>
                                 </label>
 
                                 <div className="ml-auto flex gap-2">
                                     <button
                                         type="button"
                                         onClick={() => setShowForm(false)}
-                                        className="px-4 h-11 rounded-xl border border-slate-200 text-sm
+                                        className="px-4 h-11 rounded-xl border border-slate-200 text-[1.25rem]
                                                    font-semibold text-slate-600 hover:bg-slate-50"
                                     >
                                         Cancel
@@ -517,7 +512,7 @@ export default function SuperAdminUpdates() {
                                     <button
                                         type="submit"
                                         disabled={saving}
-                                        className="px-5 h-11 rounded-xl bg-blue-600 text-white text-sm font-bold
+                                        className="px-5 h-11 rounded-xl bg-blue-600 text-white text-[1.25rem] font-bold
                                                    hover:bg-blue-700 disabled:opacity-60 inline-flex
                                                    items-center gap-2"
                                     >
@@ -531,26 +526,26 @@ export default function SuperAdminUpdates() {
 
                     {/* ---------------------------------------------- listing */}
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-5">
-                        <h2 className="text-lg font-bold text-slate-900 mb-4">
+                        <h2 className={`${CARD_TITLE} text-slate-900 mb-4`}>
                             Updates ({rows.length})
                         </h2>
 
                         {loading ? (
-                            <p className="text-sm text-slate-500 py-8 text-center">Loading…</p>
+                            <p className="text-[1.25rem] text-slate-500 py-8 text-center">Loading…</p>
                         ) : rows.length === 0 ? (
-                            <p className="text-sm text-slate-500 py-8 text-center">
+                            <p className="text-[1.25rem] text-slate-500 py-8 text-center">
                                 Nothing published yet. Create one and it appears on every matching
                                 member's dashboard.
                             </p>
                         ) : (
                             <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
+                                <table className="w-full text-[1.25rem]">
                                     <thead>
                                         <tr className="text-left text-slate-500 border-b border-slate-200">
-                                            <th className="pb-2 pr-4 font-medium">Headline</th>
-                                            <th className="pb-2 pr-4 font-medium">Reaches</th>
-                                            <th className="pb-2 pr-4 font-medium">Published</th>
-                                            <th className="pb-2 font-medium text-right">Actions</th>
+                                            <th className="pb-3 pr-4 text-[1.0625rem] font-semibold uppercase tracking-wider">Headline</th>
+                                            <th className="pb-3 pr-4 text-[1.0625rem] font-semibold uppercase tracking-wider">Reaches</th>
+                                            <th className="pb-3 pr-4 text-[1.0625rem] font-semibold uppercase tracking-wider">Published</th>
+                                            <th className="pb-3 text-[1.0625rem] font-semibold uppercase tracking-wider text-right">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -560,25 +555,25 @@ export default function SuperAdminUpdates() {
                                                     <span className="font-medium text-slate-800">{row.title}</span>
                                                     {row.pinned ? (
                                                         <span className="ml-2 inline-flex items-center gap-1
-                                                                         text-[0.625rem] font-bold uppercase
+                                                                         text-[1.0625rem] font-bold uppercase
                                                                          text-blue-700 align-middle">
                                                             <Pin className="w-3 h-3" /> Pinned
                                                         </span>
                                                     ) : null}
-                                                    <span className="block text-xs text-slate-400 capitalize">
+                                                    <span className="block text-[1.1875rem] text-slate-400 capitalize">
                                                         {row.category}
                                                     </span>
                                                 </td>
 
                                                 <td className="py-3 pr-4 text-slate-500">
                                                     {row.targetLabel || 'All regions'}
-                                                    <span className="block text-xs">
+                                                    <span className="block text-[1.1875rem]">
                                                         {row.audience === 'paid' ? 'Paid members only' : 'All members'}
                                                     </span>
                                                 </td>
 
                                                 <td className="py-3 pr-4">
-                                                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                                    <span className={`text-[1.1875rem] px-2 py-0.5 rounded-full ${
                                                         row.status === 'published'
                                                             ? 'bg-green-100 text-green-700'
                                                             : 'bg-slate-100 text-slate-500'
@@ -586,7 +581,7 @@ export default function SuperAdminUpdates() {
                                                         {row.status}
                                                     </span>
                                                     {row.publishedAt ? (
-                                                        <span className="block text-xs text-slate-400 mt-0.5">
+                                                        <span className="block text-[1.1875rem] text-slate-400 mt-0.5">
                                                             {new Date(row.publishedAt).toLocaleDateString('en-GB')}
                                                         </span>
                                                     ) : null}
@@ -619,7 +614,7 @@ export default function SuperAdminUpdates() {
                                                         onClick={() => remove(row)}
                                                         aria-label={`Delete ${row.title}`}
                                                         className="ml-1 inline-flex items-center gap-1.5 px-2.5 py-1.5
-                                                                   rounded-lg text-xs font-medium text-red-600
+                                                                   rounded-lg text-[1.1875rem] font-medium text-red-600
                                                                    border border-red-200 hover:bg-red-50"
                                                     >
                                                         <Trash2 className="w-3.5 h-3.5" /> Delete
@@ -638,7 +633,7 @@ export default function SuperAdminUpdates() {
     );
 }
 
-const INPUT = 'w-full h-11 px-3 rounded-xl border border-slate-200 text-sm bg-white ' +
+const INPUT = 'w-full h-11 px-3 rounded-xl border border-slate-200 text-[1.25rem] bg-white ' +
     'focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400';
 
 function Field({
@@ -646,9 +641,9 @@ function Field({
 }: { label: string; hint?: string; children: React.ReactNode }) {
     return (
         <label className="block min-w-0">
-            <span className="block text-[0.75rem] font-semibold text-slate-700 mb-1">{label}</span>
+            <span className="block text-[1.0625rem] font-semibold text-slate-700 mb-1">{label}</span>
             {children}
-            {hint ? <span className="block text-[0.71875rem] text-slate-400 mt-1">{hint}</span> : null}
+            {hint ? <span className="block text-[1.0625rem] text-slate-400 mt-1">{hint}</span> : null}
         </label>
     );
 }
@@ -670,12 +665,12 @@ function AudienceOption({
                 selected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300'
             }`}
         >
-            <span className={`inline-flex items-center gap-2 text-sm font-semibold ${
+            <span className={`inline-flex items-center gap-2 text-[1.25rem] font-semibold ${
                 selected ? 'text-blue-700' : 'text-slate-800'
             }`}>
                 {icon} {title}
             </span>
-            <span className="block text-xs text-slate-500 mt-1">{detail}</span>
+            <span className="block text-[1.1875rem] text-slate-500 mt-1">{detail}</span>
         </button>
     );
 }

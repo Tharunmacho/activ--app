@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,25 +13,12 @@ import {
   getBlocks,
   errorMessage,
 } from "@/services/activApi";
-
-/** The options mobile's Personal Details screen offers, in its order. */
-const RELIGION_OPTIONS = [
-  "Hinduism",
-  "Christianity",
-  "Islam",
-  "Sikhism",
-  "Buddhism",
-  "Jainism",
-  "Others",
-];
-
-const SOCIAL_CATEGORY_OPTIONS = [
-  "Christian ST",
-  "Christian SC",
-  "ST",
-  "SC",
-  "Others",
-];
+import {
+  SOCIAL_CATEGORIES,
+  GENDERS,
+  religionsFor,
+  normalizeReligion,
+} from "@/lib/memberFormOptions";
 
 interface PersonalFormData {
   /** `fullName`, not `name` — this is the field name the backend stores. */
@@ -42,8 +29,11 @@ interface PersonalFormData {
   district: string;
   block: string;
   city: string;
-  religion: string;
+  /** Members outside India: where they are, in place of the region. */
+  place: string;
   socialCategory: string;
+  religion: string;
+  gender: string;
 }
 
 const PersonalInformationForm = () => {
@@ -56,12 +46,21 @@ const PersonalInformationForm = () => {
     district: "",
     block: "",
     city: "",
-    religion: "",
+    place: "",
     socialCategory: "",
+    religion: "",
+    gender: "",
   });
 
   const [states, setStates] = useState<string[]>([]);
   const [districts, setDistricts] = useState<string[]>([]);
+  /*
+   * A member outside India — decided by the SERVER (`isInternational` on the
+   * profile, set from their phone number) and read here only to decide what
+   * the form asks. They have no state, district or block; they give a place.
+   */
+  const [isAbroad, setIsAbroad] = useState(false);
+  const [abroadCountry, setAbroadCountry] = useState("");
   const [blocks, setBlocks] = useState<string[]>([]);
   /**
    * False when the platform has no staffed region at all. That is a different
@@ -159,11 +158,20 @@ const PersonalInformationForm = () => {
           district: profile.district || "",
           block: profile.block || "",
           city: profile.city || "",
-          religion: profile.religion || "",
+          place: profile.place || profile.city || "",
           socialCategory: profile.socialCategory || "",
+          // Old spellings — "Hindu", "hindu", "HINDU" — are mapped onto the
+          // list's current wording, so a returning member is not handed a blank
+          // select and asked to answer a question they already answered.
+          // Anything with no equivalent comes back '' and has to be re-picked
+          // — see `normalizeReligion`.
+          religion: normalizeReligion(profile.religion),
+          gender: profile.gender || "",
         });
 
         setIsLocked(profile.isLocked === true);
+        setIsAbroad(profile.isInternational === true);
+        setAbroadCountry(profile.country || "");
       }
     } catch (error) {
       console.warn("Could not load personal details:", error);
@@ -184,10 +192,39 @@ const PersonalInformationForm = () => {
         next.block = "";
       } else if (field === "district") {
         next.block = "";
+      } else if (field === "socialCategory") {
+        /*
+          Social category narrows the religions on offer, so a category change
+          can leave behind a religion the new category does not admit.
+
+          Cleared rather than re-picked. Choosing the first allowed religion for
+          them would record an answer the applicant never gave, on a question
+          about their own faith — the same reason the region selects above clear
+          their children instead of auto-picking.
+
+          Only cleared when it is actually incompatible: switching between two
+          categories that both allow Hindu must not wipe a Hindu answer.
+        */
+        if (next.religion && !religionsFor(value).includes(next.religion)) {
+          next.religion = "";
+        }
       }
       return next;
     });
   };
+
+  /**
+   * The religions this applicant's social category admits.
+   *
+   * Memoised because it is read three times in one render — the hint, the
+   * `length` test in it, and the option list — and recomputing a fresh array
+   * each time would give `SelectContent` a new `key` identity on every
+   * keystroke elsewhere in the form.
+   */
+  const allowedReligions = useMemo(
+    () => religionsFor(formData.socialCategory),
+    [formData.socialCategory],
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,16 +234,19 @@ const PersonalInformationForm = () => {
       return;
     }
 
+    /* The region is asked of members in India only; abroad, the place. */
+    const locationMissing = isAbroad
+      ? !(formData.place || "").trim()
+      : !formData.state || !formData.district || !formData.block || !formData.city;
+
     if (
       !formData.fullName ||
       !formData.phoneNumber ||
       !formData.email ||
-      !formData.state ||
-      !formData.district ||
-      !formData.block ||
-      !formData.city ||
+      locationMissing ||
+      !formData.socialCategory ||
       !formData.religion ||
-      !formData.socialCategory
+      !formData.gender
     ) {
       toast.error("Please fill in all required fields");
       return;
@@ -217,7 +257,11 @@ const PersonalInformationForm = () => {
       // Sent with the backend's own field names. `updateProfile` routes each
       // group of fields to its own collection and mirrors the personal details
       // onto the member's application, so the admin queues stay in step.
-      await updateProfile(formData);
+      /* Abroad, the region is not sent at all — the server drops it anyway —
+         and the place doubles as the city the other forms read. */
+      await updateProfile(isAbroad
+        ? { ...formData, state: undefined, district: undefined, block: undefined, city: formData.place.trim(), place: formData.place.trim() }
+        : formData);
 
       toast.success("Personal information saved");
       window.dispatchEvent(new Event("formSubmitted"));
@@ -240,14 +284,14 @@ const PersonalInformationForm = () => {
     <RegistrationFormShell
       step={1}
       title="Complete Your Profile"
-      description="Personal Details — Step 1 of 4"
+      description="Personal Details — Step 1 of 3"
       submitLabel="Next"
       submitting={submitting}
       disabled={isLocked}
       onSubmit={handleSubmit}
     >
-      {!coverageAvailable && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+      {!isAbroad && !coverageAvailable && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-[1.1875rem] text-amber-800">
           No region on the platform currently has an active block admin, so there is
           nothing to select yet. An administrator has to open a region before an
           application can be routed.
@@ -261,6 +305,17 @@ const PersonalInformationForm = () => {
         subtitle="Tell us where your business is located"
       >
         <FormGrid>
+          {isAbroad ? (
+            <FormField label="Place" required hint={`You are registered from ${abroadCountry || "outside India"} — no state, district or block is needed. Shown on your certificate and dashboard.`}>
+              <Input
+                value={formData.place}
+                onChange={(e) => setField("place", e.target.value)}
+                placeholder={abroadCountry ? `Your city, ${abroadCountry}` : "Your city and country"}
+                className="h-11 border-slate-200 focus-visible:ring-blue-500"
+              />
+            </FormField>
+          ) : (
+            <>
           <FormField label="State" required>
             <Select value={formData.state} onValueChange={(v) => setField("state", v)}>
               <SelectTrigger className="h-11 border-slate-200 focus:ring-blue-500">
@@ -318,6 +373,8 @@ const PersonalInformationForm = () => {
               className="h-11 border-slate-200 focus-visible:ring-blue-500"
             />
           </FormField>
+            </>
+          )}
         </FormGrid>
       </FormCard>
 
@@ -362,25 +419,24 @@ const PersonalInformationForm = () => {
         </FormGrid>
       </FormCard>
 
-      {/* Mirrors mobile's "Demographic Information" card. */}
+      {/*
+        DEMOGRAPHIC INFORMATION — three fields, and the order is the point.
+
+        Social category comes first because it DECIDES the second: the religions
+        on offer depend on it, and a religion box that silently rewrites itself
+        after the category is answered reads as the form losing an answer. Asked
+        in this order there is nothing to rewrite.
+      */}
       <FormCard
         icon={Users}
         title="Demographic Information"
         subtitle="Help us know you better"
       >
         <FormGrid>
-          <FormField label="Religion" required>
-            <Select value={formData.religion} onValueChange={(v) => setField("religion", v)}>
-              <SelectTrigger className="h-11 border-slate-200 focus:ring-blue-500">
-                <SelectValue placeholder="Select Religion" />
-              </SelectTrigger>
-              <SelectContent>
-                {RELIGION_OPTIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </FormField>
-
-          <FormField label="Social Category" required>
+          <FormField
+            label="Social Category"
+            required
+          >
             <Select
               value={formData.socialCategory}
               onValueChange={(v) => setField("socialCategory", v)}
@@ -389,7 +445,57 @@ const PersonalInformationForm = () => {
                 <SelectValue placeholder="Select Social Category" />
               </SelectTrigger>
               <SelectContent>
-                {SOCIAL_CATEGORY_OPTIONS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                {SOCIAL_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </FormField>
+
+          {/*
+            Religion, narrowed by the category above.
+
+            Scheduled Caste status is confined to Hindu, Sikh and Buddhist, so
+            an SC applicant is shown those three and nothing else — offering the
+            other two offers a combination that cannot be true.
+
+            Disabled until the category is answered rather than showing all five
+            and shrinking the list afterwards. An applicant who picks Muslim and
+            then picks SC would watch their answer disappear with no explanation;
+            this way the question is simply not open yet, and the hint says why.
+          */}
+          <FormField
+            label="Religion"
+            required
+            /*
+              The list narrowing itself is the message.
+              A note under the field announcing that it had narrowed said
+              nothing the shortened dropdown did not already show, and it named
+              the category back at the person who had just picked it. Only the
+              prompt that is genuinely useful survives: the one explaining why
+              the field is still disabled.
+            */
+            hint={!formData.socialCategory ? "Choose a social category first" : undefined}
+          >
+            <Select
+              value={formData.religion}
+              onValueChange={(v) => setField("religion", v)}
+              disabled={!formData.socialCategory}
+            >
+              <SelectTrigger className="h-11 border-slate-200 focus:ring-blue-500">
+                <SelectValue placeholder="Select Religion" />
+              </SelectTrigger>
+              <SelectContent>
+                {allowedReligions.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </FormField>
+
+          <FormField label="Gender" required>
+            <Select value={formData.gender} onValueChange={(v) => setField("gender", v)}>
+              <SelectTrigger className="h-11 border-slate-200 focus:ring-blue-500">
+                <SelectValue placeholder="Select Gender" />
+              </SelectTrigger>
+              <SelectContent>
+                {GENDERS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
               </SelectContent>
             </Select>
           </FormField>

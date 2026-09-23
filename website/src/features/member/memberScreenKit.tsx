@@ -14,6 +14,7 @@
 import type { ReactNode } from 'react';
 import { Check, Hourglass, ArrowRight } from 'lucide-react';
 
+import { PAGE_TITLE } from '@/components/layout/appTypography';
 /** `frontend/src/screens/**` — BG, PRIMARY, SUCCESS, INK, MUTED. */
 export const PALETTE = {
     bg: '#F0F4F8',
@@ -53,14 +54,14 @@ export const SuccessMark = ({ tone = PALETTE.success }: { tone?: string }) => (
 );
 
 export const ScreenTitle = ({ children }: { children: ReactNode }) => (
-    <h1 className="font-display text-[1.625rem] lg:text-3xl font-extrabold tracking-tight text-center"
+    <h1 className={`font-display ${PAGE_TITLE} text-center`}
         style={{ color: PALETTE.ink }}>
         {children}
     </h1>
 );
 
 export const ScreenSubtitle = ({ children }: { children: ReactNode }) => (
-    <p className="text-sm text-center mt-2 mb-7 leading-relaxed max-w-md mx-auto"
+    <p className="text-[1.1875rem] text-center mt-2 mb-7 leading-relaxed max-w-md mx-auto"
        style={{ color: PALETTE.muted }}>
         {children}
     </p>
@@ -76,9 +77,9 @@ export const KitCard = ({ children, className = '' }: { children: ReactNode; cla
 
 export const KitCardHeader = ({ title, pill }: { title: string; pill?: string }) => (
     <div className="flex items-center justify-between gap-3 mb-4">
-        <p className="font-display text-[0.9375rem] font-bold" style={{ color: PALETTE.ink }}>{title}</p>
+        <p className="font-display text-[1.1875rem] font-bold" style={{ color: PALETTE.ink }}>{title}</p>
         {pill ? (
-            <span className="shrink-0 rounded-lg px-2.5 py-1 text-[0.6875rem] font-extrabold"
+            <span className="shrink-0 rounded-lg px-2.5 py-1 text-[1.0625rem] font-extrabold"
                   style={{ backgroundColor: '#E0E7FF', color: PALETTE.primary }}>
                 {pill}
             </span>
@@ -114,7 +115,7 @@ export const StageRail = ({ stages }: { stages: KitStage[] }) => (
                     <div className="w-[1.625rem] shrink-0 flex flex-col items-center">
                         <span
                             className="w-[1.625rem] h-[1.625rem] rounded-full flex items-center justify-center
-                                       text-[0.6875rem] font-extrabold text-white shrink-0"
+                                       text-[1.0625rem] font-extrabold text-white shrink-0"
                             style={{ backgroundColor: tone }}
                         >
                             {stage.done ? <Check className="w-3.5 h-3.5" strokeWidth={3} />
@@ -128,11 +129,11 @@ export const StageRail = ({ stages }: { stages: KitStage[] }) => (
                     </div>
 
                     <div className="flex-1 min-w-0 ml-3 pb-4">
-                        <p className="text-sm font-bold leading-tight"
+                        <p className="text-[1.1875rem] font-bold leading-tight"
                            style={{ color: stage.active ? PALETTE.primary : PALETTE.ink }}>
                             {stage.label}
                         </p>
-                        <p className="text-xs mt-0.5" style={{ color: PALETTE.muted }}>{stage.caption}</p>
+                        <p className="text-[1.0625rem] mt-0.5" style={{ color: PALETTE.muted }}>{stage.caption}</p>
                     </div>
                 </div>
             );
@@ -147,7 +148,7 @@ export const NoticeRow = ({ icon, children, tone = PALETTE.primary, soft = '#EEF
     <div className="rounded-xl flex items-start gap-2.5 px-3.5 py-3 mt-4"
          style={{ backgroundColor: soft }}>
         <span className="shrink-0 mt-px" style={{ color: tone }}>{icon}</span>
-        <p className="text-xs leading-relaxed" style={{ color: tone }}>{children}</p>
+        <p className="text-[1.0625rem] leading-relaxed" style={{ color: tone }}>{children}</p>
     </div>
 );
 
@@ -158,7 +159,7 @@ export const PrimaryAction = ({ onClick, children, tone = PALETTE.primary, disab
         type="button"
         onClick={onClick}
         disabled={disabled}
-        className="w-full h-12 rounded-xl text-white font-bold text-[0.9375rem] flex items-center
+        className="w-full h-12 rounded-xl text-white font-bold text-[1.1875rem] flex items-center
                    justify-center gap-2 transition-opacity hover:opacity-90
                    disabled:opacity-60 disabled:cursor-not-allowed"
         style={{ backgroundColor: tone }}
@@ -172,7 +173,7 @@ export const GhostAction = ({ onClick, children }: { onClick: () => void; childr
     <button
         type="button"
         onClick={onClick}
-        className="w-full h-12 rounded-xl font-semibold text-[0.9375rem] bg-white border
+        className="w-full h-12 rounded-xl font-semibold text-[1.1875rem] bg-white border
                    transition-colors hover:bg-slate-50 mt-3"
         style={{ borderColor: PALETTE.border, color: PALETTE.ink }}
     >

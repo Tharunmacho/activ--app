@@ -33,6 +33,7 @@ import { dashboardPathFor } from '@/features/member/memberAccess';
 import useMembershipGate from '@/features/member/useMembershipGate';
 import { PALETTE, KitCard, PrimaryAction } from '@/features/member/memberScreenKit';
 
+import { PAGE_TITLE } from '@/components/layout/appTypography';
 /** Mobile's four post-payment promises, with its colours. */
 const AFTER_PAYMENT = [
     { Icon: Zap, text: 'Instant activation', color: '#F59E0B' },
@@ -130,16 +131,16 @@ export default function Payment() {
                 {/* ---------------- title header ---------------- */}
                 <div className="text-center">
                     <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5
-                                     text-[0.6875rem] font-extrabold tracking-wide mb-3"
-                          style={{ backgroundColor: '#F3E8FF', color: '#8B5CF6' }}>
+                                     text-[1.0625rem] font-extrabold tracking-wide mb-3"
+                          style={{ backgroundColor: '#E0E7FF', color: PALETTE.primary }}>
                         <Star className="w-3.5 h-3.5" />
                         MEMBERSHIP PLAN
                     </span>
-                    <h1 className="font-display text-[1.625rem] lg:text-3xl font-extrabold tracking-tight"
+                    <h1 className={`font-display ${PAGE_TITLE}`}
                         style={{ color: PALETTE.ink }}>
                         {isCompany ? 'Select Business Plan' : 'Aspirant Membership Plan'}
                     </h1>
-                    <p className="text-sm mt-2" style={{ color: PALETTE.muted }}>
+                    <p className="text-[1.1875rem] mt-2" style={{ color: PALETTE.muted }}>
                         {isCompany
                             ? 'Choose a plan that fits your business experience'
                             : 'Empowering students and future entrepreneurs'}
@@ -162,10 +163,10 @@ export default function Payment() {
                 {/* ---------------- plan cards ---------------- */}
                 {plans.length === 0 ? (
                     <KitCard className="text-center py-10">
-                        <p className="text-sm font-semibold" style={{ color: PALETTE.ink }}>
+                        <p className="text-[1.1875rem] font-semibold" style={{ color: PALETTE.ink }}>
                             No plan is available for your account yet.
                         </p>
-                        <p className="text-xs mt-1" style={{ color: PALETTE.muted }}>
+                        <p className="text-[1.0625rem] mt-1" style={{ color: PALETTE.muted }}>
                             Complete your profile and we will show the plan that applies to you.
                         </p>
                     </KitCard>
@@ -200,42 +201,48 @@ export default function Payment() {
                                     onClick={() => !locked && setSelected(plan)}
                                     aria-pressed={active}
                                     disabled={locked}
-                                    className={`text-left rounded-2xl border-2 p-5 transition-all bg-white
-                                                ${locked ? 'cursor-default' : 'hover:shadow-md'}
-                                                ${active ? 'shadow-lg' : 'shadow-sm'}`}
+                                    /* `BIZ_CARD`'s geometry and two-stop shadow. The
+                                       selected card keeps its 2px accent border — that is
+                                       the one thing on this screen that must be
+                                       unmistakable. */
+                                    className={`text-left rounded-2xl border-2 p-6 transition-all bg-white
+                                                shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]
+                                                ${locked ? 'cursor-default' : 'hover:-translate-y-0.5'}`}
                                     style={{ borderColor: active ? PALETTE.primary : PALETTE.border }}
                                 >
                                     <div className="flex items-start justify-between gap-2 mb-2">
-                                        <p className="font-display text-base font-extrabold"
+                                        <p className="font-display text-[1.25rem] font-extrabold capitalize"
                                            style={{ color: PALETTE.ink }}>
                                             {plan.name}
                                         </p>
                                         {plan.popular ? (
-                                            <span className="shrink-0 rounded-md px-2 py-0.5 text-[0.625rem] font-extrabold"
+                                            <span className="shrink-0 inline-flex h-7 items-center rounded-full px-3 text-[1.0625rem] font-bold uppercase tracking-[0.08em]"
                                                   style={{ backgroundColor: '#FEF3C7', color: '#B45309' }}>
-                                                POPULAR
+                                                Popular
                                             </span>
                                         ) : null}
                                     </div>
 
-                                    <p className="text-xs mb-3" style={{ color: PALETTE.muted }}>
+                                    <p className="text-[1.0625rem] mb-3" style={{ color: PALETTE.muted }}>
                                         {plan.description}
                                     </p>
 
                                     <p className="mb-3">
-                                        <span className="font-display text-2xl font-extrabold tabular"
+                                        {/* The price is the reason the screen exists. */}
+                                        <span className="font-display text-[1.75rem] font-extrabold tabular"
                                               style={{ color: active ? PALETTE.primary : PALETTE.ink }}>
                                             {rupees(plan.price)}
                                         </span>
-                                        <span className="text-xs ml-1" style={{ color: PALETTE.muted }}>/ year</span>
+                                        <span className="text-[1.0625rem] ml-1"
+                                              style={{ color: PALETTE.muted }}>/ year</span>
                                     </p>
 
-                                    <ul className="space-y-1.5">
+                                    <ul className="space-y-2.5">
                                         {(plans.length === 1 ? plan.features : plan.features.slice(0, 3)).map((f) => (
                                             <li key={f} className="flex items-start gap-1.5">
-                                                <Check className="w-3.5 h-3.5 shrink-0 mt-0.5"
+                                                <Check className="w-4 h-4 shrink-0 mt-0.5"
                                                        style={{ color: PALETTE.success }} />
-                                                <span className="text-[0.6875rem] leading-snug"
+                                                <span className="text-[1.0625rem] leading-snug"
                                                       style={{ color: PALETTE.muted }}>{f}</span>
                                             </li>
                                         ))}
@@ -247,22 +254,25 @@ export default function Payment() {
                 )}
 
                 {/* ---------------- secure payment ---------------- */}
-                <div className="rounded-2xl p-5 text-white"
-                     style={{ background: `linear-gradient(135deg, ${PALETTE.primary} 0%, #1E3FA8 100%)` }}>
+                {/* Flat, not a gradient. Two near-identical blues across one panel
+                    read as a rendering fault; the member area uses one blue. */}
+                <div className="rounded-2xl p-6 text-white"
+                     style={{ backgroundColor: PALETTE.primary }}>
                     <div className="flex items-start gap-3">
                         <span className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
                             <Lock className="w-5 h-5" />
                         </span>
                         <div className="min-w-0">
-                            <p className="font-display text-[0.9375rem] font-bold">Secure Payment</p>
-                            <p className="text-xs text-white/80 mt-0.5 leading-relaxed">
+                            <p className="font-display text-[1.1875rem] font-bold">Secure Payment</p>
+                            <p className="text-[1.0625rem] text-white/80 mt-0.5 leading-relaxed">
                                 Your payment is processed over an encrypted connection.
                             </p>
                         </div>
                     </div>
                     <div className="flex flex-wrap gap-2 mt-4">
                         {['SSL Encrypted', 'PCI-DSS Compliant'].map(tag => (
-                            <span key={tag} className="rounded-lg bg-white/20 px-2.5 py-1 text-[0.6875rem] font-bold">
+                            <span key={tag} className="inline-flex h-7 items-center rounded-full bg-white/20 px-3
+                                                       text-[1.0625rem] font-bold uppercase tracking-[0.08em]">
                                 {tag}
                             </span>
                         ))}
@@ -271,7 +281,7 @@ export default function Payment() {
 
                 {/* ---------------- what's next ---------------- */}
                 <KitCard>
-                    <p className="font-display text-[0.9375rem] font-bold mb-4" style={{ color: PALETTE.ink }}>
+                    <p className="font-display text-[1.1875rem] font-bold mb-4" style={{ color: PALETTE.ink }}>
                         What&apos;s Next After Payment?
                     </p>
                     <div className="grid grid-cols-2 gap-4">
@@ -281,7 +291,7 @@ export default function Payment() {
                                       style={{ backgroundColor: `${color}15`, color }}>
                                     <Icon className="w-[1.125rem] h-[1.125rem]" />
                                 </span>
-                                <span className="text-xs font-medium leading-snug pt-2"
+                                <span className="text-[1.0625rem] font-medium leading-snug pt-2"
                                       style={{ color: PALETTE.ink }}>{text}</span>
                             </div>
                         ))}
@@ -294,7 +304,7 @@ export default function Payment() {
                 <div className="space-y-5 lg:sticky lg:top-6">
                 {activePlan ? (
                     <KitCard>
-                        <p className="font-display text-[0.9375rem] font-bold mb-4" style={{ color: PALETTE.ink }}>
+                        <p className="font-display text-[1.1875rem] font-bold mb-4" style={{ color: PALETTE.ink }}>
                             Payment Summary
                         </p>
                         <div className="space-y-2.5">
@@ -305,9 +315,9 @@ export default function Payment() {
                             <SummaryRow label="Tax" value="₹0 (Included)" valueColor="#10B981" />
                             <div className="border-t pt-3 mt-3 flex items-center justify-between"
                                  style={{ borderColor: PALETTE.border }}>
-                                <span className="font-display text-sm font-extrabold"
+                                <span className="font-display text-[1.1875rem] font-extrabold"
                                       style={{ color: PALETTE.ink }}>Total</span>
-                                <span className="font-display text-xl font-extrabold tabular"
+                                <span className="font-display text-[1.5625rem] font-extrabold tabular"
                                       style={{ color: PALETTE.primary }}>
                                     {rupees(activePlan.price)}
                                 </span>
@@ -325,7 +335,7 @@ export default function Payment() {
 
                 <div className="flex items-center justify-center gap-5">
                     {['100% Safe & Secure', 'Instant Activation'].map(t => (
-                        <span key={t} className="flex items-center gap-1.5 text-[0.6875rem]"
+                        <span key={t} className="flex items-center gap-1.5 text-[1.0625rem]"
                               style={{ color: PALETTE.muted }}>
                             <ShieldCheck className="w-3.5 h-3.5" />
                             {t}
@@ -344,8 +354,8 @@ const SummaryRow = ({ label, value, valueColor }: {
     label: string; value: string; valueColor?: string;
 }) => (
     <div className="flex items-center justify-between gap-3">
-        <span className="text-xs" style={{ color: PALETTE.muted }}>{label}</span>
-        <span className="text-xs font-bold text-right" style={{ color: valueColor || PALETTE.ink }}>
+        <span className="text-[1.0625rem]" style={{ color: PALETTE.muted }}>{label}</span>
+        <span className="text-[1.0625rem] font-bold text-right" style={{ color: valueColor || PALETTE.ink }}>
             {value}
         </span>
     </div>

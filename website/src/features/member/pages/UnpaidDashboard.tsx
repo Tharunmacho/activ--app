@@ -16,7 +16,10 @@ import {
     getMyProfile,
     getRecentActivity,
     deriveApprovalFlags,
+    decidedByLabel,
     timelineStageStatus,
+    tierDecidedAt,
+    tierDecidedByLabel,
     type MemberActivity,
     type TimelineStageStatus,
 } from "@/services/activApi";
@@ -27,6 +30,27 @@ import {
 } from "@/features/member/memberAccess";
 import useMembershipGate from "@/features/member/useMembershipGate";
 import MemberTopBar from "@/features/member/components/MemberTopBar";
+/*
+ * The in-app type scale. Every size and weight on this screen comes from here,
+ * so the rest of the member area moves onto the same voice by importing rather
+ * than by retyping — the header comment in that file says where the numbers
+ * come from (the sign-in screen).
+ */
+import {
+    ACTION_TEXT,
+    CARD_BODY,
+    CARD_SUBTITLE,
+    CARD_TITLE,
+    CHIP_TEXT,
+    EYEBROW,
+    ITEM_BODY,
+    ITEM_TITLE,
+    META_TEXT,
+    PAGE_SUBTITLE,
+    PAGE_TITLE,
+    SECTION_TITLE,
+    STAT_FIGURE,
+} from "@/components/layout/appTypography";
 
 /**
  * The dashboard an applicant sees between registering and paying.
@@ -119,10 +143,32 @@ const MEMBERSHIP_BENEFITS = [
 ];
 
 /** The three review tiers, in order. Payment is the fourth node, added below. */
-const TIERS: { key: 'block' | 'district' | 'state'; label: string; at: string }[] = [
-    { key: 'block', label: 'Block Admin', at: 'blockApprovedAt' },
-    { key: 'district', label: 'District Admin', at: 'districtApprovedAt' },
-    { key: 'state', label: 'State Admin', at: 'stateApprovedAt' },
+/**
+ * The progress rail: one review, then the payment.
+ *
+ * It was three tier nodes — Block, District, State — and a payment node, which
+ * is how the workflow used to run. An application now goes to all three admins
+ * of the member's own area at once and the first of them to decide decides it,
+ * so three nodes could only ever be one node lit and two greyed out for a turn
+ * that was never coming, or, after an approval, one lit and two grey forever on
+ * a membership that had already been granted.
+ *
+ * `stateApprovedAt` is the review's date whichever tier signed it — the server
+ * stamps that field for every approval so the member screens have one place to
+ * read it.
+ */
+/**
+ * The three review tiers, in the order an applicant reads them.
+ *
+ * Each records their OWN verdict, so these are three different answers rather
+ * than three copies of one — which is why they are three nodes again. Only the
+ * State's approval grants the membership; `grants` carries that so the copy
+ * below does not have to compare against `'state'` in four places.
+ */
+const TIERS: { key: 'block' | 'district' | 'state'; label: string; grants: boolean }[] = [
+    { key: 'block', label: 'Block Admin', grants: false },
+    { key: 'district', label: 'District Admin', grants: false },
+    { key: 'state', label: 'State Admin', grants: true },
 ];
 
 const STAGE_CHIP: Record<TimelineStageStatus, { label: string; cls: string }> = {
@@ -139,10 +185,18 @@ const formatDate = (value?: string | null): string => {
     return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
+/**
+ * The three forms an application is made of.
+ *
+ * `Financial Details` used to sit between Business and Declaration, and was
+ * filtered out of this list for an aspirant. It is asked in the Business
+ * Creation Account now — which is not part of the application — so it is gone
+ * from here rather than conditionally hidden, and every applicant sees the same
+ * three rows.
+ */
 const PROFILE_FORMS = [
     'Personal Details',
     'Business Details',
-    'Financial Details',
     'Declaration',
 ] as const;
 
@@ -157,11 +211,16 @@ const UnpaidDashboard = () => {
 
     const [loading, setLoading] = useState(true);
     const [application, setApplication] = useState<any>(null);
+    /* A member outside India — the server's answer, from their phone number. */
+    const [abroad, setAbroad] = useState<{ on: boolean; place: string; country: string }>({ on: false, place: '', country: '' });
     const [activity, setActivity] = useState<MemberActivity[]>([]);
     const [contact, setContact] = useState<any>(null);
     // Seeded from storage so a returning member sees their name before the
     // profile call lands; replaced by the database answer either way.
     const [memberName, setMemberName] = useState(() => localStorage.getItem('userName') || '');
+
+    /** The greeting takes the first name only — see the note on the header. */
+    const firstName = (memberName || '').split(' ').filter(Boolean)[0] || '';
 
 
     /**
@@ -195,6 +254,11 @@ const UnpaidDashboard = () => {
          * still read that key, so one fetch serves all of them.
          */
         const profile: any = profileRes.status === 'fulfilled' ? profileRes.value : null;
+        setAbroad({
+            on: profile?.isInternational === true,
+            place: String(profile?.place || profile?.city || ''),
+            country: String(profile?.country || ''),
+        });
         const name = profile?.fullName || '';
         if (name) {
             setMemberName(name);
@@ -261,7 +325,7 @@ const UnpaidDashboard = () => {
     const appRef = useMemo(() => formatApplicationRef(application), [application]);
 
     /**
-     * Aspirant or Business Applicant, resolved the way the server resolves it.
+     * Aspirant or Business, resolved the way the server resolves it.
      *
      * `memberType` is `undefined` on most rows — the schema gained the field
      * after applications started being written, so Mongoose strict mode dropped
@@ -277,25 +341,66 @@ const UnpaidDashboard = () => {
         [application, memberType],
     );
 
-    /** How many of the four stages are behind this application. */
+/**
+     * How many of the four stages are behind this applicant: the three tier
+     * reviews, then payment.
+     *
+     * Counted from each tier's own verdict, so a Block approval moves the bar
+     * even though it grants nothing — which is the honest picture of progress,
+     * and the reason the applicant is shown three rows rather than one.
+     */
+    /*
+     * WHO REVIEWS THIS APPLICATION.
+     *
+     * Three tiers in India. Outside India there is no block, district or state
+     * admin for the file to reach — it goes to the head office alone, and the
+     * Super Admin's decision is recorded in the State's seat (it is the one
+     * that grants the membership). So the timeline has one review node, read
+     * from that seat, instead of two that would stay grey forever.
+     */
+    const isAbroad = abroad.on || application?.isInternational === true;
+    const tiers = useMemo(() => (isAbroad
+        ? [{ key: 'state' as const, label: 'ACTIV Head Office', grants: true }]
+        : TIERS), [isAbroad]);
+
     const stagesDone = useMemo(() => {
         if (!application) return 0;
-        const approvals = [flags.isBlockApproved, flags.isDistrictApproved, flags.isStateApproved]
-            .filter(Boolean).length;
-        return approvals + (access.membershipActive ? 1 : 0);
-    }, [application, flags, access.membershipActive]);
+        const reviewed = tiers.filter(t => timelineStageStatus(t.key, application) === 'approved').length;
+        return reviewed + (access.membershipActive ? 1 : 0);
+    }, [application, access.membershipActive, tiers]);
 
-    const overallPercent = useMemo(() => Math.round((stagesDone / 4) * 100), [stagesDone]);
+    const TOTAL_STAGES = tiers.length + 1;
+    const overallPercent = useMemo(
+        () => Math.round((stagesDone / TOTAL_STAGES) * 100),
+        [stagesDone, TOTAL_STAGES],
+    );
 
-    /** The tier the file is sitting with right now. */
+    /**
+     * What is actually happening to the file right now, as a sentence.
+     *
+     * A NOUN PHRASE THAT READS AS A PLACE, not a tier name. It used to be
+     * dropped into "currently under review at the ___ level", which produced
+     * "under review at the Ready for Payment level" — a level that is not a
+     * level and not under review. The sentence is built here instead, so the
+     * words and the state cannot come apart.
+     *
+     * It does not name one tier as the holder: all three hold it from
+     * submission, and only the State's approval admits anybody.
+     */
     const currentTier = useMemo(() => {
         if (!application) return '';
-        if (access.membershipActive) return 'Active Member';
-        if (flags.isStateApproved) return 'Ready for Payment';
-        if (flags.isDistrictApproved) return 'State Admin';
-        if (flags.isBlockApproved) return 'District Admin';
-        return 'Block Admin';
-    }, [application, flags, access.membershipActive]);
+        if (access.membershipActive) return 'Your membership is active.';
+        if (flags.isRejected) return 'Your application was returned. See the reviewer note below.';
+        if (flags.isApproved) return 'Approved by your State Admin. You can now complete the membership payment.';
+
+        const waiting = tiers
+            .filter(t => timelineStageStatus(t.key, application) !== 'approved')
+            .map(t => t.label);
+
+        if (!waiting.length) return 'All three admins have reviewed your application.';
+        return `With your ${waiting.join(', ').replace(/, ([^,]*)$/, ' and $1')}. `
+            + 'Your State Admin\u2019s approval is what grants the membership.';
+    }, [application, flags, access.membershipActive, tiers]);
 
     const milestone = nextMilestone(access);
 
@@ -303,11 +408,16 @@ const UnpaidDashboard = () => {
      * The review timeline, built from the application itself.
      *
      * Not from the activity feed: that records what the *member* did, and this
-     * has to show the steps that have not happened yet as well. Each tier
-     * contributes a "forwarded to" and an "under review by" row, and each row's
-     * state comes from `timelineStageStatus` — the same function
+     * has to show the steps that have not happened yet as well. Each row's state
+     * comes from `timelineStageStatus` — the same function
      * `/member/application-status` uses, so the two screens cannot disagree
      * about where a file has got to.
+     *
+     * A "Forwarded to X" row per tier used to sit above each review row, which
+     * was the truth when a file was handed from one tier to the next. It is sent
+     * to all three the moment it is submitted, so there is one such row and it
+     * is dated with the submission — and then one review row per tier, because
+     * each of them answers separately.
      */
     const timeline = useMemo(() => {
         if (!application) return [];
@@ -322,34 +432,44 @@ const UnpaidDashboard = () => {
             },
         ];
 
-        TIERS.forEach((tier, i) => {
-            const previousDone = i === 0
-                ? true
-                : [flags.isBlockApproved, flags.isDistrictApproved][i - 1];
-
+        rows.push({
+            title: 'Sent to your Block, District and State Admin',
+            by: 'by System',
+            at: submittedAt,
+            state: 'approved',
+        });
+        /*
+         * One row per tier, each with its own verdict and its own date.
+         *
+         * The State's row is the one that admits anybody; the two above it say
+         * "approved" without implying the process is over, because the row
+         * beneath them is still open.
+         */
+        tiers.forEach((tier) => {
+            const state = timelineStageStatus(tier.key, application);
             rows.push({
-                title: `Forwarded to ${tier.label}`,
-                by: 'by System',
-                at: i === 0 ? submittedAt : (application as any)[TIERS[i - 1].at] || null,
-                state: previousDone ? 'approved' : 'pending',
-            });
-            rows.push({
-                title: `Under Review by ${tier.label}`,
-                by: '',
-                at: (application as any)[tier.at] || null,
-                state: timelineStageStatus(tier.key, application),
+                title: state === 'approved'
+                    ? `Approved by your ${tier.label}`
+                    : state === 'rejected'
+                        ? `Returned by your ${tier.label}`
+                        : `With your ${tier.label}`,
+                by: tierDecidedByLabel(application, tier.key)
+                    ? `by ${tierDecidedByLabel(application, tier.key)}`
+                    : '',
+                at: tierDecidedAt(application, tier.key),
+                state,
             });
         });
 
         rows.push({
-            title: 'Final Approval & Ready for Payment',
+            title: access.membershipActive ? 'Membership payment received' : 'Membership payment',
             by: '',
-            at: application.stateApprovedAt || null,
-            state: flags.isStateApproved ? 'approved' : 'pending',
+            at: null,
+            state: access.membershipActive ? 'approved' : flags.isApproved ? 'in_progress' : 'pending',
         });
 
         return rows;
-    }, [application, flags, memberName]);
+    }, [application, flags, memberName, access.membershipActive, tiers]);
 
     /**
      * What happens next, in the member's own terms.
@@ -362,8 +482,9 @@ const UnpaidDashboard = () => {
         {
             icon: Search,
             title: 'Application Under Review',
-            detail: `${currentTier || 'Block Admin'} is reviewing your application and documents.`,
-            active: !!application && !flags.isStateApproved && !flags.isRejected,
+            detail: 'Your Block, District and State Admin can all see your application '
+                + 'from the moment it is submitted, and each records their own decision.',
+            active: !!application && !flags.isApproved && !flags.isRejected,
         },
         {
             icon: Bell,
@@ -373,9 +494,10 @@ const UnpaidDashboard = () => {
         },
         {
             icon: CheckCircle,
-            title: 'Final Approval',
-            detail: 'Once approved by State Admin, you can proceed to payments.',
-            active: !!application && flags.isStateApproved && !access.membershipActive,
+            title: 'State Admin Approval',
+            detail: 'Your Block and District Admin record their view; your State Admin\u2019s '
+                + 'approval is what grants the membership and opens the payment step.',
+            active: !!application && flags.isApproved && !access.membershipActive,
         },
         {
             icon: CreditCard,
@@ -445,15 +567,35 @@ const UnpaidDashboard = () => {
                   does.
                 */}
                 <header className="h-[5.5rem] shrink-0 sticky top-0 z-10 bg-white border-b border-slate-200
-                                   px-6 flex items-center gap-3">
+                                   px-4 sm:px-6 flex items-center gap-2 sm:gap-3">
                     {/* Clear of the floating menu button below `lg`, where it is
                         pinned to the top-left corner and would otherwise sit
                         across the first word of the greeting. */}
                     <div className="min-w-0 flex-1 pl-11 lg:pl-0">
-                        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900">
-                            Welcome back{memberName ? `, ${memberName}` : ''} 👋
+                        {/*
+                          * THE GREETING FITS THE BAR IT IS IN.
+                          *
+                          * `h-[5.5rem]` is a fixed height, and this was
+                          * `text-[2rem]` with no truncation and the member's
+                          * WHOLE name in it — "Welcome back, Rajeshwari
+                          * Muthukrishnan" wrapped to three lines on a 390px
+                          * screen and spilled out of the header over the card
+                          * below it. The first name is what a greeting uses
+                          * anyway, and the line truncates rather than wrapping,
+                          * so no name can break the bar.
+                          */}
+                        <h1 className={`${PAGE_TITLE} text-slate-900 truncate`}>
+                            {/* On a phone the full greeting truncates to
+                                "Welcome back, …" and loses the one word on the
+                                line that identifies the reader. */}
+                            <span className="sm:hidden">
+                                {firstName ? `Hi, ${firstName} 👋` : 'Welcome back 👋'}
+                            </span>
+                            <span className="hidden sm:inline">
+                                Welcome back{firstName ? `, ${firstName}` : ''} 👋
+                            </span>
                         </h1>
-                        <p className="text-sm text-slate-500 mt-0.5">
+                        <p className={`${PAGE_SUBTITLE} text-slate-500 mt-0.5 truncate`}>
                             {milestone ? "Let's complete your membership journey" : "You're all set."}
                         </p>
                     </div>
@@ -503,7 +645,7 @@ const UnpaidDashboard = () => {
                     </div>
                 </header>
 
-                <div className="w-full max-w-[90rem] p-6 space-y-6">
+                <div className="w-full max-w-[110rem] mx-auto p-4 sm:p-6 lg:px-8 space-y-6">
 
                     {/* ---------- identity tiles, below `xl` only ----------
                         The same two facts the header carries from `xl` up. Not a
@@ -558,12 +700,12 @@ const UnpaidDashboard = () => {
                         }`}>
                             <CardContent className="p-5 h-full flex items-start justify-between gap-4">
                                 <div className="flex-1 min-w-0">
-                                    <h2 className="text-lg font-bold tracking-tight mb-3">
+                                    <h2 className={`${CARD_TITLE} mb-3`}>
                                         {access.applicationSubmitted ? 'Profile Complete' : 'Complete Your Profile'}
                                     </h2>
                                     <p className="mb-2.5">
-                                        <span className="font-display font-bold text-3xl tabular">{profileCompletion}%</span>
-                                        <span className="ml-2 text-sm text-white/85">completed</span>
+                                        <span className={STAT_FIGURE}>{profileCompletion}%</span>
+                                        <span className={`ml-2 ${CARD_BODY} text-white/85`}>completed</span>
                                     </p>
 
                                     <div className="h-1.5 bg-white/25 rounded-full overflow-hidden mb-3 max-w-[12rem]">
@@ -580,7 +722,7 @@ const UnpaidDashboard = () => {
                                       * forms done" beside "100% completed" read as
                                       * a contradiction the member could not act on.
                                       */}
-                                    <p className="text-white/85 mb-6 text-sm leading-snug font-medium">
+                                    <p className={`${CARD_BODY} text-white/85 mb-6`}>
                                         {access.applicationSubmitted
                                             ? 'Your application is submitted and under review.'
                                             : profileCompletion >= 100
@@ -590,6 +732,35 @@ const UnpaidDashboard = () => {
 
                                     <Button
                                         /*
+                                          THREE DESTINATIONS, AND THE MIDDLE ONE WAS A
+                                          DEAD END.
+
+                                          At 100% and not yet submitted this went to
+                                          `/member/profile-view`, labelled "View Profile" —
+                                          while the line directly above it read "Submit to
+                                          start the review". That page is a READ-ONLY
+                                          record: an "Edit profile" toggle and per-section
+                                          edit links, and no submit control of any kind. So
+                                          the card named the one action the member had left
+                                          and handed them a button that could not do it.
+
+                                          The ONLY "Submit Application" button in the
+                                          product is at the foot of STEP 3 of this wizard,
+                                          and the dashboard linked to the wizard only while
+                                          completion was BELOW 100 — so the route vanished
+                                          at exactly the moment it was needed. A member who
+                                          saved all three forms sat at 100% with no
+                                          Application document, in no admin queue at any
+                                          tier, and nothing on any screen they could press
+                                          to change it. `/member/forms/declaration` submits
+                                          too, but nothing links to it — it is reachable
+                                          only by typing the URL.
+
+                                          `?step=3` lands on the declaration step because
+                                          `Profile.tsx` honours `?step=` up to the furthest
+                                          step reached, and a member at 100% has reached
+                                          the last one.
+
                                           `?step=1` — this button starts the
                                           application, it does not resume it.
 
@@ -601,7 +772,7 @@ const UnpaidDashboard = () => {
                                           a member who has only done Personal
                                           pressed it and landed on Business,
                                           having never been shown the screen the
-                                          button names. The four ticks directly
+                                          button names. The three ticks directly
                                           below say which forms are outstanding,
                                           and the rail inside jumps to any step
                                           already reached — so starting at the
@@ -611,11 +782,11 @@ const UnpaidDashboard = () => {
                                             access.applicationSubmitted
                                                 ? '/member/application-status'
                                                 : profileCompletion >= 100
-                                                    ? '/member/profile-view'
+                                                    ? '/member/profile?step=3'
                                                     : '/member/profile?step=1',
                                         )}
                                         size="lg"
-                                        className={`bg-white font-bold ${
+                                        className={`bg-white ${ACTION_TEXT} ${
                                             access.applicationSubmitted
                                                 ? 'text-emerald-700 hover:bg-emerald-50'
                                                 : 'text-blue-600 hover:bg-blue-50'
@@ -623,16 +794,16 @@ const UnpaidDashboard = () => {
                                     >
                                         {access.applicationSubmitted
                                             ? 'View Status'
-                                            : profileCompletion >= 100 ? 'View Profile' : 'Continue Profile'}
+                                            : profileCompletion >= 100 ? 'Submit Application' : 'Continue Profile'}
                                         <ArrowRight className="ml-1.5 h-4 w-4" />
                                     </Button>
 
                                     {/*
-                                      THE FOUR FORMS, TICKED OFF — the profile
+                                      THE THREE FORMS, TICKED OFF — the profile
                                       card's answer to the business card's three
                                       benefit rows.
 
-                                      The card said "2 of 4 forms done" and left
+                                      The card said "2 of 3 forms done" and left
                                       the rest of its height empty, so the one
                                       question it raises — WHICH two — was
                                       answered on another screen. The same rows
@@ -642,15 +813,9 @@ const UnpaidDashboard = () => {
                                       Read from `formsCompleted`, the list the
                                       percentage is computed from, so the ticks
                                       and the figure above them cannot disagree.
-                                      Financial Details is only asked of a member
-                                      who declared a business, which is exactly
-                                      what `totalFormsRequired` counts — so the
-                                      list follows that count rather than a fixed
-                                      four.
                                     */}
                                     <ul className="mt-5 space-y-2">
                                         {PROFILE_FORMS
-                                            .filter(form => totalFormsRequired > 3 || form !== 'Financial Details')
                                             .map((form) => {
                                                 const done = access.applicationSubmitted
                                                     || formsCompleted.includes(form);
@@ -665,7 +830,7 @@ const UnpaidDashboard = () => {
                                                                 ? <Check className="w-3.5 h-3.5 text-white" />
                                                                 : <Circle className="w-2.5 h-2.5 text-white/60" />}
                                                         </span>
-                                                        <span className={`text-sm ${
+                                                        <span className={`${ITEM_BODY} ${
                                                             done ? 'font-semibold text-white' : 'text-white/70'
                                                         }`}>
                                                             {form}
@@ -678,7 +843,7 @@ const UnpaidDashboard = () => {
                                 <img
                                     src="/clipboard_3d.png"
                                     alt=""
-                                    className="hidden sm:block w-32 md:w-36 lg:w-44 xl:w-48 shrink-0 self-center
+                                    className="hidden sm:block w-40 md:w-48 lg:w-56 xl:w-64 shrink-0 self-center
                                                object-contain drop-shadow-2xl"
                                 />
                             </CardContent>
@@ -687,19 +852,18 @@ const UnpaidDashboard = () => {
                         <Card className="bg-violet-600 text-white overflow-hidden h-full rounded-2xl border-0 shadow-[0_10px_28px_-6px_rgba(16,24,40,0.25)]">
                             <CardContent className="p-5 h-full flex items-start justify-between gap-4">
                                 <div className="flex-1 min-w-0">
-                                    <h2 className="text-lg font-bold tracking-tight mb-2">Your Business Account</h2>
-                                    <span className="inline-block text-xs font-semibold bg-white/25
-                                                     rounded px-2.5 py-1 mb-4">
+                                    <h2 className={`${CARD_TITLE} mb-2`}>Your Business Account</h2>
+                                    <span className={`inline-block ${CHIP_TEXT} bg-white/25 rounded px-2.5 py-1 mb-4`}>
                                         Draft Mode
                                     </span>
-                                    <p className="text-white/80 mb-5 text-sm leading-snug">
+                                    <p className={`${CARD_BODY} text-white/80 mb-5`}>
                                         Start building your business profile, catalogue and manage products
                                         before approval.
                                     </p>
                                     <Button
                                         onClick={() => navigate('/business/create-profile')}
                                         size="lg"
-                                        className="bg-white text-purple-700 hover:bg-purple-50 font-semibold"
+                                        className={`bg-white text-purple-700 hover:bg-purple-50 ${ACTION_TEXT}`}
                                     >
                                         Manage Business Account
                                         <ArrowRight className="ml-1.5 h-4 w-4" />
@@ -713,8 +877,8 @@ const UnpaidDashboard = () => {
                                                     <Icon className="h-4 w-4" />
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="font-semibold text-sm leading-tight">{title}</p>
-                                                    <p className="text-white/70 text-xs mt-1 leading-tight">{detail}</p>
+                                                    <p className={ITEM_TITLE}>{title}</p>
+                                                    <p className={`${ITEM_BODY} text-white/70 mt-1`}>{detail}</p>
                                                 </div>
                                             </div>
                                         ))}
@@ -723,7 +887,7 @@ const UnpaidDashboard = () => {
                                 <img
                                     src="/briefcase_3d.png"
                                     alt=""
-                                    className="hidden sm:block w-32 md:w-36 lg:w-44 xl:w-48 shrink-0 self-center
+                                    className="hidden sm:block w-40 md:w-48 lg:w-56 xl:w-64 shrink-0 self-center
                                                object-contain drop-shadow-2xl"
                                 />
                             </CardContent>
@@ -787,10 +951,10 @@ const UnpaidDashboard = () => {
                             */}
                             <div className="flex flex-wrap items-start gap-3 p-6 pb-5 border-b border-slate-100">
                                 <div className="min-w-0 flex-1">
-                                    <h3 className="text-lg font-bold tracking-tight text-slate-900">
+                                    <h3 className={`${CARD_TITLE} text-slate-900`}>
                                         Application Status &amp; Progress
                                     </h3>
-                                    <p className="text-sm text-slate-500 mt-1">
+                                    <p className={`${CARD_SUBTITLE} text-slate-500 mt-1`}>
                                         Track your membership approval progress
                                     </p>
                                 </div>
@@ -806,7 +970,7 @@ const UnpaidDashboard = () => {
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="shrink-0 gap-1.5 text-xs rounded-xl"
+                                    className="shrink-0 gap-1.5 text-[1.1875rem] font-semibold rounded-xl"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         navigate('/member/application-status');
@@ -826,12 +990,12 @@ const UnpaidDashboard = () => {
                                 <div className="rounded-xl bg-slate-50 p-5">
                                     <div className="flex items-start justify-between gap-3 mb-2">
                                         <div>
-                                            <p className="font-display text-base font-bold text-slate-800">Overall Progress</p>
-                                            <p className="text-sm text-slate-500 mt-1">
-                                                {stagesDone} of 4 stages completed
+                                            <p className={`${SECTION_TITLE} text-slate-800`}>Overall Progress</p>
+                                            <p className={`${META_TEXT} text-slate-500 mt-1`}>
+                                                {stagesDone} of {TOTAL_STAGES} stages completed
                                             </p>
                                         </div>
-                                        <span className="font-display text-base font-bold text-white bg-blue-600
+                                        <span className="font-display text-[1.5625rem] font-bold text-white bg-blue-600
                                                          rounded-lg px-4 py-2 shrink-0 tabular">
                                             {overallPercent}%
                                         </span>
@@ -845,26 +1009,27 @@ const UnpaidDashboard = () => {
                                     </div>
 
                                     <div className="relative">
-                                        {/* The joining line only makes sense when all four sit in a row. */}
-                                        <div className="hidden sm:block absolute left-[12.5%] right-[12.5%] top-5 h-px
-                                                        border-t border-dashed border-slate-300" />
-                                        <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-y-6 gap-x-2">
-                                            {TIERS.map(tier => (
+                                        {/* The joining line spans an eighth in from each end, which is
+                                            where the outer node centres land in a four-column grid. */}
+                                        <div className={`hidden sm:block absolute top-5 h-px border-t border-dashed border-slate-300 ${
+                                            isAbroad ? 'left-[25%] right-[25%]' : 'left-[12.5%] right-[12.5%]'}`} />
+                                        <div className={`relative grid grid-cols-2 gap-y-6 gap-x-2 ${isAbroad ? '' : 'sm:grid-cols-4'}`}>
+                                            {tiers.map(tier => (
                                                 <StageNode
                                                     key={tier.key}
                                                     label={tier.label}
                                                     state={application
                                                         ? timelineStageStatus(tier.key, application)
                                                         : 'pending'}
-                                                    at={formatDate((application as any)?.[tier.at])}
+                                                    at={formatDate(tierDecidedAt(application, tier.key))}
                                                 />
                                             ))}
                                             <StageNode
-                                                label="Ready for Payment"
+                                                label="Payment"
                                                 state={
                                                     access.membershipActive
                                                         ? 'approved'
-                                                        : flags.isStateApproved
+                                                        : flags.isApproved
                                                             ? 'in_progress'
                                                             : 'pending'
                                                 }
@@ -878,7 +1043,7 @@ const UnpaidDashboard = () => {
                                 <div className="grid gap-6 lg:grid-cols-2 items-start">
 
                                     <div>
-                                        <p className="font-display text-lg font-bold text-slate-800 mb-3">Timeline</p>
+                                        <p className={`${SECTION_TITLE} text-slate-800 mb-3`}>Timeline</p>
                                         {!application ? (
                                             <EmptyState
                                                 icon={<FileText className="h-5 w-5" />}
@@ -901,20 +1066,20 @@ const UnpaidDashboard = () => {
                                                             )}
                                                         </span>
                                                         <span className="flex-1 min-w-0">
-                                                            <span className={`block text-base leading-tight ${
+                                                            <span className={`block text-[1.25rem] leading-tight ${
                                                                 row.state === 'pending'
-                                                                    ? 'text-slate-400'
+                                                                    ? 'font-normal text-slate-400'
                                                                     : 'font-semibold text-slate-800'
                                                             }`}>
                                                                 {row.title}
                                                             </span>
                                                             {row.by && row.state !== 'pending' && (
-                                                                <span className="block text-xs text-slate-400 mt-1">
+                                                                <span className={`block ${META_TEXT} text-slate-400 mt-1`}>
                                                                     {row.by}
                                                                 </span>
                                                             )}
                                                         </span>
-                                                        <span className="shrink-0 text-xs text-slate-400 font-medium">
+                                                        <span className={`shrink-0 ${META_TEXT} text-slate-400`}>
                                                             {row.at && row.state !== 'pending'
                                                                 ? formatDate(row.at)
                                                                 : row.state === 'pending' ? 'Pending' : ''}
@@ -927,7 +1092,7 @@ const UnpaidDashboard = () => {
                                         <div className="mt-4 rounded-xl bg-blue-50 border border-blue-200 px-3 py-2
                                                         flex items-start gap-2">
                                             <Info className="h-3.5 w-3.5 text-blue-600 mt-0.5 shrink-0" />
-                                            <p className="text-[0.6875rem] text-blue-800 leading-snug">
+                                            <p className={`${ITEM_BODY} text-blue-800`}>
                                                 You will be notified at each stage of the review process.
                                             </p>
                                         </div>
@@ -936,8 +1101,8 @@ const UnpaidDashboard = () => {
                                     <div className="space-y-4">
                                         <div className="rounded-xl border border-slate-200 bg-white p-5">
                                             <div className="flex items-center justify-between gap-2 mb-2">
-                                                <p className="font-display text-lg font-bold text-slate-800">Current Status</p>
-                                                <span className={`text-[0.8125rem] font-bold rounded-full px-3 py-1.5 shrink-0 ${
+                                                <p className={`${SECTION_TITLE} text-slate-800`}>Current Status</p>
+                                                <span className={`${CHIP_TEXT} rounded-full px-3 py-1.5 shrink-0 ${
                                                     application
                                                         ? flags.isRejected
                                                             ? 'bg-red-100 text-red-700'
@@ -950,23 +1115,19 @@ const UnpaidDashboard = () => {
                                                 </span>
                                             </div>
 
-                                            <p className="text-sm text-slate-500 leading-relaxed mb-6">
-                                                {application ? (
-                                                    <>
-                                                        Your application is currently under review at the{' '}
-                                                        <span className="font-semibold text-blue-700">{currentTier}</span>{' '}
-                                                        level.
-                                                    </>
-                                                ) : (
-                                                    'Your application has not been submitted yet. It will appear here the moment it is.'
-                                                )}
+                                            <p className={`${CARD_BODY} text-slate-500 mb-6`}>
+                                                {application
+                                                    ? currentTier
+                                                    : 'Your application has not been submitted yet. It will appear here the moment it is.'}
                                             </p>
 
                                             <div className="space-y-3">
                                                 <DetailRow
                                                     icon={<MapPin className="h-3.5 w-3.5" />}
                                                     label="Location"
-                                                    value={[application?.block, application?.district, application?.state]
+                                                    value={(isAbroad
+                                                        ? [application?.place || abroad.place, application?.country || abroad.country]
+                                                        : [application?.block, application?.district, application?.state])
                                                         .filter(Boolean).join(', ') || '—'}
                                                 />
                                                 <DetailRow
@@ -1008,7 +1169,7 @@ const UnpaidDashboard = () => {
                         <Card className="h-full rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                             <CardContent className="p-6">
                                 <div>
-                                    <h3 className="text-base font-bold text-slate-900 tracking-tight mb-4">What&apos;s Next?</h3>
+                                    <h3 className={`${CARD_TITLE} text-slate-900 mb-4`}>What&apos;s Next?</h3>
                                     <ul className="space-y-4">
                                         {WHATS_NEXT.map(({ icon: Icon, title, detail, active }) => (
                                             <li key={title} className="flex items-start gap-4">
@@ -1019,12 +1180,10 @@ const UnpaidDashboard = () => {
                                                     <Icon className="h-5 w-5" />
                                                 </div>
                                                 <div className="min-w-0 pt-1.5">
-                                                    <p className={`text-base font-bold leading-tight ${
+                                                    <p className={`${ITEM_TITLE} ${
                                                         active ? 'text-slate-900' : 'text-slate-700'
                                                     }`}>{title}</p>
-                                                    <p className={`text-sm leading-snug mt-1.5 ${
-                                                        active ? 'text-slate-500 font-medium' : 'text-slate-500'
-                                                    }`}>{detail}</p>
+                                                    <p className={`${ITEM_BODY} text-slate-500 mt-1.5`}>{detail}</p>
                                                 </div>
                                             </li>
                                         ))}
@@ -1051,16 +1210,15 @@ const UnpaidDashboard = () => {
                         <Card className="h-full rounded-2xl border border-blue-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                             <CardContent className="p-6">
                                 <div>
-                                    <span className="inline-flex items-center gap-1.5 text-[0.6875rem] font-bold
-                                                     uppercase tracking-wide text-blue-700 bg-blue-50
-                                                     rounded-full px-2.5 py-1 mb-3">
+                                    <span className={`inline-flex items-center gap-1.5 ${EYEBROW} text-blue-700 bg-blue-50
+                                                     rounded-full px-2.5 py-1 mb-3`}>
                                         <Sparkles className="h-3 w-3" /> Membership benefits
                                     </span>
 
-                                    <h3 className="text-xl font-bold tracking-tight text-slate-900 tracking-tight">
+                                    <h3 className={`${CARD_TITLE} text-slate-900`}>
                                         What your membership unlocks
                                     </h3>
-                                    <p className="text-sm text-slate-500 mt-2 mb-6 leading-relaxed">
+                                    <p className={`${CARD_BODY} text-slate-500 mt-2 mb-6`}>
                                         ACTIV is a network before it is anything else. Activating your
                                         membership puts you in touch with every other member — and puts your
                                         business in front of them.
@@ -1074,10 +1232,10 @@ const UnpaidDashboard = () => {
                                                     <Icon className="h-4 w-4" />
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="text-sm font-bold text-slate-800 leading-tight">
+                                                    <p className={`${ITEM_TITLE} text-slate-800`}>
                                                         {title}
                                                     </p>
-                                                    <p className="text-xs text-slate-500 mt-1 leading-snug">
+                                                    <p className={`${ITEM_BODY} text-slate-500 mt-1`}>
                                                         {detail}
                                                     </p>
                                                 </div>
@@ -1096,7 +1254,7 @@ const UnpaidDashboard = () => {
                                       */}
                                     <div className="mt-6 pt-5 border-t border-slate-100">
                                         {cta.detail ? (
-                                            <p className="text-sm text-slate-500 mb-3 leading-relaxed">
+                                            <p className={`${CARD_BODY} text-slate-500 mb-3`}>
                                                 {cta.detail}
                                             </p>
                                         ) : null}
@@ -1118,10 +1276,10 @@ const UnpaidDashboard = () => {
                         <Card className="h-full rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                             <CardContent className="p-6">
                                 <div className="flex items-center justify-between gap-2 mb-4">
-                                    <h3 className="text-xl font-bold tracking-tight text-slate-900 tracking-tight">Recent Updates</h3>
+                                    <h3 className={`${CARD_TITLE} text-slate-900`}>Recent Updates</h3>
                                     <button
                                         onClick={() => navigate('/member/application-status')}
-                                        className="text-sm font-semibold text-blue-600 hover:underline shrink-0"
+                                        className={`${ACTION_TEXT} text-blue-600 hover:underline shrink-0`}
                                     >
                                         View All
                                     </button>
@@ -1142,10 +1300,10 @@ const UnpaidDashboard = () => {
                                                     <Bell className="h-5 w-5" />
                                                 </div>
                                                 <div className="min-w-0 flex-1">
-                                                    <p className="text-base font-semibold text-slate-800 leading-snug">
+                                                    <p className={`${ITEM_TITLE} text-slate-800 leading-snug`}>
                                                         {item.description}
                                                     </p>
-                                                    <p className="text-sm text-slate-400 mt-1">
+                                                    <p className={`${META_TEXT} text-slate-400 mt-1`}>
                                                         {formatDate(item.at)}
                                                     </p>
                                                 </div>
@@ -1169,9 +1327,9 @@ const UnpaidDashboard = () => {
                             <CardContent className="p-6">
                                 <div className="flex items-center gap-2 mb-2">
                                     <LifeBuoy className="h-5 w-5 text-blue-600" />
-                                    <h3 className="text-xl font-bold tracking-tight text-slate-900 tracking-tight">Need Help?</h3>
+                                    <h3 className={`${CARD_TITLE} text-slate-900`}>Need Help?</h3>
                                 </div>
-                                <p className="text-sm text-slate-500 leading-relaxed mb-6">
+                                <p className={`${CARD_BODY} text-slate-500 mb-6`}>
                                     Our support team is here to help you at every step of your membership journey.
                                 </p>
 
@@ -1198,7 +1356,7 @@ const UnpaidDashboard = () => {
                                         </SupportRow>
                                     )}
                                     {supportHours.length === 0 && !supportEmail && !supportPhone && (
-                                        <p className="text-[0.6875rem] text-slate-500">
+                                        <p className={`${ITEM_BODY} text-slate-500`}>
                                             Send us a message and the team will get back to you.
                                         </p>
                                     )}
@@ -1229,7 +1387,7 @@ const UnpaidDashboard = () => {
                                         </a>
                                     </Button>
                                 ) : (
-                                    <p className="text-[0.6875rem] text-slate-500 font-medium">
+                                    <p className={`${ITEM_BODY} text-slate-500`}>
                                         In-app support is coming soon.
                                     </p>
                                 )}
@@ -1243,13 +1401,13 @@ const UnpaidDashboard = () => {
                             <img
                                 src="/clipboard_3d.png"
                                 alt=""
-                                className="hidden md:block w-20 lg:w-24 shrink-0 object-contain drop-shadow-lg"
+                                className="hidden md:block w-28 lg:w-32 shrink-0 object-contain drop-shadow-lg"
                             />
                             <div className="flex-1 min-w-0">
-                                <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                                <h3 className={`${CARD_TITLE} text-slate-900`}>
                                     Complete Your Profile &amp; Unlock Full Benefits
                                 </h3>
-                                <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
+                                <p className={`${CARD_BODY} text-slate-500 mt-1.5`}>
                                     Finish your profile, get verified and access all features designed to grow
                                     your business with ACTIV.
                                 </p>
@@ -1315,13 +1473,12 @@ const HeaderFact = ({ icon, tone, label, value, valueTone, fullValue }: {
                 {icon}
             </span>
             <div className="min-w-0">
-                <p className="text-[0.625rem] font-bold uppercase tracking-[0.08em] text-slate-500
-                              leading-none">
+                <p className={`${EYEBROW} text-slate-500 leading-none`}>
                     {label}
                 </p>
                 <div className="flex items-center gap-1.5 mt-1.5 min-w-0">
                     <p title={fullValue || value}
-                       className={`font-display font-bold text-[0.9375rem] leading-none truncate ${valueTone}`}>
+                       className={`font-display font-semibold text-[1.25rem] leading-none truncate ${valueTone}`}>
                         {value}
                     </p>
                     {fullValue ? (
@@ -1365,10 +1522,10 @@ const IdentityTile = ({ icon, tone, label, value, valueTone, fullValue }: {
                 <span className={`w-8 h-8 rounded-full ${tone} flex items-center justify-center shrink-0`}>
                     {icon}
                 </span>
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</span>
+                <span className={`${EYEBROW} text-slate-500`}>{label}</span>
             </div>
             <div className="flex items-center gap-2 min-w-0 mt-1">
-                <p title={fullValue || value} className={`font-display font-bold text-lg truncate ${valueTone}`}>
+                <p title={fullValue || value} className={`font-display font-semibold text-[1.75rem] truncate ${valueTone}`}>
                     {value}
                 </p>
                 {fullValue ? (
@@ -1405,11 +1562,11 @@ const StageNode = ({ label, state, at }: { label: string; state: TimelineStageSt
             }`}>
                 {done ? <CheckCircle className="h-5 w-5" /> : <Clock className="h-5 w-5" />}
             </div>
-            <p className="text-sm font-bold text-slate-800 leading-tight">{label}</p>
-            <span className={`inline-block mt-2 text-[0.6875rem] font-bold rounded px-2.5 py-1 ${chip.cls}`}>
+            <p className={`${ITEM_TITLE} text-slate-800`}>{label}</p>
+            <span className={`inline-block mt-2 ${CHIP_TEXT} rounded px-2.5 py-1 ${chip.cls}`}>
                 {chip.label}
             </span>
-            {at && <p className="text-xs text-slate-400 mt-2">{at}</p>}
+            {at && <p className={`${META_TEXT} text-slate-400 mt-2`}>{at}</p>}
         </div>
     );
 };
@@ -1418,8 +1575,8 @@ const DetailRow = ({ icon, label, value }: { icon: React.ReactNode; label: strin
     <div className="flex items-start gap-2.5">
         <span className="text-blue-600 mt-0.5 shrink-0">{icon}</span>
         <div className="min-w-0">
-            <p className="text-sm font-bold text-slate-700 leading-tight">{label}</p>
-            <p className="text-base text-slate-500 break-words leading-snug mt-1.5 font-medium">{value}</p>
+            <p className={`${ITEM_TITLE} text-slate-700`}>{label}</p>
+            <p className={`${CARD_BODY} text-slate-500 break-words mt-1.5`}>{value}</p>
         </div>
     </div>
 );
@@ -1430,7 +1587,7 @@ const SupportRow = ({ icon, children }: { icon: React.ReactNode; children: React
                          justify-center shrink-0 border border-blue-100">
             {icon}
         </span>
-        <div className="min-w-0 text-sm text-slate-700 leading-snug pt-2 font-medium">{children}</div>
+        <div className={`min-w-0 ${CARD_BODY} text-slate-700 pt-2`}>{children}</div>
     </div>
 );
 
@@ -1439,8 +1596,8 @@ const EmptyState = ({ icon, title, detail }: { icon: React.ReactNode; title: str
         <div className="w-12 h-12 rounded-lg bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
             {icon}
         </div>
-        <p className="text-base font-semibold text-slate-700">{title}</p>
-        <p className="text-sm text-slate-500 mt-1 max-w-[13.75rem] mx-auto leading-snug">{detail}</p>
+        <p className={`${ITEM_TITLE} text-slate-700`}>{title}</p>
+        <p className={`${ITEM_BODY} text-slate-500 mt-1 max-w-[13.75rem] mx-auto`}>{detail}</p>
     </div>
 );
 

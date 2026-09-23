@@ -8,6 +8,7 @@ import MemberSidebar from "@/pages/member/MemberSidebar";
 import { toast } from "sonner";
 import { apiFetch } from "@/services/activApi";
 
+import { PAGE_TITLE, CARD_TITLE } from '@/components/layout/appTypography';
 interface Member {
   userId: string;
   fullName: string;
@@ -97,25 +98,29 @@ const Explore = () => {
       <MemberSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 min-w-0 flex flex-col">
         {/* Header with menu button - Only visible on mobile */}
-        <div className="md:hidden flex items-center justify-between p-4 bg-white border-b">
+        {/* `lg:hidden` and `lg:block` below, matching the breakpoint
+            `MemberSidebar` switches at. At `md` this bar disappeared while the
+            rail was still a drawer, so between 768px and 1023px the screen had
+            no title and no way to open the navigation. */}
+        <div className="lg:hidden flex items-center gap-2 p-4 bg-white border-b">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setSidebarOpen(true)}
-            className="p-2"
+            aria-label="Open menu"
+            className="p-2 shrink-0"
           >
             <Menu className="h-6 w-6" />
           </Button>
-          <h1 className="text-xl font-bold">Explore Members</h1>
-          <div className="w-10" />
+          <h1 className={`${PAGE_TITLE} flex-1 min-w-0 truncate`}>Explore Members</h1>
         </div>
 
         {/* Page content */}
         <div className="flex-1 p-3 md:p-6 overflow-auto">
-          <div className="max-w-[90rem]">
-            <h1 className="text-2xl md:text-3xl font-bold mb-6 hidden md:block text-slate-800">Explore Members</h1>
+          <div className="w-full max-w-[110rem] mx-auto">
+            <h1 className={`${PAGE_TITLE} mb-6 hidden lg:block text-slate-800`}>Explore Members</h1>
 
             {/* Search Bar */}
             <div className="relative mb-6">
@@ -154,13 +159,13 @@ const Explore = () => {
                         <div className="flex items-center gap-4 mb-4">
                           <Avatar className="w-16 h-16 border-4 border-white shadow-lg">
                             <AvatarImage src={member.profilePicture || "/placeholder.svg"} />
-                            <AvatarFallback className="bg-white text-blue-600 text-xl font-bold">
+                            <AvatarFallback className="bg-white text-blue-600 text-[1.5625rem] font-bold">
                               {member.fullName ? member.fullName.charAt(0).toUpperCase() : 'M'}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
-                            <h3 className="font-bold text-lg">{member.fullName || 'Member'}</h3>
-                            <p className="text-sm text-blue-100">{member.email || ''}</p>
+                            <h3 className={CARD_TITLE}>{member.fullName || 'Member'}</h3>
+                            <p className="text-[1.1875rem] text-blue-100">{member.email || ''}</p>
                           </div>
                         </div>
                         <Button
@@ -178,15 +183,15 @@ const Explore = () => {
                         <div className="p-4 bg-slate-50 border-b">
                           <div className="flex items-center gap-2 mb-3">
                             <Building2 className="w-4 h-4 text-slate-500" />
-                            <span className="font-semibold text-sm text-slate-700">
+                            <span className="font-semibold text-[1.1875rem] text-slate-700">
                               {member.companies.length} {member.companies.length === 1 ? 'Business' : 'Businesses'}
                             </span>
                           </div>
                           <div className="space-y-2">
                             {member.companies.slice(0, 2).map((company) => (
                               <div key={company._id} className="bg-white p-3 rounded-lg shadow-sm">
-                                <p className="font-medium text-sm text-slate-900">{company.businessName}</p>
-                                <p className="text-xs text-slate-500">{company.businessType}</p>
+                                <p className="font-medium text-[1.1875rem] text-slate-900">{company.businessName}</p>
+                                <p className="text-[1.0625rem] text-slate-500">{company.businessType}</p>
                               </div>
                             ))}
                           </div>
@@ -197,7 +202,7 @@ const Explore = () => {
                       {member.products.length > 0 ? (
                         <div className="p-4">
                           <div className="flex items-center justify-between mb-3">
-                            <span className="font-semibold text-sm text-slate-700">
+                            <span className="font-semibold text-[1.1875rem] text-slate-700">
                               {member.productCount} {member.productCount === 1 ? 'Product' : 'Products'}
                             </span>
                           </div>
@@ -219,8 +224,8 @@ const Explore = () => {
                                 </div>
                                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-70 transition-all duration-300 rounded-lg flex items-center justify-center">
                                   <div className="opacity-0 group-hover:opacity-100 text-white text-center px-2">
-                                    <p className="text-xs font-semibold line-clamp-2">{product.name}</p>
-                                    <p className="text-xs mt-1">₹{product.price}</p>
+                                    <p className="text-[1.0625rem] font-semibold line-clamp-2">{product.name}</p>
+                                    <p className="text-[1.0625rem] mt-1">₹{product.price}</p>
                                   </div>
                                 </div>
                               </div>
@@ -229,7 +234,7 @@ const Explore = () => {
                         </div>
                       ) : (
                         <div className="p-4 text-center">
-                          <p className="text-sm text-slate-500">No products yet</p>
+                          <p className="text-[1.1875rem] text-slate-500">No products yet</p>
                         </div>
                       )}
                     </CardContent>

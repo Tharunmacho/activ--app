@@ -102,6 +102,22 @@ export const syncLegacyTokenKeys = (): void => {
     }
 };
 
+/**
+ * WHERE A SIGNED-OUT PERSON IS SENT: admins to `/admin/login`, members to
+ * `/login`. The two sign-in screens are separate — see `EnhancedLoginPage`'s
+ * `audience` — so an admin whose session expires lands back on theirs.
+ *
+ * Read from the stored role BEFORE the session is cleared; afterwards there
+ * is nothing left to ask.
+ */
+export const loginPathFor = (role?: string | null): string => {
+    let value = role;
+    if (value === undefined) {
+        try { value = localStorage.getItem(STORAGE_KEYS.USER_ROLE); } catch { value = null; }
+    }
+    return value && value !== 'member' ? '/admin/login' : '/login';
+};
+
 export const clearSession = (): void => {
     try {
         Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
@@ -288,9 +304,10 @@ api.interceptors.response.use(
             url.includes('/auth/reset-password');
 
         if (status === 401 && !isAuthAttempt) {
+            const signIn = loginPathFor();
             clearSession();
             if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-                window.location.assign('/login');
+                window.location.assign(signIn);
             }
         }
 
@@ -338,5 +355,17 @@ export const errorMessage = (error: unknown, fallback = 'Something went wrong'):
     }
     return (err as Error)?.message || fallback;
 };
+
+/**
+ * Did the server actually say "there is no such thing"?
+ *
+ * The distinction the pages need, and the one they were getting wrong: a 404 is
+ * a page that does not exist, and EVERYTHING ELSE — a rate limit, a restart, a
+ * dropped connection — is a page that could not be loaded right now. Printing
+ * "Not found" for the second tells a visitor their link is dead when it is
+ * perfectly good, and leaves them nothing to press.
+ */
+export const isNotFound = (error: unknown): boolean =>
+    (error as AxiosError)?.response?.status === 404;
 
 export default api;

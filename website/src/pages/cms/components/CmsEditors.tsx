@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
-import { Plus, Trash2, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react';
-import { CmsInput, CmsTextarea, CmsField, CmsSection } from './CmsUI';
+import { Plus, Trash2, ArrowUp, ArrowDown, ChevronDown, Pencil, Check } from 'lucide-react';
+import { CmsInput, CmsTextarea, CmsField, CmsSection, IconPicker, RepeatableList } from './CmsUI';
 import RichTextEditor from './RichTextEditor';
 import { CmsIcon } from '@/components/shared/CmsIcon';
 import { ICON_GROUPS, type CmsLink, type CmsStat, type CmsBullet, type CmsExtraField } from '@/services/cmsApi';
@@ -14,196 +14,16 @@ import { ICON_GROUPS, type CmsLink, type CmsStat, type CmsBullet, type CmsExtraF
  * where off-by-one bugs live, and one copy of it is one copy to get right.
  */
 
-// ============================================================ icon picker
-
-/**
- * Pick an icon by name.
+/*
+ * `IconPicker` AND `RepeatableList` moved to `CmsUI`, and are re-exported at
+ * the foot of this file.
  *
- * A grid of the real glyphs rather than a `<select>` of names: nobody knows what
- * "hard-hat" looks like from the string, and choosing the wrong one is only
- * discovered on the live site.
+ * `CmsStep`'s own section-fields control needs it — those rows carry an icon
+ * now — and this file imports FROM `CmsUI`, so `CmsUI` importing back would be
+ * a cycle. It lives in the lower of the two; the re-export keeps every call
+ * site that already names it working unchanged.
  */
-export function IconPicker({ value, onChange, label = 'Icon' }: {
-    value: string;
-    onChange: (icon: string) => void;
-    label?: string;
-}) {
-    const [open, setOpen] = useState(false);
 
-    return (
-        <div className="relative">
-            <span className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-1.5">{label}</span>
-
-            <button
-                type="button"
-                onClick={() => setOpen(v => !v)}
-                className="w-full flex items-center gap-2 bg-slate-50 dark:bg-black border border-slate-300
-                           dark:border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-neutral-100"
-            >
-                <CmsIcon name={value} size={18} className="text-blue-600 dark:text-blue-400 shrink-0" />
-                <span className="truncate flex-1 text-left">{value || 'none'}</span>
-                <ChevronDown size={14} className="shrink-0 opacity-60" />
-            </button>
-
-            {open && (
-                <div className="absolute z-30 mt-1 w-full max-h-72 overflow-y-auto bg-white dark:bg-[#0a0a0a]
-                                border border-slate-200 dark:border-[#2a2a2a] rounded-lg shadow-xl p-3 space-y-3">
-                    {ICON_GROUPS.map(group => (
-                        <div key={group.label}>
-                            <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">
-                                {group.label}
-                            </p>
-                            <div className="grid grid-cols-8 gap-1">
-                                {group.icons.map(name => (
-                                    <button
-                                        key={name}
-                                        type="button"
-                                        title={name}
-                                        onClick={() => { onChange(name); setOpen(false); }}
-                                        className={`aspect-square flex items-center justify-center rounded-md transition-colors ${
-                                            value === name
-                                                ? 'bg-blue-600 text-white'
-                                                : 'text-slate-600 dark:text-neutral-300 hover:bg-slate-100 dark:hover:bg-[#161616]'
-                                        }`}
-                                    >
-                                        <CmsIcon name={name} size={16} />
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
-
-// ============================================================ generic list
-
-interface ListProps<T> {
-    items: T[];
-    onChange: (next: T[]) => void;
-    /** Used for the add button and the empty state, e.g. "slide", "nav link". */
-    noun: string;
-    /** A fresh, blank record. */
-    blank: () => T;
-    /** Render one row's fields; the frame around it is drawn here. */
-    row: (item: T, update: (patch: Partial<T>) => void, index: number) => ReactNode;
-    /** Off for lists where position carries no meaning. */
-    reorderable?: boolean;
-    max?: number;
-}
-
-/**
- * A list the admin can add to, reorder and remove from.
- *
- * Reordering matters more than it looks: these lists render in order, so the
- * first carousel slide is what most visitors see and the first nav link is the
- * leftmost. Without arrows the only way to reorder is to delete and retype.
- */
-export function RepeatableList<T>({
-    items, onChange, noun, blank, row, reorderable = true, max,
-}: ListProps<T>) {
-    const update = (index: number, patch: Partial<T>) =>
-        onChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
-
-    /**
-     * Confirmed, because it cannot be undone.
-     *
-     * This deleted on a single click of a 14px icon with no label and no
-     * confirmation — the same size and position as the two reorder arrows
-     * beside it, so losing a slide to a misclick took one slip and there was
-     * no way back. The button is now labelled and asks first.
-     */
-    const remove = (index: number) => {
-        const ok = window.confirm(
-            `Delete this ${noun}? It is removed from the live site when you save, and cannot be undone.`,
-        );
-        if (!ok) return;
-        onChange(items.filter((_, i) => i !== index));
-    };
-
-    const move = (index: number, delta: number) => {
-        const target = index + delta;
-        if (target < 0 || target >= items.length) return;
-        const next = [...items];
-        [next[index], next[target]] = [next[target], next[index]];
-        onChange(next);
-    };
-
-    const atLimit = typeof max === 'number' && items.length >= max;
-
-    return (
-        <div className="space-y-3">
-            {items.length === 0 && (
-                <p className="text-sm text-neutral-500 py-4 text-center border border-dashed
-                              border-slate-300 dark:border-[#2a2a2a] rounded-lg">
-                    No {noun}s yet.
-                </p>
-            )}
-
-            {items.map((item, index) => (
-                <div
-                    key={index}
-                    className="border border-slate-200 dark:border-[#2a2a2a] rounded-lg p-4
-                               bg-slate-50/60 dark:bg-black/40"
-                >
-                    <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                            {noun} {index + 1}
-                        </span>
-                        <div className="flex items-center gap-1">
-                            {reorderable && (
-                                <>
-                                    <button
-                                        type="button" onClick={() => move(index, -1)} disabled={index === 0}
-                                        aria-label={`Move ${noun} up`}
-                                        className="p-1.5 rounded text-neutral-500 hover:text-slate-900 dark:hover:text-white
-                                                   disabled:opacity-30 disabled:cursor-not-allowed"
-                                    >
-                                        <ArrowUp size={14} />
-                                    </button>
-                                    <button
-                                        type="button" onClick={() => move(index, 1)} disabled={index === items.length - 1}
-                                        aria-label={`Move ${noun} down`}
-                                        className="p-1.5 rounded text-neutral-500 hover:text-slate-900 dark:hover:text-white
-                                                   disabled:opacity-30 disabled:cursor-not-allowed"
-                                    >
-                                        <ArrowDown size={14} />
-                                    </button>
-                                </>
-                            )}
-                            <button
-                                type="button" onClick={() => remove(index)}
-                                aria-label={`Delete ${noun} ${index + 1}`}
-                                className="ml-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium
-                                           text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30
-                                           hover:bg-red-500/10 transition-colors"
-                            >
-                                <Trash2 size={13} /> Delete
-                            </button>
-                        </div>
-                    </div>
-
-                    {row(item, patch => update(index, patch), index)}
-                </div>
-            ))}
-
-            <button
-                type="button"
-                onClick={() => onChange([...items, blank()])}
-                disabled={atLimit}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium
-                           border border-dashed border-slate-300 dark:border-[#2a2a2a] text-slate-600
-                           dark:text-neutral-300 hover:border-blue-500 hover:text-blue-600 transition-colors
-                           disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-                <Plus size={16} />
-                {atLimit ? `Maximum of ${max}` : `Add ${noun}`}
-            </button>
-        </div>
-    );
-}
 
 // ============================================================ typed lists
 
@@ -218,6 +38,10 @@ export function LinkList({ items, onChange, noun = 'link' }: {
             items={items}
             onChange={onChange}
             noun={noun}
+            /* Two fields a row. See the note on `compact`. */
+            compact
+            /* The label and where it goes — which is the whole of a link. */
+            summary={(item) => ({ title: item.label, subtitle: item.href })}
             blank={() => ({ label: '', href: '' })}
             row={(item, update) => (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -254,6 +78,8 @@ export function StatList({ items, onChange, noun = 'figure', max }: {
             onChange={onChange}
             noun={noun}
             max={max}
+            /* The figure leads, because it is what the card shows. */
+            summary={(item) => ({ title: item.value, subtitle: item.label })}
             blank={() => ({ icon: 'users', value: '', label: '' })}
             row={(item, update) => (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -288,6 +114,8 @@ export function BulletList({ items, onChange }: {
             items={items}
             onChange={onChange}
             noun="point"
+            /* The markup is stripped: a closed row is a line of prose, not tags. */
+            summary={(item) => ({ title: (item.text || '').replace(/<[^>]+>/g, '').slice(0, 90) })}
             blank={() => ({ icon: 'users', text: '' })}
             row={(item, update) => (
                 <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-3">
@@ -366,45 +194,170 @@ export function LineList({ label = '', hint, value, onChange, rows = 4, placehol
  * thing, looks the same and is edited the same way on Home, About, Events,
  * Gallery, Contact and the footer.
  */
-export function ExtraFieldsEditor({ items, onChange, hint }: {
+export function ExtraFieldsEditor({ items, onChange, hint, title, bare = false }: {
     items: CmsExtraField[];
     onChange: (next: CmsExtraField[]) => void;
     /** Where these appear on the public page, in the editor's words. */
     hint?: string;
+    /**
+     * The card's heading. "Your own fields" reads right on a page; a list
+     * nested inside one row of another list wants to say whose fields these
+     * are — "Its own fields", on a photograph.
+     */
+    title?: string;
+    /**
+     * Drop the heading, because the card around it already carries one.
+     *
+     * This renders a `CmsSection` — a heading inside a card — and on three
+     * screens it was dropped straight into the column with no card at all,
+     * so it sat between two numbered cards as loose text on the page
+     * background. Given its own card it needs no second heading.
+     */
+    bare?: boolean;
 }) {
-    return (
-        <CmsSection
-            title="Your own fields"
-            hint={hint || 'Add anything this form does not already ask for. Each row shows as a labelled '
-                + 'line on the page, in this order. Delete a row to remove it.'}
-        >
+    const rows = (
             <RepeatableList<CmsExtraField>
                 items={items || []}
                 onChange={onChange}
                 noun="field"
-                blank={() => ({ label: '', value: '' })}
+                summary={(field) => ({
+                    title: field.label,
+                    subtitle: [
+                        field.placement === 'content' ? 'In the write-up' : 'In the details card',
+                        field.value,
+                    ].filter(Boolean).join(' · '),
+                })}
+                blank={() => ({ label: '', value: '', icon: 'info', placement: 'card' })}
                 row={(field, update) => (
-                    /* Stacked below `sm`: a long value must never push the row
-                       wider than the card it sits in. */
-                    <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] gap-3">
-                        <CmsField label="Field name">
-                            <CmsInput
-                                value={field.label}
-                                onChange={e => update({ label: e.target.value })}
-                                placeholder="Registration desk"
-                            />
-                        </CmsField>
-                        <CmsField label="Content">
-                            <CmsTextarea
-                                rows={2}
-                                value={field.value}
-                                onChange={e => update({ value: e.target.value })}
-                                placeholder="Open 9am–5pm, Monday to Friday"
-                            />
-                        </CmsField>
+                    <div className="space-y-4">
+                        {/*
+                          * WHERE IT GOES, asked first, because it decides what
+                          * the two boxes below are for: a card field is a
+                          * one-line fact, a content field is a section of prose.
+                          *
+                          * Every named field on every screen used to land in the
+                          * details card, so an editor with a paragraph to write
+                          * had only a box built for one line to put it in.
+                          */}
+                        <FieldPlacement
+                            value={field.placement === 'content' ? 'content' : 'card'}
+                            onChange={placement => update({ placement })}
+                        />
+
+                        {/* Stacked below `sm`: a long value must never push the
+                            row wider than the card it sits in. */}
+                        <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,11rem)_minmax(0,1fr)] gap-3">
+                            {/* Only a card field is drawn with a mark, so the
+                                picker is only asked for when it is one. */}
+                            {field.placement !== 'content' ? (
+                                <IconPicker
+                                    value={field.icon || 'info'}
+                                    onChange={icon => update({ icon })}
+                                />
+                            ) : <div className="hidden sm:block" />}
+
+                            <div className="space-y-3">
+                                <CmsField label="Field name" hint="Printed exactly as you type it.">
+                                    <CmsInput
+                                        value={field.label}
+                                        onChange={e => update({ label: e.target.value })}
+                                        placeholder={field.placement === 'content'
+                                            ? 'How we chose the venue'
+                                            : 'Registration desk'}
+                                    />
+                                </CmsField>
+                                <CmsField label="Content">
+                                    <CmsTextarea
+                                        rows={field.placement === 'content' ? 5 : 2}
+                                        value={field.value}
+                                        onChange={e => update({ value: e.target.value })}
+                                        placeholder={field.placement === 'content'
+                                            ? 'A paragraph. Blank lines start a new one.'
+                                            : 'Open 9am–5pm, Monday to Friday'}
+                                    />
+                                </CmsField>
+                            </div>
+                        </div>
                     </div>
                 )}
             />
+    );
+
+    if (bare) return rows;
+
+    return (
+        <CmsSection
+            title={title || 'Your own fields'}
+            hint={hint || 'Add anything this form does not already ask for. Each row can sit in the '
+                + 'details card as a labelled fact, or become a section of its own in the write-up.'}
+        >
+            {rows}
         </CmsSection>
     );
 }
+
+
+/**
+ * Where a named field goes — exactly one of two, so a radio group.
+ *
+ * Two `aria-pressed` buttons would look exclusive and not be: assistive tech
+ * announces each as separately switchable and the keyboard tabs through two
+ * stops. The same rule the CMS applies to every other pick-one on the site.
+ */
+function FieldPlacement({ value, onChange }: {
+    value: 'card' | 'content';
+    onChange: (next: 'card' | 'content') => void;
+}) {
+    const options: { value: 'card' | 'content'; label: string; hint: string }[] = [
+        {
+            value: 'card',
+            label: 'In the details card',
+            hint: 'A labelled fact beside the page, with the icon you pick. Best for one line — a name, a date, a number.',
+        },
+        {
+            value: 'content',
+            label: 'In the write-up',
+            hint: 'A section of its own in the body, with your name for it as the heading. Best for a paragraph.',
+        },
+    ];
+
+    return (
+        <div role="radiogroup" aria-label="Where it appears">
+            <span className="mb-1.5 block text-[1.25rem] font-medium text-slate-700 dark:text-neutral-300">
+                Where it appears
+            </span>
+            <div className="grid gap-2 sm:grid-cols-2">
+                {options.map(opt => {
+                    const on = opt.value === value;
+                    return (
+                        <button
+                            key={opt.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={on}
+                            onClick={() => onChange(opt.value)}
+                            className={`rounded-xl border p-3 text-left transition-colors ${on
+                                ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-950/30'
+                                : 'border-slate-300 hover:border-slate-400 dark:border-[#2a2a2a]'}`}
+                        >
+                            <span className="flex items-center gap-2">
+                                <span className={`grid h-4 w-4 shrink-0 place-items-center rounded-full border-2 ${on
+                                    ? 'border-blue-600' : 'border-slate-400'}`}>
+                                    {on && <span className="h-2 w-2 rounded-full bg-blue-600" />}
+                                </span>
+                                <span className="text-[1.1875rem] font-bold text-slate-900 dark:text-white">
+                                    {opt.label}
+                                </span>
+                            </span>
+                            <span className="mt-1 block pl-6 text-[1.0625rem] leading-snug text-slate-500 dark:text-neutral-400">
+                                {opt.hint}
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+export { IconPicker, RepeatableList } from './CmsUI';

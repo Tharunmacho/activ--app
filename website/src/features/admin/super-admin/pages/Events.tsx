@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Menu } from 'lucide-react';
 import AdminSidebar from './AdminSidebar';
 import EventsManager from '@/pages/cms/EventsManager';
+import { AdminPageHeader, ADMIN_PAGE } from '@/features/admin/components/AdminUI';
 
 /**
  * Events, inside the platform admin area.
@@ -46,24 +47,18 @@ export default function SuperAdminEvents() {
             <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
             <div className="flex-1 min-w-0">
-                <header className="bg-white border-b border-slate-200 px-6 py-4 flex flex-wrap items-center gap-3">
-                    <button
-                        className="lg:hidden text-slate-500"
-                        onClick={() => setSidebarOpen(true)}
-                        aria-label="Open menu"
-                    >
-                        <Menu className="w-5 h-5" />
-                    </button>
-                    <div>
-                        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900">Events</h1>
-                        <p className="text-sm text-slate-600 mt-0.5">
-                            Aim an event at a state, district or block and every member there sees it —
-                            paid or unpaid. Choose whether it also appears on the onboarding site.
-                        </p>
-                    </div>
-                </header>
+                {/* The one admin header — menu button, way back and the mobile
+                    stacking, shared with Membership and Updates. */}
+                <AdminPageHeader
+                    title="Events"
+                    subtitle={<>
+                        Aim an event at a state, district or block and every member there sees it —
+                        paid or unpaid. Choose whether it also appears on the onboarding site.
+                    </>}
+                    onMenu={() => setSidebarOpen(true)}
+                />
 
-                <main className="p-6">
+                <main className={ADMIN_PAGE}>
                     <EventsManager defaultAudience="all" channel="members" />
                 </main>
             </div>

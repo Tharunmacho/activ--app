@@ -5,7 +5,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import AdminSidebar from './AdminSidebar';
-import { ADMIN_PAGE, ADMIN_PRIMARY_BTN } from '@/features/admin/components/AdminUI';
+import { CARD_TITLE } from '@/components/layout/appTypography';
+import { ADMIN_PAGE, ADMIN_PRIMARY_BTN, AdminPageHeader, rupees,
+} from '@/features/admin/components/AdminUI';
 import {
     listMembershipPlans, createMembershipPlan, updateMembershipPlan,
     retireMembershipPlan, deleteMembershipPlan, updateMembershipSettings, alignMembershipBands, errorMessage,
@@ -54,9 +56,12 @@ const BLANK: Partial<MembershipPlanRow> = {
     order: 0,
 };
 
-/** ₹10,000 — grouped the way an Indian reader groups it. */
-const money = (value: number) =>
-    '₹' + Number(value || 0).toLocaleString('en-IN');
+/**
+ * ₹10,000 — the admin area's one formatter, aliased to the name this file
+ * already calls it by. The definition moved to `AdminUI` so the three money
+ * screens cannot drift apart again; see its note there.
+ */
+const money = rupees;
 
 /**
  * The band, as a person reads it. Derived from the numbers on every render, so
@@ -409,28 +414,22 @@ export default function SuperAdminMembership() {
             <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
             <div className="flex-1 min-w-0">
-                <header className="bg-white border-b border-slate-200 px-6 py-4 flex flex-wrap items-center gap-3">
-                    <button
-                        className="lg:hidden text-slate-500"
-                        onClick={() => setSidebarOpen(true)}
-                        aria-label="Open menu"
-                    >
-                        <Menu className="w-5 h-5" />
-                    </button>
-                    <div className="min-w-0 flex-1">
-                        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900">Membership Plans</h1>
-                        <p className="text-sm text-slate-600 mt-0.5">
-                            What a membership costs, and which commencement year earns which plan.
-                            An edit here changes what applicants are charged.
-                        </p>
-                    </div>
-                    <button
-                        onClick={openNew}
-                        className={ADMIN_PRIMARY_BTN + ' shrink-0'}
-                    >
-                        <Plus className="w-4 h-4" /> Add plan
-                    </button>
-                </header>
+                {/* The one admin header — see `AdminPageHeader`. It carries the
+                    menu button, the way back and the mobile stacking, so the
+                    three super-admin screens cannot drift apart again. */}
+                <AdminPageHeader
+                    title="Membership Plans"
+                    subtitle={<>
+                        What a membership costs, and which commencement year earns which plan.
+                        An edit here changes what applicants are charged.
+                    </>}
+                    onMenu={() => setSidebarOpen(true)}
+                    actions={
+                        <button onClick={openNew} className={ADMIN_PRIMARY_BTN + ' justify-center'}>
+                            <Plus className="w-4 h-4" /> Add plan
+                        </button>
+                    }
+                />
 
                 <main className={ADMIN_PAGE}>
                     {/* ------------------------------------------------ the rule */}
@@ -461,7 +460,7 @@ export default function SuperAdminMembership() {
                                 {showAll && <Check className="w-3 h-3" strokeWidth={3} />}
                             </span>
                             <span className="min-w-0">
-                                <span className={`block text-sm font-semibold ${
+                                <span className={`block text-[1.25rem] font-semibold ${
                                     showAll ? 'text-blue-700' : 'text-slate-800'
                                 }`}>
                                     Show every plan to every applicant
@@ -471,7 +470,7 @@ export default function SuperAdminMembership() {
                                     currently stands leaves the reader guessing what
                                     pressing it does — which is the question they
                                     have. */}
-                                <span className="block text-xs text-slate-500 mt-1 leading-snug">
+                                <span className="block text-[1.1875rem] text-slate-500 mt-1 leading-snug">
                                     {showAll
                                         ? 'On — every applicant picks from all three company plans, whatever '
                                           + 'their commencement year. Turn this off to show each applicant only '
@@ -492,14 +491,14 @@ export default function SuperAdminMembership() {
                           one time it matters it looks the same as always.
                         */
                         <section className="rounded-xl border border-amber-300 bg-amber-50 shadow-sm p-6">
-                            <p className="flex items-center gap-2 text-base font-bold text-amber-900">
+                            <p className="flex items-center gap-2 text-[1.25rem] font-bold text-amber-900">
                                 <AlertTriangle className="w-5 h-5" />
                                 These bands leave applicants without a plan
                             </p>
-                            <ul className="mt-2 space-y-1 text-xs text-amber-700 list-disc list-inside">
+                            <ul className="mt-2 space-y-1 text-[1.1875rem] text-amber-700 list-disc list-inside">
                                 {bandProblems.map((problem, i) => <li key={i}>{problem}</li>)}
                             </ul>
-                            <p className="mt-2 text-xs text-amber-700">
+                            <p className="mt-2 text-[1.1875rem] text-amber-700">
                                 An applicant no band covers is shown every plan instead, and where two
                                 bands overlap the cheaper one silently wins — which reads as the rule not
                                 working.
@@ -521,7 +520,7 @@ export default function SuperAdminMembership() {
                                 onClick={alignBands}
                                 disabled={aligning}
                                 className="mt-3 inline-flex items-center gap-2 rounded-lg bg-amber-600 px-3.5
-                                           py-2 text-xs font-semibold text-white transition-colors
+                                           py-2 text-[1.1875rem] font-semibold text-white transition-colors
                                            hover:bg-amber-700 disabled:opacity-60"
                             >
                                 {aligning
@@ -541,7 +540,7 @@ export default function SuperAdminMembership() {
                         */
                         <form onSubmit={save} className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-6 space-y-6">
                             <div className="flex items-center justify-between">
-                                <h2 className="text-base font-bold text-slate-900">
+                                <h2 className={`${CARD_TITLE} text-slate-900`}>
                                     {creating ? 'New plan' : `Editing ${editingPlan?.name || editingKey}`}
                                 </h2>
                                 <button type="button" onClick={closeForm} aria-label="Close"
@@ -647,10 +646,10 @@ export default function SuperAdminMembership() {
                                           setting.
                                         */}
                                         <div className="sm:col-span-2 rounded-lg border border-blue-100 bg-blue-50/60 p-3">
-                                            <p className="text-xs font-semibold text-blue-800">
+                                            <p className="text-[1.1875rem] font-semibold text-blue-800">
                                                 Or set it by commencement year
                                             </p>
-                                            <p className="text-[0.6875rem] text-blue-700/80 mt-0.5 mb-2.5">
+                                            <p className="text-[1.0625rem] text-blue-700/80 mt-0.5 mb-2.5">
                                                 Which years a company can have started in to earn this plan.
                                                 Stored as a duration, so this window moves forward every
                                                 January and a company rises to the next plan as it matures.
@@ -689,7 +688,7 @@ export default function SuperAdminMembership() {
                                                 </Field>
                                             </div>
 
-                                            <p className="mt-2 text-[0.6875rem] text-blue-800">
+                                            <p className="mt-2 text-[1.0625rem] text-blue-800">
                                                 Right now: <strong>{yearWindowLabel(form, thisYear)}</strong>
                                                 {' · '}{bandLabel(form)}
                                             </p>
@@ -740,14 +739,14 @@ export default function SuperAdminMembership() {
 
                             <div className="flex gap-3 pt-2 border-t">
                                 <button type="button" onClick={closeForm}
-                                    className="h-11 px-5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300">
+                                    className="h-11 px-5 rounded-xl border border-slate-200 text-[1.25rem] font-semibold text-slate-700 transition-colors hover:border-slate-300">
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={saving}
                                     className="flex-1 inline-flex items-center justify-center gap-2 py-2.5
-                                               rounded-lg bg-blue-600 text-white text-sm font-medium
+                                               rounded-lg bg-blue-600 text-white text-[1.25rem] font-medium
                                                disabled:opacity-60"
                                 >
                                     {saving && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -759,7 +758,7 @@ export default function SuperAdminMembership() {
 
                     {/* --------------------------------------------------- plans */}
                     {loading ? (
-                        <p className="flex items-center gap-2 text-sm text-slate-500 py-10">
+                        <p className="flex items-center gap-2 text-[1.25rem] text-slate-500 py-10">
                             <Loader2 className="w-4 h-4 animate-spin" /> Loading plans…
                         </p>
                     ) : (
@@ -807,10 +806,10 @@ export default function SuperAdminMembership() {
                                     <CalendarRange className="w-5 h-5 text-blue-600" />
                                 </span>
                                 <div className="min-w-0">
-                                    <h2 className="text-base font-bold text-slate-900">
+                                    <h2 className={`${CARD_TITLE} text-slate-900`}>
                                         Commencement year → plan
                                     </h2>
-                                    <p className="text-sm text-slate-500 mt-0.5">
+                                    <p className="text-[1.25rem] text-slate-500 mt-0.5">
                                         What a company that started in each year is offered today. Every row
                                         shifts by one year each January, because the bands are durations.
                                     </p>
@@ -818,13 +817,13 @@ export default function SuperAdminMembership() {
                             </div>
 
                             <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
+                                <table className="w-full text-[1.25rem]">
                                     <thead>
                                         <tr className="text-left text-slate-500 border-b border-slate-200">
-                                            <th className="pb-2 pr-4 font-semibold">Started in</th>
-                                            <th className="pb-2 pr-4 font-semibold">Years trading</th>
-                                            <th className="pb-2 pr-4 font-semibold">Plan</th>
-                                            <th className="pb-2 font-semibold text-right">Price</th>
+                                            <th className="pb-3 pr-4 text-[1.0625rem] font-semibold uppercase tracking-wider">Started in</th>
+                                            <th className="pb-3 pr-4 text-[1.0625rem] font-semibold uppercase tracking-wider">Years trading</th>
+                                            <th className="pb-3 pr-4 text-[1.0625rem] font-semibold uppercase tracking-wider">Plan</th>
+                                            <th className="pb-3 text-[1.0625rem] font-semibold uppercase tracking-wider text-right">Price</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -887,8 +886,8 @@ export default function SuperAdminMembership() {
                                 <Sparkles className="w-5 h-5 text-blue-600" />
                             </span>
                             <div className="min-w-0">
-                                <h2 className="text-base font-bold text-slate-900">Check a commencement year</h2>
-                                <p className="text-sm text-slate-500 mt-0.5">
+                                <h2 className={`${CARD_TITLE} text-slate-900`}>Check a commencement year</h2>
+                                <p className="text-[1.25rem] text-slate-500 mt-0.5">
                                     What an applicant whose company started in this year would be shown.
                                 </p>
                             </div>
@@ -904,7 +903,7 @@ export default function SuperAdminMembership() {
                             />
 
                             {preview && (
-                                <p className="text-sm text-slate-700">
+                                <p className="text-[1.25rem] text-slate-700">
                                     {preview.showAll ? (
                                         <>
                                             <strong>{preview.years} years trading</strong> — and every plan is
@@ -945,7 +944,7 @@ export default function SuperAdminMembership() {
  * screen is not a reason to invent a second.
  */
 const INPUT =
-    'h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 '
+    'h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-[1.25rem] text-slate-900 '
     + 'outline-none transition-colors placeholder:text-slate-400 '
     + 'focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20';
 
@@ -955,9 +954,9 @@ function Field({ label, hint, full, children }: {
 }) {
     return (
         <div className={`min-w-0 ${full ? 'sm:col-span-2' : ''}`}>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">{label}</label>
+            <label className="block text-[1.25rem] font-semibold text-slate-700 mb-2">{label}</label>
             {children}
-            {hint && <p className="text-xs text-slate-500 mt-1.5">{hint}</p>}
+            {hint && <p className="text-[1.1875rem] text-slate-500 mt-1.5">{hint}</p>}
         </div>
     );
 }
@@ -981,7 +980,7 @@ function MoneyInput({ value, onChange }: {
     return (
         <div className="relative">
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2
-                             text-sm font-semibold text-slate-400">
+                             text-[1.25rem] font-semibold text-slate-400">
                 ₹
             </span>
             <input
@@ -1011,7 +1010,7 @@ function Toggle({ checked, onChange, label }: {
             role="switch"
             aria-checked={checked}
             onClick={() => onChange(!checked)}
-            className="inline-flex items-center gap-2 text-sm text-slate-700"
+            className="inline-flex items-center gap-2 text-[1.25rem] text-slate-700"
         >
             <span className={`w-9 h-5 rounded-full p-0.5 transition-colors ${
                 checked ? 'bg-blue-600' : 'bg-slate-300'
@@ -1041,13 +1040,13 @@ function PlanGroup({ title, hint, icon, plans, thisYear, onEdit, onDelete }: {
                     {icon}
                 </span>
                 <div className="min-w-0">
-                    <h2 className="text-base font-bold text-slate-900">{title}</h2>
-                    <p className="text-sm text-slate-500 mt-0.5">{hint}</p>
+                    <h2 className={`${CARD_TITLE} text-slate-900`}>{title}</h2>
+                    <p className="text-[1.25rem] text-slate-500 mt-0.5">{hint}</p>
                 </div>
             </header>
 
             {plans.length === 0 ? (
-                <p className="px-5 py-8 text-sm text-slate-500">No plans here yet.</p>
+                <p className="px-5 py-8 text-[1.25rem] text-slate-500">No plans here yet.</p>
             ) : (
                 <ul className="divide-y">
                     {plans.map((plan) => (
@@ -1059,14 +1058,14 @@ function PlanGroup({ title, hint, icon, plans, thisYear, onEdit, onDelete }: {
                         >
                             <div className="min-w-0 flex-1">
                                 <p className="flex flex-wrap items-center gap-2">
-                                    <span className={`text-sm font-semibold ${
+                                    <span className={`text-[1.25rem] font-semibold ${
                                         plan.active ? 'text-slate-900' : 'text-slate-500'
                                     }`}>
                                         {plan.name}
                                     </span>
 
                                     {plan.popular && (
-                                        <span className="inline-flex items-center gap-1 text-[0.625rem] font-bold
+                                        <span className="inline-flex items-center gap-1 text-[1.0625rem] font-bold
                                                          uppercase tracking-wide px-1.5 py-0.5 rounded-full
                                                          bg-blue-100 text-blue-700">
                                             <Users className="w-2.5 h-2.5" /> Popular
@@ -1077,14 +1076,14 @@ function PlanGroup({ title, hint, icon, plans, thisYear, onEdit, onDelete }: {
                                         other row is offered, so a badge saying so
                                         would be on every line. */}
                                     {!plan.active && (
-                                        <span className="inline-flex items-center gap-1 text-[0.625rem] font-bold
+                                        <span className="inline-flex items-center gap-1 text-[1.0625rem] font-bold
                                                          uppercase tracking-wide px-1.5 py-0.5 rounded-full
                                                          bg-slate-200 text-slate-500">
                                             <EyeOff className="w-2.5 h-2.5" /> Retired
                                         </span>
                                     )}
                                 </p>
-                                <p className="text-xs text-slate-500 mt-0.5">
+                                <p className="text-[1.1875rem] text-slate-500 mt-0.5">
                                     {bandLabel(plan)}
                                     {/* The same band in the unit the APPLICANT types.
                                         The form asks for a year; this row said
@@ -1099,7 +1098,7 @@ function PlanGroup({ title, hint, icon, plans, thisYear, onEdit, onDelete }: {
                                 </p>
                             </div>
 
-                            <p className="inline-flex items-center text-lg font-bold tracking-tight text-slate-900">
+                            <p className="inline-flex items-center text-[1.375rem] font-bold tracking-tight text-slate-900">
                                 <IndianRupee className="w-4 h-4" />
                                 {Number(plan.price || 0).toLocaleString('en-IN')}
                             </p>
@@ -1128,7 +1127,7 @@ function PlanGroup({ title, hint, icon, plans, thisYear, onEdit, onDelete }: {
                                     onClick={() => onDelete(plan)}
                                     aria-label={`Delete ${plan.name}`}
                                     className="inline-flex items-center gap-1.5 px-2.5 h-9 rounded-lg
-                                               text-xs font-semibold text-red-600 border border-red-200
+                                               text-[1.1875rem] font-semibold text-red-600 border border-red-200
                                                transition-colors hover:bg-red-50 hover:border-red-300"
                                 >
                                     <Trash2 className="w-3.5 h-3.5" /> Delete

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import {
     PanelTop, Home, FileText, PartyPopper, Images, Phone, Inbox,
+    BadgeCheck, Newspaper, MapPin, Scale, MessageSquare,
     Check, AlertTriangle, ArrowRight, type LucideIcon,
 } from 'lucide-react';
 import { getCmsOverview, errorMessage } from '@/services/cmsApi';
@@ -25,9 +26,19 @@ type Overview = {
     home?: { configured?: boolean; slides?: number; aboutBullets?: number; aboutStats?: number };
     about?: { configured?: boolean; bullets?: number; stats?: number };
     contact?: { configured?: boolean; addressLines?: number; workingHours?: number };
+
+    /* The seven screens this used not to answer for. */
+    membership?: { configured?: boolean; advantages?: number; steps?: number };
+    eventsPage?: { configured?: boolean; published?: number; categories?: number };
+    galleryPage?: { configured?: boolean; categories?: number };
+    newsPage?: { configured?: boolean; articles?: number; schemes?: number; categories?: number };
+    regions?: { configured?: boolean; regionPages?: number; statePages?: number };
+    legalPage?: { configured?: boolean; documents?: number };
+
     gallery?: { total?: number; hidden?: number };
     events?: { total?: number };
     messages?: { total?: number; unread?: number };
+    leaderMessages?: { total?: number; unread?: number };
 };
 
 /**
@@ -68,17 +79,17 @@ function Stat({ label, value, caption, icon: Icon, to, dark, tone = 'plain' }: {
                 <span className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${chip}`}>
                     <Icon className="w-[1.125rem] h-[1.125rem]" />
                 </span>
-                <p className={`text-[0.75rem] font-bold uppercase tracking-[0.1em]
+                <p className={`text-[1.0625rem] font-bold uppercase tracking-[0.1em]
                                ${dark ? 'text-[#A1A1AA]' : 'text-slate-500'}`}>
                     {label}
                 </p>
             </div>
 
-            <p className={`font-display text-[2.75rem] leading-none font-bold tabular-nums mt-4
+            <p className={`font-display text-[3.125rem] leading-none font-bold tabular-nums mt-4
                            ${dark ? 'text-white' : 'text-slate-900'}`}>
                 {value}
             </p>
-            <p className={`text-[0.875rem] mt-2.5 ${dark ? 'text-[#71717A]' : 'text-slate-400'}`}>
+            <p className={`text-[1.0625rem] mt-2.5 ${dark ? 'text-[#71717A]' : 'text-slate-400'}`}>
                 {caption}
             </p>
         </Link>
@@ -103,15 +114,15 @@ function SectionRow({ label, to, ready, detail, icon: Icon, dark }: {
             </span>
 
             <span className="min-w-0 flex-1">
-                <span className={`block text-base font-semibold truncate ${dark ? 'text-white' : 'text-slate-900'}`}>
+                <span className={`block text-[1.25rem] font-semibold truncate ${dark ? 'text-white' : 'text-slate-900'}`}>
                     {label}
                 </span>
-                <span className={`block text-[0.875rem] truncate ${dark ? 'text-[#A1A1AA]' : 'text-slate-500'}`}>
+                <span className={`block text-[1.0625rem] truncate ${dark ? 'text-[#A1A1AA]' : 'text-slate-500'}`}>
                     {detail}
                 </span>
             </span>
 
-            <span className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[0.75rem]
+            <span className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[1.0625rem]
                               font-bold shrink-0 ${ready
                     ? 'bg-[#16A34A]/12 text-[#4ADE80]'
                     : 'bg-[#F59E0B]/12 text-[#FBBF24]'}`}>
@@ -169,9 +180,45 @@ export default function CmsDashboard() {
             detail: `${d.about?.bullets || 0} bullets · ${d.about?.stats || 0} figures`,
         },
         {
+            label: 'Membership', to: '/cms/membership', icon: BadgeCheck,
+            ready: !!d.membership?.configured,
+            detail: `${d.membership?.advantages || 0} advantages · ${d.membership?.steps || 0} steps`,
+        },
+        {
+            label: 'Events', to: '/cms/events', icon: PartyPopper,
+            ready: !!d.eventsPage?.configured,
+            detail: `${d.eventsPage?.published || 0} published · ${d.eventsPage?.categories || 0} filter chips`,
+        },
+        {
+            label: 'Gallery', to: '/cms/gallery', icon: Images,
+            ready: !!d.galleryPage?.configured,
+            detail: `${d.gallery?.total || 0} images · ${d.galleryPage?.categories || 0} filter chips`
+                + (d.gallery?.hidden ? ` · ${d.gallery.hidden} hidden` : ''),
+        },
+        {
+            label: 'News', to: '/cms/news', icon: Newspaper,
+            ready: !!d.newsPage?.configured,
+            detail: `${d.newsPage?.articles || 0} articles`,
+        },
+        {
+            label: 'Schemes', to: '/cms/schemes', icon: Newspaper,
+            ready: (d.newsPage?.schemes || 0) > 0,
+            detail: `${d.newsPage?.schemes || 0} schemes`,
+        },
+        {
+            label: 'Zones & States', to: '/cms/regions', icon: MapPin,
+            ready: !!d.regions?.configured,
+            detail: `${d.regions?.regionPages || 0} region pages · ${d.regions?.statePages || 0} state pages`,
+        },
+        {
             label: 'Contact Details', to: '/cms/contact', icon: Phone,
             ready: !!d.contact?.configured,
             detail: `${d.contact?.addressLines || 0} address lines · ${d.contact?.workingHours || 0} working hours`,
+        },
+        {
+            label: 'Legal Notices', to: '/cms/legal', icon: Scale,
+            ready: !!d.legalPage?.configured,
+            detail: `${d.legalPage?.documents || 0} published policies`,
         },
     ];
 
@@ -184,22 +231,22 @@ export default function CmsDashboard() {
             {/* An eyebrow above the title, as the reference lays it out — it says
                 which part of the console you are in before the title says what. */}
             <header>
-                <p className={`text-[0.75rem] font-bold uppercase tracking-[0.14em] mb-2
+                <p className={`text-[1.0625rem] font-bold uppercase tracking-[0.14em] mb-2
                                ${dark ? 'text-[#52525B]' : 'text-slate-400'}`}>
                     Workspace
                 </p>
-                <h1 className={`font-display text-[2.5rem] leading-[1.1] font-bold tracking-tight
+                <h1 className={`font-display text-[2.8125rem] leading-[1.1] font-bold tracking-tight
                                 ${dark ? 'text-white' : 'text-slate-900'}`}>
                     Overview
                 </h1>
-                <p className={`text-base mt-2.5 max-w-[64ch] ${dark ? 'text-[#A1A1AA]' : 'text-slate-500'}`}>
+                <p className={`text-[1.25rem] mt-2.5 max-w-[64ch] ${dark ? 'text-[#A1A1AA]' : 'text-slate-500'}`}>
                     {notReady === 0
                         ? 'Every section is authored. This is what the public site is serving.'
                         : `${notReady} of ${sections.length} sections still need content before they render.`}
                 </p>
             </header>
 
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
                 <Stat
                     label="Events" value={events.total || 0} icon={PartyPopper} to="/cms/events" dark={dark}
                     caption={events.total ? 'Published and draft, all tiers' : 'Nothing scheduled yet'}
@@ -214,6 +261,14 @@ export default function CmsDashboard() {
                     tone={messages.unread ? 'alert' : 'plain'}
                 />
                 <Stat
+                    label="Leader enquiries" value={d.leaderMessages?.total || 0}
+                    icon={MessageSquare} to="/cms/leader-messages" dark={dark}
+                    caption={d.leaderMessages?.unread
+                        ? `${d.leaderMessages.unread} nobody has answered`
+                        : 'Nothing outstanding'}
+                    tone={d.leaderMessages?.unread ? 'alert' : 'plain'}
+                />
+                <Stat
                     label="Sections to finish" value={notReady} icon={AlertTriangle} to="/cms/site" dark={dark}
                     caption={notReady ? 'Blank on the live site until authored' : 'Everything is authored'}
                     tone={notReady ? 'alert' : 'plain'}
@@ -223,11 +278,11 @@ export default function CmsDashboard() {
             <section className={`rounded-2xl border overflow-hidden
                                  ${dark ? 'bg-[#0A0A0A] border-[#1F1F1F]' : 'bg-white border-slate-200'}`}>
                 <header className={`px-5 py-5 border-b ${dark ? 'border-[#1F1F1F]' : 'border-slate-200'}`}>
-                    <h2 className={`font-display text-xl font-bold tracking-tight
+                    <h2 className={`font-display text-[1.5625rem] font-bold tracking-tight
                                     ${dark ? 'text-white' : 'text-slate-900'}`}>
                         Site content
                     </h2>
-                    <p className={`text-[0.9375rem] mt-1.5 ${dark ? 'text-[#A1A1AA]' : 'text-slate-500'}`}>
+                    <p className={`text-[1.1875rem] mt-1.5 ${dark ? 'text-[#A1A1AA]' : 'text-slate-500'}`}>
                         What each public page is reading, and whether it has anything to read.
                     </p>
                 </header>

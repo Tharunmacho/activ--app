@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/shared/components/ui/sonner";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import ScrollToTop from "@/components/layout/ScrollToTop";
 import { CartProvider } from "@/contexts/CartContext";
 import { ProfileProvider } from "@/contexts/ProfileContext";
 import { ActiveCompanyProvider } from "@/contexts/ActiveCompanyContext";
@@ -25,14 +26,45 @@ import Hero from "./pages/onboarding/Hero";
 import AboutPage from "./pages/onboarding/AboutPage";
 import EventsPage from "./pages/onboarding/EventsPage";
 import GalleryPage from "./pages/onboarding/GalleryPage";
+import RegionPage from "./pages/onboarding/RegionPage";
+import StatePage from "./pages/onboarding/StatePage";
+/* "View All" — one list in full, on its own screen. Replaces the old feed page,
+   which 404'd on the two types that are not feeds (About and Leadership). */
+import StateDetailPage from "./pages/onboarding/StateDetailPage";
 /* One item's own page. Lazy: it is reached by a click from the landing page or
    the gallery, never as a first paint, so it does not belong in the entry
    bundle the landing page waits on. */
 const GalleryDetailPage = lazy(() => import("./pages/onboarding/GalleryDetailPage"));
+/* One photograph out of an album, on a page of its own — see the note at the
+   head of the file. Lazy for the same reason the album page is: most visits to
+   the site never reach it. */
+const GalleryPhotoPage = lazy(() => import("./pages/onboarding/GalleryPhotoPage"));
+/* The newsroom and one article. Lazy, like the gallery detail: most visits to
+   the site never open either, and the schemes band brings its own icons. */
+const NewsPage = lazy(() => import("./pages/onboarding/NewsPage"));
+const NewsDetailPage = lazy(() => import("./pages/onboarding/NewsDetailPage"));
+/* Government schemes — their own section now, out of the newsroom. */
+const SchemesPage = lazy(() => import("./pages/onboarding/SchemesPage"));
+const SchemeDetailPage = lazy(() => import("./pages/onboarding/SchemeDetailPage"));
 /* One event's own page. Lazy for the same reason: reached by a click, never
    as a first paint. */
 const EventDetailPage = lazy(() => import("./pages/onboarding/EventDetailPage"));
 import ContactPage from "./pages/onboarding/ContactPage";
+/*
+ * The membership prospectus. Lazy, like the other leaf pages: it is reached
+ * from a nav link, never as a first paint, and it carries the whole of the
+ * association's twelve-page "Membership Advantage" document as a typed table —
+ * which has no business sitting in the bundle the landing page waits on.
+ */
+const MembershipPage = lazy(() => import("./pages/onboarding/MembershipPage"));
+/*
+ * Lazy, like the other leaf pages. The legal documents are long strings that
+ * nobody reads on the way to booking an event, and bundling them into the
+ * landing chunk would make every first visit carry four policies.
+ */
+const LegalPage = lazy(() => import("./pages/onboarding/LegalPage"));
+/* The public Book Now flow. Lazy for the same reason the detail page is. */
+const EventBookingPage = lazy(() => import("./pages/onboarding/EventBookingPage"));
 import EnhancedLoginPage from "./shared/components/EnhancedLoginPage";
 
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -46,7 +78,6 @@ import MemberProfile from "./pages/member/Profile";
 import ProfileView from "./features/member/pages/ProfileView";
 const PersonalForm = lazy(() => import("./pages/member/PersonalForm"));
 const BusinessForm = lazy(() => import("./pages/member/BusinessForm"));
-const FinancialForm = lazy(() => import("./pages/member/FinancialForm"));
 const DeclarationForm = lazy(() => import("./pages/member/DeclarationForm"));
 const ApplicationSubmitted = lazy(() => import("./pages/member/ApplicationSubmitted"));
 import ApplicationStatus from "./pages/member/ApplicationStatus";
@@ -76,6 +107,10 @@ const MemberMessages = lazy(() => import("./features/member/pages/MemberMessages
 const MemberDocuments = lazy(() => import("./features/member/pages/MemberDocuments"));
 const MemberHelp = lazy(() => import("./features/member/pages/MemberHelp"));
 const CertificatePage = lazy(() => import("./features/member/pages/CertificatePage"));
+const DonationCertificatePage = lazy(
+  () => import("./features/member/pages/DonationCertificatePage"));
+/* What "View plan details" opens — see the note at the head of the file. */
+const MembershipPlanDetails = lazy(() => import("./features/member/pages/MembershipPlanDetails"));
 import MemberSettings from "./pages/member/Settings";
 
 // Payment Feature Imports
@@ -83,6 +118,9 @@ const PaymentRegistration = lazy(() => import("./pages/payment/PaymentRegistrati
 const PaymentConfirmation = lazy(() => import("./pages/payment/PaymentConfirmation"));
 const MockPayment = lazy(() => import("./pages/payment/MockPayment"));
 const PaymentGateway = lazy(() => import("./pages/payment/PaymentGateway"));
+/* Where Instamojo returns the member to — `redirect_url` on every payment
+   request the server creates is `${FRONTEND_URL}/payment-success`. */
+const PaymentReturn = lazy(() => import("./pages/payment/PaymentReturn"));
 import PaymentMemberDashboard from "./features/member/pages/PaidDashboard";
 const MembershipPlans = lazy(() => import("./pages/payment/MembershipPlans"));
 
@@ -90,7 +128,6 @@ const MembershipPlans = lazy(() => import("./pages/payment/MembershipPlans"));
 import BusinessProfile from "./pages/business/BusinessProfile";
 import BusinessDashboard from "./pages/business/Dashboard";
 import Products from "./pages/business/Products";
-const BusinessStock = lazy(() => import("./pages/business/Stock"));
 const AddProduct = lazy(() => import("./pages/business/AddProduct"));
 const EditProduct = lazy(() => import("./pages/business/EditProduct"));
 import Discover from "./pages/business/Discover";
@@ -99,6 +136,8 @@ import BusinessSettings from "./pages/business/Settings";
 const MyCompanies = lazy(() => import("./pages/business/MyCompanies"));
 const AddEditCompany = lazy(() => import("./pages/business/AddEditCompany"));
 const CompanyDetails = lazy(() => import("./pages/business/CompanyDetails"));
+const CompanyPublicView = lazy(() => import("./pages/business/CompanyPublicView"));
+const TrustList = lazy(() => import("./pages/business/TrustList"));
 
 // Block Admin Imports
 const BlockDashboard = lazy(() => import("./features/admin/block-admin/pages/Dashboard"));
@@ -112,7 +151,6 @@ const DistrictApprovals = lazy(() => import("./features/admin/district-admin/pag
 const DistrictMembers = lazy(() => import("./features/admin/district-admin/pages/Members"));
 const DistrictSettings = lazy(() => import("./features/admin/district-admin/pages/Settings"));
 const DistrictHub = lazy(() => import("./features/admin/district-admin/pages/Hub"));
-const DistrictAdmins = lazy(() => import("./features/admin/district-admin/pages/ManageAdmins"));
 
 // State Admin Imports
 const StateDashboard = lazy(() => import("./features/admin/state-admin/pages/Dashboard"));
@@ -120,7 +158,6 @@ const StateApprovals = lazy(() => import("./features/admin/state-admin/pages/App
 const StateMembers = lazy(() => import("./features/admin/state-admin/pages/Members"));
 const StateSettings = lazy(() => import("./features/admin/state-admin/pages/Settings"));
 const StateHub = lazy(() => import("./features/admin/state-admin/pages/Hub"));
-const StateAdmins = lazy(() => import("./features/admin/state-admin/pages/ManageAdmins"));
 
 // Super Admin Imports
 // The Hub replaces the old flat dashboard: mobile drills tiers -> regions
@@ -132,7 +169,17 @@ const SuperSettings = lazy(() => import("./features/admin/super-admin/pages/Sett
 const SuperManageAdmins = lazy(() => import("./features/admin/super-admin/pages/ManageAdmins"));
 const SuperEvents = lazy(() => import("./features/admin/super-admin/pages/Events"));
 const SuperMembership = lazy(() => import("./features/admin/super-admin/pages/Membership"));
+/* Who is coming to which event, and who has paid. The organiser end of the
+   public Book Now flow. */
+const SuperBookings = lazy(() => import("./features/admin/super-admin/pages/Bookings"));
+// The Bookings landing table — every event with its seat figures. The screen
+// above is now the DETAIL of one event, reached from a row here.
+const SuperBookingEvents = lazy(() => import("./features/admin/super-admin/pages/BookingEvents"));
+// The chips an event is filed under — the same rows the public events grid
+// filters by. See `eventcategory.service.js`.
+const SuperEventCategories = lazy(() => import("./features/admin/super-admin/pages/EventCategories"));
 const SuperUpdates = lazy(() => import("./features/admin/super-admin/pages/Updates"));
+const SuperNotifications = lazy(() => import("./features/admin/super-admin/pages/Notifications"));
 
 // CMS (public-site content management, super admin only)
 const CmsLayout = lazy(() => import("./pages/cms/CmsLayout"));
@@ -142,8 +189,18 @@ const HomeManager = lazy(() => import("./pages/cms/HomeManager"));
 const AboutManager = lazy(() => import("./pages/cms/AboutManager"));
 const EventsManager = lazy(() => import("./pages/cms/EventsManager"));
 const GalleryManager = lazy(() => import("./pages/cms/GalleryManager"));
+const NewsManager = lazy(() => import("./pages/cms/NewsManager"));
+const SchemesManager = lazy(() => import("./pages/cms/SchemesManager"));
+const MembershipManager = lazy(() => import("./pages/cms/MembershipManager"));
 const ContactManager = lazy(() => import("./pages/cms/ContactManager"));
 const MessagesInbox = lazy(() => import("./pages/cms/MessagesInbox"));
+const LeaderMessagesInbox = lazy(() => import("./pages/cms/LeaderMessagesInbox"));
+/* The legal notices, with their version history. See LegalManager. */
+const LegalManager = lazy(() => import("./pages/cms/LegalManager"));
+/* The regional and state pages — leadership, photographs, updates and contact.
+   Lazy like the rest of the CMS: an editor who never opens it never downloads
+   it. */
+const RegionsManager = lazy(() => import("./pages/cms/RegionsManager"));
 
 /**
  * Shown while a lazy route's chunk is in flight.
@@ -178,22 +235,94 @@ const App = () => (
               silences the upgrade warnings and means the eventual move to v7
               changes nothing about how this app routes. */}
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            {/* A routed page opens at its top. Without this the window keeps
+                the offset it had, so pressing a link from the foot of one page
+                lands on the footer of the next — see the component. */}
+            <ScrollToTop />
             <Suspense fallback={<RouteFallback />}>
               <Routes>
               <Route path="/" element={<Hero />} />
               <Route path="/onboarding" element={<Hero />} />
               <Route path="/about" element={<AboutPage />} />
+              {/* The membership prospectus, beside About: both answer "what is
+                  this association", one about the body and one about joining it. */}
+              <Route path="/membership" element={<MembershipPage />} />
               <Route path="/events" element={<EventsPage />} />
               {/* Where an event card goes when it is clicked. Below /events,
                   so the list keeps the bare path. */}
               <Route path="/events/:id" element={<EventDetailPage />} />
+              {/* Book Now. Declared AFTER /events/:id so the detail page keeps the
+                  bare path — React Router ranks static segments above dynamic
+                  ones, but declaring it in reading order keeps that obvious. */}
+              <Route path="/events/:id/book" element={<EventBookingPage />} />
+              {/*
+                The Regions & States section.
+
+                The FEED path is declared above the page path on purpose. React
+                Router ranks a static segment above a dynamic one so the order
+                does not strictly matter here, but `/regions/:slug/:type` and
+                `/regions/:slug` differ by one segment and reading them in this
+                order is what makes it obvious that "south" is a page and
+                "south/sectorUpdates" is a list — the same reason the events
+                routes are written detail-then-book.
+              */}
+              <Route path="/regions/:slug/:type" element={<StateDetailPage scope="region" />} />
+              <Route path="/regions/:slug" element={<RegionPage />} />
+              <Route path="/states/:slug/:type" element={<StateDetailPage scope="state" />} />
+              <Route path="/states/:slug" element={<StatePage />} />
+
+              {/* The newsroom, then one article. `/news/:slug` below `/news`,
+                  so the list keeps the bare path — the same order the gallery
+                  and the events routes are written in. */}
+              <Route path="/news" element={<NewsPage />} />
+              <Route path="/news/:slug" element={<NewsDetailPage />} />
+
+              {/* Schemes, chosen from the header's Schemes dropdown: Central,
+                  or a state. `/schemes` opens the central list; the old
+                  states-grid address goes there too, for any saved link.
+                  `/schemes/view/:slug` has its own literal segment so a
+                  scheme's slug can never collide with `central` or `state`. */}
+              <Route path="/schemes" element={<SchemesPage view="central" />} />
+              <Route path="/schemes/central" element={<SchemesPage view="central" />} />
+              <Route path="/schemes/state" element={<Navigate to="/schemes/central" replace />} />
+              <Route path="/schemes/state/:slug" element={<SchemesPage view="state" />} />
+              <Route path="/schemes/view/:slug" element={<SchemeDetailPage />} />
+
               <Route path="/gallery" element={<GalleryPage />} />
               {/* Where a poster goes when it is clicked, on the landing page or
                   in the gallery grid. Below /gallery, so the list keeps the
                   bare path. */}
               <Route path="/gallery/:id" element={<GalleryDetailPage />} />
+              {/*
+                ONE PHOTOGRAPH OUT OF THAT ALBUM.
+
+                Below `/gallery/:id` and nested under it, so the address says
+                what it is — this photograph, of this album — and the album
+                stays the parent a reader goes back to. `:n` indexes the album
+                with the COVER AS 0, which is the same numbering the album page
+                links with; see the note in `GalleryPhotoPage`.
+              */}
+              <Route path="/gallery/:id/photo/:n" element={<GalleryPhotoPage />} />
               <Route path="/contact" element={<ContactPage />} />
+
+              {/*
+                The four legal documents, at the literal paths the footer links
+                to and a search engine expects. One component renders all four
+                from the slug — see the note in LegalPage.
+
+                `/legal/:slug` last, as a catch-all for a link written the other
+                way round. It is not the canonical form: nothing links to it.
+              */}
+              <Route path="/privacy-policy" element={<LegalPage />} />
+              <Route path="/terms-and-conditions" element={<LegalPage />} />
+              <Route path="/refund-policy" element={<LegalPage />} />
+              <Route path="/cancellation-policy" element={<LegalPage />} />
+              <Route path="/legal/:slug" element={<LegalPage />} />
+
               <Route path="/login" element={<EnhancedLoginPage />} />
+              {/* Admins sign in on their own screen: no social sign-in, no
+                  "Create an account", and members are sent back to /login. */}
+              <Route path="/admin/login" element={<EnhancedLoginPage audience="admin" />} />
               {/* The login page has linked to /forgot-password all along;
                   neither route existed, so it fell through to the 404 page. */}
               <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -217,6 +346,13 @@ const App = () => (
                 * and one way back. Declared AFTER `/:id` is fine: the paths
                 * differ in length, so there is no ambiguity for the router.
                 */}
+              {/* BOOKING, INSIDE THE MEMBER AREA.
+
+                  The same page the public site books through — one booking
+                  system, one attendee list — rendered in the dashboard's own
+                  shell so a member is not thrown out to the marketing site
+                  halfway through paying. See `EventBookingPage`. */}
+              <Route path="/member/events/:id/book" element={<EventBookingPage chrome="member" />} />
               <Route path="/member/events/:id/register" element={<EventRegistration />} />
               <Route path="/member/directory" element={<MemberDirectory />} />
               <Route path="/member/directory/:id" element={<DirectoryProfile />} />
@@ -234,9 +370,25 @@ const App = () => (
               <Route path="/member/profile" element={<MemberProfile />} />
               <Route path="/member/settings" element={<MemberSettings />} />
               <Route path="/member/certificate/:kind" element={<CertificatePage />} />
+              {/* The 80G donation receipt. Its own route rather than another
+                  `:kind` on the one above: that page renders a MEMBERSHIP
+                  certificate and this one is a tax document with a payment
+                  table, which is not the same sheet with different words. */}
+              <Route path="/member/donation-certificate" element={<DonationCertificatePage />} />
+              <Route path="/member/plan" element={<MembershipPlanDetails />} />
               <Route path="/member/forms/personal" element={<PersonalForm />} />
               <Route path="/member/forms/business" element={<BusinessForm />} />
-              <Route path="/member/forms/financial" element={<FinancialForm />} />
+              {/*
+                  The Financial & Compliance step has moved to the Business
+                  Creation Account, which is where the company it describes
+                  lives. The path redirects rather than 404ing: it is in the
+                  browser history of every applicant part-way through the old
+                  four-step flow, and in any tab left open across the deploy.
+                */}
+              <Route
+                path="/member/forms/financial"
+                element={<Navigate to="/member/forms/declaration" replace />}
+              />
               <Route path="/member/forms/declaration" element={<DeclarationForm />} />
               <Route path="/business/create-profile" element={<BusinessProfile />} />
               <Route path="/member/application-submitted" element={<ApplicationSubmitted />} />
@@ -255,13 +407,20 @@ const App = () => (
               {/* PaymentGateway existed but was never routed, so nothing could
                   reach it — and it is the step that records the payment. */}
               <Route path="/payment/gateway" element={<PaymentGateway />} />
+              {/*
+                * TOP LEVEL, not under /member, and not negotiable: this exact
+                * path is what the server sends to Instamojo as `redirect_url`,
+                * and Instamojo sends the member back to it after paying. A
+                * route that does not exist here is a paying member landing on
+                * a 404 with money gone.
+                */}
+              <Route path="/payment-success" element={<PaymentReturn />} />
               <Route path="/payment/member-dashboard" element={<PaymentMemberDashboard />} />
               <Route path="/payment/membership-plans" element={<MembershipPlans />} />
 
               {/* Business Routes */}
               <Route path="/business/dashboard" element={<BusinessDashboard />} />
               <Route path="/business/products" element={<Products />} />
-              <Route path="/business/stock" element={<BusinessStock />} />
               <Route path="/business/add-product" element={<AddProduct />} />
               <Route path="/business/edit-product/:id" element={<EditProduct />} />
               <Route path="/business/discover" element={<Discover />} />
@@ -270,6 +429,20 @@ const App = () => (
               <Route path="/business/companies" element={<MyCompanies />} />
               <Route path="/business/companies/add" element={<AddEditCompany />} />
               <Route path="/business/companies/edit/:id" element={<AddEditCompany />} />
+              <Route path="/business/trust-list" element={<TrustList />} />
+              {/*
+                  The member-facing company page, under `/company/` rather than
+                  `/companies/`.
+
+                  A separate path on purpose: `/business/companies/*` is the
+                  OWNER's area — a list of what you have, and the forms that
+                  edit them — and this is the page any member may open, about
+                  any company. Hanging it off `/companies/:id/view` would put a
+                  route anyone can reach inside a branch whose every other entry
+                  is owner-only, which is the kind of neighbourhood where an
+                  ownership check gets forgotten.
+              */}
+              <Route path="/business/company/:id" element={<CompanyPublicView />} />
               <Route path="/business/companies/:id" element={<CompanyDetails />} />
 
               {/* Block Admin Routes */}
@@ -288,9 +461,6 @@ const App = () => (
               {/* The blocks of this district, with their queues — the super
                   admin Hub, narrowed by the server to this patch. */}
               <Route path="/district-admin/hub" element={<DistrictHub />} />
-              {/* The block admins of this district — the super admin's Admins
-                  screen, narrowed by the server to their patch. */}
-              <Route path="/district-admin/admins" element={<DistrictAdmins />} />
 
               {/* State Admin Routes */}
               <Route path="/state-admin/dashboard" element={<StateDashboard />} />
@@ -300,8 +470,6 @@ const App = () => (
               <Route path="/state-admin/settings" element={<StateSettings />} />
               {/* The districts and blocks of this state, with their queues. */}
               <Route path="/state-admin/hub" element={<StateHub />} />
-              {/* The district and block admins of this state. */}
-              <Route path="/state-admin/admins" element={<StateAdmins />} />
 
               {/* Super Admin Routes */}
               <Route path="/super-admin/dashboard" element={<SuperHub />} />
@@ -309,16 +477,30 @@ const App = () => (
               <Route path="/super-admin/applications" element={<SuperApprovals />} />
               <Route path="/super-admin/members" element={<SuperMembers />} />
               <Route path="/super-admin/settings" element={<SuperSettings />} />
-              {/* Mobile has ManageAdminsScreen; the website declared every
-                  endpoint for it and never had a page. */}
+              {/* The one place admin accounts are created, edited and removed.
+                  The district and state tiers had a narrowed copy of this at
+                  `/district-admin/admins` and `/state-admin/admins`; both are
+                  gone — see `TIER_NAV` in `tierConfig.ts`. */}
               <Route path="/super-admin/admins" element={<SuperManageAdmins />} />
               {/* Events is a TAB of the super-admin section on mobile. Linking
                   at /cms/events dropped the administrator into the CMS shell. */}
               <Route path="/super-admin/events" element={<SuperEvents />} />
+              {/* Declared AFTER `/super-admin/events` and it does not matter —
+                  React Router ranks by specificity, not by declaration order,
+                  unlike the Express routers this codebase warns about twice.
+                  Kept adjacent anyway so the section reads as one block. */}
+              <Route path="/super-admin/events/categories" element={<SuperEventCategories />} />
+              {/* The overview, and one event's own bookings. Two routes rather
+                  than a dropdown: the detail screen is then linkable, Back
+                  returns to the table, and a reload lands on the same event. */}
+              <Route path="/super-admin/bookings" element={<SuperBookingEvents />} />
+              <Route path="/super-admin/bookings/:eventId" element={<SuperBookings />} />
               <Route path="/super-admin/membership" element={<SuperMembership />} />
               {/* Association Updates (MEM-001) — authored here, delivered to the
                   dashboard of every member whose region matches. */}
               <Route path="/super-admin/updates" element={<SuperUpdates />} />
+              {/* Delivery oversight for the email and WhatsApp channels. */}
+              <Route path="/super-admin/notifications" element={<SuperNotifications />} />
 
               {/* Legacy Admin Routes - Redirect to Block Admin */}
               <Route path="/admin/dashboard" element={<BlockDashboard />} />
@@ -340,8 +522,14 @@ const App = () => (
                 <Route path="about" element={<AboutManager />} />
                 <Route path="events" element={<EventsManager />} />
                 <Route path="gallery" element={<GalleryManager />} />
+                <Route path="news" element={<NewsManager />} />
+                <Route path="schemes" element={<SchemesManager />} />
+                <Route path="membership" element={<MembershipManager />} />
                 <Route path="contact" element={<ContactManager />} />
+                <Route path="regions" element={<RegionsManager />} />
+                <Route path="legal" element={<LegalManager />} />
                 <Route path="messages" element={<MessagesInbox />} />
+                <Route path="leader-messages" element={<LeaderMessagesInbox />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

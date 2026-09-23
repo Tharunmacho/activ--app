@@ -34,6 +34,16 @@ const DeclarationForm = () => {
   const [submitting, setSubmitting] = useState(false);
   const [companyInputs, setCompanyInputs] = useState<string[]>([""]);
 
+  /*
+   * Whether this applicant trades — the business step's answer.
+   *
+   * `null` until it has been read, and the sister-concerns card renders
+   * only on an explicit `true`. An unknown is not a yes: defaulting to
+   * shown would flash a business-only question at every aspirant on the
+   * way past, which is the thing being fixed.
+   */
+  const [isBusinessApplicant, setIsBusinessApplicant] = useState<boolean | null>(null);
+
   useEffect(() => {
     loadFormData();
   }, []);
@@ -47,6 +57,14 @@ const DeclarationForm = () => {
       }
 
       const saved = await getDeclarationInfo();
+
+      // Same three spellings the submit path already reconciles.
+      const business = await getBusinessInfo().catch(() => ({} as any));
+      setIsBusinessApplicant(
+        !(business?.doingBusiness === false
+          || business?.doingBusiness === "no"
+          || business?.registrationType === "aspirant"),
+      );
 
       if (saved && Object.keys(saved).length > 0) {
         setFormData((current) => ({
@@ -114,7 +132,9 @@ const DeclarationForm = () => {
       // form let Mongoose fall back to the default and record 0.
       await updateProfile({
         ...formData,
-        sisterConcerns: Number(formData.sisterConcerns || 0),
+        // 0 for an aspirant, who was never shown the field.
+        sisterConcerns: isBusinessApplicant === true ? Number(formData.sisterConcerns || 0) : 0,
+        companyNames: isBusinessApplicant === true ? formData.companyNames : [],
       });
 
       toast.success("Declaration submitted successfully!");
@@ -123,6 +143,17 @@ const DeclarationForm = () => {
       // Gather every section the applicant has filled in. Read back from the
       // server rather than from local state so the application carries what was
       // actually stored, not what this page happens to remember.
+      /*
+        `financial` is still read, and still nested under `data` below.
+
+        The Financial & Compliance STEP has gone from this flow — it is asked in
+        the Business Creation Account now — but the record it writes to has not,
+        and the admin review screens read `data.financialInfo` to render the
+        applicant. Dropping it from the payload would blank that panel for every
+        member who HAS filled it in, on the account or before the move. An empty
+        object is the honest answer when there is nothing yet; a missing key is
+        a panel that stops rendering.
+      */
       const [profile, business, financial, declaration] = await Promise.all([
         getMyProfile().catch(() => ({} as any)),
         getBusinessInfo().catch(() => ({} as any)),
@@ -163,8 +194,9 @@ const DeclarationForm = () => {
             district: profile.district,
             block: profile.block,
             city: profile.city || "",
-            religion: profile.religion || "",
             socialCategory: profile.socialCategory || "",
+            religion: profile.religion || "",
+            gender: profile.gender || "",
           },
           businessInfo: business || {},
           financialInfo: financial || {},
@@ -187,23 +219,34 @@ const DeclarationForm = () => {
 
   return (
     <RegistrationFormShell
-      step={4}
+      step={3}
       title="Declaration"
-      description="Final Declaration — Step 4 of 4"
-      previousTo="/member/forms/financial"
+      description="Final Declaration — Step 3 of 3"
+      previousTo="/member/forms/business"
       submitLabel="Submit Application"
       submitting={submitting}
       disabled={!formData.agreeToDeclaration}
       onSubmit={handleSubmit}
     >
-      {/* Mirrors mobile's "Sister Concerns & Firms" card. */}
+      {/*
+        Mirrors mobile's "Sister Concerns & Firms" card.
+
+        SISTER CONCERNS IS A BUSINESS QUESTION, and the business step
+        has already asked whether there is a business. Asking an
+        aspirant how many OTHER companies they own, on the screen where
+        they certify the information is correct, is asking them to
+        invent a field. "0 if none" is not the honest answer; "this does
+        not apply" is, and the form had no way to say it.
+        Same gate as `Profile.tsx` step 3.
+      */}
+      {isBusinessApplicant === true && (
       <FormCard
         icon={Building2}
         title="Sister Concerns &amp; Firms"
         subtitle="Other businesses under the same ownership"
       >
                   <div>
-                    <Label htmlFor="sisterConcerns" className="text-sm font-medium mb-2 block">
+                    <Label htmlFor="sisterConcerns" className="text-[1.1875rem] font-medium mb-2 block">
                       Number of Sister Concerns
                     </Label>
                     <Input
@@ -257,6 +300,7 @@ const DeclarationForm = () => {
                     </div>
                   )}
       </FormCard>
+      )}
 
       {/* Mirrors mobile's "Member Declaration" card. */}
       <FormCard
@@ -265,8 +309,8 @@ const DeclarationForm = () => {
         subtitle="Read and accept before submitting"
       >
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
-          <p className="text-sm font-semibold text-slate-800 mb-2">I hereby declare that:</p>
-          <ul className="list-disc list-inside space-y-1 ml-1 text-sm text-slate-700">
+          <p className="text-[1.1875rem] font-semibold text-slate-800 mb-2">I hereby declare that:</p>
+          <ul className="list-disc list-inside space-y-1 ml-1 text-[1.1875rem] text-slate-700">
             <li>All the information provided by me is true and correct to the best of my knowledge.</li>
             <li>I understand that any false information may lead to rejection of my application.</li>
             <li>I agree to abide by the rules and regulations of the organization.</li>
@@ -281,7 +325,7 @@ const DeclarationForm = () => {
             onCheckedChange={(checked) => setFormData({ ...formData, agreeToDeclaration: checked as boolean })}
             className="mt-1"
           />
-          <span className="text-sm text-slate-700">
+          <span className="text-[1.1875rem] text-slate-700">
             I have read and agree to the above declaration. I understand that this submission
             is final and any false information may result in termination of membership.
             <span className="text-red-500 ml-0.5">*</span>

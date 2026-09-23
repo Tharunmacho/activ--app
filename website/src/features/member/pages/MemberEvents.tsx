@@ -107,7 +107,7 @@ export default function MemberEvents() {
                                 key={key}
                                 type="button"
                                 onClick={() => setTab(key)}
-                                className={`flex-1 min-w-0 px-2 py-2.5 rounded-xl text-[0.8125rem] font-semibold
+                                className={`flex-1 min-w-0 px-2 py-2.5 rounded-xl text-[1.0625rem] font-semibold
                                             transition-colors flex items-center justify-center gap-1.5 ${
                                     active
                                         ? 'bg-blue-600 text-white'
@@ -116,7 +116,7 @@ export default function MemberEvents() {
                             >
                                 <span className="truncate">{label}</span>
                                 {count > 0 ? (
-                                    <span className={`shrink-0 text-[0.6875rem] font-bold px-1.5 rounded-full ${
+                                    <span className={`shrink-0 text-[1.0625rem] font-bold px-1.5 rounded-full ${
                                         active ? 'bg-white/25' : 'bg-slate-200 text-slate-600'
                                     }`}>
                                         {count}
@@ -142,6 +142,16 @@ export default function MemberEvents() {
                         detail={EMPTY[tab].detail}
                     />
                 ) : (
+                    /*
+                     * The grid stretches, and every card fills its row.
+                     *
+                     * This carried `items-start` for a real reason: a card with
+                     * no banner, pulled up to match one that had a poster, was a
+                     * title, a date and then 400px of white. The fix for that is
+                     * not to let the row go ragged — it is for a card with no
+                     * poster to have something in the space where the poster
+                     * goes, which `EventCard` now draws. See the note there.
+                     */
                     <div className="grid gap-4 sm:grid-cols-2">
                         {rows.map((event) => <EventCard key={event.id} event={event} />)}
                     </div>

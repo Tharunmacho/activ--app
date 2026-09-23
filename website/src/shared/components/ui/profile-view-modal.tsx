@@ -14,6 +14,7 @@ interface ProfileData {
   city?: string;
   religion?: string;
   socialCategory?: string;
+  gender?: string;
   doingBusiness?: string;
   organization?: string;
   constitution?: string;
@@ -55,7 +56,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">Application Details</DialogTitle>
+          <DialogTitle className="text-[1.75rem] font-bold">Application Details</DialogTitle>
           <DialogDescription>
             Complete application information submitted by the member
           </DialogDescription>
@@ -68,15 +69,15 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
         ) : !profile || Object.keys(profile).filter(key => key !== '_id' && key !== 'userId' && key !== '__v' && key !== 'createdAt' && key !== 'updatedAt' && key !== 'isLocked' && key !== 'completedSteps' && profile[key]).length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <User className="w-16 h-16 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Profile Data</h3>
-            <p className="text-sm text-muted-foreground">This user has not filled in their profile information yet.</p>
+            <h3 className="text-[1.375rem] font-semibold mb-2">No Profile Data</h3>
+            <p className="text-[1.1875rem] text-muted-foreground">This user has not filled in their profile information yet.</p>
           </div>
         ) : (
           <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
             <div className="space-y-6">
               {/* Personal Details */}
               <div>
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <h3 className="text-[1.375rem] font-semibold mb-4 flex items-center gap-2">
                   <User className="w-5 h-5 text-primary" />
                   Personal Details
                 </h3>
@@ -85,7 +86,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                     <div className="flex items-start gap-2">
                       <User className="w-4 h-4 text-muted-foreground mt-1" />
                       <div>
-                        <p className="text-sm font-medium text-muted-foreground">Name</p>
+                        <p className="text-[1.1875rem] font-medium text-muted-foreground">Name</p>
                         <p className="font-medium">{profile.name}</p>
                       </div>
                     </div>
@@ -94,7 +95,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                     <div className="flex items-start gap-2">
                       <Mail className="w-4 h-4 text-muted-foreground mt-1" />
                       <div>
-                        <p className="text-sm font-medium text-muted-foreground">Email</p>
+                        <p className="text-[1.1875rem] font-medium text-muted-foreground">Email</p>
                         <p className="font-medium">{profile.email}</p>
                       </div>
                     </div>
@@ -103,7 +104,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                     <div className="flex items-start gap-2">
                       <Phone className="w-4 h-4 text-muted-foreground mt-1" />
                       <div>
-                        <p className="text-sm font-medium text-muted-foreground">Phone</p>
+                        <p className="text-[1.1875rem] font-medium text-muted-foreground">Phone</p>
                         <p className="font-medium">{profile.phone}</p>
                       </div>
                     </div>
@@ -112,7 +113,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                     <div className="flex items-start gap-2">
                       <MapPin className="w-4 h-4 text-muted-foreground mt-1" />
                       <div>
-                        <p className="text-sm font-medium text-muted-foreground">Location</p>
+                        <p className="text-[1.1875rem] font-medium text-muted-foreground">Location</p>
                         <p className="font-medium">
                           {[profile?.block, profile?.district, profile?.state].filter(Boolean).join(', ')}
                         </p>
@@ -123,7 +124,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                     <div className="flex items-start gap-2">
                       <MapPin className="w-4 h-4 text-muted-foreground mt-1" />
                       <div>
-                        <p className="text-sm font-medium text-muted-foreground">City</p>
+                        <p className="text-[1.1875rem] font-medium text-muted-foreground">City</p>
                         <p className="font-medium">{profile.city}</p>
                       </div>
                     </div>
@@ -132,7 +133,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                     <div className="flex items-start gap-2">
                       <FileText className="w-4 h-4 text-muted-foreground mt-1" />
                       <div>
-                        <p className="text-sm font-medium text-muted-foreground">Religion</p>
+                        <p className="text-[1.1875rem] font-medium text-muted-foreground">Religion</p>
                         <p className="font-medium">{profile.religion}</p>
                       </div>
                     </div>
@@ -141,8 +142,17 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                     <div className="flex items-start gap-2">
                       <FileText className="w-4 h-4 text-muted-foreground mt-1" />
                       <div>
-                        <p className="text-sm font-medium text-muted-foreground">Social Category</p>
+                        <p className="text-[1.1875rem] font-medium text-muted-foreground">Social Category</p>
                         <p className="font-medium">{profile.socialCategory}</p>
+                      </div>
+                    </div>
+                  )}
+                  {profile?.gender && (
+                    <div className="flex items-start gap-2">
+                      <FileText className="w-4 h-4 text-muted-foreground mt-1" />
+                      <div>
+                        <p className="text-[1.1875rem] font-medium text-muted-foreground">Gender</p>
+                        <p className="font-medium">{profile.gender}</p>
                       </div>
                     </div>
                   )}
@@ -154,7 +164,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                 <>
                   <Separator />
                   <div>
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <h3 className="text-[1.375rem] font-semibold mb-4 flex items-center gap-2">
                       <Building className="w-5 h-5 text-primary" />
                       Business Information
                     </h3>
@@ -163,7 +173,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2">
                           <Building className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Doing Business</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">Doing Business</p>
                             <p className="font-medium">{profile.doingBusiness}</p>
                           </div>
                         </div>
@@ -172,7 +182,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2">
                           <Building className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Organization</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">Organization</p>
                             <p className="font-medium">{profile.organization}</p>
                           </div>
                         </div>
@@ -181,7 +191,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2">
                           <FileText className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Constitution</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">Constitution</p>
                             <p className="font-medium">{profile.constitution}</p>
                           </div>
                         </div>
@@ -190,7 +200,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2">
                           <FileText className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Business Types</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">Business Types</p>
                             <div className="flex flex-wrap gap-1 mt-1">
                               {profile.businessTypes.map((type, idx) => (
                                 <Badge key={idx} variant="outline">{type}</Badge>
@@ -203,7 +213,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2">
                           <Calendar className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Business Year</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">Business Year</p>
                             <p className="font-medium">{profile.businessYear}</p>
                           </div>
                         </div>
@@ -212,7 +222,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2">
                           <User className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Employees</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">Employees</p>
                             <p className="font-medium">{profile.employees}</p>
                           </div>
                         </div>
@@ -221,7 +231,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2">
                           <Building className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Chamber</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">Chamber</p>
                             <p className="font-medium">{profile.chamber}</p>
                           </div>
                         </div>
@@ -230,7 +240,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2 md:col-span-2">
                           <Building className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Government Organizations</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">Government Organizations</p>
                             <div className="flex flex-wrap gap-1 mt-1">
                               {profile.govtOrgs.map((org, idx) => (
                                 <Badge key={idx} variant="secondary">{org}</Badge>
@@ -249,7 +259,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                 <>
                   <Separator />
                   <div>
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <h3 className="text-[1.375rem] font-semibold mb-4 flex items-center gap-2">
                       <DollarSign className="w-5 h-5 text-primary" />
                       Financial & Compliance
                     </h3>
@@ -258,7 +268,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2">
                           <FileText className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">PAN</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">PAN</p>
                             <p className="font-medium">{profile.pan}</p>
                           </div>
                         </div>
@@ -267,7 +277,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2">
                           <FileText className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">GST</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">GST</p>
                             <p className="font-medium">{profile.gst}</p>
                           </div>
                         </div>
@@ -276,7 +286,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2">
                           <FileText className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Udyam</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">Udyam</p>
                             <p className="font-medium">{profile.udyam}</p>
                           </div>
                         </div>
@@ -285,7 +295,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2">
                           <FileText className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Filed ITR</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">Filed ITR</p>
                             <p className="font-medium">{profile.filedITR}</p>
                           </div>
                         </div>
@@ -294,7 +304,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2">
                           <FileText className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">ITR Years</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">ITR Years</p>
                             <p className="font-medium">{profile.itrYears}</p>
                           </div>
                         </div>
@@ -303,7 +313,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2">
                           <DollarSign className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Turnover Range</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">Turnover Range</p>
                             <p className="font-medium">{profile.turnoverRange}</p>
                           </div>
                         </div>
@@ -312,7 +322,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2">
                           <DollarSign className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Turnover Year 1</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">Turnover Year 1</p>
                             <p className="font-medium">{profile.turnover1}</p>
                           </div>
                         </div>
@@ -321,7 +331,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2">
                           <DollarSign className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Turnover Year 2</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">Turnover Year 2</p>
                             <p className="font-medium">{profile.turnover2}</p>
                           </div>
                         </div>
@@ -330,7 +340,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2">
                           <DollarSign className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Turnover Year 3</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">Turnover Year 3</p>
                             <p className="font-medium">{profile.turnover3}</p>
                           </div>
                         </div>
@@ -339,7 +349,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2 md:col-span-2">
                           <FileText className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Government Schemes</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">Government Schemes</p>
                             <p className="font-medium">{profile.govtSchemes}</p>
                           </div>
                         </div>
@@ -354,7 +364,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                 <>
                   <Separator />
                   <div>
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <h3 className="text-[1.375rem] font-semibold mb-4 flex items-center gap-2">
                       <CheckCircle className="w-5 h-5 text-primary" />
                       Declaration
                     </h3>
@@ -363,7 +373,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2">
                           <Building className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Sister Concerns</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">Sister Concerns</p>
                             <p className="font-medium">{profile.sisterConcerns}</p>
                           </div>
                         </div>
@@ -372,7 +382,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                         <div className="flex items-start gap-2">
                           <Building className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Company Names</p>
+                            <p className="text-[1.1875rem] font-medium text-muted-foreground">Company Names</p>
                             <p className="font-medium">{profile.companyNames}</p>
                           </div>
                         </div>
@@ -393,7 +403,7 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                 <>
                   <Separator />
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">Profile Status</h3>
+                    <h3 className="text-[1.375rem] font-semibold mb-4">Profile Status</h3>
                     <div className="flex flex-wrap gap-2">
                       {profile?.isLocked && (
                         <Badge variant="secondary" className="bg-blue-100 text-blue-800">

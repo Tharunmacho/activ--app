@@ -187,12 +187,37 @@ export interface Applicant {
     block: string;
     district: string;
     state: string;
+    /**
+     * The APPLICATION's outcome: `Pending`, `Approved` or `Rejected`.
+     *
+     * Written by the State Admin alone (or a Super Admin filling that seat), and
+     * it is what makes somebody a member. NOT the same question as `stage`.
+     */
     status: string;
     rawStatus: string;
-    /** pending | approved | rejected | upstream | closed */
+    /**
+     * THIS TIER'S OWN VERDICT: pending | approved | rejected.
+     *
+     * `approved` means the tier that fetched this row approved it — not that the
+     * applicant was admitted. The two were one field once, which is why a
+     * District admin's Hub read "Approved" on applicants the State had approved
+     * and the District had never opened.
+     */
     stage: string;
     statusLabel: string;
     approvedByText: string;
+    /** The outcome again, named so it cannot be mistaken for `stage`. */
+    outcome?: string;
+    /** Has THIS tier's verdict still to be given? The only thing that draws buttons. */
+    canAct?: boolean;
+    /** Would this tier's approval enrol the applicant, or only be recorded? */
+    decidesOutcome?: boolean;
+    /** All three tiers' verdicts, for a card that wants to lay them out itself. */
+    tierReviews?: Record<string, { decision: string; adminType: string; decidedAt: string | null; reason: string }>;
+    /** The decided ones among the OTHER two tiers, widest first. */
+    otherTierReviews?: { tier: string; label: string; decision: string; decidedAt: string | null }[];
+    /** Those, as one line: "State approved · Block rejected". Empty when none. */
+    endorsementLine?: string;
     orphaned: boolean;
     fallbackReason: string;
     submittedAt: string | null;
@@ -230,8 +255,15 @@ export interface AdminDashboard {
     };
     /** Approved + rejected applicants, with Active/Inactive already resolved. */
     members?: AdminMember[];
-    recentActivities?: Array<Record<string, any>>;
+    /*
+     * `recentActivities` was declared here and never read: the dashboard builds
+     * Recent Activity from `applicants.all`, which carries the computed stage.
+     * The server has stopped sending it — see `computeBlockDashboard`, the only
+     * tier that ever did.
+     */
+    /** The blocks feeding a district, with their own counts. District only. */
     blocks?: Array<Record<string, any>>;
+    /** The districts in a state, likewise. State only. */
     districts?: Array<Record<string, any>>;
     /** True when the admin's own region could not be resolved. */
     scopeUnresolved?: boolean;
@@ -254,7 +286,17 @@ const EMPTY_DASHBOARD: AdminDashboard = {
  * it found in `data.role`. Calling a second "admin login" endpoint is what the
  * website used to do, and that endpoint has never existed on this backend.
  */
-export const login = async (email: string, password: string): Promise<LoginResult> => {
+export const login = async (
+    email: string,
+    password: string,
+    /**
+     * WHICH SIGN-IN SCREEN this came from: `admin` for /admin/login, `member`
+     * for /login. The server refuses the wrong one and returns no token at all
+     * — see `assertPortal` in `auth.service.js`. Omitted, either is accepted,
+     * which is what the mobile app still does.
+     */
+    portal?: 'member' | 'admin',
+): Promise<LoginResult> => {
     /*
      * Forget the previous session before asking about the next one.
      *
@@ -273,6 +315,7 @@ export const login = async (email: string, password: string): Promise<LoginResul
     const res = await api.post(ENDPOINTS.AUTH.LOGIN, {
         email: String(email || '').toLowerCase().trim(),
         password,
+        ...(portal ? { portal } : {}),
     });
 
     const data = unwrap<any>(res, {});
@@ -326,11 +369,18 @@ export const register = async (payload: {
     email: string;
     password: string;
     phoneNumber: string;
+    /** Where WhatsApp notifications go. Server falls back to `phoneNumber`. */
+    whatsappNumber?: string;
     state: string;
     district: string;
     block: string;
     city?: string;
+    /** Members outside India give a place instead of a state/district/block. */
+    place?: string;
 }): Promise<LoginResult> => {
+    // `payload` is posted whole, so a new field reaches the server as soon as
+    // the type admits it — unlike the wrapper in `shared/services/authService`,
+    // which names each field and silently drops any it has not been told about.
     const res = await api.post(ENDPOINTS.AUTH.REGISTER, payload);
     const data = unwrap<any>(res, {});
     const token: string = data?.token || '';
@@ -611,6 +661,40 @@ export const getBlocks = async (state: string, district: string) => {
     };
 };
 
+/**
+ * THE MAP OF INDIA, not the map of who is staffed.
+ *
+ * `getStates`/`getDistricts`/`getBlocks` above read the ADMIN tree, which is
+ * the right answer for a registration form — an applicant may only choose a
+ * region somebody can review them in. It is the wrong answer for a search
+ * filter: a member looking for suppliers in Kerala should be able to ask, and
+ * on a database with one staffed state the dropdown offered one state.
+ *
+ * These three read `/regions/geography`, the canonical dataset the server
+ * already publishes, and return plain arrays of names.
+ */
+const geography = async (params: string): Promise<string[]> => {
+    try {
+        const res = await api.get(`/regions/geography${params}`);
+        const data = res?.data?.data || res?.data || {};
+        const rows = data.states || data.districts || data.blocks || [];
+        return Array.isArray(rows) ? rows.filter(Boolean).map(String) : [];
+    } catch {
+        return [];
+    }
+};
+
+export const listAllStates = () => geography('');
+
+export const listAllDistricts = (state: string) =>
+    (state ? geography(`?state=${encodeURIComponent(state)}`) : Promise.resolve([]));
+
+export const listAllBlocks = (state: string, district: string) => (
+    state && district
+        ? geography(`?state=${encodeURIComponent(state)}&district=${encodeURIComponent(district)}`)
+        : Promise.resolve([])
+);
+
 /** Pre-flight, so the user sees the problem before submitting the form. */
 export const validateRegion = async (state: string, district: string, block: string) =>
     unwrap<{ ok: boolean; reason: string; region: any }>(
@@ -657,8 +741,53 @@ export interface Certificate {
     member: {
         name: string; membershipNumber: string; email: string;
         block: string; district: string; state: string;
+        /** Members outside India: no region — the place and country instead. */
+        isInternational?: boolean; place?: string; country?: string;
     };
+    /** `annual` | `lifetime` | `''`. The client words it for display. */
+    membershipType: 'annual' | 'lifetime' | '';
     memberSince: string | null;
+    activatedAt: string | null;
+    /**
+     * When it lapses. NULL MEANS IT DOES NOT — a lifetime membership.
+     *
+     * Never render a null as a date. A certificate carrying an invented expiry
+     * is a lie with a number on it, and one carrying no end date at all reads
+     * as permanent, which an annual membership is not.
+     */
+    validUntil: string | null;
+    /**
+     * “2026-27” on a TAX certificate, `''` on the membership one.
+     *
+     * The financial year the exemption may be claimed against. Derived on the
+     * server from the same date as `validUntil`, so the two cannot disagree —
+     * and derived there rather than in each client, because the website and the
+     * mobile app computing it separately is how the two would come to print
+     * different years on the same document.
+     */
+    financialYear: string;
+    /**
+     * What was actually received — the TAX certificate only, `null` on the other.
+     *
+     * The exemption certificate is laid out as a Form 10BE, which names a sum
+     * and the transaction it arrived on.
+     *
+     * `amount` IS NULLABLE AND HAS TO BE TREATED SO. Both `paymentAmount` and
+     * `paymentId` were undeclared on the member schema for a long window and
+     * Mongoose strict mode dropped them on every payment in it, so a member
+     * activated then has a paid membership and no record of the sum. Filling
+     * that gap with a plausible figure would put a number on a tax document
+     * that nobody can reconcile against the books — the row is dropped instead.
+     */
+    contribution: {
+        /** Rupees. NULL when the platform has no record of the sum. */
+        amount: number | null;
+        /** The gateway's transaction id, or `''`. */
+        reference: string;
+        receivedOn: string | null;
+    } | null;
+    /** A quotable reference, stable for a given membership on a given day. */
+    reference: string;
     issuedAt: string;
     issuedBy: string;
 }
@@ -711,87 +840,231 @@ export const getMyApplications = async () =>
     unwrap<any[]>(await api.get(ENDPOINTS.APPLICATIONS.MINE), []);
 
 /**
+ * =========================================================================
+ * AN APPLICATION HAS ONE REVIEW, NOT THREE
+ * =========================================================================
+ *
+ * This section used to model a relay — Block signs, then District, then State —
+ * and everything below derived "how far along is it" from which tier had
+ * stamped its timestamp. That workflow is gone. An application is submitted to
+ * its Block, District and State admin at the same time and the first of them to
+ * decide decides it, so there is one review with three possible answers: being
+ * looked at, approved, refused.
+ *
+ * `normaliseStatus` is the browser's copy of the server's `normalizeStatus`.
+ * Live rows still carry `Pending-Block`, `pending_district_approval` and bare
+ * `approved`, and nothing rewrote them — every undecided spelling means the
+ * same thing now.
+ */
+const normaliseStatus = (value: any): 'Pending' | 'Approved' | 'Rejected' => {
+    const key = String(value || '').trim().toLowerCase().replace(/[\s_\-.]/g, '');
+    if (key === 'rejected' || key === 'declined') return 'Rejected';
+    if (key === 'approved' || key === 'stateapproved' || key === 'complete' || key === 'completed') {
+        return 'Approved';
+    }
+    return 'Pending';
+};
+
+/**
  * Pick the application a member should be shown.
  *
  * The most *advanced* one, not simply the newest. A member can hold more than
  * one row — a resubmission, or a legacy duplicate — and sorting by date can put
- * a stale `Pending-Block` record in front of one that has already reached the
- * State tier. The status screen would then tell someone their application had
- * not been looked at when it was one approval from done.
+ * an untouched record in front of one that has already been decided. The status
+ * screen would then tell someone their application had not been looked at when
+ * it had been approved.
+ *
+ * Three tiers of "advanced" collapsed to two: decided beats undecided. An
+ * approval leads because it is the answer the member is waiting for, and a
+ * rejection ranks above an untouched row for the same reason — a decision is
+ * news and a blank is not.
  */
 export const pickMostAdvancedApplication = (list: any[]): any | null => {
     if (!Array.isArray(list) || list.length === 0) return null;
     return (
-        list.find((a) => a?.status === 'Approved') ||
-        list.find((a) => a?.status === 'Pending-State') ||
-        list.find((a) => a?.status === 'Pending-District') ||
+        list.find((a) => normaliseStatus(a?.status) === 'Approved') ||
+        list.find((a) => normaliseStatus(a?.status) === 'Rejected') ||
         list[0]
     );
 };
 
 /**
- * Which tiers have signed off.
+ * Where the application stands.
  *
- * Derived from the status AND the timestamps, because either alone is
- * incomplete: a file at `Pending-State` has necessarily cleared Block and
- * District even if an older row never recorded those timestamps, and a
- * timestamp proves a tier signed off regardless of where the file sits now.
+ * `isApproved` reads the status first and the timestamp second, because either
+ * alone is incomplete: a legacy row may carry `stateApprovedAt` with a
+ * lowercase status, and a row approved today carries both.
+ *
+ * THE THREE TIER FLAGS ARE KEPT AND ALL THREE NOW MEAN "APPROVED". They are
+ * read by four screens and by the mobile app, and "which tiers have signed off"
+ * is not a fact about a file any more — one tier signs and the review is over.
+ * Leaving them to mean three different things would make `isBlockApproved` true
+ * while the member's application had not been approved at all, and those
+ * screens print exactly that as progress.
  */
 export const deriveApprovalFlags = (app: any) => {
-    const status = app?.status || '';
-    const isBlockApproved =
-        status === 'Approved' ||
-        status === 'Pending-State' ||
-        status === 'Pending-District' ||
-        !!app?.blockApprovedAt;
-    const isDistrictApproved =
-        status === 'Approved' || status === 'Pending-State' || !!app?.districtApprovedAt;
-    const isStateApproved = status === 'Approved' || !!app?.stateApprovedAt;
+    const status = normaliseStatus(app?.status);
+    /*
+     * APPROVED MEANS THE STATE APPROVED, and `status` already says so — the
+     * server writes it for the State and for nobody else.
+     *
+     * `|| !!app?.stateApprovedAt` used to be here and had to go. That field is
+     * stamped by EVERY approval whoever made it, because it is the one place
+     * the member screens read "the day this was approved" from. As a test of
+     * whether the application was granted it answered yes for a file a Block
+     * admin had merely endorsed.
+     */
+    const isApproved = status === 'Approved';
+    const isRejected = status === 'Rejected';
+    const isUnderReview = !!app && !isApproved && !isRejected;
 
-    return { isBlockApproved, isDistrictApproved, isStateApproved, isRejected: status === 'Rejected' };
+    const v = (tier: 'block' | 'district' | 'state') => tierVerdict(app, tier);
+
+    return {
+        isApproved,
+        isRejected,
+        isUnderReview,
+        // Per tier now, and genuinely different from one another.
+        isBlockApproved: v('block') === 'approved',
+        isDistrictApproved: v('district') === 'approved',
+        isStateApproved: v('state') === 'approved',
+    };
+};
+
+/**
+ * One tier's verdict on an application, for the applicant's own screens.
+ *
+ * READ FROM THE SERVER'S ANSWER (`tierReviews`) whenever it is there — the rule
+ * lives in `backend/src/modules/common/tierReviews.js` and
+ * `getUserApplications` resolves it before sending. The fallbacks below are for
+ * a payload from an older build only, and they follow the same rule:
+ *
+ *   - `blockApprovedAt` / `districtApprovedAt` are trustworthy. Both previous
+ *     workflows wrote them only when that tier itself acted.
+ *   - `stateApprovedAt` IS NOT, and is deliberately absent. Every approval
+ *     stamps it, so reading it as the State's verdict would credit the State
+ *     with every decision a Block or District admin ever made.
+ */
+export const tierVerdict = (
+    app: any,
+    tier: 'block' | 'district' | 'state',
+): 'pending' | 'approved' | 'rejected' => {
+    const served = app?.tierReviews?.[tier]?.decision;
+    if (served === 'approved' || served === 'rejected') return served;
+    if (served === 'pending') return 'pending';
+
+    if (tier === 'block' && app?.blockApprovedAt) return 'approved';
+    if (tier === 'district' && app?.districtApprovedAt) return 'approved';
+
+    const signer = String(
+        normaliseStatus(app?.status) === 'Rejected'
+            ? app?.rejectedBy?.adminType
+            : app?.approvedBy?.adminType
+        || '',
+    );
+    const SEAT: Record<string, string> = {
+        BlockAdmin: 'block', DistrictAdmin: 'district',
+        StateAdmin: 'state', SuperAdmin: 'state',
+    };
+    // An approval with no attribution at all predates the field; the State is
+    // the only tier that could have granted it.
+    const seat = SEAT[signer] || (normaliseStatus(app?.status) === 'Approved' && !app?.approvedBy ? 'state' : '');
+    if (seat && seat === tier) {
+        return normaliseStatus(app?.status) === 'Rejected' ? 'rejected' : 'approved';
+    }
+    return 'pending';
+};
+
+/** Who signed one tier's verdict, for the line under that stage. */
+export const tierDecidedByLabel = (app: any, tier: 'block' | 'district' | 'state'): string => {
+    const LABELS: Record<string, string> = {
+        BlockAdmin: 'Block Admin',
+        DistrictAdmin: 'District Admin',
+        StateAdmin: 'State Admin',
+        SuperAdmin: 'ACTIV Head Office',
+    };
+    const served = app?.tierReviews?.[tier];
+    if (served?.adminType) return LABELS[String(served.adminType)] || '';
+    if (tierVerdict(app, tier) === 'pending') return '';
+    return LABELS[`${tier[0].toUpperCase()}${tier.slice(1)}Admin`] || '';
+};
+
+/** When one tier decided, for the date under that stage. */
+export const tierDecidedAt = (app: any, tier: 'block' | 'district' | 'state'): string | null => {
+    const served = app?.tierReviews?.[tier]?.decidedAt;
+    if (served) return served;
+    if (tier === 'block') return app?.blockApprovedAt || null;
+    if (tier === 'district') return app?.districtApprovedAt || null;
+    return app?.approvedBy?.approvedAt || app?.rejectedBy?.rejectedAt || app?.stateApprovedAt || null;
+};
+
+/** Who signed the decision, for the line under it. `''` when nobody has. */
+export const decidedByLabel = (app: any): string => {
+    const LABELS: Record<string, string> = {
+        BlockAdmin: 'Block Admin',
+        DistrictAdmin: 'District Admin',
+        StateAdmin: 'State Admin',
+        SuperAdmin: 'ACTIV Head Office',
+    };
+    const status = normaliseStatus(app?.status);
+    if (status === 'Rejected') return LABELS[String(app?.rejectedBy?.adminType || '')] || '';
+    if (status === 'Approved') return LABELS[String(app?.approvedBy?.adminType || '')] || '';
+    return '';
 };
 
 export type TimelineStageStatus = 'pending' | 'in_progress' | 'approved' | 'rejected';
 
 /**
- * One tier's state on the review timeline.
+ * A stage's state on the timeline.
  *
- * A rejection belongs to the first tier that had not yet approved — that is the
- * tier that must have refused it, and it is what `rejectedBy.adminType` records
- * on the server.
+ * ONE ANSWER PER TIER. Each of the Block, District and State admin records
+ * their own verdict, so the three rows genuinely differ and the rail can show
+ * an applicant what each of their admins has said.
+ *
+ * This briefly gave every key the same answer, which was right while the three
+ * tiers shared one verdict and became wrong the moment they stopped. What it
+ * must never go back to is the RELAY reading — one row "In Review" and two
+ * "Waiting" — because nobody is queued behind anybody: all three hold the file
+ * from the day it is submitted. An undecided tier is `in_progress`, not
+ * `pending`.
  */
 export const timelineStageStatus = (
-    stage: 'block' | 'district' | 'state',
+    stage: 'review' | 'block' | 'district' | 'state',
     app: any,
 ): TimelineStageStatus => {
-    const f = deriveApprovalFlags(app);
+    if (!app) return 'pending';
 
-    if (f.isRejected) {
-        if (stage === 'block' && !f.isBlockApproved) return 'rejected';
-        if (stage === 'district' && f.isBlockApproved && !f.isDistrictApproved) return 'rejected';
-        if (stage === 'state' && f.isDistrictApproved && !f.isStateApproved) return 'rejected';
+    // `review` is the whole-application question, kept for callers that show a
+    // single row.
+    if (stage === 'review') {
+        const f = deriveApprovalFlags(app);
+        if (f.isRejected) return 'rejected';
+        if (f.isApproved) return 'approved';
+        return 'in_progress';
     }
 
-    if (stage === 'block') {
-        if (f.isBlockApproved) return 'approved';
-        return app?.status === 'Pending-Block' ? 'in_progress' : 'pending';
-    }
-    if (stage === 'district') {
-        if (f.isDistrictApproved) return 'approved';
-        return app?.status === 'Pending-District' && f.isBlockApproved ? 'in_progress' : 'pending';
-    }
-    if (stage === 'state') {
-        if (f.isStateApproved) return 'approved';
-        return app?.status === 'Pending-State' && f.isDistrictApproved ? 'in_progress' : 'pending';
-    }
-    return 'pending';
+    const verdict = tierVerdict(app, stage);
+    if (verdict === 'approved') return 'approved';
+    if (verdict === 'rejected') return 'rejected';
+    /*
+     * Undecided, and IN REVIEW rather than "Waiting".
+     *
+     * All three tiers hold the file from the day it is submitted, so no tier is
+     * queued behind another. "Waiting" belonged to the relay, where two of the
+     * three rows described a turn that had not come round yet.
+     */
+    return 'in_progress';
 };
 
 /**
- * The three-tier review timeline for the member's own application.
+ * The review timeline for the member's own application.
  *
  * Same derivation the mobile app uses, so both clients tell an applicant the
  * same story about where their file is.
+ *
+ * Three review stages — Block, District, State — because each tier records its
+ * own verdict and an applicant is entitled to see all three. Only the State's
+ * approval grants the membership; the two beneath it are endorsements.
  */
 export const getApplicationTimeline = async () => {
     const app = pickMostAdvancedApplication(await getMyApplications());
@@ -801,26 +1074,18 @@ export const getApplicationTimeline = async () => {
 
     return {
         application: { ...app, ...flags },
-        stages: [
-            {
-                key: 'block' as const,
-                title: 'Block Review',
-                status: timelineStageStatus('block', app),
-                reviewDate: app.blockApprovedAt || null,
-            },
-            {
-                key: 'district' as const,
-                title: 'District Review',
-                status: timelineStageStatus('district', app),
-                reviewDate: app.districtApprovedAt || null,
-            },
-            {
-                key: 'state' as const,
-                title: 'State Review',
-                status: timelineStageStatus('state', app),
-                reviewDate: app.stateApprovedAt || null,
-            },
-        ],
+        stages: ([
+            { key: 'block', title: 'Block Admin Review' },
+            { key: 'district', title: 'District Admin Review' },
+            { key: 'state', title: 'State Admin Approval' },
+        ] as const).map(stage => ({
+            key: stage.key,
+            title: stage.title,
+            status: timelineStageStatus(stage.key, app),
+            reviewDate: tierDecidedAt(app, stage.key),
+            decidedBy: tierDecidedByLabel(app, stage.key),
+        })),
+        decidedBy: decidedByLabel(app),
         rejectionReason: app.rejectionReason || '',
         rejectedBy: app.rejectedBy?.adminType || '',
     };
@@ -901,12 +1166,11 @@ export const memberAction = async (id: string, action: 'activate' | 'suspend' | 
 /**
  * Approve or reject, keeping the server's own sentence.
  *
- * The API answers with the outcome in words — "Application approved. Forwarded
- * to District Admin.", or "Member profile created successfully." at the last
- * tier — and `unwrap` returns only `data`, so every caller was throwing that
- * away and inventing its own "Approved". The message is the one place that
- * knows WHERE the file went, which is exactly what an admin wants told back to
- * them after pressing the button.
+ * The API answers with the outcome in words — "Application approved by the
+ * Block Admin. Member profile created." — and `unwrap` returns only `data`, so
+ * every caller was throwing that away and inventing its own "Approved". The
+ * message is the one place that names which tier the decision was recorded
+ * under, which matters now that any of the three could have made it.
  */
 export const approveApplication = async (id: string) => {
     const res = await api.post(ENDPOINTS.APPLICATIONS.APPROVE(id), {});
@@ -918,7 +1182,14 @@ export const rejectApplication = async (id: string, rejectionReason: string) => 
     return { ...unwrap<any>(res, {}), message: res?.data?.message || '' };
 };
 
-/** Explicit per-tier review, when the caller wants to name the tier. */
+/**
+ * Explicit per-tier review, when the caller wants to name the tier.
+ *
+ * The tier no longer decides WHETHER the caller may act — every tier covering
+ * the applicant's region can decide a pending application — only which of them
+ * the decision is recorded under. The endpoints stay role-gated, so this cannot
+ * be used to sign a decision as a tier the caller is not.
+ */
 export const reviewApplication = async (
     id: string,
     tier: 'block' | 'district' | 'state',
@@ -1013,7 +1284,7 @@ export const getApplicationProfile = async (applicationId: string) => {
 };
 
 /**
- * The four-stage approval record the admin screens render.
+ * The approval record the admin screens render — one review, then payment.
  *
  * Built from the server's `Applicant` shape, which already carries the tier
  * bucketing and every approval timestamp. The pages used to derive this
@@ -1024,7 +1295,7 @@ export const getApplicationProfile = async (applicationId: string) => {
  */
 export interface ApprovalStage {
     id: number;
-    key: 'block' | 'district' | 'state' | 'payment';
+    key: 'review' | 'payment';
     title: string;
     reviewer: string;
     status: 'Approved' | 'Rejected' | 'Under Review' | 'Pending';
@@ -1041,63 +1312,66 @@ export interface ApplicationRecord {
     stages: ApprovalStage[];
     memberData: Record<string, any>;
     profile: Applicant;
-    /** The server's own per-tier bucket: pending | approved | rejected | upstream | closed. */
+    /** The server's own bucket: pending | approved | rejected. */
     bucket: string;
     orphaned: boolean;
     fallbackReason: string;
 }
 
+/*
+ * Two positions, not four: under review, or decided.
+ *
+ * The four were the relay's rungs. Anything still pending — however it is
+ * spelled in the collection — sits at 1, and an approval goes straight to the
+ * payment step, because approval IS the end of the review.
+ */
 const STATUS_TO_STAGE: Record<string, number> = {
-    'Pending-Block': 1,
-    'Pending-District': 2,
-    'Pending-State': 3,
-    Approved: 4,
+    Pending: 1,
+    Approved: 2,
     Rejected: 1,
 };
 
 /** Turn one server `Applicant` into the record the approval screens render. */
 export const toApplicationRecord = (a: any): ApplicationRecord => {
-    const status = a?.status || 'Pending-Block';
+    const status = normaliseStatus(a?.status);
     const currentStage = STATUS_TO_STAGE[status] ?? 1;
-    const rejectedBy = a?.rejectedBy?.adminType || '';
 
-    // A tier is Approved once its timestamp exists — that is the fact the
-    // server records. "Under Review" belongs only to the tier now holding it.
-    const stageFor = (
-        index: number,
-        key: ApprovalStage['key'],
-        title: string,
-        reviewer: string,
-        approvedAt: string | null,
-        rejectorType: string,
-    ): ApprovalStage => {
-        let stageStatus: ApprovalStage['status'] = 'Pending';
-        if (approvedAt) stageStatus = 'Approved';
-        else if (status === 'Rejected' && rejectedBy === rejectorType) stageStatus = 'Rejected';
-        else if (currentStage === index && status !== 'Rejected') stageStatus = 'Under Review';
+    /*
+     * WHO the review belongs to, named from the region rather than the tier.
+     *
+     * There is one review row now and three admins standing behind it, so an
+     * undecided row names the region — which is what the applicant recognises
+     * anyway — and a decided one names the tier that actually signed it.
+     */
+    const decidedBy = decidedByLabel(a);
+    const region = [a?.block, a?.district, a?.state].filter(Boolean).join(', ');
 
-        return {
-            id: index,
-            key,
-            title,
-            reviewer,
-            status: stageStatus,
-            reviewDate: approvedAt || (stageStatus === 'Rejected' ? a?.rejectedBy?.rejectedAt || null : null),
-            notes: stageStatus === 'Rejected' ? a?.rejectionReason || '' : '',
-        };
-    };
+    const reviewStatus: ApprovalStage['status'] =
+        status === 'Rejected' ? 'Rejected'
+            : status === 'Approved' ? 'Approved'
+                : 'Under Review';
 
     const stages: ApprovalStage[] = [
-        stageFor(1, 'block', 'Block Review', `${a?.block || 'Block'} Admin`, a?.blockApprovedAt || null, 'BlockAdmin'),
-        stageFor(2, 'district', 'District Review', `${a?.district || 'District'} Admin`, a?.districtApprovedAt || null, 'DistrictAdmin'),
-        stageFor(3, 'state', 'State Review', `${a?.state || 'State'} Admin`, a?.stateApprovedAt || null, 'StateAdmin'),
         {
-            id: 4,
+            id: 1,
+            key: 'review',
+            title: 'Application Review',
+            reviewer: decidedBy || (region ? `${region} Admins` : 'Block, District and State Admin'),
+            status: reviewStatus,
+            reviewDate: status === 'Approved'
+                ? (a?.stateApprovedAt || a?.districtApprovedAt || a?.blockApprovedAt || null)
+                : status === 'Rejected'
+                    ? (a?.rejectedBy?.rejectedAt || null)
+                    : null,
+            notes: status === 'Rejected' ? a?.rejectionReason || '' : '',
+        },
+        {
+            id: 2,
             key: 'payment',
             title: 'Payment',
             reviewer: 'Member',
-            // Approval is not payment: a fully approved application still sits
-            // at membershipStatus 'pending' until the member pays.
+            // Approval is not payment: an approved application still sits at
+            // membershipStatus 'pending' until the member pays.
             status: status === 'Approved' ? 'Under Review' : 'Pending',
             reviewDate: null,
             notes: '',
@@ -1136,9 +1410,9 @@ export const toApplicationRecord = (a: any): ApplicationRecord => {
  * Every application this admin can see, already mapped.
  *
  * Reads the tier dashboard rather than `/applications`: the dashboard is
- * geofenced to the admin's own region and the buckets are computed server-side,
- * where the rule that the same application shows a different stage to each tier
- * actually lives.
+ * geofenced to the admin's own region, which is the whole of what decides who
+ * may see an application, and the buckets are computed server-side so the three
+ * tiers cannot disagree about one file.
  */
 export const getAdminApplications = async (): Promise<ApplicationRecord[]> => {
     const dashboard = await getAdminDashboard();
@@ -1270,6 +1544,74 @@ export const getAdminAnalytics = async (period = 'month') =>
 export const generateReport = async (options: Record<string, any> = {}) =>
     unwrap<any>(await api.post(ENDPOINTS.ADMIN.REPORTS, options), {});
 
+// ---- notification delivery oversight (super admin) -------------------------
+
+/** One row of the delivery log. */
+export interface NotificationLogRow {
+    _id: string;
+    event: string;
+    channel: 'in_app' | 'email' | 'whatsapp';
+    recipient: string;
+    sender?: string;
+    replyTo?: string;
+    templateId?: string;
+    subject?: string;
+    status: 'queued' | 'sent' | 'failed';
+    /**
+     * The provider was never contacted — no credentials are configured.
+     *
+     * Deliberately separate from `status`. A mock row is a successful no-op, and
+     * collapsing it into `sent` would tell a Super Admin that members were
+     * emailed on a deployment with no mail server at all.
+     */
+    mock?: boolean;
+    providerMessageId?: string;
+    lastError?: string;
+    attempts?: number;
+    data?: any;
+    createdAt: string;
+}
+
+export interface NotificationHealth {
+    sent: number; failed: number; queued: number; mock: number; total: number;
+}
+
+export interface DeliveryStatus {
+    email: {
+        configured: boolean; host: string | null; user: string | null;
+        from: string; regionalFrom: boolean; supportAddress: string;
+        verification?: { ok: boolean; configured: boolean; error?: string };
+    };
+    whatsapp: {
+        configured: boolean; baseUrl: string; templateEndpoint: string;
+        textEndpoint: string; authStyle: string;
+        webhookConfigured: boolean; webhookUrl: string;
+    };
+}
+
+export const getNotificationLogs = async (params: Record<string, any> = {}) =>
+    unwrap<{ logs: NotificationLogRow[]; health: NotificationHealth; pagination: any }>(
+        await api.get(ENDPOINTS.NOTIFICATIONS.LOGS, { params }),
+        { logs: [], health: { sent: 0, failed: 0, queued: 0, mock: 0, total: 0 }, pagination: {} }
+    );
+
+export const getDeliveryStatus = async (verifyEmail = false) =>
+    unwrap<DeliveryStatus>(
+        await api.get(ENDPOINTS.NOTIFICATIONS.DELIVERY_STATUS, {
+            params: verifyEmail ? { verifyEmail: '1' } : {}
+        }),
+        null as any
+    );
+
+export const retryNotification = async (id: string) =>
+    unwrap<NotificationLogRow>(await api.post(ENDPOINTS.NOTIFICATIONS.RETRY(id), {}), null as any);
+
+export const previewRegionRouting = async (region: Record<string, string>) =>
+    unwrap<any>(await api.get(ENDPOINTS.NOTIFICATIONS.ROUTING_PREVIEW, { params: region }), null as any);
+
+export const sendTestNotification = async (channel: 'email' | 'whatsapp', to: string) =>
+    unwrap<any>(await api.post(ENDPOINTS.NOTIFICATIONS.TEST_SEND, { channel, to }), null as any);
+
 // ---- super admin -----------------------------------------------------------
 
 export const getSuperOverview = async () => unwrap<any>(await api.get(ENDPOINTS.ADMIN.SUPER_OVERVIEW), {});
@@ -1292,26 +1634,11 @@ export const previewAdminRemoval = async (id: string) =>
 export const suggestAdminRegions = async (params: Record<string, any> = {}) =>
     unwrap<any>(await api.get(ENDPOINTS.ADMIN.SUPER_ADMIN_REGIONS, { params }), {});
 /*
- * The same six calls, for a district or state admin staffing the regions
- * beneath them.
- *
- * Separate functions rather than a flag on the six above, so the super admin's
- * screen keeps calling the endpoints it always called and cannot be affected by
- * a change made for another tier. The server enforces the delegation either
- * way; this split is about blast radius, not about permission.
+ * The six `listTeamAdmins` / `createTeamAdmin` / … calls were here, for a
+ * district or state admin staffing the regions beneath them. Admin accounts are
+ * the Super Admin's now — the screen, the routes and the endpoints all went
+ * together, so there is nothing left for them to call.
  */
-export const listTeamAdmins = async (params: Record<string, unknown> = {}) =>
-    unwrap<any>(await api.get(ENDPOINTS.ADMIN.TEAM_ADMINS, { params }), {});
-export const createTeamAdmin = async (payload: Record<string, unknown>) =>
-    unwrap<any>(await api.post(ENDPOINTS.ADMIN.TEAM_ADMINS, payload), {});
-export const updateTeamAdmin = async (id: string, payload: Record<string, unknown>) =>
-    unwrap<any>(await api.put(ENDPOINTS.ADMIN.TEAM_ADMIN_BY_ID(id), payload), {});
-export const deleteTeamAdmin = async (id: string) =>
-    unwrap<any>(await api.delete(ENDPOINTS.ADMIN.TEAM_ADMIN_BY_ID(id)), {});
-export const previewTeamAdminRemoval = async (id: string) =>
-    unwrap<any>(await api.get(ENDPOINTS.ADMIN.TEAM_ADMIN_REMOVAL_PREVIEW(id)), {});
-export const suggestTeamAdminRegions = async (params: Record<string, unknown> = {}) =>
-    unwrap<any>(await api.get(ENDPOINTS.ADMIN.TEAM_ADMIN_REGIONS, { params }), {});
 
 export const bulkTemplate = async () => unwrap<any>(await api.get(ENDPOINTS.ADMIN.SUPER_BULK_TEMPLATE), {});
 export const bulkValidate = async (csv: string) =>
@@ -1557,4 +1884,99 @@ export const deleteMembershipPlan = async (key: string) =>
     unwrap<{ deleted: boolean; key: string; name: string; orders: number }>(
         await api.delete(`/admin/super/membership/plans/${encodeURIComponent(key)}`),
         { deleted: false, key, name: '', orders: 0 },
+    );
+
+
+/* ------------------------------------------------------------------ */
+/* TRUST LIST, and the member-facing company page                      */
+/* ------------------------------------------------------------------ */
+
+/** One product as it appears on a company's member-facing page. */
+export interface PublicProduct {
+    _id: string;
+    name?: string;
+    category?: string;
+    price?: number;
+    stock?: number;
+    sku?: string;
+    description?: string;
+    imageUrl?: string;
+    isFeatured?: boolean;
+}
+
+/**
+ * A company through the server's public whitelist.
+ *
+ * There is no PAN, GSTIN, turnover or registration number on this type, and
+ * there must not be: the fields are chosen by `PUBLIC_FIELDS` in
+ * `business.controller.js` and this interface is the client's copy of that
+ * decision. Widening it here would not add the data — it would add a field that
+ * is always `undefined` and read, wrongly, as one the server forgot to send.
+ */
+export interface PublicCompany {
+    _id: string;
+    businessName?: string;
+    businessType?: string;
+    description?: string;
+    businessActivities?: string;
+    constitutionType?: string;
+    numberOfEmployees?: string;
+    productCategories?: { code?: string; description?: string; industryType?: string }[];
+    memberOfOtherChamber?: boolean;
+    otherChamber?: string;
+    mobileNumber?: string;
+    email?: string;
+    area?: string;
+    location?: string;
+    logo?: string;
+    /** The cover image across the top of the public profile. */
+    banner?: string;
+    /** The bodies ticked and the schemes availed. Never the numbers. */
+    govtRegistrations?: string[];
+    govtSchemes?: string[];
+    status?: string;
+    isActive?: boolean;
+    createdAt?: string;
+    products?: PublicProduct[];
+    /** How many members keep this company on their trust list. */
+    trustedBy?: number;
+    /** Whether the CALLER does. Two different questions, both needed. */
+    isTrusted?: boolean;
+    /** True when the viewer owns it — the page says so rather than pretending. */
+    isOwner?: boolean;
+    /** Only on trust-list rows. */
+    trustedAt?: string;
+    note?: string;
+}
+
+/** A company as the rest of the network sees it. */
+export const getPublicCompany = async (id: string) =>
+    unwrap<PublicCompany | null>(
+        await api.get(`/business-profiles/public/${encodeURIComponent(id)}`),
+        null,
+    );
+
+/** The member's trust list, newest first, as full company cards. */
+export const getTrustList = async () =>
+    unwrap<PublicCompany[]>(await api.get('/business-profiles/trust-list'), []);
+
+/**
+ * Just the ids.
+ *
+ * Discover renders up to 200 cards and each needs to know whether its company
+ * is already trusted. One request for the whole set, not one per card.
+ */
+export const getTrustListIds = async () =>
+    unwrap<string[]>(await api.get('/business-profiles/trust-list/ids'), []);
+
+export const addToTrustList = async (companyId: string, note = '') =>
+    unwrap<{ companyId: string; isTrusted: boolean; trustedBy: number }>(
+        await api.post(`/business-profiles/trust-list/${encodeURIComponent(companyId)}`, { note }),
+        { companyId, isTrusted: true, trustedBy: 0 },
+    );
+
+export const removeFromTrustList = async (companyId: string) =>
+    unwrap<{ companyId: string; isTrusted: boolean; trustedBy: number }>(
+        await api.delete(`/business-profiles/trust-list/${encodeURIComponent(companyId)}`),
+        { companyId, isTrusted: false, trustedBy: 0 },
     );

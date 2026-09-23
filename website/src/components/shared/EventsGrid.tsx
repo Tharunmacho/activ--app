@@ -5,7 +5,7 @@ import { getCmsEvents, getEventsSettings, type CmsEvent, type EventsSettings } f
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
 import { Reveal } from '@/components/shared/Reveal';
 import { Tilt3D } from '@/components/shared/Tilt3D';
-import { PAGE_CONTAINER } from '@/components/layout/pageContainer';
+import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
 import {
     SECTION_HEADING, CARD_TITLE, CARD_BODY, MICRO_LABEL, EYEBROW,
 } from '@/components/layout/typography';
@@ -66,8 +66,8 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
 
     if (isLoading) {
         return (
-            <section className="w-full py-24 bg-[#fafbfc]">
-                <div className={`${PAGE_CONTAINER} animate-pulse`}>
+            <section className="w-full py-24 dot-band">
+                <div className={`${SCREEN_CONTAINER} animate-pulse`}>
                     <div className="flex flex-col items-center text-center mb-16 space-y-6">
                         <div className="h-6 bg-slate-200 rounded w-24"></div>
                         <div className="h-10 bg-slate-200 rounded w-1/2"></div>
@@ -93,9 +93,52 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
     // every page load before the real list arrives.
     if (events === null) return null;
 
-    const cap = limit ?? settings?.homeLimit ?? 0;
-    const visible = cap > 0 ? events.slice(0, cap) : events;
-    const hasMore = cap > 0 && events.length > cap;
+    /*
+     * ======================================================================
+     * THE SAME EVENTS AS /events — NO SWITCH, NO SEPARATE LIST
+     * ======================================================================
+     *
+     * Every event on the events page is on the home page, and nothing else is.
+     * There used to be a per-event "home page" switch, set from two CMS
+     * screens, which let the two pages disagree about what is happening. It is
+     * gone: posting an event in the CMS puts it on both, and the rule here is
+     * the events page's own — upcoming only, with an undated event kept,
+     * because an unset date is missing information rather than a statement
+     * that it already happened (see `EventsExplorer`).
+     *
+     * The list is already the public one: `getCmsEvents` returns only
+     * published events the onboarding site may show.
+     */
+    const now = Date.now();
+    const forHome = events.filter((e) => {
+        /* The END, where one was given: a multi-day event belongs on the home
+           page until its last day is over, not until its first is. */
+        const finish = e?.endAt || e?.startAt;
+        const start = finish ? new Date(finish).getTime() : NaN;
+        return Number.isNaN(start) || start >= now;
+    });
+
+    /*
+     * EVERY ONE THAT IS SWITCHED ON, however many that is.
+     *
+     * There was a `homeLimit` here, capping this at three. An editor who
+     * switched five events on got three of them and nothing anywhere said
+     * which two had been dropped — the switch they were using was being
+     * overruled by a number on another card. One control, one answer.
+     *
+     * `limit` survives as a PROP because a caller may still ask for a
+     * short strip in a narrow place; nothing passes it today.
+     */
+    const visible = limit && limit > 0 ? forHome.slice(0, limit) : forHome;
+
+    /*
+     * "See all events" counts against the WHOLE list, not the home list.
+     *
+     * An editor who puts three events on the home page out of nine has nine
+     * to see on /events, and hiding the button because the strip is full
+     * would be the CMS deciding there is nothing more to show.
+     */
+    const hasMore = events.length > visible.length;
 
     const heading = settings?.heading || '';
     // The heading is stored in two halves so the Events page's hero can set the
@@ -110,8 +153,8 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
     if (!visible.length && !heading && !headingHighlight && !settings?.emptyText) return null;
 
     return (
-        <section className="w-full py-24 bg-[#fafbfc]">
-            <div className={PAGE_CONTAINER}>
+        <section className="w-full py-24 dot-band">
+            <div className={SCREEN_CONTAINER}>
 
                 {(badge || heading || headingHighlight || subtitle) && (
                     <Reveal className="flex flex-col items-center text-center mb-16">
@@ -133,7 +176,7 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                         {subtitle && (
                             <div className="flex items-center space-x-4">
                                 <div className="h-px w-10 bg-brand-300" />
-                                <span className="text-base font-semibold text-gray-500 lowercase tracking-wider">
+                                <span className="text-[1.25rem] font-semibold text-gray-500 lowercase tracking-wider">
                                     {subtitle}
                                 </span>
                                 <div className="h-px w-10 bg-brand-300" />
@@ -173,13 +216,26 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                                 )}
 
                                 <div className="p-8 flex flex-col flex-grow">
-                                    {formatDate(event.startAt) && (
-                                        <p className={`${MICRO_LABEL} text-brand-500 mb-4`}>
-                                            {formatDate(event.startAt)}
-                                        </p>
-                                    )}
+                                    {/*
+                                      * ALWAYS DRAWN, even with no date on the
+                                      * event.
+                                      *
+                                      * Two reasons, and they agree. A card that
+                                      * omits the line starts its title where its
+                                      * neighbour's date sits, so a row of three
+                                      * has three different first baselines. And
+                                      * an undated event is a real thing here —
+                                      * no field on the event form is required —
+                                      * so the card says which it is rather than
+                                      * leaving a corner missing, which reads as
+                                      * a render fault.
+                                      */}
+                                    <p className={`${MICRO_LABEL} text-brand-500 mb-4`}>
+                                        {formatDate(event.startAt) || 'Date to be confirmed'}
+                                    </p>
 
-                                    <h3 className={`${CARD_TITLE} text-brand-800 ${
+                                    <h3 className={`${CARD_TITLE} text-balance line-clamp-2 min-h-[2.4em]
+                                                    text-brand-800 ${
                                         event.description ? 'mb-3' : 'mb-8 flex-grow'
                                     }`}>
                                         {event.title}
@@ -188,7 +244,8 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                                     {/* Was captured in the CMS and rendered nowhere, which made it
                                         a field that quietly did nothing. */}
                                     {event.description && (
-                                        <p className={`${CARD_BODY} text-gray-500 mb-8 flex-grow line-clamp-3`}>
+                                        <p className={`${CARD_BODY} text-gray-500 mb-8 flex-grow line-clamp-3
+                                                       min-h-[4.9em]`}>
                                             {event.description}
                                         </p>
                                     )}
@@ -200,7 +257,7 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                                                 <MapPin size={18} className="text-brand-600" />
                                             </div>
                                             <div className="min-w-0">
-                                                <p className="text-[0.8125rem] font-bold text-brand-800 truncate pr-2">Location</p>
+                                                <p className="text-[1rem] font-bold text-brand-800 truncate pr-2">Location</p>
                                                 <p className={`${MICRO_LABEL} text-gray-500 truncate pr-2`}>
                                                     {event.location || '—'}
                                                 </p>
@@ -231,7 +288,7 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                         <Link
                             to={settings.viewAllHref || '/events'}
                             className="border-2 border-gray-200 hover:border-brand-800 text-gray-600 hover:text-brand-800
-                                       px-8 py-3.5 rounded-full font-bold text-[0.8125rem] uppercase tracking-[0.1em] transition-colors"
+                                       px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase tracking-[0.1em] transition-colors"
                         >
                             {settings.viewAllLabel}
                         </Link>

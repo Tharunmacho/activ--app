@@ -2,20 +2,22 @@ import { useEffect, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import {
     getContactInfo, updateContactInfo, errorMessage,
-    EMPTY_MEDIA, type ContactInfo, type CmsMedia,
+    EMPTY_MEDIA, EMPTY_CONTACT, type ContactInfo, type CmsMedia, type CmsSectionOverride,
 } from '@/services/cmsApi';
 import {
-    CmsCard,
     CmsField,
     CmsInput,
     CmsTextarea,
-    SaveButton,
     CmsLoading,
     CmsError,
     cmsSaved,
     cmsFailed,
     CmsPage,
     CmsSection,
+    CmsSteps,
+    CmsStep,
+    SaveNowProvider,
+    SectionToolsProvider,
 } from './components/CmsUI';
 import { LineList, IconPicker , ExtraFieldsEditor } from './components/CmsEditors';
 import MediaPicker from './components/MediaPicker';
@@ -35,6 +37,8 @@ export default function ContactManager() {
     const [info, setInfo] = useState<ContactInfo | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    /* Whether there is anything to save. Set by `set`; cleared on a save. */
+    const [dirty, setDirty] = useState(false);
     const [error, setError] = useState('');
     const [saved, setSaved] = useState('');
 
@@ -52,8 +56,7 @@ export default function ContactManager() {
 
     useEffect(() => { load(); }, []);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = async () => {
         if (!info) return;
         setSaving(true);
         setError('');
@@ -75,27 +78,47 @@ export default function ContactManager() {
     if (loading) return <CmsLoading label="Loading contact page…" />;
     if (!info) return <CmsError message={error || 'No content'} onRetry={load} />;
 
-    const set = (patch: Partial<ContactInfo>) => setInfo({ ...info, ...patch });
+    const set = (patch: Partial<ContactInfo>) => {
+        setInfo({ ...info, ...patch });
+        setDirty(true);
+    };
+
+    /* Removing a card, or adding a field to one — see `SectionToolsProvider`. */
+    const setSections = (sections: CmsSectionOverride[]) => set({ sections });
     const setForm = (patch: Partial<ContactInfo['formCard']>) => set({ formCard: { ...info.formCard, ...patch } });
     const setInfoCard = (patch: Partial<ContactInfo['infoCard']>) => set({ infoCard: { ...info.infoCard, ...patch } });
     const setBanner = (patch: Partial<ContactInfo['banner']>) => set({ banner: { ...info.banner, ...patch } });
+    const setBand = (patch: Partial<ContactInfo['regionsBand']>) => set({
+        regionsBand: { ...EMPTY_CONTACT.regionsBand, ...(info.regionsBand || {}), ...patch },
+    });
 
     const setHeroMedia = (index: number, media: CmsMedia) =>
         set({ heroMedia: info.heroMedia.map((m, i) => (i === index ? media : m)) });
 
+    /*
+     * ======================================================================
+     * NUMBERED CARDS, AND NO `<form>`
+     * ======================================================================
+     *
+     * Every card carries the save in its footer now, so there are six of
+     * them and one form cannot have six submits that mean the same thing.
+     * Enter in a text field no longer saves the page, which is what the rest
+     * of the CMS has always done.
+     */
     return (
-        <form onSubmit={handleSubmit} className="w-full">
+        <SaveNowProvider value={{ save: handleSubmit, saving, dirty }}>
+            <SectionToolsProvider value={{ sections: info.sections || [], onChange: setSections }}>
             <CmsPage>
             <CmsError message={error} onRetry={load} />
             {saved && (
-                <p className="text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/40
+                <p className="text-[1.1875rem] text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/40
                               border border-green-200 dark:border-green-900 rounded-lg px-4 py-2">
                     {saved}
                 </p>
             )}
 
             {/* ============================================== page heading */}
-            <CmsCard title="Page heading" description="The badge, title and paragraph at the top of /contact.">
+            <CmsStep sectionKey="contact.header" step="Section 1" title="Page heading" hint="The badge, title and paragraph at the top of /contact.">
                 <div className="space-y-5">
                     <div className="grid gap-4 md:grid-cols-[200px_1fr]">
                         <IconPicker value={info.badgeIcon} onChange={badgeIcon => set({ badgeIcon })} label="Badge icon" />
@@ -140,7 +163,7 @@ export default function ContactManager() {
                             <button
                                 type="button"
                                 onClick={() => set({ heroMedia: [...info.heroMedia, { ...EMPTY_MEDIA }] })}
-                                className="flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 shrink-0"
+                                className="flex items-center gap-1.5 text-[1.1875rem] text-blue-600 dark:text-blue-400 shrink-0"
                             >
                                 <Plus size={14} /> Add image
                             </button>
@@ -148,7 +171,7 @@ export default function ContactManager() {
                     >
 
                         {info.heroMedia.length === 0 ? (
-                            <p className="text-sm text-neutral-500 py-4 text-center border border-dashed
+                            <p className="text-[1.1875rem] text-neutral-500 py-4 text-center border border-dashed
                                           border-slate-300 dark:border-[#2a2a2a] rounded-lg">
                                 No images — the heading uses the full width.
                             </p>
@@ -157,7 +180,7 @@ export default function ContactManager() {
                                 {info.heroMedia.map((media, i) => (
                                     <div key={i} className="border border-slate-200 dark:border-[#2a2a2a] rounded-lg p-4">
                                         <div className="flex items-center justify-between mb-3">
-                                            <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                                            <span className="text-[1.0625rem] font-semibold uppercase tracking-wider text-neutral-400">
                                                 {i === 0 ? 'Large frame' : 'Small frame'}
                                             </span>
                                             <button
@@ -166,7 +189,7 @@ export default function ContactManager() {
                                                     if (!window.confirm('Remove this image from the heading?')) return;
                                                     set({ heroMedia: info.heroMedia.filter((_, x) => x !== i) });
                                                 }}
-                                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium
+                                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[1.0625rem] font-medium
                                                            text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30
                                                            hover:bg-red-500/10 transition-colors"
                                                 aria-label="Delete image"
@@ -186,10 +209,10 @@ export default function ContactManager() {
                         )}
                     </CmsSection>
                 </div>
-            </CmsCard>
+            </CmsStep>
 
             {/* ============================================== form card */}
-            <CmsCard title="Message form" description="The wording on the form card. The fields themselves are fixed — they are what the API accepts.">
+            <CmsStep sectionKey="contact.form" step="Section 2" title="Message form" hint="The wording on the form card. The fields themselves are fixed — they are what the API accepts.">
                 <div className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-[200px_1fr]">
                         <IconPicker value={info.formCard.icon} onChange={icon => setForm({ icon })} />
@@ -295,10 +318,10 @@ export default function ContactManager() {
                         </CmsField>
                     </div>
                 </div>
-            </CmsCard>
+            </CmsStep>
 
             {/* ============================================== details card */}
-            <CmsCard title="Contact details" description="The card beside the form. A detail left blank is not shown at all.">
+            <CmsStep sectionKey="contact.info" step="Section 3" title="Contact details" hint="The card beside the form. A detail left blank is not shown at all.">
                 <div className="space-y-5">
                     <div className="grid gap-4 md:grid-cols-[200px_1fr]">
                         <IconPicker value={info.infoCard.icon} onChange={icon => setInfoCard({ icon })} />
@@ -404,11 +427,11 @@ export default function ContactManager() {
                         </div>
                     </CmsSection>
                 </div>
-            </CmsCard>
+            </CmsStep>
 
             {/* ============================================== bottom banner */}
-            <CmsCard title="Bottom banner" description="The strip at the foot of the contact page.">
-                <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-neutral-300 mb-5">
+            <CmsStep sectionKey="contact.banner" ownFields={false} step="Section 4" title="Bottom banner" hint="The strip at the foot of the contact page.">
+                <label className="flex items-center gap-2 text-[1.1875rem] text-slate-700 dark:text-neutral-300 mb-5">
                     <input
                         type="checkbox"
                         checked={info.banner.enabled}
@@ -457,12 +480,67 @@ export default function ContactManager() {
                         </div>
                     </div>
                 )}
-            </CmsCard>
+            </CmsStep>
+
+            {/* ============================================== regions band */}
+            {/*
+              * The six region tiles above the footer, as THIS page draws them.
+              * Every other page's tiles open the region's leadership page; here
+              * each opens that region's or state's Get in Touch section, because
+              * a reader on the Contact page is looking for somebody to call.
+              */}
+            <CmsStep
+                ownFields={false}
+                step="Section 5"
+                title="Contacts across India"
+                hint="The zone and state tiles near the foot of /contact. Clicking one opens that zone's or state's contact details. Blank fields use the wording shown in grey."
+            >
+                <label className="flex items-center gap-2 text-[1.1875rem] text-slate-700 dark:text-neutral-300 mb-5">
+                    <input
+                        type="checkbox"
+                        checked={info.regionsBand?.enabled !== false}
+                        onChange={e => setBand({ enabled: e.target.checked })}
+                        className="rounded border-slate-400"
+                    />
+                    Show the zone tiles on the contact page
+                </label>
+
+                {info.regionsBand?.enabled !== false && (
+                    <div className="space-y-4">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <CmsField label="Small label">
+                                <CmsInput
+                                    value={info.regionsBand?.eyebrow || ''}
+                                    onChange={e => setBand({ eyebrow: e.target.value })}
+                                    placeholder="Contacts across India"
+                                />
+                            </CmsField>
+                            <CmsField label="Heading">
+                                <CmsInput
+                                    value={info.regionsBand?.heading || ''}
+                                    onChange={e => setBand({ heading: e.target.value })}
+                                    placeholder="Reach ACTIV in your zone"
+                                />
+                            </CmsField>
+                        </div>
+                        <CmsField label="Subtitle">
+                            <CmsInput
+                                value={info.regionsBand?.subtitle || ''}
+                                onChange={e => setBand({ subtitle: e.target.value })}
+                                placeholder="Choose your zone or state to see who to contact there."
+                            />
+                        </CmsField>
+                    </div>
+                )}
+            </CmsStep>
 
             {/* ============================================== socials */}
-            <CmsCard
+            <CmsStep
+                sectionKey="contact.social"
+                ownFields={false}
+                step="Section 6"
                 title="Social links"
-                description="Used elsewhere on the site. The footer's own social buttons are under Header & Footer."
+                hint="Used elsewhere on the site. The footer's own social buttons are under Header & Footer."
             >
                 <div className="grid gap-4 sm:grid-cols-2">
                     {(['facebook', 'instagram', 'linkedin', 'youtube'] as const).map((key) => (
@@ -475,18 +553,20 @@ export default function ContactManager() {
                         </CmsField>
                     ))}
                 </div>
-            <CmsCard title="Your own fields" description="Extra rows in the details card on the public page.">
+            </CmsStep>
+
+            <CmsStep ownFields={false} step="Section 7" title="Your own fields" hint="Extra rows on the page, under the details card.">
+                {/* `bare`: the card is already called “Your own fields”. */}
                 <ExtraFieldsEditor
+                    bare
                     items={info.extraFields || []}
                     onChange={extraFields => set({ extraFields })}
-                    hint="A WhatsApp number, a registration desk, opening times for a second office — anything the four details above do not cover."
+                    hint="A WhatsApp number, a registration desk, opening times for a second office — anything the four details above do not cover. For a row inside ONE of the cards above, use that card's own Add field."
                 />
-            </CmsCard>
+            </CmsStep>
 
-            </CmsCard>
-
-            <SaveButton loading={saving} label="Save contact page" />
             </CmsPage>
-        </form>
+            </SectionToolsProvider>
+        </SaveNowProvider>
     );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { getHome, type HomeAbout } from '@/services/cmsApi';
+import { getHome, type HomeAbout, type CmsSectionOverride } from '@/services/cmsApi';
 import { AboutBlock } from '@/components/shared/AboutBlock';
-import { PAGE_CONTAINER } from '@/components/layout/pageContainer';
+import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
 
 /**
  * The About block on the home page.
@@ -13,12 +13,19 @@ import { PAGE_CONTAINER } from '@/components/layout/pageContainer';
  */
 export function AboutSection() {
     const [about, setAbout] = useState<HomeAbout | null>(null);
+    /* The home document's list — the About PAGE keeps its own. */
+    const [sections, setSections] = useState<CmsSectionOverride[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         let cancelled = false;
         getHome()
-            .then((home) => { if (!cancelled) { setAbout(home.about); setIsLoading(false); } })
+            .then((home) => {
+                if (cancelled) return;
+                setAbout(home.about);
+                setSections(home.sections || []);
+                setIsLoading(false);
+            })
             .catch(() => { if (!cancelled) { setAbout(null); setIsLoading(false); } });
         return () => { cancelled = true; };
     }, []);
@@ -26,7 +33,7 @@ export function AboutSection() {
     if (isLoading) {
         return (
             <div className="w-full py-24 bg-white">
-                <div className={`${PAGE_CONTAINER} animate-pulse`}>
+                <div className={`${SCREEN_CONTAINER} animate-pulse`}>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
                         <div className="space-y-6">
                             <div className="h-8 bg-slate-200 rounded w-32 mb-6"></div>
@@ -61,6 +68,7 @@ export function AboutSection() {
             logoOverlay={about.logoOverlay}
             statsBar={about.statsBar}
             extraFields={about.extraFields}
+            sections={sections}
         />
     );
 }

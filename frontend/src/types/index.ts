@@ -138,13 +138,42 @@ export enum UserRole {
 }
 
 // Application Status
+//
+// ONE PENDING VALUE. The review used to run Block -> District -> State and the
+// status named whose turn it was; an application now goes to all three admins
+// of the applicant's own region at once and the first of them to decide decides
+// it, so there is nothing left for a tier-named status to say.
+//
+// The three legacy spellings are kept because rows carrying them are still in
+// the collection and nothing rewrote them. They all mean PENDING — compare
+// through `normalizeApplicationStatus` below, never against a literal.
 export enum ApplicationStatus {
-  PENDING_BLOCK = 'Pending-Block',
-  PENDING_DISTRICT = 'Pending-District',
-  PENDING_STATE = 'Pending-State',
+  PENDING = 'Pending',
   APPROVED = 'Approved',
   REJECTED = 'Rejected',
+
+  /** @deprecated Legacy stored spellings. All of them mean `PENDING`. */
+  PENDING_BLOCK = 'Pending-Block',
+  /** @deprecated */
+  PENDING_DISTRICT = 'Pending-District',
+  /** @deprecated */
+  PENDING_STATE = 'Pending-State',
 }
+
+/**
+ * Fold any spelling the server or the database can produce to one of the three
+ * canonical values. The mobile counterpart of the backend's `normalizeStatus`.
+ */
+export const normalizeApplicationStatus = (
+  value?: string | null,
+): ApplicationStatus.PENDING | ApplicationStatus.APPROVED | ApplicationStatus.REJECTED => {
+  const key = String(value || '').trim().toLowerCase().replace(/[\s_\-.]/g, '');
+  if (key === 'rejected' || key === 'declined') return ApplicationStatus.REJECTED;
+  if (key === 'approved' || key === 'stateapproved' || key === 'complete' || key === 'completed') {
+    return ApplicationStatus.APPROVED;
+  }
+  return ApplicationStatus.PENDING;
+};
 
 // Member Types
 export enum MemberType {
@@ -215,11 +244,34 @@ export interface Application {
 
 // Applicant as returned by the admin dashboard endpoints — a flattened
 // application joined with the member profile it belongs to.
-// `upstream` = still awaiting an earlier tier; `closed` = rejected by another
-// tier. Both are visible in the `all` bucket but belong to no action queue.
-export type ApplicantStage = 'pending' | 'approved' | 'rejected' | 'upstream' | 'closed';
+//
+// Three stages, and THEY ARE THIS TIER'S OWN VERDICT.
+//
+// The block, district and state admin of a region all hold every one of its
+// applications from submission — nothing is upstream of anybody, which is why
+// `upstream` and `closed` are gone — but each of them records a SEPARATE
+// verdict. `approved` here means the tier that fetched the row approved it. It
+// does NOT mean the applicant was admitted: that is `outcome`, written by the
+// State Admin alone.
+//
+// Briefly the three shared one verdict, and a District admin's Hub showed rows
+// as Approved because the State had approved them. See `Applicant.outcome`.
+export type ApplicantStage = 'pending' | 'approved' | 'rejected';
 
-/** Which tier's perspective an applicant payload was built from. */
+/** One tier's recorded answer. */
+export interface TierVerdict {
+  decision: 'pending' | 'approved' | 'rejected';
+  adminType?: string;
+  decidedAt?: string | null;
+  reason?: string;
+}
+
+/**
+ * Which tier's dashboard a payload was built for.
+ *
+ * It no longer changes how an application is classified — it labels the rows
+ * and picks the region rollup the dashboard shows beneath them.
+ */
 export type AdminLevel = 'block' | 'district' | 'state';
 
 /** The four buckets every admin dashboard renders. */
@@ -253,11 +305,31 @@ export interface Applicant {
   district: string;
   state: string;
   city: string;
+  /**
+   * The APPLICATION's outcome — `Pending`, `Approved` or `Rejected`.
+   *
+   * Only the State Admin (or a Super Admin in that seat) writes it, and it is
+   * what makes somebody a member. Run it through `normalizeApplicationStatus`
+   * before comparing: live rows carry several spellings.
+   */
   status: string;
+  /** THIS TIER'S OWN VERDICT. Not the outcome — see the type's note. */
   stage: ApplicantStage;
   level?: AdminLevel;
   statusLabel: string;
   approvedByText?: string;
+  /** The outcome again, named so it cannot be read as this tier's verdict. */
+  outcome?: string;
+  /** Has THIS tier's verdict still to be given? The only thing that draws buttons. */
+  canAct?: boolean;
+  /** Would this tier's approval enrol the applicant, or only be recorded? */
+  decidesOutcome?: boolean;
+  /** All three verdicts, keyed by tier. */
+  tierReviews?: Record<string, TierVerdict>;
+  /** The decided ones among the other two tiers, widest first. */
+  otherTierReviews?: { tier: string; label: string; decision: string; decidedAt?: string | null }[];
+  /** Those as one line: "State approved". Empty when nobody else has decided. */
+  endorsementLine?: string;
   /**
    * Orphan fallback. True when the tier that formally owns this application has
    * no active admin, so it has escalated to the tier reading it now. The stored

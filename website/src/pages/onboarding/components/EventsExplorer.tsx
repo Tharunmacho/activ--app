@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, MapPin, Clock, ArrowRight, X, Landmark } from 'lucide-react';
+import { Search, MapPin, Clock, CalendarDays, ArrowRight, X, Landmark, Video } from 'lucide-react';
 import type { CmsEvent, EventsSettings } from '@/services/cmsApi';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
 import { CmsIcon } from '@/components/shared/CmsIcon';
 import { Reveal } from '@/components/shared/Reveal';
+import { sectionHidden, sectionFields } from '@/components/shared/cmsSections';
 import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
+import { SectionFields } from '@/components/shared/SectionFields';
 import { Tilt3D } from '@/components/shared/Tilt3D';
-import { PAGE_CONTAINER } from '@/components/layout/pageContainer';
+import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
 import { CARD_TITLE, CARD_BODY, MICRO_LABEL } from '@/components/layout/typography';
 
 /**
@@ -30,14 +32,51 @@ import { CARD_TITLE, CARD_BODY, MICRO_LABEL } from '@/components/layout/typograp
  * keystroke would be slower than the filter it replaced.
  */
 
-/** The time windows. `all` is offered so a filter can be undone. */
-const WHEN = [
-    { value: 'upcoming', label: 'Upcoming' },
-    { value: 'past', label: 'Past' },
-    { value: 'all', label: 'All dates' },
+/**
+ * ==========================================================================
+ * THIS PAGE IS UPCOMING EVENTS.
+ * ==========================================================================
+ *
+ * There was a date-window filter here — Upcoming / Past / All dates — and a
+ * past event reached this page whenever it was set to one of the last two.
+ * Both are gone, and the removal is the FILTER and the EVENTS together:
+ * leaving the filter while hiding the rows would be a control that can only
+ * ever return nothing.
+ *
+ * The association's reasoning, and it is worth keeping: an events page is
+ * something a visitor reads to decide what to attend. The home page's events
+ * band shows exactly this same list (`EventsGrid`), so the two never disagree.
+ *
+ * EVENTS AND THE GALLERY ARE SEPARATE. There used to be a strip here sending
+ * visitors to the gallery for past events, and a CMS button copying an event
+ * into the gallery. Both are gone: the gallery holds photographs the editor
+ * posts after an event, as albums of its own, and nothing links the two.
+ *
+ * So `upcomingOnly` below is not a default an editor can change — it is
+ * what this page IS. An event with no date at all still shows: an unset
+ * date is missing information, not a statement that it already happened.
+ */
+
+/**
+ * How you attend it — a filter of its own, beside the category chips.
+ *
+ * NOT a chip in that rail, and that is the point. The chips are `category`:
+ * what KIND of event it is, a list the CMS authors. This is `mode`: whether
+ * there is a room to go to. They are independent — there are online workshops
+ * and offline workshops — and folding one into the other is exactly what put
+ * "ZOOM" and "Webinars" into the category list beside "Tea party".
+ *
+ * As a select rather than a third rail of pills because it is the coarsest and
+ * least-used of the three, and the toolbar already carries a chip rail and four
+ * dropdowns.
+ */
+const HOW = [
+    { value: 'all', label: 'Online and in person' },
+    { value: 'offline', label: 'In person' },
+    { value: 'online', label: 'Online' },
 ] as const;
 
-type When = (typeof WHEN)[number]['value'];
+type How = (typeof HOW)[number]['value'];
 
 const ALL = 'All';
 
@@ -117,6 +156,28 @@ const splitDate = (iso: string | null) => {
     };
 };
 
+/**
+ * "– 12 OCT 2026" for an event that runs over more than one day, else ''.
+ *
+ * The date chip on the card holds ONE day and is three stacked lines, so a
+ * range cannot go in it. This is the extra line under the time. It compares
+ * the rendered days rather than the instants because `endAt` also carries the
+ * finishing TIME of a single-day event, and comparing instants would print a
+ * range on every event with a closing time.
+ */
+const lastDayLabel = (startAt: string | null, endAt: string | null) => {
+    const day = (iso: string | null) => {
+        if (!iso) return '';
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return '';
+        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+            .toUpperCase();
+    };
+    const from = day(startAt);
+    const to = day(endAt);
+    return to && to !== from ? to : '';
+};
+
 /** "10:00 AM - 05:00 PM", or just the start when no end was set. */
 const formatTimeRange = (startAt: string | null, endAt: string | null) => {
     const time = (iso: string | null) => {
@@ -137,11 +198,43 @@ interface Props {
     settings: EventsSettings | null;
 }
 
+/**
+ * HOW WIDE THE EVENTS ROW RUNS, PER COUNT.
+ *
+ * Two things had to be true at once and only one of them was. Five fixed tracks
+ * keeps every card the same size, and four events then stop a card's width short
+ * of the right-hand edge — which reads as a card that failed rather than as a
+ * month with four events in it. Tracks that narrow to the count fill the row,
+ * and three events across a 1600px page become billboards.
+ *
+ * So the track count narrows AND the row is capped and centred with it, which
+ * holds the card inside one narrow band of widths whatever the count. It is the
+ * same rule, for the same reason, as the leadership benches — see `rowClass` in
+ * `LeadershipSections`.
+ */
+const EVENT_GRID: Record<number, string> = {
+    1: 'xl:grid-cols-1 xl:max-w-[26rem] xl:mx-auto',
+    2: 'xl:grid-cols-2 xl:max-w-[54rem] xl:mx-auto',
+    3: 'xl:grid-cols-3 xl:max-w-[82rem] xl:mx-auto',
+    4: 'xl:grid-cols-4 xl:max-w-[110rem] xl:mx-auto',
+    /*
+     * Four abreast, and five only on a display wide enough for it.
+     *
+     * The caps above went up with the column: this page runs to the screen's
+     * edge now (`SCREEN_CONTAINER`), so a row of three capped at 70rem sat in
+     * the middle of a 1730px band with a third of it empty either side. Five
+     * tracks at 1440 is a 250px card, which is where a real title starts
+     * losing its last word to the ellipsis -- hence `2xl` for the fifth.
+     */
+    5: 'xl:grid-cols-4 2xl:grid-cols-5',
+};
+
 export function EventsExplorer({ events, settings }: Props) {
     const [query, setQuery] = useState('');
     const [category, setCategory] = useState<string>(ALL);
     const [location, setLocation] = useState<string>(ALL);
-    const [when, setWhen] = useState<When>('upcoming');
+
+    const [how, setHow] = useState<How>('all');
 
     /*
      * The region filter, as three dependent choices rather than one flat list.
@@ -163,7 +256,11 @@ export function EventsExplorer({ events, settings }: Props) {
     const [district, setDistrict] = useState<string>(ALL);
     const [block, setBlock] = useState<string>(ALL);
 
-    const chips = settings?.categories || [];
+    /* The Search-and-chips card can be removed — see `cmsSections`. It takes
+       the chips with it; the search box is not authored and stays. */
+    const chips = sectionHidden(settings?.sections, 'events.filters')
+        ? []
+        : (settings?.categories || []);
 
     /**
      * The location options come from the events themselves, not the CMS.
@@ -266,6 +363,16 @@ export function EventsExplorer({ events, settings }: Props) {
             if (location !== ALL && (event?.location || '') !== location) return false;
 
             /*
+             * Online or in person.
+             *
+             * Anything that is not explicitly `online` is in person, which is
+             * every event written before the field existed — so filtering to
+             * "In person" shows the whole back catalogue rather than hiding it
+             * behind a field those rows never had.
+             */
+            if (how !== 'all' && (event?.mode === 'online' ? 'online' : 'offline') !== how) return false;
+
+            /*
              * Region.
              *
              * An UNTARGETED event passes every region filter, and that is not a
@@ -281,16 +388,18 @@ export function EventsExplorer({ events, settings }: Props) {
                 }
             }
 
-            if (when !== 'all') {
-                const start = event?.startAt ? new Date(event.startAt).getTime() : NaN;
-                // An event with no usable date is shown in every window rather
-                // than hidden from all of them — an unset date is missing
-                // information, not a statement that it already happened.
-                if (!Number.isNaN(start)) {
-                    if (when === 'upcoming' && start < now) return false;
-                    if (when === 'past' && start >= now) return false;
-                }
-            }
+            /*
+             * Upcoming only — see the note at the top of this file. An event
+             * with no usable date is kept: an unset date is missing
+             * information, not a statement that it already happened.
+             *
+             * THE END DATE DECIDES IT, where there is one. A three-day
+             * conclave read as past from its second morning, because this
+             * asked when it STARTED. An event is over when it is over.
+             */
+            const finish = event?.endAt || event?.startAt;
+            const start = finish ? new Date(finish).getTime() : NaN;
+            if (!Number.isNaN(start) && start < now) return false;
 
             if (needle) {
                 const haystack = [event?.title, event?.description, event?.location, event?.category]
@@ -300,16 +409,25 @@ export function EventsExplorer({ events, settings }: Props) {
             }
             return true;
         });
-    }, [events, query, category, location, when, state, district, block]);
+        /*
+         * `how` IS IN HERE, and was not.
+         *
+         * The filter body has always read it, so the first render was
+         * right and every change after it did nothing: picking “In person”
+         * left the grid exactly as it was. A `useMemo` recomputes only
+         * when something in this list changes, so a value used inside and
+         * missing from it is a control wired to nothing.
+         */
+    }, [events, query, category, location, how, state, district, block]);
 
     const isFiltered = !!(query.trim()) || category !== ALL || location !== ALL
-        || when !== 'upcoming' || state !== ALL || district !== ALL || block !== ALL;
+        || how !== 'all' || state !== ALL || district !== ALL || block !== ALL;
 
     const reset = () => {
         setQuery('');
         setCategory(ALL);
         setLocation(ALL);
-        setWhen('upcoming');
+        setHow('all');
         setState(ALL);
         setDistrict(ALL);
         setBlock(ALL);
@@ -329,23 +447,42 @@ export function EventsExplorer({ events, settings }: Props) {
         if (state !== ALL) return state;
         if (category !== ALL) return category;
         if (location !== ALL) return location;
-        return WHEN.find((w) => w.value === when)?.label || 'that filter';
+        return 'that filter';
     };
 
     const emptyFiltered = (settings?.emptyFilterText || 'No events match {query}.')
         .replace('{query}', describeFilter());
 
-    const banner = settings?.banner;
+    const banner = sectionHidden(settings?.sections, 'events.banner') ? undefined : settings?.banner;
+    /* The explorer's own type, handed down — see `SectionFields`. */
+    const fieldsFor = (k: string) => (
+        <SectionFields
+            proseClass={`${CARD_BODY} text-gray-600`}
+            sections={settings?.sections}
+            sectionKey={k}
+        />
+    );
     const showBanner = !!(banner?.enabled && (banner.title || banner.ctaLabel));
 
+
+    /* The editor's own rows, per card, then the page's own list. */
+    const key = (k: string) => (sectionHidden(settings?.sections, k) ? [] : sectionFields(settings?.sections, k));
+    /*
+     * Each card's rows are drawn WITH that card now — see `SectionFields`.
+     * They were pooled here and printed once under the grid, so a field added
+     * to "Filters" appeared at the foot of the explorer instead of with the
+     * filters. What is left is the list attached to the PAGE.
+     */
+    const ownRows = settings?.extraFields || [];
+
     const selectClass =
-        'h-11 min-w-0 rounded-xl border border-brand-100 bg-white px-3.5 text-sm font-semibold '
+        'h-12 min-w-0 rounded-xl border border-brand-100 bg-white px-4 text-[1.25rem] font-semibold '
         + 'text-brand-800 outline-none transition-colors hover:border-brand-300 '
         + 'focus:border-brand-600 focus:ring-2 focus:ring-brand-600/15';
 
     return (
-        <section className="w-full bg-white font-sans">
-            <div className={PAGE_CONTAINER}>
+        <section className="w-full dot-band font-sans">
+            <div className={SCREEN_CONTAINER}>
 
                 {/* ---------------------------------------------------- toolbar */}
                 {/*
@@ -362,7 +499,7 @@ export function EventsExplorer({ events, settings }: Props) {
                         <label className="relative flex-1 min-w-0">
                             <span className="sr-only">Search events</span>
                             <Search
-                                size={17}
+                                size={19}
                                 className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-400"
                             />
                             <input
@@ -370,8 +507,8 @@ export function EventsExplorer({ events, settings }: Props) {
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 placeholder={settings?.searchPlaceholder || 'Search events...'}
-                                className="h-11 w-full rounded-xl border border-brand-100 bg-white pl-10 pr-3
-                                           text-sm font-medium text-brand-800 placeholder:text-gray-400
+                                className="h-12 w-full rounded-xl border border-brand-100 bg-white pl-11 pr-3.5
+                                           text-[1.25rem] font-medium text-brand-800 placeholder:text-gray-400
                                            outline-none transition-colors hover:border-brand-300
                                            focus:border-brand-600 focus:ring-2 focus:ring-brand-600/15"
                             />
@@ -469,14 +606,17 @@ export function EventsExplorer({ events, settings }: Props) {
                                 </select>
                             )}
 
+                            {/* The date window used to sit here. See the note at
+                                the top of this file: this page is upcoming events,
+                                so there is no window left to choose. */}
                             <select
-                                aria-label="When"
-                                value={when}
-                                onChange={(e) => setWhen(e.target.value as When)}
+                                aria-label="Online or in person"
+                                value={how}
+                                onChange={(e) => setHow(e.target.value as How)}
                                 className={selectClass}
                             >
-                                {WHEN.map((w) => (
-                                    <option key={w.value} value={w.value}>{w.label}</option>
+                                {HOW.map((h) => (
+                                    <option key={h.value} value={h.value}>{h.label}</option>
                                 ))}
                             </select>
 
@@ -485,17 +625,20 @@ export function EventsExplorer({ events, settings }: Props) {
                                 <button
                                     type="button"
                                     onClick={reset}
-                                    className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl
-                                               border border-brand-100 px-4 text-sm font-bold text-brand-700
+                                    className="inline-flex h-12 items-center justify-center gap-2 rounded-xl
+                                               border border-brand-100 px-5 text-[1.25rem] font-bold text-brand-700
                                                transition-colors hover:border-brand-600 hover:bg-brand-50"
                                 >
-                                    <X size={15} />
+                                    <X size={17} />
                                     Reset
                                 </button>
                             )}
                         </div>
                     </div>
                 </div>
+
+                {/* This card's own rows, with the card — see `SectionFields`. */}
+                {fieldsFor('events.filters')}
 
                 {/* ------------------------------------------------ chip rail */}
                 {chips.length > 0 && (
@@ -515,8 +658,8 @@ export function EventsExplorer({ events, settings }: Props) {
                                         key={i}
                                         type="button"
                                         onClick={() => setCategory(chip.label)}
-                                        className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl
-                                                    px-4 py-2.5 text-sm font-bold transition-all duration-200 ${
+                                        className={`flex shrink-0 items-center gap-2.5 whitespace-nowrap rounded-xl
+                                                    px-5 py-3 text-[1.25rem] font-bold transition-all duration-200 ${
                                             active
                                                 ? 'bg-white text-brand-800 shadow-[0_6px_16px_-6px_rgb(28_46_104/0.5)]'
                                                 : 'text-brand-600/80 hover:text-brand-800'
@@ -525,7 +668,7 @@ export function EventsExplorer({ events, settings }: Props) {
                                         {chip.icon && (
                                             <CmsIcon
                                                 name={chip.icon}
-                                                size={15}
+                                                size={18}
                                                 className={active ? 'text-brand-600' : 'text-brand-400'}
                                                 fallback="calendar-days"
                                             />
@@ -540,14 +683,29 @@ export function EventsExplorer({ events, settings }: Props) {
 
                 {/* ----------------------------------------------------- grid */}
                 {filtered.length === 0 ? (
-                    <p className="py-20 text-center text-base font-semibold text-gray-500">
+                    <p className="py-20 text-center text-[1.375rem] font-semibold text-gray-500">
                         {isFiltered ? emptyFiltered : (settings?.emptyText || '')}
                     </p>
                 ) : (
-                    <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                    /*
+                      * THE ROW FILLS, AND THE CARDS KEEP ONE SIZE.
+                      *
+                      * Five tracks and four events left a card's width of white
+                      * at the right-hand end of the row, which reads as a card
+                      * that failed to load rather than as a month with four
+                      * events in it. The track count comes down to the number
+                      * there are — and the ROW is capped and centred with it, so
+                      * a grid of three does not blow each card up to a third of
+                      * a 1600px page. Same rule, same reasons, as the leadership
+                      * benches; see `rowClass` in `LeadershipSections`.
+                      */
+                    <div className={`mt-10 grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3
+                                     ${EVENT_GRID[Math.min(5, Math.max(1, filtered.length))]
+                                        || EVENT_GRID[5]}`}>
                         {filtered.map((event, i) => {
                             const date = splitDate(event?.startAt);
                             const time = formatTimeRange(event?.startAt, event?.endAt);
+                            const lastDay = lastDayLabel(event?.startAt, event?.endAt);
 
                             /*
                               WHO THE EVENT IS FOR, on the card.
@@ -597,7 +755,7 @@ export function EventsExplorer({ events, settings }: Props) {
                                         >
                                             {/* No image is a valid event; a broken frame is not. */}
                                             {event?.media?.url && (
-                                                <div className="relative h-40 w-full overflow-hidden">
+                                                <div className="relative h-44 w-full overflow-hidden">
                                                     <CmsMediaFrame
                                                         media={event.media}
                                                         width={320}
@@ -609,9 +767,9 @@ export function EventsExplorer({ events, settings }: Props) {
 
                                                     {event?.category && (
                                                         <span className="absolute left-3 top-3 rounded-md bg-brand-900/85
-                                                                         px-2.5 py-1 text-[0.625rem] font-extrabold
+                                                                         px-3 py-1.5 text-[1rem] font-extrabold
                                                                          uppercase tracking-[0.08em] text-white
-                                                                         backdrop-blur-sm">
+                                                                         ">
                                                             {event.category}
                                                         </span>
                                                     )}
@@ -630,40 +788,70 @@ export function EventsExplorer({ events, settings }: Props) {
                                                         /* Wider and larger on a phone, where the
                                                            card is one across; it steps back down
                                                            from `sm`, where five share a row. */
-                                                        className={`absolute left-5 flex w-16 sm:w-14 flex-col
+                                                        className={`absolute left-5 flex w-[4.5rem] flex-col
                                                                     items-center rounded-xl bg-white px-2 py-2
                                                                     text-center ring-1 ring-brand-100
                                                                     shadow-[0_8px_20px_-8px_rgb(28_46_104/0.5)]
                                                                     ${event?.media?.url ? '-top-9' : 'top-4'}`}
                                                         style={{ transform: 'translateZ(30px)' }}
                                                     >
-                                                        <span className="text-xl sm:text-lg font-black leading-none
+                                                        <span className="text-[1.875rem] font-black leading-none
                                                                          text-brand-800">
                                                             {date.day}
                                                         </span>
-                                                        <span className="mt-0.5 text-[0.6875rem] xl:text-[0.625rem]
+                                                        <span className="mt-0.5 text-[1rem]
                                                                          font-extrabold uppercase tracking-[0.08em]
                                                                          text-brand-600">
                                                             {date.month}
                                                         </span>
-                                                        <span className="text-[0.6875rem] xl:text-[0.625rem]
+                                                        <span className="text-[1rem]
                                                                          font-bold text-gray-400">
                                                             {date.year}
                                                         </span>
                                                     </div>
                                                 )}
 
-                                                {/* Clears the date block where one is drawn. */}
-                                                <div className={date ? (event?.media?.url ? 'pt-6' : 'pt-20') : ''}>
-                                                    {/* Three lines, not two: at five
-                                                        across a card is ~220px, and a
-                                                        real event title ("SC/ST
-                                                        Entrepreneurs Integration
-                                                        Conference") loses its last word
-                                                        to the ellipsis at two. */}
-                                                    <h3 className={`${CARD_TITLE} text-[0.9375rem] leading-snug
-                                                                    text-brand-800 line-clamp-3 transition-colors
-                                                                    group-hover:text-brand-600`}>
+                                                {/*
+                                                  CLEARS THE DATE CHIP, MEASURED.
+
+                                                  The chip is 96px tall and hangs 36px
+                                                  above this block, so 60px of it comes
+                                                  down into the content. The clearance
+                                                  was 24px, and the title's first line
+                                                  sat under it — 16px of “Business
+                                                  Integration Conclave” was behind the
+                                                  date on every card in the row.
+
+                                                  Without media the chip sits 16px INSIDE
+                                                  the card instead of above it, so that
+                                                  case needs the chip's whole height plus
+                                                  its offset.
+                                                */}
+                                                <div className={date ? (event?.media?.url ? 'pt-16' : 'pt-28') : ''}>
+                                                    {/*
+                                                      * THREE LINES, AND ALWAYS THREE LINES' WORTH OF ROOM.
+                                                      *
+                                                      * Three because at five across a card
+                                                      * is ~220px and a real title ("SC/ST
+                                                      * Entrepreneurs Integration
+                                                      * Conference") loses its last word to
+                                                      * the ellipsis at two.
+                                                      *
+                                                      * `min-h` because the cards sit in a
+                                                      * row: a one-line title and a
+                                                      * three-line title beside it started
+                                                      * their summaries two lines apart, and
+                                                      * then their prices, their venues and
+                                                      * their times — every row in the card
+                                                      * out of step with its neighbour all
+                                                      * the way down. Reserving the three
+                                                      * lines costs a short title some white
+                                                      * space and buys the whole row one set
+                                                      * of baselines.
+                                                      */}
+                                                    <h3 className={`${CARD_TITLE} text-[1.25rem] leading-snug
+                                                                    min-h-[5.1rem] text-brand-800 line-clamp-3
+                                                                    transition-colors group-hover:text-brand-600`}>
                                                         {/* No field on the event form is
                                                             required, so a published event
                                                             can genuinely have no title.
@@ -674,18 +862,46 @@ export function EventsExplorer({ events, settings }: Props) {
                                                     </h3>
 
                                                     {event?.description && (
-                                                        <p className={`${CARD_BODY} mt-2 line-clamp-3 text-[0.8125rem]
-                                                                       text-gray-500`}>
+                                                        <p className={`${CARD_BODY} mt-2.5 line-clamp-2
+                                                                       min-h-[3.4rem] text-[1.25rem]
+                                                                       font-medium text-gray-500`}>
                                                             {event.description}
                                                         </p>
                                                     )}
                                                 </div>
 
                                                 <div className="mt-auto space-y-2 pt-5">
+                                                    {/*
+                                                      WHAT IT COSTS, above where it is
+                                                      and who it is for.
+
+                                                      Only when the event is taking
+                                                      bookings: a price on an event
+                                                      nobody can book is a number with
+                                                      nothing behind it.
+                                                    */}
+                                                    {event?.registrationEnabled && (
+                                                        <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1
+                                                                      text-[1.0625rem]">
+                                                            <span className="font-extrabold text-brand-800">
+                                                                {Number(event?.registrationFee) > 0
+                                                                    ? `₹${Number(event.registrationFee).toLocaleString('en-IN')}`
+                                                                    : 'Free'}
+                                                            </span>
+                                                            {event?.hasMemberRate
+                                                                && Number(event?.memberPrice) < Number(event?.registrationFee) && (
+                                                                <span className="rounded-full bg-emerald-50 px-2.5 py-0.5
+                                                                                 text-[1.0625rem] font-bold text-emerald-700">
+                                                                    Members ₹{Number(event.memberPrice).toLocaleString('en-IN')}
+                                                                </span>
+                                                            )}
+                                                        </p>
+                                                    )}
+
                                                     {reach && (
-                                                        <p className="flex items-start gap-2 text-[0.75rem]
+                                                        <p className="flex items-start gap-2 text-[1.125rem]
                                                                       font-bold text-brand-600">
-                                                            <Landmark size={13} className="mt-0.5 shrink-0 text-brand-400" />
+                                                            <Landmark size={16} className="mt-0.5 shrink-0 text-brand-400" />
                                                             <span className="line-clamp-1">
                                                                 {reach}
                                                                 {extraRegions > 0 && (
@@ -696,18 +912,56 @@ export function EventsExplorer({ events, settings }: Props) {
                                                             </span>
                                                         </p>
                                                     )}
-                                                    {event?.location && (
-                                                        <p className="flex items-start gap-2 text-[0.75rem]
+                                                    {/*
+                                                      * WHERE IT HAPPENS — a room or a link,
+                                                      * never both.
+                                                      *
+                                                      * An online event is not allowed to print
+                                                      * a venue here. A pin over "Chennai Trade
+                                                      * Centre" on a video call is not a cosmetic
+                                                      * slip: it is the card telling somebody to
+                                                      * drive there. The venue stays on the
+                                                      * record — an editor who switches an event
+                                                      * back should not have to type it again —
+                                                      * so the guard has to be on the READ, here,
+                                                      * and not on the write.
+                                                      *
+                                                      * The joining link itself is never on this
+                                                      * page. It reaches the people who book, on
+                                                      * their confirmation.
+                                                      */}
+                                                    {event?.mode === 'online' ? (
+                                                        <p className="flex items-start gap-2 text-[1.125rem]
                                                                       font-semibold text-gray-500">
-                                                            <MapPin size={13} className="mt-0.5 shrink-0 text-brand-400" />
+                                                            <Video size={16} className="mt-0.5 shrink-0 text-brand-400" />
+                                                            <span className="line-clamp-1">
+                                                                Online{event?.onlinePlatform ? ` · ${event.onlinePlatform}` : ' event'}
+                                                            </span>
+                                                        </p>
+                                                    ) : event?.location ? (
+                                                        <p className="flex items-start gap-2 text-[1.125rem]
+                                                                      font-semibold text-gray-500">
+                                                            <MapPin size={16} className="mt-0.5 shrink-0 text-brand-400" />
                                                             <span className="line-clamp-1">{event.location}</span>
                                                         </p>
-                                                    )}
+                                                    ) : null}
                                                     {time && (
-                                                        <p className="flex items-center gap-2 text-[0.75rem]
+                                                        <p className="flex items-center gap-2 text-[1.125rem]
                                                                       font-semibold text-gray-500">
-                                                            <Clock size={13} className="shrink-0 text-brand-400" />
+                                                            <Clock size={16} className="shrink-0 text-brand-400" />
                                                             <span>{time}</span>
+                                                        </p>
+                                                    )}
+                                                    {/* A multi-day event says when it
+                                                        finishes. The chip above can hold
+                                                        one day, and a conclave that runs
+                                                        to Friday reading as a Wednesday
+                                                        is somebody booking one night. */}
+                                                    {lastDay && (
+                                                        <p className="flex items-center gap-2 text-[1.125rem]
+                                                                      font-semibold text-gray-500">
+                                                            <CalendarDays size={16} className="shrink-0 text-brand-400" />
+                                                            <span>Runs to {lastDay}</span>
                                                         </p>
                                                     )}
                                                     {/*
@@ -723,9 +977,9 @@ export function EventsExplorer({ events, settings }: Props) {
                                                       real state a visitor will meet.
                                                     */}
                                                     {!date && (
-                                                        <p className="flex items-center gap-2 text-[0.75rem]
+                                                        <p className="flex items-center gap-2 text-[1rem]
                                                                       font-semibold text-gray-400">
-                                                            <Clock size={13} className="shrink-0 text-brand-300" />
+                                                            <Clock size={16} className="shrink-0 text-brand-300" />
                                                             <span>Date to be confirmed</span>
                                                         </p>
                                                     )}
@@ -764,7 +1018,7 @@ export function EventsExplorer({ events, settings }: Props) {
                         className="my-16 overflow-hidden rounded-3xl bg-brand-800 relative"
                     >
                         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-                            <div className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-brand-600/40 blur-3xl" />
+                            <div className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-brand-600/40 blur-3xl transform-gpu" />
                         </div>
 
                         <div className="relative z-10 flex flex-col items-center gap-6 p-7 text-center
@@ -776,12 +1030,12 @@ export function EventsExplorer({ events, settings }: Props) {
                                 </span>
                                 <div>
                                     {banner?.title && (
-                                        <p className="text-xl font-black tracking-tight text-white md:text-2xl">
+                                        <p className="text-[1.5625rem] font-black tracking-tight text-white md:text-2xl">
                                             {banner.title}
                                         </p>
                                     )}
                                     {banner?.subtitle && (
-                                        <p className="mt-1.5 text-sm font-medium text-white/70">{banner.subtitle}</p>
+                                        <p className="mt-1.5 text-[1.1875rem] font-medium text-white/70">{banner.subtitle}</p>
                                     )}
                                 </div>
                             </div>
@@ -790,7 +1044,7 @@ export function EventsExplorer({ events, settings }: Props) {
                                 <Link
                                     to={banner.ctaHref || '/contact'}
                                     className="inline-flex shrink-0 items-center gap-2 rounded-full bg-white
-                                               px-7 py-3.5 text-sm font-extrabold text-brand-800
+                                               px-7 py-3.5 text-[1.1875rem] font-extrabold text-brand-800
                                                transition-transform duration-300 hover:-translate-y-0.5
                                                shadow-[0_14px_30px_-12px_rgb(0,0,0,0.6)]"
                                 >
@@ -802,8 +1056,18 @@ export function EventsExplorer({ events, settings }: Props) {
                     </Reveal>
                 )}
 
-                {/* Fields the editor added to this page. */}
-                <CmsExtraFields fields={settings?.extraFields} className="mt-16" />
+                {/* The grid's own rows, then the banner's, then the PAGE's.
+                    Each card's rows used to be pooled into one list printed
+                    here, so a field added to the filters landed under the grid. */}
+                {fieldsFor('events.grid')}
+                {fieldsFor('events.banner')}
+                {/* The "past events link" card offered the control and had
+                    nothing drawing the answer. It belongs to this page's foot,
+                    which is where that link sits. */}
+                {fieldsFor('events.pastLink')}
+                <div className={`${CARD_BODY} text-gray-600`}>
+                    <CmsExtraFields fields={ownRows} className="mt-16" />
+                </div>
             </div>
         </section>
     );

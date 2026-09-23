@@ -19,14 +19,18 @@ export const SURFACE = {
   border: '#E8EBF2',
 };
 
+/*
+ * Three stages, because there are three answers.
+ *
+ * `upstream` and `closed` were the two an admin could see but not act on, under
+ * a workflow where a file belonged to one tier at a time. Every pending file in
+ * a region belongs to all three of its tiers now, so an applicant an admin can
+ * see is one they can decide.
+ */
 const STAGE_ACCENTS: Record<ApplicantStage, { tint: string; solid: string }> = {
   pending: ACCENTS.amber,
   approved: ACCENTS.green,
   rejected: ACCENTS.red,
-  // Awaiting a later tier, and rejected-by-another-tier: neither is an action
-  // this dashboard owns, so both read as neutral rather than actionable.
-  upstream: ACCENTS.indigo,
-  closed: ACCENTS.slate,
 };
 
 export const getStageStyle = (stage?: string | null) => {
@@ -35,7 +39,6 @@ export const getStageStyle = (stage?: string | null) => {
   if (s.includes('approved')) return ACCENTS.green;
   if (s.includes('reject')) return ACCENTS.red;
   if (s.includes('pending')) return ACCENTS.amber;
-  if (s.includes('upstream')) return ACCENTS.indigo;
   return STAGE_ACCENTS[stage as ApplicantStage] || ACCENTS.slate;
 };
 

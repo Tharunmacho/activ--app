@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import AdminSidebar from "./AdminSidebar";
 import { getSuperOverview, getAdminProfile, errorMessage } from "@/services/activApi";
 
+import { PAGE_SUBTITLE, PAGE_TITLE, CARD_TITLE } from '@/components/layout/appTypography';
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -121,7 +122,7 @@ const AdminDashboard = () => {
       <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 min-w-0 flex flex-col">
         {/* Mobile Header - Only visible on mobile */}
         <div className="md:hidden flex items-center justify-between p-4 bg-white border-b shadow-sm">
           <button
@@ -132,7 +133,7 @@ const AdminDashboard = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <h1 className="text-xl font-bold text-slate-900">Dashboard</h1>
+          <h1 className={`${PAGE_TITLE} text-slate-900`}>Dashboard</h1>
           <Avatar className="w-10 h-10 ring-2 ring-blue-100 cursor-pointer hover:ring-4 transition-all" onClick={() => navigate('/super-admin/settings')}>
             {adminInfo?.avatarUrl && <AvatarImage src={adminInfo.avatarUrl} className="object-cover" />}
             <AvatarFallback className="bg-blue-600 text-white font-bold">
@@ -152,36 +153,36 @@ const AdminDashboard = () => {
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-4 text-center md:text-left">
                   <Avatar className="w-16 h-16 ring-4 ring-blue-100">
                     <AvatarImage src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=96&h=96&fit=crop&crop=face" className="object-cover" />
-                    <AvatarFallback className="bg-blue-600 text-white font-bold text-2xl">
+                    <AvatarFallback className="bg-blue-600 text-white font-bold text-[1.75rem]">
                       {avatarInitials}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{dashboardTitle}</h1>
-                    <p className="text-slate-500 text-base md:text-lg">{dashboardSubtitle}</p>
+                    <h1 className={`${PAGE_TITLE} text-slate-900`}>{dashboardTitle}</h1>
+                    <p className={`${PAGE_SUBTITLE} text-slate-500`}>{dashboardSubtitle}</p>
                   </div>
                 </div>
               </div>
 
               {/* Statistics Section */}
               <div>
-                <h2 className="text-xl font-semibold mb-4 text-slate-900">Overview Statistics</h2>
+                <h2 className={`${CARD_TITLE} mb-4 text-slate-900`}>Overview Statistics</h2>
                 <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="bg-blue-600 rounded-2xl p-6 shadow-[0_10px_28px_-6px_rgba(37,99,235,0.55)]">
-                    <p className="text-blue-100 text-sm mb-1 font-medium">Total Members</p>
-                    <p className="text-4xl font-bold tracking-tight tabular-nums text-white">{stats.totalMembers}</p>
+                    <p className="text-blue-100 text-[1.25rem] mb-1 font-medium">Total Members</p>
+                    <p className="text-[2.5625rem] font-bold tracking-tight tabular-nums text-white">{stats.totalMembers}</p>
                   </div>
                   <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
-                    <p className="text-purple-100 text-sm mb-1 font-medium">Pending</p>
-                    <p className="text-4xl font-bold tracking-tight tabular-nums text-white">{stats.pending}</p>
+                    <p className="text-purple-100 text-[1.25rem] mb-1 font-medium">Pending</p>
+                    <p className="text-[2.5625rem] font-bold tracking-tight tabular-nums text-white">{stats.pending}</p>
                   </div>
                   <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
-                    <p className="text-cyan-100 text-sm mb-1 font-medium">Approved</p>
-                    <p className="text-4xl font-bold tracking-tight tabular-nums text-white">{stats.approved}</p>
+                    <p className="text-cyan-100 text-[1.25rem] mb-1 font-medium">Approved</p>
+                    <p className="text-[2.5625rem] font-bold tracking-tight tabular-nums text-white">{stats.approved}</p>
                   </div>
                   <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
-                    <p className="text-indigo-100 text-sm mb-1 font-medium">Rejected</p>
-                    <p className="text-4xl font-bold tracking-tight tabular-nums text-white">{stats.rejected}</p>
+                    <p className="text-indigo-100 text-[1.25rem] mb-1 font-medium">Rejected</p>
+                    <p className="text-[2.5625rem] font-bold tracking-tight tabular-nums text-white">{stats.rejected}</p>
                   </div>
                 </div>
               </div>
@@ -194,8 +195,8 @@ const AdminDashboard = () => {
               {/* Header */}
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
                 <div>
-                  <h2 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900">Recent Activity</h2>
-                  <p className="text-slate-500 text-sm">Latest application submissions</p>
+                  <h2 className={`${CARD_TITLE} text-slate-900`}>Recent Activity</h2>
+                  <p className="text-slate-500 text-[1.25rem]">Latest application submissions</p>
                 </div>
                 <Link to="/admin/applications">
                   <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6 shadow-sm">
@@ -206,7 +207,7 @@ const AdminDashboard = () => {
 
               {/* Applications Table/List */}
               <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
-                <div className="hidden md:grid grid-cols-4 gap-4 px-4 py-3 text-sm font-semibold text-slate-700 border-b border-slate-200 mb-4">
+                <div className="hidden md:grid grid-cols-4 gap-4 px-5 py-4 text-[1.25rem] font-semibold text-slate-700 border-b border-slate-200 mb-4">
                   <div>Name</div>
                   <div>Status</div>
                   <div>Size</div>
@@ -222,13 +223,13 @@ const AdminDashboard = () => {
                       <div className="flex items-center gap-3">
                         <Avatar className="w-10 h-10 ring-2 ring-blue-200">
                           <AvatarImage src={app.image} className="object-cover" />
-                          <AvatarFallback className="bg-blue-600 text-white font-bold text-sm">
+                          <AvatarFallback className="bg-blue-600 text-white font-bold text-[1.25rem]">
                             {app.name.split(' ').map(n => n[0]).join('')}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-semibold text-slate-900 text-sm">{app.name}</p>
-                          <p className="text-xs text-slate-500">{app.id}</p>
+                          <p className="font-semibold text-slate-900 text-[1.25rem]">{app.name}</p>
+                          <p className="text-[1.1875rem] text-slate-500">{app.id}</p>
                         </div>
                       </div>
                       <div>
@@ -243,9 +244,9 @@ const AdminDashboard = () => {
                           {app.status?.toLowerCase() === "approved" ? "Approved" : "Pending"}
                         </Badge>
                       </div>
-                      <div className="text-sm text-slate-700 font-medium">{app.size}</div>
+                      <div className="text-[1.25rem] text-slate-700 font-medium">{app.size}</div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-slate-700 font-medium">{app.date}</span>
+                        <span className="text-[1.25rem] text-slate-700 font-medium">{app.date}</span>
                         <Link to={`/admin/application/${app.id}`}>
                           <Button
                             size="sm"

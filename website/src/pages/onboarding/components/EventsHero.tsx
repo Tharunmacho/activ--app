@@ -1,10 +1,12 @@
 import type { EventsSettings } from '@/services/cmsApi';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
+import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
+import { sectionHidden, sectionFields } from '@/components/shared/cmsSections';
 import { CmsIcon } from '@/components/shared/CmsIcon';
 import { CountUp } from '@/components/shared/CountUp';
 import { Reveal } from '@/components/shared/Reveal';
-import { PAGE_CONTAINER } from '@/components/layout/pageContainer';
-import { HERO_HEADING, HERO_LEDE, EYEBROW } from '@/components/layout/typography';
+import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
+import { HERO_HEADING, HERO_LEDE, EYEBROW, BAND_MEASURE } from '@/components/layout/typography';
 
 /**
  * The Events page's opening band.
@@ -26,18 +28,30 @@ interface Props {
 }
 
 export function EventsHero({ settings }: Props) {
-    const badge = settings?.badgeText || '';
-    const heading = settings?.heading || '';
-    const highlight = settings?.headingHighlight || '';
-    const lede = settings?.lede || '';
-    const stats = settings?.stats || [];
-    const media = settings?.heroMedia;
-    const heroBadge = settings?.heroBadge;
+    /* The Heading card and the Hero band card can each be removed — see
+       `cmsSections`. Removing the heading leaves the picture and the
+       figures, which is a hero; removing the band leaves the words. */
+    const removed = (key: string) => sectionHidden(settings?.sections, key);
+    const showCopy = !removed('events.header');
+    const showBand = !removed('events.hero');
+
+    const badge = showCopy ? (settings?.badgeText || '') : '';
+    const heading = showCopy ? (settings?.heading || '') : '';
+    const highlight = showCopy ? (settings?.headingHighlight || '') : '';
+    const lede = showCopy ? (settings?.lede || '') : '';
+    const stats = showBand ? (settings?.stats || []) : [];
+    const media = showBand ? settings?.heroMedia : undefined;
+    const heroBadge = showBand ? settings?.heroBadge : undefined;
+    const ownRows = [
+        ...(showCopy ? sectionFields(settings?.sections, 'events.header') : []),
+        ...(showBand ? sectionFields(settings?.sections, 'events.hero') : []),
+    ];
 
     const hasMedia = !!media?.url;
     const showBadge = !!(heroBadge?.enabled && (heroBadge.title || heroBadge.subtitle));
 
-    if (!badge && !heading && !highlight && !lede && !stats.length && !hasMedia) return null;
+    if (!badge && !heading && !highlight && !lede && !stats.length && !hasMedia
+        && !ownRows.length) return null;
 
     return (
         <section className="relative w-full overflow-hidden bg-brand-900 text-white font-sans">
@@ -47,8 +61,8 @@ export function EventsHero({ settings }: Props) {
               composited, none of it content.
             */}
             <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-                <div className="absolute -top-40 right-0 h-[34rem] w-[34rem] rounded-full bg-brand-600/30 blur-3xl" />
-                <div className="absolute -bottom-52 -left-24 h-[30rem] w-[30rem] rounded-full bg-brand-700/40 blur-3xl" />
+                <div className="absolute -top-40 right-0 h-[34rem] w-[34rem] rounded-full bg-brand-600/30 blur-3xl transform-gpu" />
+                <div className="absolute -bottom-52 -left-24 h-[30rem] w-[30rem] rounded-full bg-brand-700/40 blur-3xl transform-gpu" />
                 <svg className="absolute inset-0 h-full w-full opacity-[0.15]" xmlns="http://www.w3.org/2000/svg">
                     <defs>
                         <pattern id="events-dots" x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse">
@@ -59,7 +73,7 @@ export function EventsHero({ settings }: Props) {
                 </svg>
             </div>
 
-            <div className={`${PAGE_CONTAINER} relative z-10 pt-16 pb-20 md:pt-20 md:pb-24`}>
+            <div className={`${SCREEN_CONTAINER} relative z-10 pt-16 pb-20 md:pt-20 md:pb-24`}>
                 <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
 
                     {/* ------------------------------------------------ copy */}
@@ -80,8 +94,15 @@ export function EventsHero({ settings }: Props) {
                         )}
 
                         {lede && (
-                            <p className={`${HERO_LEDE} mt-6 max-w-xl text-white/70`}>{lede}</p>
+                            <p className={`${HERO_LEDE} mt-6 ${BAND_MEASURE} text-white/70`}>{lede}</p>
                         )}
+
+                        {/* The editor's own rows on these two cards, in the
+                            hero's own lede type — the rows are a continuation of
+                            the words over the picture, not a footnote under it. */}
+                        <div className="text-[1.125rem] sm:text-[1.25rem] font-medium leading-relaxed">
+                            <CmsExtraFields fields={ownRows} tone="dark" force="content" className="mt-8" />
+                        </div>
 
                         {stats.length > 0 && (
                             <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
@@ -89,7 +110,7 @@ export function EventsHero({ settings }: Props) {
                                     <div
                                         key={i}
                                         className="rounded-2xl bg-white/[0.07] px-4 py-4 ring-1 ring-white/15
-                                                   backdrop-blur-sm transition-colors duration-300
+                                                   transition-colors duration-300
                                                    hover:bg-white/[0.12]"
                                     >
                                         <CmsIcon
@@ -98,10 +119,10 @@ export function EventsHero({ settings }: Props) {
                                             className="text-brand-300 mb-2.5"
                                             fallback="calendar-days"
                                         />
-                                        <p className="text-2xl font-black tracking-tight tabular-nums">
+                                        <p className="text-[1.5625rem] font-black tracking-tight tabular-nums">
                                             <CountUp value={stat.value} />
                                         </p>
-                                        <p className="mt-0.5 text-xs sm:text-[0.6875rem] font-bold uppercase
+                                        <p className="mt-0.5 text-[1.0625rem] sm:text-[0.8125rem] font-bold uppercase
                                                       tracking-[0.08em] text-white/55">
                                             {stat.label}
                                         </p>
@@ -139,7 +160,7 @@ export function EventsHero({ settings }: Props) {
                                 {showBadge && (
                                     <div
                                         className="absolute -bottom-2 -left-4 w-40 rounded-full bg-brand-700/95
-                                                   px-5 py-5 text-center ring-1 ring-white/20 backdrop-blur-sm
+                                                   px-5 py-5 text-center ring-1 ring-white/20
                                                    shadow-[0_20px_40px_-16px_rgb(0,0,0,0.8)] animate-activ-float"
                                     >
                                         <CmsIcon
@@ -149,10 +170,10 @@ export function EventsHero({ settings }: Props) {
                                             fallback="calendar-days"
                                         />
                                         {heroBadge?.title && (
-                                            <p className="text-sm font-extrabold leading-tight">{heroBadge.title}</p>
+                                            <p className="text-[1.1875rem] font-extrabold leading-tight">{heroBadge.title}</p>
                                         )}
                                         {heroBadge?.subtitle && (
-                                            <p className="mt-1 text-xs leading-snug text-white/70">
+                                            <p className="mt-1 text-[1.0625rem] leading-snug text-white/70">
                                                 {heroBadge.subtitle}
                                             </p>
                                         )}

@@ -1,24 +1,60 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Mail, Phone, MapPin, Save, Camera, Menu } from "lucide-react";
+import {
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+    User, Mail, Phone, MapPin, Save, Camera, Menu, Briefcase, Building2,
+    FileCheck, ArrowRight,
+} from "lucide-react";
 import MemberSidebar from "./MemberSidebar";
 import MemberTopBar from "@/features/member/components/MemberTopBar";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { apiFetch } from "@/services/activApi";
-import { useProfile } from "@/contexts/ProfileContext";
+import { PAGE_SUBTITLE, PAGE_TITLE } from '@/components/layout/appTypography';
+import {
+    apiFetch, getStates, getDistricts, getBlocks, errorMessage,
+} from "@/services/activApi";
+import {
+    SOCIAL_CATEGORIES,
+    GENDERS,
+    religionsFor,
+    normalizeReligion,
+    commencementYears,
+} from "@/lib/memberFormOptions";
+
+/**
+ * EVERY SECTION OF THE APPLICATION, EDITABLE, IN ONE PLACE.
+ *
+ * This screen used to show Personal Information and nothing else to anyone who
+ * had not paid — the business and declaration sections were behind
+ * `isPaid`, and an applicant reaching Settings was told their forms were
+ * "locked while they are in review" with a link to Help & Support. So the only
+ * way to fix a mistyped commencement year was to email somebody about it.
+ *
+ * All of it is here now, prefilled from the record and written straight back.
+ *
+ * WHAT IS NOT HERE, and deliberately: the company's own details — constitution,
+ * activities, PAN, GSTIN, turnover, government registrations. Those describe a
+ * COMPANY, not an applicant, and a member may have several; they are edited per
+ * company in the Business Account, and this screen links there rather than
+ * carrying a second copy of the form. (Two screens editing one record with
+ * different field sets is how the six silently-dropped business fields
+ * documented below came about in the first place.)
+ */
 
 /**
  * A stored Boolean, as the form's yes/no strings.
  *
- * `doingBusiness`, `memberOfOtherChamber` and `filedITR` are Booleans in the
- * database and yes/no strings in these inputs. `value || ""` turned a stored
- * `false` into the empty string — indistinguishable from "never answered" — so
- * a member who had said "no" reopened the page with the question blank.
+ * `doingBusiness` is a Boolean in the database and a yes/no string in these
+ * controls. `value || ""` turned a stored `false` into the empty string —
+ * indistinguishable from "never answered" — so a member who had said "no"
+ * reopened the page with the question blank.
  */
 const yesNoText = (value: unknown): string => {
     if (value === true) return "yes";
@@ -26,32 +62,44 @@ const yesNoText = (value: unknown): string => {
     return String(value ?? "");
 };
 
+/** A yes / no pair. Answering neither leaves the stored answer alone. */
+const YesNo = ({
+    value, onChange,
+}: { value: string; onChange: (v: string) => void }) => (
+    <div className="flex gap-2">
+        {["yes", "no"].map((choice) => (
+            <button
+                key={choice}
+                type="button"
+                aria-pressed={value === choice}
+                onClick={() => onChange(choice)}
+                className={`px-5 py-2 rounded-xl text-[1.1875rem] font-semibold border transition-colors ${value === choice
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                    }`}
+            >
+                {choice === "yes" ? "Yes" : "No"}
+            </button>
+        ))}
+    </div>
+);
+
 const MemberSettings = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const { memberType } = useProfile();
-    const isAspirant = memberType === 'Standard';
 
-    /**
-     * Whether this member sees the paid sections.
-     *
-     * The same localStorage key the sidebar gates its navigation on, so the menu
-     * and this page cannot disagree about who the member is.
-     */
-    const isPaid = (() => {
-        try {
-            return localStorage.getItem('paymentStatus') === 'completed';
-        } catch {
-            return false;
-        }
-    })();
     const [profilePhoto, setProfilePhoto] = useState("");
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-    
+
+    /** Region options, from the admin database — never a bundled list. */
+    const [states, setStates] = useState<string[]>([]);
+    const [districts, setDistricts] = useState<string[]>([]);
+    const [blocks, setBlocks] = useState<string[]>([]);
+
     const [formData, setFormData] = useState({
-        // Personal Information (matches PersonalForm model)
+        // Personal
         name: "",
         email: "",
         phoneNumber: "",
@@ -59,38 +107,107 @@ const MemberSettings = () => {
         state: "",
         district: "",
         block: "",
-        religion: "",
         socialCategory: "",
-        
-        // Business Information (matches BusinessForm model)
+        religion: "",
+        gender: "",
+
+        // Business — the two questions the application asks
         doingBusiness: "",
-        organization: "",
-        constitution: "",
-        businessTypes: [] as string[],
-        businessActivities: "",
         businessYear: "",
-        employees: "",
-        chamber: "",
-        chamberDetails: "",
-        govtOrgs: [] as string[],
-        
-        // Declaration Information (matches DeclarationForm model)
+
+        // Declaration
         sisterConcerns: "",
         companyNames: [] as string[],
         declarationAccepted: false,
-        
-        // Financial Information (matches FinancialForm model)
-        pan: "",
-        gst: "",
-        udyam: "",
-        filedITR: "",
-        turnoverRange: "",
-        govtSchemes: "",
     });
+
+    /** Extra rows for the company-name list, kept beside the saved value. */
+    const [companyInputs, setCompanyInputs] = useState<string[]>([""]);
+
+    /** The religions this member's social category admits. */
+    const allowedReligions = useMemo(
+        () => religionsFor(formData.socialCategory),
+        [formData.socialCategory],
+    );
+
+    /** 1950 to this year, newest first. Fixed for the life of the screen. */
+    const years = useMemo(() => commencementYears(), []);
 
     useEffect(() => {
         loadUserData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    /*
+     * Region options come from the API.
+     *
+     * These three fields were free-text boxes, and that is not a cosmetic
+     * problem: `buildGeoFilter` matches a member's region against an admin's
+     * with an ANCHORED regex, so "Tamil Nadu" typed as "tamil  nadu" is a
+     * different region holding one member and visible to no admin's queue. A
+     * member could type themselves out of every dashboard from this screen and
+     * nothing would report it. See ADMIN-FIRST REGION ARCHITECTURE in CLAUDE.md.
+     */
+    useEffect(() => {
+        let cancelled = false;
+        getStates()
+            .then((r) => { if (!cancelled) setStates((r.states || []).map((s) => s.name)); })
+            .catch(() => { if (!cancelled) setStates([]); });
+        return () => { cancelled = true; };
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        if (!formData.state) {
+            setDistricts([]);
+            return;
+        }
+        getDistricts(formData.state)
+            .then((r) => { if (!cancelled) setDistricts((r.districts || []).map((d) => d.name)); })
+            .catch(() => { if (!cancelled) setDistricts([]); });
+        return () => { cancelled = true; };
+    }, [formData.state]);
+
+    useEffect(() => {
+        let cancelled = false;
+        if (!formData.state || !formData.district) {
+            setBlocks([]);
+            return;
+        }
+        getBlocks(formData.state, formData.district)
+            .then((r) => { if (!cancelled) setBlocks((r.blocks || []).map((b) => b.name)); })
+            .catch(() => { if (!cancelled) setBlocks([]); });
+        return () => { cancelled = true; };
+    }, [formData.state, formData.district]);
+
+    /**
+     * One setter, with the dependencies between fields in it.
+     *
+     * Changing a parent region clears its children rather than auto-picking the
+     * first option: auto-picking silently moves the member to a region they
+     * never chose, and their application queue follows them. Changing the social
+     * category clears a religion the new category does not admit.
+     */
+    const setField = (field: string, value: unknown) =>
+        setFormData((prev) => {
+            const next = { ...prev, [field]: value } as typeof prev;
+            if (field === "state") {
+                next.district = "";
+                next.block = "";
+            } else if (field === "district") {
+                next.block = "";
+            } else if (field === "socialCategory") {
+                if (next.religion && !religionsFor(String(value)).includes(next.religion)) {
+                    next.religion = "";
+                }
+            } else if (field === "doingBusiness" && value === "no") {
+                // An aspirant has no commencement year. Leaving one behind would
+                // price them into a band for a business they just said they do
+                // not have.
+                next.businessYear = "";
+            }
+            return next;
+        });
 
     const loadUserData = async () => {
         try {
@@ -100,121 +217,101 @@ const MemberSettings = () => {
                 return;
             }
 
-            // Parallel fetch all data at once for faster loading
-            const [personalRes, businessRes, declarationRes, financialRes] = await Promise.all([
-                // Fetched once. The same endpoint was requested twice in this
-                // very list, and both results fed the same form.
-                apiFetch('/members/my-profile', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }),
-                apiFetch('/members/business-info', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }),
-                apiFetch('/members/declaration-info', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }),
-                apiFetch('/members/financial-info', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                })
+            const auth = { headers: { 'Authorization': `Bearer ${token}` } };
+
+            // Three reads, issued together. The financial record is not edited
+            // here any more — it belongs to a company, in the Business Account.
+            const [personalRes, businessRes, declarationRes] = await Promise.all([
+                apiFetch('/members/my-profile', auth),
+                apiFetch('/members/business-info', auth),
+                apiFetch('/members/declaration-info', auth),
             ]);
 
-            // Process user data
-            if (personalRes.ok) {
-                const userResult = await personalRes.clone().json();
-                if (userResult.success && userResult.data) {
-                    setProfilePhoto(userResult.data.profilePhoto || "");
-                }
-            }
-
-            // Process personal form data
             if (personalRes.ok) {
                 const personalResult = await personalRes.json();
                 if (personalResult.success && personalResult.data) {
                     const data = personalResult.data;
+                    setProfilePhoto(data.profilePhoto || "");
                     setFormData(prev => ({
                         ...prev,
-                        name: data.name || "",
+                        // `fullName` is what the endpoint returns; `name` is kept
+                        // as a fallback for an older cached response shape.
+                        name: data.fullName || data.name || "",
                         email: data.email || "",
                         phoneNumber: data.phoneNumber || "",
                         city: data.city || "",
                         state: data.state || "",
                         district: data.district || "",
                         block: data.block || "",
-                        religion: data.religion || "",
-                        socialCategory: data.socialCategory || ""
+                        socialCategory: data.socialCategory || "",
+                        // Old spellings map onto the list's current wording.
+                        // Mapped, so a returning member is not handed a blank
+                        // select — see `normalizeReligion`.
+                        religion: normalizeReligion(data.religion),
+                        gender: data.gender || "",
                     }));
                 }
             }
 
-            // Process business form data
             if (businessRes.ok) {
                 const businessResult = await businessRes.json();
                 if (businessResult.success && businessResult.data) {
                     /*
-                      * The names `GET /members/business-info` returns.
-                      *
-                      * It answers `organizationName`, `constitutionType`,
-                      * `businessCommencementYear`, `numberOfEmployees`,
-                      * `memberOfOtherChamber` and `govtOrganizations`; this read
-                      * the form's shorthand, so all six came back `undefined`
-                      * and the fields rendered empty over data that existed.
-                      * Saving then wrote those blanks back.
-                      */
+                     * `businessCommencementYear` is the name
+                     * `GET /members/business-info` returns. This screen used to
+                     * read the form's own shorthand, so six business fields came
+                     * back `undefined`, rendered empty over data that existed,
+                     * and the next save wrote those blanks back.
+                     */
+                    const d = businessResult.data;
                     setFormData(prev => ({
                         ...prev,
-                        doingBusiness: yesNoText(businessResult.data.doingBusiness),
-                        organization: businessResult.data.organizationName || businessResult.data.organization || "",
-                        constitution: businessResult.data.constitutionType || businessResult.data.constitution || "",
-                        businessTypes: businessResult.data.businessTypes || [],
-                        businessActivities: businessResult.data.businessActivities || "",
-                        businessYear: String(businessResult.data.businessCommencementYear || businessResult.data.businessYear || ""),
-                        employees: String(businessResult.data.numberOfEmployees || businessResult.data.employees || ""),
-                        chamber: yesNoText(businessResult.data.memberOfOtherChamber ?? businessResult.data.chamber),
-                        chamberDetails: businessResult.data.otherChamber || businessResult.data.chamberDetails || "",
-                        govtOrgs: businessResult.data.govtOrganizations || businessResult.data.govtOrgs || []
+                        doingBusiness: yesNoText(d.doingBusiness),
+                        businessYear: String(d.businessCommencementYear || d.businessYear || ""),
                     }));
                 }
             }
 
-            // Process declaration form data
             if (declarationRes.ok) {
                 const declarationResult = await declarationRes.json();
                 if (declarationResult.success && declarationResult.data) {
+                    const d = declarationResult.data;
+                    const names: string[] = Array.isArray(d.companyNames)
+                        ? d.companyNames.map((v: unknown) => String(v ?? ""))
+                        : [];
                     setFormData(prev => ({
                         ...prev,
-                        sisterConcerns: String(declarationResult.data.sisterConcerns ?? ""),
-                        companyNames: declarationResult.data.companyNames || [],
+                        sisterConcerns: String(d.sisterConcerns ?? ""),
+                        companyNames: names,
                         // `agreeToDeclaration` is what the endpoint returns.
-                        declarationAccepted: declarationResult.data.agreeToDeclaration === true
+                        declarationAccepted: d.agreeToDeclaration === true,
                     }));
+                    // One empty row when there is nothing stored, or the member
+                    // is left with an "Add" button and nowhere to type.
+                    setCompanyInputs(names.length ? names : [""]);
                 }
             }
-
-            // Process financial form data
-            if (financialRes.ok) {
-                const financialResult = await financialRes.json();
-                if (financialResult.success && financialResult.data) {
-                    setFormData(prev => ({
-                        ...prev,
-                        // `panNumber` / `gstNumber` / `udyamNumber` — the three
-                        // identifiers a member is most likely to come here to
-                        // correct, and the three that were rendering blank.
-                        pan: financialResult.data.panNumber || financialResult.data.pan || "",
-                        gst: financialResult.data.gstNumber || financialResult.data.gst || "",
-                        udyam: financialResult.data.udyamNumber || financialResult.data.udyam || "",
-                        filedITR: yesNoText(financialResult.data.filedITR),
-                        turnoverRange: financialResult.data.turnoverRange || "",
-                        govtSchemes: financialResult.data.govtSchemes || [],
-                    }));
-                }
-            }
-
         } catch (error) {
             console.error('Error loading user data:', error);
             toast.error('Failed to load settings data');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleCompanyNameChange = (index: number, value: string) => {
+        const next = [...companyInputs];
+        next[index] = value;
+        setCompanyInputs(next);
+        setFormData(prev => ({ ...prev, companyNames: next.filter((n) => n.trim() !== "") }));
+    };
+
+    const addCompanyInput = () => setCompanyInputs([...companyInputs, ""]);
+
+    const removeCompanyInput = (index: number) => {
+        const next = companyInputs.filter((_, i) => i !== index);
+        setCompanyInputs(next.length ? next : [""]);
+        setFormData(prev => ({ ...prev, companyNames: next.filter((n) => n.trim() !== "") }));
     };
 
     const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -272,162 +369,114 @@ const MemberSettings = () => {
         } catch (error) {
             console.error('Error uploading photo:', error);
             toast.error('Error uploading photo');
+        } finally {
             setIsUploadingPhoto(false);
         }
     };
 
     const handleSave = async () => {
+        if (formData.socialCategory && formData.religion
+            && !allowedReligions.includes(formData.religion)) {
+            toast.error(`Please choose a religion recognised for ${formData.socialCategory}`);
+            return;
+        }
+        if (formData.doingBusiness === "yes" && !formData.businessYear) {
+            toast.error("Please select the year your business commenced");
+            return;
+        }
+
         setSaving(true);
         try {
             const token = localStorage.getItem('token');
 
-            // Update personal form - POST works, PUT has issues
-            const personalResponse = await apiFetch('/members/profile', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    // `fullName`, not `name`. The controller reads
-                    // `profileData.fullName`; anything else is dropped without
-                    // an error, so the form reported success and changed nothing.
-                    fullName: formData.name,
-                    email: formData.email,
-                    phoneNumber: formData.phoneNumber,
-                    city: formData.city,
-                    state: formData.state,
-                    district: formData.district,
-                    block: formData.block,
-                    religion: formData.religion,
-                    socialCategory: formData.socialCategory
-                })
-            });
+            /**
+             * ONE request, carrying every section.
+             *
+             * `updateMember` routes a single body to all four collections — the
+             * personal record, the business record, the financial record and the
+             * declaration — so this used to be four sequential PUTs to the same
+             * endpoint with overlapping bodies, plus a fifth that re-sent the
+             * name. Four round trips, four chances to half-succeed, and no way
+             * to tell the member which half.
+             *
+             * Every key is the name the schema actually stores. The form's own
+             * shorthand (`organization`, `constitution`, `businessYear`,
+             * `employees`, `chamber`, `govtOrgs`) is not read by the controller,
+             * so Mongoose strict mode dropped all six on every save while the
+             * response said 200 and the toast said "saved".
+             */
+            const payload: Record<string, unknown> = {
+                // `fullName`, not `name`.
+                fullName: formData.name,
+                email: formData.email,
+                phoneNumber: formData.phoneNumber,
+                city: formData.city,
+                state: formData.state,
+                district: formData.district,
+                block: formData.block,
+                socialCategory: formData.socialCategory,
+                religion: formData.religion,
+                gender: formData.gender,
 
-            // Update business form - POST works
-            let businessResponse = { ok: true };
-            if (!isAspirant) {
-                businessResponse = await apiFetch('/members/profile', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                /*
-                  * The names the schema stores, not the form's own shorthand.
-                  *
-                  * `organization`, `constitution`, `businessYear`, `employees`,
-                  * `chamber` and `govtOrgs` are not keys `updateMember` reads,
-                  * so Mongoose strict mode dropped all six on every save while
-                  * the response said 200 and the toast said "saved". Six
-                  * corrections a member made here never reached the database.
-                  */
-                body: JSON.stringify({
-                    doingBusiness: formData.doingBusiness,
-                    organizationName: formData.organization,
-                    constitutionType: formData.constitution,
-                    businessTypes: formData.businessTypes,
-                    businessActivities: formData.businessActivities,
-                    businessCommencementYear: formData.businessYear,
-                    numberOfEmployees: formData.employees,
-                    memberOfOtherChamber: formData.chamber || undefined, // undefined, not '' — see asBool
-                    otherChamber: formData.chamberDetails,
-                    govtOrganizations: formData.govtOrgs
-                })
-                });
-            }
-
-            // Update declaration form - POST works
-            const declarationResponse = await apiFetch('/members/profile', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
                 // `agreeToDeclaration` is the stored field; `declarationAccepted`
-                // is not a key the server reads, so the consent was recorded as
-                // false for everyone who saved from here.
-                body: JSON.stringify({
-                    sisterConcerns: formData.sisterConcerns,
-                    companyNames: formData.companyNames,
-                    agreeToDeclaration: formData.declarationAccepted
-                })
+                // is not a key the server reads, so the consent used to be
+                // recorded as false for everyone who saved from here.
+                // Never a count from a field an aspirant was not shown.
+                sisterConcerns: formData.doingBusiness === "yes" ? formData.sisterConcerns : "",
+                companyNames: formData.companyNames,
+                agreeToDeclaration: formData.declarationAccepted,
+            };
+
+            /*
+              An unanswered business question is left out entirely.
+
+              `''` cannot be cast to Boolean and failed the whole request with a
+              500 no client could act on; omitting it is what "unanswered" means
+              and leaves the stored answer alone.
+            */
+            if (formData.doingBusiness) {
+                payload.doingBusiness = formData.doingBusiness;
+                payload.registrationType =
+                    formData.doingBusiness === "no" ? "aspirant" : "business";
+                if (formData.doingBusiness === "yes") {
+                    payload.businessCommencementYear = formData.businessYear;
+                }
+            }
+
+            const response = await apiFetch('/members/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(payload),
             });
 
-            // Update financial form - POST works
-            let financialResponse = { ok: true };
-            if (!isAspirant) {
-                financialResponse = await apiFetch('/members/profile', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                // Same again: `panNumber`, not `pan`. The three identifiers a
-                // member is most likely to correct were the three being lost.
-                body: JSON.stringify({
-                    panNumber: formData.pan,
-                    gstNumber: formData.gst,
-                    udyamNumber: formData.udyam,
-                    filedITR: formData.filedITR || undefined,
-                    turnoverRange: formData.turnoverRange,
-                    govtSchemes: formData.govtSchemes || undefined,
-                })
-                });
+            if (!response.ok) {
+                // The region gate rejects a district or block with no active
+                // admin and its message names the region — worth showing
+                // verbatim rather than replacing with a generic failure.
+                const result = await response.json().catch(() => ({}));
+                toast.error(result?.message || "Failed to update your details");
+                return;
             }
 
-            if (personalResponse.ok) {
-                // Also update the user profile (fullName) in the User model
-                const updateRes = await apiFetch('/members/profile', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        fullName: formData.name,
-                        email: formData.email
-                    })
-                });
+            toast.success("Your details have been updated");
 
-                if (updateRes.ok) {
-                    toast.success("Profile updated successfully!");
-                    // Update localStorage
-                    localStorage.setItem('userName', formData.name);
-                    localStorage.setItem('userEmail', formData.email);
-                    if (formData.organization) {
-                        localStorage.setItem('userOrganization', formData.organization);
-                    }
-                    // Dispatch events to update sidebar immediately
-                    window.dispatchEvent(new CustomEvent('userDataUpdated'));
-                    window.dispatchEvent(new CustomEvent('profileDataUpdated'));
-                    if (formData.organization) {
-                        window.dispatchEvent(new CustomEvent('companyUpdated'));
-                    }
-                    
-                    // No need to reload - sidebar will update via events
-                    loadUserData();
-                } else {
-                    toast.success("Profile forms updated!");
-                    // Update localStorage even if user profile API fails
-                    localStorage.setItem('userName', formData.name);
-                    localStorage.setItem('userEmail', formData.email);
-                    if (formData.organization) {
-                        localStorage.setItem('userOrganization', formData.organization);
-                    }
-                    window.dispatchEvent(new CustomEvent('userDataUpdated'));
-                    window.dispatchEvent(new CustomEvent('profileDataUpdated'));
-                    if (formData.organization) {
-                        window.dispatchEvent(new CustomEvent('companyUpdated'));
-                    }
-                    loadUserData();
-                }
-            } else {
-                toast.error("Failed to update profile");
-            }
+            localStorage.setItem('userName', formData.name);
+            localStorage.setItem('userEmail', formData.email);
+            // Every surface that shows the member's name or completion reads
+            // these; without them the sidebar keeps the old name until a reload.
+            window.dispatchEvent(new CustomEvent('userDataUpdated'));
+            window.dispatchEvent(new CustomEvent('profileDataUpdated'));
+            window.dispatchEvent(new CustomEvent('formSubmitted'));
+
+            // Read back what was actually stored rather than trusting local
+            // state — the server normalises phone numbers and region spellings.
+            await loadUserData();
         } catch (error) {
             console.error('Error updating profile:', error);
-            toast.error("Error updating profile");
+            toast.error(errorMessage(error, "Error updating profile"));
         } finally {
             setSaving(false);
         }
@@ -450,7 +499,7 @@ const MemberSettings = () => {
     return (
         <div className="flex h-screen bg-slate-50">
             <MemberSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-            
+
             <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Header */}
                 <header className="h-[5.5rem] shrink-0 bg-white border-b border-slate-200 flex items-center gap-3 px-6 z-10">
@@ -464,10 +513,10 @@ const MemberSettings = () => {
                     </button>
 
                     <div className="min-w-0">
-                        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900 truncate">
+                        <h1 className={`${PAGE_TITLE} text-slate-900 truncate`}>
                             Settings
                         </h1>
-                        <p className="text-sm text-slate-500 mt-0.5 truncate hidden sm:block">
+                        <p className={`${PAGE_SUBTITLE} text-slate-500 mt-0.5 truncate hidden sm:block`}>
                             Manage your profile and account preferences
                         </p>
                     </div>
@@ -490,7 +539,7 @@ const MemberSettings = () => {
                                     <div className="relative">
                                         <Avatar className="w-24 h-24">
                                             <AvatarImage src={profilePhoto || undefined} />
-                                            <AvatarFallback className="bg-blue-600 text-white text-2xl font-bold">
+                                            <AvatarFallback className="bg-blue-600 text-white text-[1.75rem] font-bold">
                                                 {formData.name ? formData.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "U"}
                                             </AvatarFallback>
                                         </Avatar>
@@ -519,16 +568,19 @@ const MemberSettings = () => {
                                                 {isUploadingPhoto ? 'Uploading...' : 'Change Photo'}
                                             </Button>
                                         </label>
-                                        <p className="text-xs text-slate-500 mt-2">JPG, PNG or GIF. Max size 5MB.</p>
+                                        <p className="text-[1.0625rem] text-slate-500 mt-2">JPG, PNG or GIF. Max size 5MB.</p>
                                     </div>
                                 </div>
                             </CardContent>
                         </Card>
 
-                        {/* Profile Information */}
+                        {/* ------------------------------------------- personal */}
                         <Card>
                             <CardHeader>
-                                <CardTitle>Personal Information</CardTitle>
+                                <CardTitle className="flex items-center gap-2">
+                                    <User className="h-5 w-5 text-blue-600" />
+                                    Personal Information
+                                </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -539,7 +591,7 @@ const MemberSettings = () => {
                                         </Label>
                                         <Input
                                             value={formData.name}
-                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            onChange={(e) => setField("name", e.target.value)}
                                             placeholder="Enter your full name"
                                         />
                                     </div>
@@ -552,7 +604,7 @@ const MemberSettings = () => {
                                         <Input
                                             type="email"
                                             value={formData.email}
-                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                            onChange={(e) => setField("email", e.target.value)}
                                             placeholder="your.email@example.com"
                                         />
                                     </div>
@@ -564,9 +616,11 @@ const MemberSettings = () => {
                                         </Label>
                                         <Input
                                             type="tel"
+                                            inputMode="numeric"
+                                            maxLength={10}
                                             value={formData.phoneNumber}
-                                            onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                                            placeholder="+91 98765 43210"
+                                            onChange={(e) => setField("phoneNumber", e.target.value)}
+                                            placeholder="9876543210"
                                         />
                                     </div>
 
@@ -577,310 +631,298 @@ const MemberSettings = () => {
                                         </Label>
                                         <Input
                                             value={formData.city}
-                                            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                                            onChange={(e) => setField("city", e.target.value)}
                                             placeholder="Enter city"
                                         />
                                     </div>
 
                                     <div>
                                         <Label className="mb-2">State</Label>
-                                        <Input
+                                        <Select
                                             value={formData.state}
-                                            onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                                            placeholder="Enter state"
-                                        />
+                                            onValueChange={(v) => setField("state", v)}
+                                        >
+                                            <SelectTrigger><SelectValue placeholder="Select State" /></SelectTrigger>
+                                            <SelectContent>
+                                                {states.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
 
                                     <div>
                                         <Label className="mb-2">District</Label>
-                                        <Input
+                                        <Select
                                             value={formData.district}
-                                            onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                                            placeholder="Enter district"
-                                        />
+                                            onValueChange={(v) => setField("district", v)}
+                                            disabled={!formData.state}
+                                        >
+                                            <SelectTrigger><SelectValue placeholder="Select District" /></SelectTrigger>
+                                            <SelectContent>
+                                                {districts.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
 
                                     <div>
                                         <Label className="mb-2">Block</Label>
-                                        <Input
+                                        <Select
                                             value={formData.block}
-                                            onChange={(e) => setFormData({ ...formData, block: e.target.value })}
-                                            placeholder="Enter block"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <Label className="mb-2">Religion</Label>
-                                        <Input
-                                            value={formData.religion}
-                                            onChange={(e) => setFormData({ ...formData, religion: e.target.value })}
-                                            placeholder="Enter religion"
-                                        />
+                                            onValueChange={(v) => setField("block", v)}
+                                            disabled={!formData.district}
+                                        >
+                                            <SelectTrigger><SelectValue placeholder="Select Block" /></SelectTrigger>
+                                            <SelectContent>
+                                                {blocks.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
 
                                     <div>
                                         <Label className="mb-2">Social Category</Label>
-                                        <Input
+                                        <Select
                                             value={formData.socialCategory}
-                                            onChange={(e) => setFormData({ ...formData, socialCategory: e.target.value })}
-                                            placeholder="Enter social category"
-                                        />
+                                            onValueChange={(v) => setField("socialCategory", v)}
+                                        >
+                                            <SelectTrigger><SelectValue placeholder="Select Social Category" /></SelectTrigger>
+                                            <SelectContent>
+                                                {SOCIAL_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/*
+                                        Religion, narrowed by the category above.
+
+                                        Asked in this order because the category
+                                        decides this field: a religion already
+                                        chosen would have to be rewritten the
+                                        moment the category is answered, and a
+                                        field that silently changes its own value
+                                        reads as the form losing an answer.
+
+                                        Disabled until the category is answered
+                                        rather than showing all five and then
+                                        shrinking the list.
+                                    */}
+                                    <div>
+                                        <Label className="mb-2">Religion</Label>
+                                        <Select
+                                            value={formData.religion}
+                                            onValueChange={(v) => setField("religion", v)}
+                                            disabled={!formData.socialCategory}
+                                        >
+                                            <SelectTrigger><SelectValue placeholder="Select Religion" /></SelectTrigger>
+                                            <SelectContent>
+                                                {allowedReligions.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        {/* Only the disabled-state prompt — see PersonalForm. */}
+                                        <p className="text-[1.0625rem] text-slate-500 mt-1.5">
+                                            {!formData.socialCategory ? "Choose a social category first." : " "}
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <Label className="mb-2">Gender</Label>
+                                        <Select
+                                            value={formData.gender}
+                                            onValueChange={(v) => setField("gender", v)}
+                                        >
+                                            <SelectTrigger><SelectValue placeholder="Select Gender" /></SelectTrigger>
+                                            <SelectContent>
+                                                {GENDERS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                 </div>
                             </CardContent>
                         </Card>
 
-                        {/*
-                          * Business, financial and declaration — paid members only.
-                          *
-                          * Mobile gives an unpaid member `EditProfileScreen`: seven
-                          * personal fields and nothing else. These three sections belong
-                          * to `PaidSettingsScreen`, which an unpaid member has no route
-                          * to. Reaching them here through "Edit Profile" let an unpaid
-                          * member edit a business record they cannot yet have, and did it
-                          * by walking past the paid-only gate on the sidebar entry.
-                          *
-                          * Each form also has its own dedicated screen at
-                          * `/member/forms/*`, which is where they are filled in during
-                          * registration. This is for corrections afterwards.
-                          */}
-                        {isPaid && (
-                        <>
-                        {!isAspirant && (
-                        <>
-                        {/* Business Information */}
+                        {/* ------------------------------------------- business */}
                         <Card>
                             <CardHeader>
-                                <CardTitle>Business Information</CardTitle>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Briefcase className="h-5 w-5 text-blue-600" />
+                                    Business Information
+                                </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-5">
                                     <div>
-                                        <Label className="mb-2">Doing Business</Label>
-                                        <Input
+                                        <Label className="mb-2">Are you currently doing business?</Label>
+                                        <YesNo
                                             value={formData.doingBusiness}
-                                            onChange={(e) => setFormData({ ...formData, doingBusiness: e.target.value })}
-                                            placeholder="Yes/No"
+                                            onChange={(v) => setField("doingBusiness", v)}
                                         />
+                                        <p className="text-[1.0625rem] text-slate-500 mt-1.5">
+                                            Answering "No" records you as an aspirant member.
+                                        </p>
                                     </div>
 
-                                    <div>
-                                        <Label className="mb-2">Organization Name</Label>
-                                        <Input
-                                            value={formData.organization}
-                                            onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
-                                            placeholder="Enter organization name"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <Label className="mb-2">Constitution</Label>
-                                        <Input
-                                            value={formData.constitution}
-                                            onChange={(e) => setFormData({ ...formData, constitution: e.target.value })}
-                                            placeholder="Enter constitution type"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <Label className="mb-2">Business Year</Label>
-                                        <Input
-                                            value={formData.businessYear}
-                                            onChange={(e) => setFormData({ ...formData, businessYear: e.target.value })}
-                                            placeholder="Enter business year"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <Label className="mb-2">Number of Employees</Label>
-                                        <Input
-                                            value={formData.employees}
-                                            onChange={(e) => setFormData({ ...formData, employees: e.target.value })}
-                                            placeholder="Enter employee count"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <Label className="mb-2">Chamber Membership</Label>
-                                        <Input
-                                            value={formData.chamber}
-                                            onChange={(e) => setFormData({ ...formData, chamber: e.target.value })}
-                                            placeholder="Yes/No"
-                                        />
-                                    </div>
-
-                                    <div className="md:col-span-2">
-                                        <Label className="mb-2">Chamber Details</Label>
-                                        <Input
-                                            value={formData.chamberDetails}
-                                            onChange={(e) => setFormData({ ...formData, chamberDetails: e.target.value })}
-                                            placeholder="Enter chamber details"
-                                        />
-                                    </div>
-
-                                    <div className="md:col-span-2">
-                                        <Label className="mb-2">Business Activities</Label>
-                                        <Input
-                                            value={formData.businessActivities}
-                                            onChange={(e) => setFormData({ ...formData, businessActivities: e.target.value })}
-                                            placeholder="Enter business activities"
-                                        />
-                                    </div>
+                                    {formData.doingBusiness === "yes" && (
+                                        <div className="max-w-sm">
+                                            <Label className="mb-2">Business Commencement Year</Label>
+                                            <Select
+                                                value={formData.businessYear}
+                                                onValueChange={(v) => setField("businessYear", v)}
+                                            >
+                                                <SelectTrigger><SelectValue placeholder="Select year" /></SelectTrigger>
+                                                {/* Seventy-odd years, so the list scrolls
+                                                    rather than covering the window. */}
+                                                <SelectContent className="max-h-72">
+                                                    {years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                            <p className="text-[1.0625rem] text-slate-500 mt-1.5">
+                                                This year decides which membership plan you are offered.
+                                                The fee is confirmed at the payment step.
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
 
-                        {/* Financial Information */}
+                        {/* ---------------------------------------- declaration */}
                         <Card>
                             <CardHeader>
-                                <CardTitle>Financial & Compliance Information</CardTitle>
+                                <CardTitle className="flex items-center gap-2">
+                                    <FileCheck className="h-5 w-5 text-blue-600" />
+                                    Declaration
+                                </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <Label className="mb-2">PAN Number</Label>
+                                <div className="space-y-5">
+                                    {/*
+                                        SISTER CONCERNS IS A BUSINESS QUESTION, and the business step
+                                        has already asked whether there is a business. Asking an
+                                        aspirant how many OTHER companies they own, on the screen where
+                                        they certify the information is correct, is asking them to
+                                        invent a field. "0 if none" is not the honest answer; "this does
+                                        not apply" is, and the form had no way to say it.
+                                        Same gate as `Profile.tsx` step 3.
+                                    */}
+                                    {formData.doingBusiness === "yes" && (
+                                    <>
+                                    <div className="max-w-sm">
+                                        <Label className="mb-2">Number of Sister Concerns</Label>
                                         <Input
-                                            value={formData.pan}
-                                            onChange={(e) => setFormData({ ...formData, pan: e.target.value })}
-                                            placeholder="Enter PAN number"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <Label className="mb-2">GST Number</Label>
-                                        <Input
-                                            value={formData.gst}
-                                            onChange={(e) => setFormData({ ...formData, gst: e.target.value })}
-                                            placeholder="Enter GST number"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <Label className="mb-2">Udyam Number</Label>
-                                        <Input
-                                            value={formData.udyam}
-                                            onChange={(e) => setFormData({ ...formData, udyam: e.target.value })}
-                                            placeholder="Enter Udyam number"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <Label className="mb-2">Filed ITR</Label>
-                                        <Input
-                                            value={formData.filedITR}
-                                            onChange={(e) => setFormData({ ...formData, filedITR: e.target.value })}
-                                            placeholder="Yes/No"
-                                        />
-                                    </div>
-
-
-                                    <div>
-                                        <Label className="mb-2">Turnover Range</Label>
-                                        <Input
-                                            value={formData.turnoverRange}
-                                            onChange={(e) => setFormData({ ...formData, turnoverRange: e.target.value })}
-                                            placeholder="Enter turnover range"
-                                        />
-                                    </div>
-
-
-
-
-                                    <div>
-                                        <Label className="mb-2">Government Schemes</Label>
-                                        <Input
-                                            value={formData.govtSchemes}
-                                            onChange={(e) => setFormData({ ...formData, govtSchemes: e.target.value })}
-                                            placeholder="Yes/No"
-                                        />
-                                    </div>
-
-
-
-                                </div>
-                            </CardContent>
-                        </Card>
-                        </>
-                        )}
-
-                        {/* Declaration Information */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Declaration Information</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <Label className="mb-2">Sister Concerns</Label>
-                                        <Input
+                                            type="number"
+                                            min={0}
+                                            inputMode="numeric"
                                             value={formData.sisterConcerns}
-                                            onChange={(e) => setFormData({ ...formData, sisterConcerns: e.target.value })}
-                                            placeholder="Enter sister concerns"
+                                            onChange={(e) => {
+                                                // Digits only. The field is a count, and a
+                                                // negative one fails the schema's `min: 0`.
+                                                const digits = e.target.value.replace(/[^0-9]/g, "");
+                                                setField("sisterConcerns", digits);
+                                            }}
+                                            placeholder="Enter number (0 if none)"
                                         />
                                     </div>
 
-                                    <div>
-                                        <Label className="mb-2">Declaration Accepted</Label>
-                                        <Input
-                                            value={formData.declarationAccepted ? "Yes" : "No"}
-                                            onChange={(e) => setFormData({ ...formData, declarationAccepted: e.target.value.toLowerCase() === "yes" })}
-                                            placeholder="Yes/No"
+                                    {Number(formData.sisterConcerns || 0) > 0 && (
+                                        <div className="space-y-3 max-w-xl">
+                                            <Label>Company Names</Label>
+                                            {companyInputs.map((value, index) => (
+                                                <div key={index} className="flex gap-2">
+                                                    <Input
+                                                        value={value}
+                                                        onChange={(e) => handleCompanyNameChange(index, e.target.value)}
+                                                        placeholder={`Company ${index + 1}`}
+                                                        className="flex-1"
+                                                    />
+                                                    {companyInputs.length > 1 && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            onClick={() => removeCompanyInput(index)}
+                                                            className="text-red-600 hover:text-red-700"
+                                                        >
+                                                            Remove
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={addCompanyInput}
+                                                className="w-full"
+                                            >
+                                                + Add Another Company
+                                            </Button>
+                                        </div>
+                                    )}
+                                    </>
+                                    )}
+
+                                    <label className="flex items-start gap-3 cursor-pointer">
+                                        <Checkbox
+                                            checked={formData.declarationAccepted}
+                                            onCheckedChange={(checked) =>
+                                                setField("declarationAccepted", checked === true)}
+                                            className="mt-1"
                                         />
-                                    </div>
+                                        <span className="text-[1.1875rem] text-slate-700">
+                                            I declare that all the information provided is true and correct
+                                            to the best of my knowledge, and I understand that false
+                                            information may result in rejection of my application.
+                                        </span>
+                                    </label>
                                 </div>
                             </CardContent>
                         </Card>
-
-                        </>
-                        )}
 
                         {/*
-                          * Why an applicant sees one section and not four.
+                          * Company and financial details, and where they actually live.
                           *
-                          * Settings is in the rail from the day the account exists
-                          * now, so an applicant reaches this screen while their
-                          * business, financial and declaration forms are still with
-                          * the review team — locked on purpose, because a file that
-                          * changes underneath a reviewer is a file nobody has
-                          * actually approved. Without this note the screen reads as
-                          * three missing sections; with it, it reads as three
-                          * sections that are exactly where they should be.
+                          * Not a second copy of the company form. Constitution, PAN,
+                          * GSTIN, turnover and government registrations describe a
+                          * COMPANY, and a member may have more than one — asked here
+                          * they would have one set of answers describing whichever
+                          * company was edited last. This is a signpost.
                           */}
-                        {!isPaid && (
                         <Card className="border-blue-100 bg-blue-50/60">
-                            <CardContent className="pt-6">
-                                <p className="text-sm font-bold text-slate-900">
-                                    Your application forms are locked while they are in review
-                                </p>
-                                <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
-                                    Your contact details above can be changed at any time. The business,
-                                    financial and declaration sections were submitted with your application
-                                    and stay as the review team received them. If one of them needs a
-                                    correction, send it from{' '}
-                                    <button
-                                        type="button"
-                                        onClick={() => navigate('/member/help')}
-                                        className="font-semibold text-blue-700 hover:underline"
-                                    >
-                                        Help &amp; Support
-                                    </button>{' '}
-                                    with your application reference.
-                                </p>
+                            <CardContent className="pt-6 flex flex-wrap items-start justify-between gap-4">
+                                <div className="min-w-0">
+                                    <p className="text-[1.1875rem] font-bold text-slate-900 flex items-center gap-2">
+                                        <Building2 className="h-4 w-4 text-blue-600" />
+                                        Company &amp; financial details
+                                    </p>
+                                    <p className="text-[1.1875rem] text-slate-500 mt-1.5 leading-relaxed max-w-2xl">
+                                        Constitution, type of business, activities, PAN, GSTIN, turnover
+                                        and government registrations are held against each company rather
+                                        than against you, so they are edited in your Business Account.
+                                    </p>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="border-blue-200 text-blue-700 hover:bg-blue-100 shrink-0"
+                                    onClick={() => navigate('/business/companies')}
+                                >
+                                    Open Business Account
+                                    <ArrowRight className="h-4 w-4 ml-2" />
+                                </Button>
                             </CardContent>
                         </Card>
-                        )}
 
                         {/* Save Button */}
                         <Card>
                             <CardContent className="pt-6">
-                                <Button 
-                                    onClick={handleSave} 
+                                <Button
+                                    onClick={handleSave}
                                     disabled={saving}
                                     className="w-full md:w-auto bg-blue-600 hover:bg-blue-700"
                                 >
                                     <Save className="h-4 w-4 mr-2" />
                                     {saving ? "Saving..." : "Save All Changes"}
                                 </Button>
+                                <p className="text-[1.0625rem] text-slate-500 mt-3">
+                                    Changes are written to your record immediately and are what the
+                                    review team sees.
+                                </p>
                             </CardContent>
                         </Card>
                     </div>

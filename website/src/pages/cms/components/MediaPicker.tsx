@@ -78,10 +78,20 @@ export default function MediaPicker({ value, onChange, label = 'Media', aspect =
 
     return (
         <div className="space-y-4">
-            <div>
-                <p className="text-sm font-medium text-slate-700 dark:text-neutral-300">{label}</p>
-                {hint && <p className="text-xs text-neutral-500 mt-0.5">{hint}</p>}
-            </div>
+            {/* Nothing to say, nothing drawn. `label=""` is how a caller says
+                the section heading above already names this picker — and it was
+                still emitting an empty paragraph, which is a blank line of
+                space that reads as a missing field. */}
+            {(label || hint) && (
+                <div>
+                    {label && (
+                        <p className="text-[1.25rem] font-medium text-slate-700 dark:text-neutral-300">
+                            {label}
+                        </p>
+                    )}
+                    {hint && <p className="text-[1.1875rem] text-neutral-500 mt-0.5">{hint}</p>}
+                </div>
+            )}
 
             {/*
                 The preview and the upload buttons share one row; every field
@@ -105,7 +115,7 @@ export default function MediaPicker({ value, onChange, label = 'Media', aspect =
                     {!media.url ? (
                         <div className="text-center text-neutral-400 dark:text-neutral-600 px-3">
                             <ImageIcon className="w-6 h-6 mx-auto mb-1" />
-                            <span className="text-xs">Nothing selected</span>
+                            <span className="text-[1.1875rem]">Nothing selected</span>
                         </div>
                     ) : media.type === 'video' ? (
                         <video
@@ -133,7 +143,7 @@ export default function MediaPicker({ value, onChange, label = 'Media', aspect =
                             type="button"
                             onClick={() => fileRef.current?.click()}
                             disabled={uploading}
-                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-slate-100 dark:bg-[#1A1A1A]
+                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-[1.25rem] bg-slate-100 dark:bg-[#1A1A1A]
                                        hover:bg-slate-200 dark:hover:bg-[#262626] text-slate-800 dark:text-[#E4E4E7] disabled:opacity-50"
                         >
                             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
@@ -144,7 +154,7 @@ export default function MediaPicker({ value, onChange, label = 'Media', aspect =
                             <button
                                 type="button"
                                 onClick={() => set({ ...EMPTY_MEDIA })}
-                                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm
+                                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-[1.25rem]
                                            text-red-600 dark:text-red-400 hover:bg-slate-100 dark:hover:bg-[#1A1A1A]"
                             >
                                 <Trash2 className="w-4 h-4" /> Remove
@@ -152,12 +162,33 @@ export default function MediaPicker({ value, onChange, label = 'Media', aspect =
                         )}
 
                         {media.url && (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-2 text-xs text-slate-500 dark:text-[#A1A1AA]">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-2 text-[1.1875rem] text-slate-500 dark:text-[#A1A1AA]">
                                 {media.type === 'video' ? <Film className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
                                 {media.type}
                             </span>
                         )}
                     </div>
+
+                    {/* WHAT WAS SAVED. The upload writes this address; showing
+                        it is how an editor checks it went in, and how they copy
+                        it when the same picture is wanted elsewhere. */}
+                    {media.url && (
+                        <div className="w-full">
+                            <span className="block text-[1.0625rem] font-bold uppercase tracking-wide
+                                             text-slate-400 dark:text-neutral-500">
+                                Picture address, saved with the page
+                            </span>
+                            <code
+                                title={media.url}
+                                className="mt-1 block max-w-lg truncate rounded bg-slate-100 dark:bg-[#141414]
+                                           px-2 py-1 text-[1.0625rem] font-mono text-slate-500
+                                           dark:text-neutral-400 select-all"
+                            >
+                                {media.url}
+                            </code>
+                        </div>
+                    )}
+
 
                     <input
                         ref={fileRef}
@@ -167,21 +198,26 @@ export default function MediaPicker({ value, onChange, label = 'Media', aspect =
                         onChange={(e) => handleFile(e.target.files?.[0] || null)}
                     />
 
-                    {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+                    {error && <p className="text-[1.1875rem] text-red-600 dark:text-red-400">{error}</p>}
                 </div>
             </div>
 
             {/* Full width from here down, so these align with the card's other
                 fields rather than with the preview's right edge. */}
             <div className="space-y-4">
-                <CmsField label="Or paste a URL">
-                    <CmsInput
-                        value={media.url}
-                        onChange={(e) => set({ url: e.target.value })}
-                        placeholder="https://… or /uploads/banner.jpg"
-                    />
-                </CmsField>
-
+                {/*
+                  * NO "PASTE A URL" BOX.
+                  *
+                  * Uploading is the path that works: it puts the file on this
+                  * server, under this domain, and it cannot rot. A pasted
+                  * address is somebody else's server — it breaks when they
+                  * reorganise, and it was the field most likely to be filled in
+                  * with something that 404s on the public site a month later.
+                  *
+                  * `media.url` is UNTOUCHED as a field: every banner already
+                  * stored is still read and still rendered, including ones that
+                  * were pasted. Only the box for typing a new one is gone.
+                  */}
                 <div className="grid gap-4 sm:grid-cols-2">
                     <CmsField label="How it fills the space">
                         <div className="flex gap-2">
@@ -191,7 +227,7 @@ export default function MediaPicker({ value, onChange, label = 'Media', aspect =
                                     type="button"
                                     onClick={() => set({ fit: f.key })}
                                     title={f.hint}
-                                    className={`flex-1 px-3 py-2.5 rounded-lg text-xs border transition-colors ${
+                                    className={`flex-1 px-3 py-2.5 rounded-lg text-[1.1875rem] border transition-colors ${
                                         media.fit === f.key
                                             ? 'bg-blue-600 border-blue-600 text-white'
                                             : 'bg-slate-50 dark:bg-[#050505] border-slate-300 dark:border-[#262626] text-slate-700 dark:text-[#D4D4D8] hover:bg-slate-100 dark:hover:bg-[#1A1A1A]'
@@ -212,7 +248,7 @@ export default function MediaPicker({ value, onChange, label = 'Media', aspect =
                             onChange={(e) => set({ position: e.target.value })}
                             disabled={media.fit === 'contain'}
                             className="w-full bg-slate-50 dark:bg-[#050505] border border-slate-300 dark:border-[#262626]
-                                       rounded-lg px-3 py-2.5 text-sm text-slate-900 dark:text-white disabled:opacity-40"
+                                       rounded-lg px-3 py-2.5 text-[1.25rem] text-slate-900 dark:text-white disabled:opacity-40"
                         >
                             {POSITIONS.map((p) => (
                                 <option key={p} value={p}>{p}</option>

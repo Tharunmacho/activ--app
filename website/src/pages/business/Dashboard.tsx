@@ -5,11 +5,12 @@ import {
     Eye, Package, CheckCircle2, Star, Pencil, Clock, Plus, Store, ArrowLeftRight,
 } from "lucide-react";
 import BusinessPageShell from "./BusinessPageShell";
-import { Card, SectionHeading, StatTile, EmptyState, Loading, Chip } from "./BusinessUI";
+import { Card, SectionHeading, StatTile, EmptyState, Loading, Chip, companyName } from "./BusinessUI";
 import { apiFetch } from "@/services/activApi";
 import { resolveMediaUrl } from "@/config/api.config";
 import { useActiveCompanyStore } from "@/contexts/ActiveCompanyContext";
 
+import { CARD_TITLE } from '@/components/layout/appTypography';
 /**
  * The company `status` vocabulary is `pending | active | inactive` — the enum on
  * `company.model.js`. This screen tested for 'approved' and 'rejected', which
@@ -131,13 +132,23 @@ const BusinessDashboard = () => {
             subtitle="Manage your business presence"
             width="wide"
             actions={
+                /*
+                 * Icon only on a phone, labelled from `sm`.
+                 *
+                 * The label is 180px of a 390px bar, and it was taking that
+                 * width off the page TITLE — "Business Dashboard" arrived as
+                 * "Business …". The glyph plus `aria-label` says the same thing
+                 * to a screen reader and leaves the heading room to be read.
+                 */
                 <Button
                     onClick={() => navigate('/business/companies')}
                     variant="outline"
-                    className="border-slate-200 text-slate-700 hover:bg-slate-50"
+                    aria-label="Switch company"
+                    title="Switch company"
+                    className="border-slate-200 text-slate-700 hover:bg-slate-50 px-3 sm:px-4"
                 >
-                    <ArrowLeftRight className="h-4 w-4 mr-2" />
-                    Switch company
+                    <ArrowLeftRight className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Switch company</span>
                 </Button>
             }
         >
@@ -152,7 +163,9 @@ const BusinessDashboard = () => {
                         lines of text — with the activity list beside it, so the
                         left two-thirds of the page was mostly empty.
                     */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+                    {/* Two-up on a phone, as on the member dashboard. One column made
+                        four figures cost a full screen of scrolling to read. */}
+                    <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5">
                         <StatTile label="Profile Views" value={0} unit="Last 30 days" icon={Eye} />
                         <StatTile label="Products Listed" value={stats.total} unit="Total catalog" icon={Package} />
                         {/*
@@ -208,7 +221,7 @@ const BusinessDashboard = () => {
                                         {activeCompany.logo ? (
                                             <img
                                                 src={resolveMediaUrl(activeCompany.logo)}
-                                                alt={activeCompany.businessName}
+                                                alt={companyName(activeCompany)}
                                                 className="w-14 h-14 rounded-xl object-cover shrink-0"
                                             />
                                         ) : (
@@ -219,13 +232,13 @@ const BusinessDashboard = () => {
 
                                         <div className="flex-1 min-w-0">
                                             <div className="flex flex-wrap items-center gap-2 mb-1">
-                                                <h3 className="font-bold text-lg text-slate-900 truncate">
-                                                    {activeCompany.businessName}
+                                                <h3 className={`${CARD_TITLE} text-slate-900 truncate`}>
+                                                    {companyName(activeCompany)}
                                                 </h3>
                                                 <Chip tone={STATUS_TONES[status] || 'amber'}>{statusLabel}</Chip>
                                             </div>
 
-                                            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 mt-3 text-sm">
+                                            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 mt-3 text-[1.1875rem]">
                                                 <div className="flex gap-2 min-w-0">
                                                     <dt className="text-slate-500 shrink-0">Type</dt>
                                                     <dd className="text-slate-800 font-medium truncate">
@@ -286,7 +299,7 @@ const BusinessDashboard = () => {
                             {recentActivity.length === 0 ? (
                                 <div className="text-center py-10">
                                     <Package className="h-10 w-10 text-slate-300 mx-auto mb-2" />
-                                    <p className="text-sm text-slate-500">No recent activity</p>
+                                    <p className="text-[1.1875rem] text-slate-500">No recent activity</p>
                                 </div>
                             ) : (
                                 <ul className="space-y-2">
@@ -297,9 +310,9 @@ const BusinessDashboard = () => {
                                         >
                                             <span className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-2 shrink-0" />
                                             <div className="min-w-0 flex-1">
-                                                <p className="text-sm font-semibold text-slate-800">{activity.type}</p>
-                                                <p className="text-sm text-slate-600 truncate">{activity.name}</p>
-                                                <p className="text-xs text-slate-400 mt-0.5">{activity.time}</p>
+                                                <p className="text-[1.1875rem] font-semibold text-slate-800">{activity.type}</p>
+                                                <p className="text-[1.1875rem] text-slate-600 truncate">{activity.name}</p>
+                                                <p className="text-[1.0625rem] text-slate-400 mt-0.5">{activity.time}</p>
                                             </div>
                                         </li>
                                     ))}

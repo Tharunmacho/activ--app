@@ -48,7 +48,17 @@ export const formatTime = (value?: string | null): string => {
  */
 export const formatWhen = (event: Pick<MemberEvent, 'startAt' | 'endAt'>): string => {
     const start = parse(event.startAt);
-    if (!start) return '';
+    /*
+     * "Date to be confirmed", not an empty string.
+     *
+     * An event may legitimately have no date — the schema has no `required` on
+     * `startAt` precisely so one can be written before the date is settled. An
+     * empty string left the member detail page with a "Date and time" heading
+     * over nothing, and the card with a gap where the line should be, both of
+     * which read as content that failed to load rather than as a date nobody
+     * has fixed yet.
+     */
+    if (!start) return 'Date to be confirmed';
 
     const end = parse(event.endAt);
     const startDate = start.toLocaleDateString('en-GB', DATE);

@@ -56,13 +56,13 @@ const ApprovalCard = ({ member, onApprove, onReject, status = 'pending' }: Appro
           {member.profilePictureUrl && (
             <AvatarImage src={member.profilePictureUrl} alt={member.name || 'User'} />
           )}
-          <AvatarFallback className="bg-primary text-primary-foreground text-xl">
+          <AvatarFallback className="bg-primary text-primary-foreground text-[1.5625rem]">
             {(member.name || 'User').split(' ').map(n => n[0]).join('').toUpperCase()}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="text-xl font-bold">{member.name || 'Unknown User'}</h3>
+            <h3 className="text-[1.5625rem] font-bold">{member.name || 'Unknown User'}</h3>
             {member.memberType && (
               <Badge variant="outline" className="capitalize">
                 {member.memberType}
@@ -71,7 +71,7 @@ const ApprovalCard = ({ member, onApprove, onReject, status = 'pending' }: Appro
           </div>
           <div className="flex items-center gap-1 text-muted-foreground mt-1">
             <Mail className="w-4 h-4" />
-            <span className="text-sm">{member.email}</span>
+            <span className="text-[1.1875rem]">{member.email}</span>
           </div>
         </div>
       </CardHeader>
@@ -89,7 +89,7 @@ const ApprovalCard = ({ member, onApprove, onReject, status = 'pending' }: Appro
           <div className="flex items-center gap-2">
             <MapPin className="w-4 h-4 text-muted-foreground" />
             <span className="font-medium">Location:</span>
-            <span className="text-sm">
+            <span className="text-[1.1875rem]">
               {[member.block, member.district, member.state].filter(Boolean).join(', ')}
             </span>
           </div>
@@ -99,7 +99,7 @@ const ApprovalCard = ({ member, onApprove, onReject, status = 'pending' }: Appro
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-muted-foreground" />
             <span className="font-medium">Registered:</span>
-            <span className="text-sm">
+            <span className="text-[1.1875rem]">
               {new Date(member.registrationDate).toLocaleDateString('en-IN', {
                 day: 'numeric',
                 month: 'short',

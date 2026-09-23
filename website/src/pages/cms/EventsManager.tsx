@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X, Save, Check, Loader2 } from 'lucide-react';
+import { ArrowLeft,
+    Plus, Pencil, Trash2, X, Save, Check, Loader2,
+    Lock, Globe, Building2, MapPin, Shield, Video, Home, Eye, EyeOff, Images, Search,
+} from 'lucide-react';
 import {
-    getCmsEvents, createCmsEvent, updateCmsEvent, deleteCmsEvent,
+    getCmsEvents, createCmsEvent, updateCmsEvent, deleteCmsEvent, invalidateCmsCache,
     getEventsSettings, updateEventsSettings,
     errorMessage, EMPTY_MEDIA,
     type CmsEvent, type EventsSettings, type CmsMedia,
@@ -16,10 +19,15 @@ import {
     CmsError,
     CmsEmpty,
     cmsSaved,
+    cmsDone,
     cmsFailed,
     cmsDeleted,
     CmsPage,
     CmsSection,
+    CmsStep,
+    CmsSteps,
+    SaveNowProvider,
+    SectionToolsProvider,
     CmsChoice,
     CmsCheck,
 } from './components/CmsUI';
@@ -27,10 +35,10 @@ import MediaPicker from './components/MediaPicker';
 import RegionTargetPicker from './components/RegionTargetPicker';
 import { StatList, IconPicker, RepeatableList , ExtraFieldsEditor } from './components/CmsEditors';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
+import { CARD_TITLE } from '@/components/layout/appTypography';
 import EventDetailFields, {
     BLANK_DETAIL, toLocalDateTimeInput, type EventDetail,
 } from './components/EventDetailFields';
-import { Lock, Globe, Building2, MapPin } from 'lucide-react';
 
 /**
  * Events.
@@ -70,6 +78,20 @@ const BLANK = {
     description: '',
     date: '',
     time: '',
+    /*
+     * A CONFERENCE RUNS FOR THREE DAYS, and the form could only say one.
+     *
+     * There was an end TIME and no end DATE, so a three-day conclave was
+     * stored as finishing at 5pm on its first evening. Two things read that:
+     * the public events page, which drops an event once it is over and was
+     * therefore dropping day-one-of-three at teatime, and the card, which
+     * could only print one date for something the visitor has to book three
+     * days off for.
+     *
+     * Blank means a single-day event, which is most of them — the end date
+     * is not required and an absent one still reads as `date`.
+     */
+    endDate: '',
     endTime: '',
     location: '',
     category: '',
@@ -128,6 +150,12 @@ const BLANK = {
  * `targets` list is the real answer, and the legacy `state`/`district`/`block`
  * trio carries the one region of any row written before multi-targeting.
  */
+/** The two filters above the list, styled as one control rather than two. */
+const FILTER_SELECT =
+    'min-w-0 max-w-full h-11 rounded-lg border border-slate-200 dark:border-[#2a2a2a] '
+    + 'bg-white dark:bg-black px-3 text-[1.25rem] font-medium text-slate-900 dark:text-neutral-100 '
+    + 'hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors';
+
 const hasTargets = (e: CmsEvent) =>
     (Array.isArray(e?.targets) && e.targets.length > 0)
     || !!(e?.state || e?.district || e?.block);
@@ -189,6 +217,26 @@ const toInstant = (date: string, time: string): string => {
     return d.toISOString();
 };
 
+/**
+ * Has this event already happened?
+ *
+ * Module level, because the filtered list is built near the top of the
+ * component and this used to be a `const` four hundred lines below it —
+ * which is a temporal-dead-zone throw the moment the list asks.
+ *
+ * An event with NO date has not been held. It is an announcement waiting
+ * for a date, and filing it under “already held” would archive something
+ * that has not happened.
+ */
+const hasBeenHeld = (e: CmsEvent) => {
+    /* The END, falling back to the start. A three-day conclave is not a past
+       event on its second morning, and reading `startAt` alone said it was. */
+    const when = e?.endAt || e?.startAt;
+    if (!when) return false;
+    const t = new Date(when).getTime();
+    return !Number.isNaN(t) && t < Date.now();
+};
+
 export default function EventsManager({
     defaultAudience = 'all',
     channel = 'public',
@@ -222,7 +270,33 @@ export default function EventsManager({
     channel?: 'public' | 'members';
 } = {}) {
     const [events, setEvents] = useState<CmsEvent[]>([]);
-    const [settings, setSettings] = useState<EventsSettings | null>(null);
+    /*
+     * ==================================================================
+     * A SAVE IN EVERY SECTION'S FOOTER, like the rest of the CMS
+     * ==================================================================
+     *
+     * There was ONE save, in a band under the last card, so an editor who
+     * changed the heading in Section 1 scrolled past five cards to find a
+     * button, and nothing in Sections 1 to 4 said their work was unsaved.
+     * Home, About, Membership, Contact and Regions have carried a Save in
+     * each card's footer for a while; this screen had not been brought
+     * across, and neither had the gallery, the news, the schemes or the
+     * legal pages. They all have one now.
+     *
+     * The WRITE is unchanged — the endpoint takes the whole document, so
+     * every one of those buttons saves the page. That is what it says.
+     *
+     * `setSettings` is a wrapper rather than the raw setter so that the
+     * ~thirty call sites below all mark the page dirty without each one
+     * having to remember to. The two places that must NOT — the load and
+     * the server's copy back after a save — use `setSettingsClean`.
+     */
+    const [settings, setSettingsClean] = useState<EventsSettings | null>(null);
+    const [copyDirty, setCopyDirty] = useState(false);
+    const setSettings = (next: EventsSettings | null) => {
+        setSettingsClean(next);
+        setCopyDirty(true);
+    };
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -242,6 +316,37 @@ export default function EventsManager({
      * blocks.
      */
     const [targetFilter, setTargetFilter] = useState('all');
+
+    /*
+     * WHERE A ROW CAME FROM.
+     *
+     * The CMS list holds the programme written here AND whatever the super
+     * admin posted to the onboarding site from their own screen — the panel
+     * maintains those pages, so it has to show both. They are told apart by the
+     * EVENT's own channel, never by the surface being viewed: the same event
+     * opens from both screens, and "who wrote this" is a fact about the event.
+     */
+    const [originFilter, setOriginFilter] = useState<'all' | 'cms' | 'admin'>('all');
+
+    /*
+     * WHAT AN EDITOR ARRIVES LOOKING FOR.
+     *
+     * The two filters above both answer “who is this for”. Neither answers
+     * “which of these is still to come” or “where is the Coimbatore one”,
+     * and those are the two questions a list of events is actually opened
+     * with — the public page shows what is upcoming, so an editor comparing
+     * the two needs to see the same slice here.
+     */
+    /*
+     * THE TABS, like Regions & States: Upcoming, Past, and the page's wording.
+     * `when` is what the list filters on; the wording tab shows the section
+     * copy in place of the list.
+     */
+    const [when, setWhen] = useState<'all' | 'upcoming' | 'past'>('upcoming');
+    const [wordingTab, setWordingTab] = useState(false);
+    const [query, setQuery] = useState('');
+    const originOf = (e: CmsEvent) => ((e.channel || 'public') === 'public' ? 'cms' : 'admin');
+    const adminPosted = events.filter((e) => originOf(e) === 'admin').length;
     const [saving, setSaving] = useState(false);
 
     const targetOf = (e: CmsEvent) => e.targetLabel || 'Everyone';
@@ -249,25 +354,87 @@ export default function EventsManager({
     const targetOptions = Array.from(new Set(events.map(targetOf)))
         .sort((a, b) => (a === 'Everyone' ? -1 : b === 'Everyone' ? 1 : a.localeCompare(b)));
 
-    const visibleEvents = targetFilter === 'all' ? events : events.filter(e => targetOf(e) === targetFilter);
+    const upcomingCount = events.filter((e) => !hasBeenHeld(e)).length;
 
-    const load = async () => {
-        setLoading(true);
+    const visibleEvents = events
+        .filter((e) => targetFilter === 'all' || targetOf(e) === targetFilter)
+        .filter((e) => originFilter === 'all' || originOf(e) === originFilter)
+        .filter((e) => when === 'all' || (when === 'past' ? hasBeenHeld(e) : !hasBeenHeld(e)))
+        .filter((e) => {
+            const needle = query.trim().toLowerCase();
+            if (!needle) return true;
+            /* Everything a person might recognise it by — the title is
+               often the one thing they do NOT remember. */
+            return [e.title, e.venue, e.category, e.state, e.district, e.block,
+                e.description, e.targetLabel]
+                .filter(Boolean).join(' ').toLowerCase().includes(needle);
+        });
+
+    /** `quiet` refetches without blanking the screen — see `GalleryManager`. */
+    const load = async ({ quiet = false } = {}) => {
+        if (!quiet) setLoading(true);
         setError('');
         try {
             // Together: the list and the copy around it are independent, and
             // waiting for one before asking for the other doubles the delay.
             const [list, config] = await Promise.all([getCmsEvents(), getEventsSettings()]);
             setEvents(list);
-            setSettings(config);
+            setSettingsClean(config);
+            return list;
         } catch (err) {
             setError(errorMessage(err, 'Could not load events'));
         } finally {
-            setLoading(false);
+            if (!quiet) setLoading(false);
         }
     };
 
-    useEffect(() => { load(); }, []);
+    /*
+     * ======================================================================
+     * ?event=<id> OPENS THAT EVENT'S FORM, ?new=1 OPENS A BLANK ONE
+     * ======================================================================
+     *
+     * The Home screen's events picker links here to change an event's
+     * picture or its details. Landing on the LIST and asking the editor to
+     * find the row they just clicked is the kind of small failure that
+     * makes a link not worth following — so the link names the event and
+     * this opens it.
+     *
+     * Run once, after the first load, and the parameter is cleared so a
+     * refresh or a back-button does not reopen a form the editor closed.
+     * An id that no longer exists is ignored rather than reported: the
+     * event was deleted, which is not an error worth a banner.
+     */
+    useEffect(() => {
+        let cancelled = false;
+        load().then((list) => {
+            if (cancelled || !list) return;
+
+            const params = new URLSearchParams(window.location.search);
+            const wanted = params.get('event');
+            const blank = params.get('new');
+
+            if (!wanted && !blank) return;
+
+            if (blank) {
+                /*
+                 * `?new=1` OPENS THE BLANK FORM.
+                 *
+                 * The Home screen's picker links here to add one. Landing on
+                 * this screen's first card — the section WORDING — and
+                 * leaving the editor to find the New event button is how a
+                 * button called 'Add an event' ends up not adding an event.
+                 */
+                openNew();
+            } else {
+                const found = list.find((e) => e.id === wanted);
+                if (found) openEdit(found);
+            }
+
+            window.history.replaceState({}, '', window.location.pathname);
+        });
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const saveCopy = async () => {
         if (!settings) return;
@@ -275,7 +442,8 @@ export default function EventsManager({
         setSavedCopy(false);
         setError('');
         try {
-            setSettings(await updateEventsSettings(settings));
+            setSettingsClean(await updateEventsSettings(settings));
+            setCopyDirty(false);
             setSavedCopy(true);
             cmsSaved('Section copy');
             setTimeout(() => setSavedCopy(false), 2500);
@@ -315,6 +483,11 @@ export default function EventsManager({
             description: e.description || '',
             date: toDateInput(e.startAt),
             time: toTimeInput(e.startAt),
+            /* Only a DIFFERENT day is an end date. An event that starts and
+               finishes on one day has an `endAt` carrying the end time and the
+               same date, and echoing that back into the field would show every
+               single-day event as a two-day one. */
+            endDate: toDateInput(e.endAt) === toDateInput(e.startAt) ? '' : toDateInput(e.endAt),
             endTime: toTimeInput(e.endAt),
             location: e.location || '',
             category: e.category || '',
@@ -327,7 +500,10 @@ export default function EventsManager({
              * second block and save it without losing the first.
              */
             targets: Array.isArray(e.targets) && e.targets.length
-                ? e.targets.map((t: any) => ({
+                /* Typed to what a target IS, not `any`: these three names
+                   are the whole shape, and `any` switched off the one check
+                   that catches a fourth being misspelled into existence. */
+                ? e.targets.map((t: { state?: string; district?: string; block?: string }) => ({
                     state: t.state || '', district: t.district || '', block: t.block || '',
                 }))
                 : (e.state
@@ -347,6 +523,8 @@ export default function EventsManager({
              * would have told them that was the state it was already in.
              */
             showOnOnboarding: isOnPublicSite(e),
+            // `!== false`: the field postdates every event in the
+            // collection, and those belong on the home page as before.
             /*
              * Restored from the event, with a fallback for every row written
              * before the field existed: those express "everyone" as an empty
@@ -360,6 +538,21 @@ export default function EventsManager({
                 // before these fields existed comes back without them, so each
                 // falls back to the blank rather than to `undefined`.
                 audience: e.audience === 'paid' ? 'paid' : 'all',
+                /*
+                 * Anything but an explicit `online` is offline — which is every
+                 * row written before this field existed, and is what they all
+                 * actually were.
+                 */
+                mode: e.mode === 'online' ? 'online' : 'offline',
+                onlinePlatform: e.onlinePlatform || '',
+                /*
+                 * The server sends this back ONLY to a signed-in content admin
+                 * (see `withJoinLink`), which is who is looking at this form.
+                 * Blank for anyone else — and blank is also what a save would
+                 * then send, so a public read could never blank a link it was
+                 * never shown.
+                 */
+                onlineUrl: e.onlineUrl || '',
                 agenda: Array.isArray(e.agenda) ? e.agenda : [],
                 speakers: Array.isArray(e.speakers) ? e.speakers : [],
                 venueAddress: e.venueAddress || '',
@@ -373,6 +566,17 @@ export default function EventsManager({
                 // Blank, not "0", for a free event: an empty box reads as "no
                 // fee" where a typed zero reads as a price somebody set.
                 registrationFee: e.registrationFee ? String(e.registrationFee) : '',
+                /*
+                 * `null` AND `undefined` BOTH BECOME BLANK, and a numeric 0
+                 * survives as "0".
+                 *
+                 * `e.memberFee ? ... : ''` would be wrong here in the one case
+                 * that matters: a member rate of zero — an event members attend
+                 * free — is falsy, so reopening that event would show an empty
+                 * box and the next save would clear the offer. `== null` is the
+                 * check that separates "not set" from "set to nothing".
+                 */
+                memberFee: e.memberFee == null ? '' : String(e.memberFee),
                 registrationNote: e.registrationNote || '',
                 registrationFields: Array.isArray(e.registrationFields) ? e.registrationFields : [],
                 reminderOffsetsHours: Array.isArray(e.reminderOffsetsHours) ? e.reminderOffsetsHours : [],
@@ -380,6 +584,25 @@ export default function EventsManager({
         });
         setShowForm(true);
     };
+
+
+    /**
+     * Escape closes the dialog, and the page behind it stops scrolling.
+     *
+     * Both are what separates a dialog from a div on top of the page: without
+     * the first it can only be dismissed by finding a small ×, and without the
+     * second a wheel gesture over the backdrop scrolls the event list
+     * underneath, which reads as the dialog having come loose from the page.
+     *
+     * The previous `overflow` is restored rather than assumed to be `''`, so a
+     * screen that locks scrolling for its own reasons is not unlocked by
+     * closing this.
+     */
+    /* The form opens as its own screen (see the render), so it starts at the
+       top of the page rather than wherever the table was scrolled to. */
+    useEffect(() => {
+        if (showForm) window.scrollTo({ top: 0 });
+    }, [showForm]);
 
     const handleSubmit = async (ev: React.FormEvent) => {
         ev.preventDefault();
@@ -390,8 +613,20 @@ export default function EventsManager({
                 title: form.title,
                 description: form.description,
                 startAt: toInstant(form.date, form.time),
-                // An end time is optional, and only means anything with a start.
-                endAt: form.endTime ? toInstant(form.date, form.endTime) : '',
+                /*
+                 * THE END, from whichever of the two fields was given.
+                 *
+                 * A date with no time finishes at the end of that day — not
+                 * at midnight its morning, which would make a three-day event
+                 * read as finishing before its second day began. A time with
+                 * no date finishes that same evening, which is the
+                 * single-day case and the only one this form used to have.
+                 * Neither given, and there is no end: optional, like
+                 * everything else on this form.
+                 */
+                endAt: (form.endDate || form.endTime)
+                    ? toInstant(form.endDate || form.date, form.endTime || '23:59')
+                    : '',
                 location: form.location,
                 category: form.category,
                 /*
@@ -460,6 +695,15 @@ export default function EventsManager({
                     : '',
                 capacity: Number(form.detail.capacity) || 0,
                 registrationFee: Number(form.detail.registrationFee) || 0,
+                /*
+                 * Sent as `''` when blank, so the server clears the rate, and as
+                 * a NUMBER otherwise — including 0. `Number('') || 0` would send
+                 * zero for a blank box, which is "free for every member" written
+                 * by an editor who typed nothing.
+                 */
+                memberFee: String(form.detail.memberFee ?? '').trim() === ''
+                    ? ''
+                    : Number(form.detail.memberFee) || 0,
                 registrationNote: form.detail.registrationNote,
                 // JSON-encoded for the same reason the agenda is: this payload
                 // becomes `FormData` whenever there is an image, and
@@ -472,7 +716,7 @@ export default function EventsManager({
             else await createCmsEvent(payload);
             cmsSaved(editing ? 'Event' : 'New event');
             setShowForm(false);
-            await load();
+            await load({ quiet: true });
         } catch (err) {
             // The server rejects a missing title or an unparseable date with a
             // specific message; showing it verbatim is more use than a generic one.
@@ -484,12 +728,20 @@ export default function EventsManager({
         }
     };
 
+    /*
+     * Already held.
+     *
+     * An event with NO date is not past: an unset date is missing
+     * information, not a statement that it already happened.
+     */
+    const isPastEvent = hasBeenHeld;
+
     const handleDelete = async (e: CmsEvent) => {
         if (!window.confirm(`Delete "${e.title || 'Untitled event'}"? This removes it from the public site and from the member app.`)) return;
         try {
             await deleteCmsEvent(e.id);
             cmsDeleted(e.title || 'Event');
-            await load();
+            await load({ quiet: true });
         } catch (err) {
             const message = errorMessage(err, 'Could not delete the event');
             setError(message);
@@ -506,15 +758,55 @@ export default function EventsManager({
             {/* The wording around the onboarding page's grid -- CMS only. The
                 grid itself is the list below, the same events the member app
                 shows, so publishing once is enough for both. */}
-            {showSectionCopy && settings && (
+            {/* The tabs — hidden while an event is open, which is its own screen. */}
+            {!showForm && (
+                <div className="mb-6 flex flex-wrap gap-2 border-b border-slate-200 dark:border-[#1f1f1f]">
+                    {([
+                        ['upcoming', 'Upcoming', upcomingCount],
+                        ['past', 'Past', events.length - upcomingCount],
+                        ...(showSectionCopy ? [['wording', 'Page wording', null]] : []),
+                    ] as [string, string, number | null][]).map(([key, label, count]) => {
+                        const on = key === 'wording' ? wordingTab : (!wordingTab && when === key);
+                        return (
+                            <button
+                                key={key}
+                                type="button"
+                                onClick={() => {
+                                    if (key === 'wording') { setWordingTab(true); return; }
+                                    setWordingTab(false);
+                                    setWhen(key as 'upcoming' | 'past');
+                                }}
+                                className={`-mb-px border-b-2 px-5 py-3 text-[1.25rem] font-semibold transition-colors ${on
+                                    ? 'border-blue-600 text-blue-700 dark:text-blue-400'
+                                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-neutral-200'}`}
+                            >
+                                {label}
+                                {count !== null && <span className="ml-2 text-[1.1875rem] text-slate-400">{count}</span>}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+
+            {!showForm && wordingTab && showSectionCopy && settings && (
                 <CmsCard
                     title="Section copy"
                     description="The heading above the events grid, on the home page and on /events."
                 >
-                    <div className="space-y-0">
-                        <CmsSection title="Heading" hint="The wording above the events grid.">
+                    <SectionToolsProvider
+                        value={{
+                            sections: settings.sections || [],
+                            onChange: (sections) => setSettings({ ...settings, sections }),
+                        }}
+                    >
+                    {/* 32px between the cards, like Home and the gallery.
+                        At zero, one card's last field and the next card's
+                        heading read as one continuous column. */}
+                    <SaveNowProvider value={{ save: saveCopy, saving: savingCopy, dirty: copyDirty }}>
+                    <CmsSteps>
+                        <CmsStep sectionKey="events.header" fieldMode="content" step="Section 1" title="Heading">
                         <div className="grid gap-4 sm:grid-cols-2">
-                            <CmsField label="Eyebrow" hint="The small pill above the heading.">
+                            <CmsField label="Eyebrow">
                                 <CmsInput
                                     value={settings.badgeText}
                                     onChange={(e) => setSettings({ ...settings, badgeText: e.target.value })}
@@ -533,7 +825,6 @@ export default function EventsManager({
                         <div className="mt-4">
                             <CmsField
                                 label="Heading highlight"
-                                hint="The tail of the heading, shown in the accent colour."
                             >
                                 <CmsInput
                                     value={settings.headingHighlight}
@@ -546,7 +837,6 @@ export default function EventsManager({
                         <div className="mt-4 space-y-4">
                         <CmsField
                             label="Hero paragraph"
-                            hint="Under the heading on the /events band. Not shown on the home page."
                         >
                             <CmsTextarea
                                 rows={3}
@@ -556,7 +846,7 @@ export default function EventsManager({
                             />
                         </CmsField>
 
-                        <CmsField label="Subtitle" hint="Between two rules under the heading. Home page only.">
+                        <CmsField label="Subtitle">
                             <CmsInput
                                 value={settings.subtitle}
                                 onChange={(e) => setSettings({ ...settings, subtitle: e.target.value })}
@@ -564,7 +854,7 @@ export default function EventsManager({
                             />
                         </CmsField>
 
-                        <CmsField label="Empty message" hint="Shown in place of the grid when nothing is published.">
+                        <CmsField label="Empty message">
                             <CmsInput
                                 value={settings.emptyText}
                                 onChange={(e) => setSettings({ ...settings, emptyText: e.target.value })}
@@ -583,12 +873,15 @@ export default function EventsManager({
                             />
                         </CmsField>
                         </div>
-                        </CmsSection>
+                        </CmsStep>
 
                         {/* ----------------------------------------- hero band */}
-                        <CmsSection
+                        <CmsStep
+                            sectionKey="events.hero"
+                            /* Words over a photograph; no details card. */
+                            fieldMode="content"
+                            step="Section 2"
                             title="Hero band"
-                            hint="The navy band at the top of /events. Every part is optional, and an empty one is not drawn."
                         >
                             <MediaPicker
                                 label="Hero photograph"
@@ -607,7 +900,7 @@ export default function EventsManager({
                                     label="Badge icon"
                                 />
                                 <div className="grid gap-4 sm:grid-cols-2">
-                                    <CmsField label="Badge title" hint="Blank hides the badge.">
+                                    <CmsField label="Badge title">
                                         <CmsInput
                                             value={settings.heroBadge.title}
                                             onChange={(e) => setSettings({
@@ -631,7 +924,7 @@ export default function EventsManager({
                             </div>
 
                             <div className="mt-6">
-                                <CmsField label="Figures" hint="The tiles across the band. Four fit a row.">
+                                <CmsField label="Figures">
                                     <StatList
                                         items={settings.stats}
                                         onChange={(stats) => setSettings({ ...settings, stats })}
@@ -640,10 +933,21 @@ export default function EventsManager({
                                     />
                                 </CmsField>
                             </div>
-                        </CmsSection>
+                        </CmsStep>
 
                         {/* ------------------------------------ search and chips */}
-                        <CmsSection
+                        <CmsStep
+                            sectionKey="events.filters"
+                            /*
+                             * THIS CARD'S LOGIC IS CHIPS, so its extra rows
+                             * are shaped like a chip: a mark and a name, with
+                             * what it says beside them. No "show it as" pair
+                             * — a rail of pills has no write-up to put a
+                             * paragraph in, so the question has one answer.
+                             */
+                            fieldMode="card"
+                            fieldNoun="label"
+                            step="Section 3"
                             title="Search and filter chips"
                             hint={CHIP_HINT}
                         >
@@ -661,6 +965,18 @@ export default function EventsManager({
                                     onChange={(categories) => setSettings({ ...settings, categories })}
                                     noun="chip"
                                     blank={() => ({ label: '', icon: 'calendar-days' })}
+                                    /*
+                                     * A CHIP IS NAMED BY `label`, NOT `title`.
+                                     *
+                                     * Without this the collapsed row fell back
+                                     * to "Untitled chip" on every row, so a
+                                     * list of six filters read as six blanks
+                                     * and the only way to tell them apart was
+                                     * to open each one. The row HAD a name the
+                                     * whole time — the list was reading a
+                                     * field this shape does not have.
+                                     */
+                                    summary={(chip) => ({ title: chip.label, subtitle: chip.icon })}
                                     row={(chip, update) => (
                                         <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-3">
                                             <IconPicker value={chip.icon} onChange={(icon) => update({ icon })} />
@@ -675,12 +991,13 @@ export default function EventsManager({
                                     )}
                                 />
                             </div>
-                        </CmsSection>
+                        </CmsStep>
 
                         {/* ------------------------------------------ cta strip */}
-                        <CmsSection
+                        <CmsStep
+                            sectionKey="events.banner"
+                            step="Section 4"
                             title="Call-to-action strip"
-                            hint="The navy strip under the grid on /events. A blank title and label hide it."
                         >
                             <div className="grid gap-4 sm:grid-cols-[200px_1fr]">
                                 <IconPicker
@@ -710,7 +1027,7 @@ export default function EventsManager({
                                         />
                                     </CmsField>
                                     <div className="grid gap-4 sm:grid-cols-2">
-                                        <CmsField label="Button label" hint="Blank hides the button.">
+                                        <CmsField label="Button label">
                                             <CmsInput
                                                 value={settings.banner.ctaLabel}
                                                 onChange={(e) => setSettings({
@@ -731,18 +1048,23 @@ export default function EventsManager({
                                     </div>
                                 </div>
                             </div>
-                        </CmsSection>
+                        </CmsStep>
 
-                        <CmsSection title="Grid and button" hint="How many events the home page shows, and where the button goes.">
-                        <div className="grid gap-4 sm:grid-cols-3">
-                            <CmsField label="Events on the home page" hint="The rest are reached via the button.">
-                                <CmsInput
-                                    type="number" min={1} max={24}
-                                    value={String(settings.homeLimit)}
-                                    onChange={(e) => setSettings({ ...settings, homeLimit: Number(e.target.value) || 3 })}
-                                />
-                            </CmsField>
-                            <CmsField label="Button label" hint="Blank hides the button.">
+                        <CmsStep sectionKey="events.grid" ownFields={false} step="Section 5" title="Grid and button">
+                        {/*
+                          * The home-page picker used to sit here, and does not
+                          * any more: the TABLE below has a Home page column with
+                          * a switch on every row, so this card was asking the
+                          * same question about the same events a few hundred
+                          * pixels from where it is already answered.
+                          *
+                          * The picker lives on the Home screen, where the
+                          * question belongs to the page being edited.
+                          */}
+                        {/* “Events on the home page” used to lead this row. The
+                            switches above decide now — see `EventsGrid`. */}
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <CmsField label="Button label">
                                 <CmsInput
                                     value={settings.viewAllLabel}
                                     onChange={(e) => setSettings({ ...settings, viewAllLabel: e.target.value })}
@@ -760,39 +1082,99 @@ export default function EventsManager({
                         <ExtraFieldsEditor
                             items={settings.extraFields || []}
                             onChange={extraFields => setSettings({ ...settings, extraFields })}
-                            hint="Anything else this page should say. Each row shows as a labelled line under the grid."
-                        />
-                        </CmsSection>
-                    </div>
 
-                    <div className="mt-6">
-                        <button
-                            type="button"
-                            disabled={savingCopy}
-                            onClick={saveCopy}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-500
-                                       text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                        >
-                            {savingCopy ? <Loader2 size={16} className="animate-spin" />
-                                : savedCopy ? <Check size={16} /> : <Save size={16} />}
-                            {savingCopy ? 'Saving...' : savedCopy ? 'Saved -- live page updated' : 'Save section copy'}
-                        </button>
-                    </div>
+                        />
+                        </CmsStep>
+
+                    </CmsSteps>
+                    </SaveNowProvider>
+                    </SectionToolsProvider>
+
+                    {/*
+                      * NO SAVE BAND UNDER THE LAST CARD.
+                      *
+                      * There was one here, and the moment every card grew a
+                      * Save in its footer it became a SECOND full-width blue
+                      * button stacked directly under the first — same colour,
+                      * same width, same action, four pixels apart. Two buttons
+                      * that do one thing is a question the editor has to stop
+                      * and answer, and it was reported as exactly that.
+                      *
+                      * The card footers are the save now, on every card, which
+                      * is what the rest of the CMS does. Nothing is lost: each
+                      * of them calls `saveCopy`, and this button called the
+                      * same function.
+                      */}
                 </CmsCard>
             )}
 
             {showForm && (
-                <CmsCard
-                    title={editing ? 'Edit event' : 'New event'}
-                    description="Published events appear on the public site and to signed-in members."
-                    actions={
-                        <button type="button" onClick={() => setShowForm(false)}
-                            className="text-neutral-500 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-neutral-100" aria-label="Close">
-                            <X className="w-5 h-5" />
-                        </button>
-                    }
-                >
-                    <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
+                /*
+                 * AN EVENT OPENS ON A SCREEN OF ITS OWN, the way a state page
+                 * does in Regions & States. It was a dialog over the table — a
+                 * scroll inside a scroll, with the page locked behind it.
+                 */
+                <div aria-label={editing ? 'Edit event' : 'New event'}>
+                    <button
+                        type="button"
+                        onClick={() => setShowForm(false)}
+                        className="mb-4 inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3.5 py-2
+                                   text-[1.0625rem] font-semibold text-slate-600 transition-colors hover:border-[#2563EB]
+                                   hover:text-[#2563EB] dark:border-[#2a2a2a] dark:text-neutral-300"
+                    >
+                        <ArrowLeft className="h-4 w-4" /> Back to the events
+                    </button>
+
+                    {/*
+                      * `max-h` and a THREE-PART COLUMN: header, scrolling body,
+                      * footer. Letting the whole dialog scroll would take the
+                      * Create button off screen on a long form, which is the
+                      * fault this change exists to fix.
+                      */}
+                    {/*
+                      * A CARD, AND IT HAS TO READ AS ONE.
+                      *
+                      * It was `max-w-4xl` - 896px - which is a card on a wide
+                      * monitor and the whole screen on a laptop running at 150%
+                      * or 200%, where the CSS viewport is around 950px. At that
+                      * width the backdrop is a 20px margin, the rounded corners
+                      * are off the edge of the glass, and what is technically a
+                      * dialog reads as a page that has replaced the events
+                      * table. Reported exactly that way: "where is the box".
+                      *
+                      * 2xl (672px) stays a card at every width anybody uses,
+                      * and the form inside it is two columns at that size. The
+                      * border is there for the same reason: on a light
+                      * background a shadow alone does not draw an edge.
+                      */}
+                    <div className="relative w-full bg-white dark:bg-[#0b0b0b] rounded-2xl
+                                    border border-slate-200 dark:border-[#1f1f1f] flex flex-col">
+
+                        <header className="shrink-0 flex items-start gap-4 px-5 sm:px-7 py-5
+                                           border-b border-slate-200 dark:border-[#1f1f1f]">
+                            <div className="min-w-0 flex-1">
+                                <h2 className={`${CARD_TITLE} text-slate-900 dark:text-neutral-100`}>
+                                    {editing ? 'Edit event' : 'New event'}
+                                </h2>
+                                <p className="text-[1.25rem] text-slate-500 dark:text-[#A1A1AA] mt-1">
+                                    Published events appear on the public site and to signed-in members.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowForm(false)}
+                                aria-label="Close"
+                                className="shrink-0 w-10 h-10 rounded-xl border border-slate-200
+                                           dark:border-[#2a2a2a] flex items-center justify-center
+                                           text-slate-500 hover:bg-slate-50 dark:hover:bg-[#141414]"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </header>
+
+                    <form id="event-form" onSubmit={handleSubmit}
+                          className="px-5 sm:px-7 py-6
+                                     grid gap-4 sm:grid-cols-2 content-start">
                         <div className="sm:col-span-2">
                             {/*
                               NOT `required` — no field on this form is.
@@ -805,22 +1187,336 @@ export default function EventsManager({
                               a blank the same way, and every reader falls back —
                               see the note at the top of the event schema.
                             */}
-                            <CmsField label="Title" hint="Optional, like everything here. Blank shows as “Untitled event”.">
+                            <CmsField label="Title">
                                 <CmsInput value={form.title} placeholder="Untitled event"
                                     onChange={(e) => setForm({ ...form, title: e.target.value })} />
                             </CmsField>
+
+                            {/* Straight under the title, which is how an event
+                                is written: the name, then what it is about. It
+                                sat below the banner and the category, four
+                                fields away from the sentence it continues. */}
+                            <CmsField label="Description">
+                                <CmsTextarea rows={4} value={form.description}
+                                    onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                            </CmsField>
                         </div>
 
-                        {/*
-                          Second, under the title, because it is the decision
-                          that determines who ever receives this event.
+                        <CmsField label="Date">
+                            <CmsInput type="date" value={form.date}
+                                onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                        </CmsField>
 
-                          It sat below the date and time and above the venue,
-                          where it read as another address field and was missed
-                          entirely. WHERE THE EVENT IS HELD and WHO IT IS FOR are
-                          different questions: the venue is a line on a card, this
-                          decides whose dashboard the card appears on at all.
+                        <div className="grid grid-cols-2 gap-3">
+                            {/*
+                              * `lang="en-US"` — AM/PM, not a 24-hour clock.
+                              *
+                              * A native time input renders in the BROWSER's
+                              * locale, and on an en-GB browser that is 24-hour:
+                              * "10:00" gives no way to tell a morning session
+                              * from an evening one, which is the one thing the
+                              * field exists to say. The attribute pins the
+                              * control's display to a 12-hour clock; the VALUE
+                              * is unaffected — it is always "HH:MM" on the wire,
+                              * so nothing downstream has to know.
+                              */}
+                            <CmsField label="Starts">
+                                <CmsInput type="time" lang="en-US" value={form.time}
+                                    onChange={(e) => setForm({ ...form, time: e.target.value })} />
+                            </CmsField>
+                            <CmsField label="Ends">
+                                <CmsInput type="time" lang="en-US" value={form.endTime}
+                                    onChange={(e) => setForm({ ...form, endTime: e.target.value })} />
+                            </CmsField>
+                        </div>
+
+                        <CmsField
+                            label="Last day"
+                            hint="Only for an event that runs over more than one day. Leave it blank and the event is on the date above."
+                        >
+                            <CmsInput
+                                type="date"
+                                value={form.endDate}
+                                min={form.date || undefined}
+                                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                            />
+                        </CmsField>
+
+
+                        {/*
+                          * ONE COLUMN OR TWO, DEPENDING ON WHETHER THE VENUE
+                          * FIELD IS THERE.
+                          *
+                          * A fixed two-column row leaves Category stranded in
+                          * the left half of an online event's form with a
+                          * column of nothing beside it, which reads as a field
+                          * that failed to render rather than as a field that
+                          * does not apply. With the venue gone, Category takes
+                          * the width — the same thing Title and Description do,
+                          * so the form still reads as one ruled edge down each
+                          * side.
+                          */}
+                        <div className={`sm:col-span-2 grid gap-4 ${
+                            form.detail.mode === 'online' ? '' : 'sm:grid-cols-2'
+                        }`}>
+                            {/*
+                              * THE VENUE FIELD IS FOR EVENTS THAT HAVE ONE.
+                              *
+                              * An online event has no room, and asking for one
+                              * anyway is how "Location: Chennai Trade Centre"
+                              * ends up on the card of a Zoom call. The address
+                              * and map that DO belong to a physical event are in
+                              * the "How it is attended" section below; this is
+                              * the short line the cards print, so it follows the
+                              * same rule.
+                              *
+                              * Hidden, not cleared. A venue typed before the
+                              * event was switched to online is kept on the
+                              * record, so switching back does not ask for it a
+                              * second time — the same thing the platform and
+                              * link do in the other direction.
+                              */}
+                            {form.detail.mode !== 'online' && (
+                                <CmsField label="Location / venue">
+                                    <CmsInput value={form.location}
+                                        onChange={(e) => setForm({ ...form, location: e.target.value })}
+                                        placeholder="Chennai Trade Centre" />
+                                </CmsField>
+                            )}
+
+                            {/*
+                              A datalist rather than a select: the chip list
+                              below is free text an editor can add to, and a
+                              closed dropdown would make an event uncategorisable
+                              until someone had also edited the chips. This
+                              suggests the existing chips and still accepts a new
+                              word — which then shows on the card as a badge and
+                              is matched by a chip the moment one is added.
+                            */}
+                            {/*
+                              * A REAL SELECT, not a `<datalist>`.
+                              *
+                              * The datalist's popup is drawn by the browser, not
+                              * by us — Chrome renders it from the input's own
+                              * `color-scheme`, and this input carries a
+                              * `dark:bg-black` variant, so the suggestions came
+                              * up as white text on a black panel in the middle
+                              * of a light form. Nothing in our stylesheet can
+                              * reach inside that popup to correct it.
+                              *
+                              * A select is ours to style, and the free-text the
+                              * datalist bought is no longer worth its cost:
+                              * categories are a managed list with its own screen
+                              * now, so "add it under Events → Categories" is a
+                              * real answer rather than a dead end.
+                              */}
+                            <CmsField
+                                label="Category"
+                            >
+                                <select
+                                    value={form.category}
+                                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                                    className="w-full h-12 rounded-xl border border-slate-200 bg-white px-3.5
+                                               text-[1.25rem] text-slate-900 outline-none transition-colors
+                                               focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                                >
+                                    <option value="">No category</option>
+                                    {/*
+                                      * A category this event already carries but
+                                      * the list no longer offers is kept as an
+                                      * option, or opening an old event would
+                                      * silently reset it to "No category" and
+                                      * saving would make that true.
+                                      */}
+                                    {form.category
+                                        && !(settings?.categories || []).some(c => c.label === form.category)
+                                        ? <option value={form.category}>{form.category} (not listed)</option>
+                                        : null}
+                                    {/*
+                                      * ONLY THE CATEGORIES THIS KIND OF EVENT
+                                      * CAN BE FILED UNDER.
+                                      *
+                                      * A category is marked online-only,
+                                      * in-person-only, or both, on Events →
+                                      * Categories. This is where that earns its
+                                      * keep: "ZOOM" and "Webinars" stop being
+                                      * offered on an event people are driving
+                                      * to, and "Tea party" and "Club House"
+                                      * stop being offered on a video call.
+                                      *
+                                      * A row with no `mode` is treated as
+                                      * `both` — every category written before
+                                      * the field existed, and what they have
+                                      * always meant. The event's own category,
+                                      * whatever its mode, is kept by the branch
+                                      * above, so switching an event to online
+                                      * never silently drops the label it
+                                      * already carries.
+                                      */}
+                                    {(settings?.categories || [])
+                                        .filter(c => {
+                                            const mode = (c as { mode?: string }).mode || 'both';
+                                            return mode === 'both' || mode === form.detail.mode;
+                                        })
+                                        .map((c, i) => (
+                                            <option key={i} value={c.label}>{c.label}</option>
+                                        ))}
+                                </select>
+                            </CmsField>
+                        </div>
+
+                        {/* ===================== 2b · HOW IT IS ATTENDED
+                          *
+                          * BESIDE THE CATEGORY, because it is decided at the
+                          * same moment. "What kind of event" and "is there a
+                          * room to come to" are the two things an editor knows
+                          * before they know anything else, and they are two
+                          * different questions — which is the whole reason this
+                          * exists. With no field for it, editors put "ZOOM" and
+                          * "Webinars" into the category list, where they sit
+                          * beside "Tea party" and "Exhibitions" describing a
+                          * platform rather than a kind of event.
+                          *
+                          * It was first written into the collapsible detail
+                          * panel below, four screens down under a heading that
+                          * says "Programme, speakers and registration". An
+                          * editor creating an event never got there. Reported
+                          * as "still not shows categorised online or offline".
+                          */}
+                        <div className="sm:col-span-2">
+                            {/*
+                              * A VISIBLE CAPTION, in the same type as Title,
+                              * Date and Category.
+                              *
+                              * `CmsChoice` takes its `label` as an aria-label
+                              * only — every other call site sits under a section
+                              * heading that already says what the group is for.
+                              * This one sits in the middle of a plain field
+                              * stack, and without a caption the two cards read
+                              * as an unlabelled pair of boxes that have drifted
+                              * under the Category select. The caption is what
+                              * puts them on the same left edge as every other
+                              * field's name.
+                              */}
+                            <span className="block mb-2 text-[1.25rem] font-semibold
+                                             text-slate-800 dark:text-neutral-100">
+                                How this event is attended
+                            </span>
+                            <CmsChoice
+                                label="How this event is attended"
+                                value={form.detail.mode}
+                                onChange={(mode) => setForm({
+                                    ...form,
+                                    detail: { ...form.detail, mode },
+                                })}
+                                options={[
+                                    {
+                                        value: 'offline' as const,
+                                        icon: <MapPin className="h-4 w-4" />,
+                                        title: 'In person',
+                                        detail: 'People come to a venue. The page shows the address and a Directions button.',
+                                    },
+                                    {
+                                        value: 'online' as const,
+                                        icon: <Video className="h-4 w-4" />,
+                                        title: 'Online',
+                                        detail: 'People join on a link. The page names the platform; the link itself goes only to those who book.',
+                                    },
+                                ]}
+                            />
+
+                            {/*
+                              * The fields that follow from the answer, in the
+                              * same block rather than in a section of their own:
+                              * they ARE the answer, and an editor who has just
+                              * picked Online is looking for the link box now.
+                              */}
+                            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                                {form.detail.mode === 'online' ? (
+                                    <>
+                                        <CmsField
+                                            label="Platform"
+                                            hint="Zoom, Google Meet, Microsoft Teams — whatever people will need open."
+                                        >
+                                            <CmsInput
+                                                value={form.detail.onlinePlatform}
+                                                placeholder="Zoom"
+                                                onChange={(e) => setForm({
+                                                    ...form,
+                                                    detail: { ...form.detail, onlinePlatform: e.target.value },
+                                                })}
+                                            />
+                                        </CmsField>
+                                        <CmsField
+                                            label="Joining link"
+                                            hint="Not shown publicly. It reaches the people who book, on their confirmation."
+                                        >
+                                            <CmsInput
+                                                value={form.detail.onlineUrl}
+                                                placeholder="https://zoom.us/j/…"
+                                                onChange={(e) => setForm({
+                                                    ...form,
+                                                    detail: { ...form.detail, onlineUrl: e.target.value },
+                                                })}
+                                            />
+                                        </CmsField>
+                                    </>
+                                ) : (
+                                    <>
+                                        <CmsField label="Venue address">
+                                            <CmsInput
+                                                value={form.detail.venueAddress}
+                                                onChange={(e) => setForm({
+                                                    ...form,
+                                                    detail: { ...form.detail, venueAddress: e.target.value },
+                                                })}
+                                            />
+                                        </CmsField>
+                                        <CmsField label="Map link">
+                                            <CmsInput
+                                                value={form.detail.venueMapUrl}
+                                                placeholder="https://maps.app.goo.gl/…"
+                                                onChange={(e) => setForm({
+                                                    ...form,
+                                                    detail: { ...form.detail, venueMapUrl: e.target.value },
+                                                })}
+                                            />
+                                        </CmsField>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="sm:col-span-2">
+                            {/* 16/9 — the shape of the banner on an event card. */}
+                            <MediaPicker
+                                label="Banner"
+                                aspect="16 / 9"
+                                value={form.media}
+                                onChange={(media) => setForm({ ...form, media })}
+
+                            />
+                        </div>
+
+                        {/* ============================== 3 · WHO IT REACHES
+
+                          AFTER the event exists, not before it.
+
+                          This used to be the SECOND thing on the form — the
+                          hardest decision on it, asked before the editor had
+                          said what the event was or when it was. An editor
+                          cannot sensibly choose an audience for something they
+                          have not described yet, and several simply scrolled
+                          past it.
+
+                          It still comes before the programme and the ticketing,
+                          because it is the decision that determines whether any
+                          of that is ever seen. WHERE THE EVENT IS HELD and WHO
+                          IT IS FOR remain different questions — the venue is a
+                          line on a card, this decides whose dashboard the card
+                          appears on at all.
                         */}
+
                         <div className="sm:col-span-2">
                             <RegionTargetPicker
                                 targets={form.targets}
@@ -834,7 +1530,7 @@ export default function EventsManager({
                                 audience={form.detail.audience}
                                 title="Who sees this event"
                                 hint={'Members, block admins, district admins and state admins only see events aimed '
-                                    + 'at where they are. Tick nothing to reach the whole association.'}
+                                    + 'at where they are. Choose one of the two below.'}
                             />
                         </div>
 
@@ -868,56 +1564,31 @@ export default function EventsManager({
                         */}
                         {(channel === 'members' || form.targets.length > 0) && (
                             <div className="sm:col-span-2">
-                                <CmsSection
-                                    title="Onboarding website"
-                                    hint={'The regions above decide whose dashboard this reaches. This is an '
-                                        + 'addition on top of that, not an alternative to it.'}
-                                >
+                                <div>
                                     {/*
-                                      A CHECKBOX, BECAUSE BOTH THINGS HAPPEN AT ONCE.
+                                      A CHECKBOX, NOT A THIRD RADIO OPTION.
 
-                                      This was a pair of cards — "keep it inside the
-                                      association" against "post it in the onboarding
-                                      events section" — and that framing was simply
-                                      untrue. Posting to the onboarding site does not
-                                      take the event off the member dashboards:
+                                      Posting to the onboarding site is not an
+                                      alternative to the two cards above it:
                                       `event.service.listEvents` never reads
-                                      `showOnOnboarding`, so members in the targeted
-                                      regions receive it either way. The pair claimed
-                                      the two were alternatives and an editor
-                                      reasonably read the second card as replacing the
-                                      first.
+                                      `showOnOnboarding`, so members in the
+                                      chosen regions receive the event either
+                                      way. Rendering it inside that radio group
+                                      would claim that ticking it takes the
+                                      event off the member dashboards, which is
+                                      untrue — and was the framing this control
+                                      already had removed once.
 
-                                      One box, phrased as the addition it is. The
-                                      unconditional half is stated above it as a fact
-                                      rather than offered as an option nobody can
-                                      turn off.
+                                      The two paragraphs that used to stand above
+                                      it said as much in prose. One line on the
+                                      card says it where it is read.
                                     */}
-                                    <p className="mb-3 flex items-start gap-2 text-xs text-slate-600
-                                                  dark:text-neutral-400">
-                                        <Building2 className="w-3.5 h-3.5 mt-0.5 shrink-0 text-slate-400" />
-                                        <span>
-                                            <strong className="font-semibold text-slate-700 dark:text-neutral-200">
-                                                Members always see this
-                                            </strong>{' '}
-                                            — on their dashboard and in the app,{' '}
-                                            {form.targets.length
-                                                ? 'everywhere in the regions chosen above.'
-                                                : 'across the whole association.'}{' '}
-                                            That cannot be turned off here; widen or narrow it with the regions.
-                                        </span>
-                                    </p>
-
                                     <CmsCheck
                                         checked={form.showOnOnboarding}
                                         onChange={(showOnOnboarding) => setForm({ ...form, showOnOnboarding })}
                                         icon={<Globe className="w-4 h-4" />}
                                         title="Also post it in the onboarding events section"
-                                        detail={form.targets.length
-                                            ? 'Adds it to the public site as well, labelled with its region and '
-                                              + 'findable under the region filter there. Members keep it either way.'
-                                            : 'Adds it to the public site as well, for the whole association. '
-                                              + 'Members keep it either way.'}
+                                        detail="Members see it either way. This adds it to the public site too."
                                     />
 
                                     {/*
@@ -933,7 +1604,7 @@ export default function EventsManager({
                                     */}
                                     {form.showOnOnboarding && form.targets.length > 0 && (
                                         <p className="mt-3 flex items-start gap-2 rounded-lg border border-blue-200
-                                                      dark:border-blue-900/60 bg-blue-500/5 px-3 py-2 text-xs
+                                                      dark:border-blue-900/60 bg-blue-500/5 px-3 py-2 text-[1.1875rem]
                                                       text-blue-700 dark:text-blue-300">
                                             <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                                             <span>
@@ -946,78 +1617,10 @@ export default function EventsManager({
                                             </span>
                                         </p>
                                     )}
-                                </CmsSection>
+                                </div>
                             </div>
                         )}
 
-                        <CmsField label="Date" hint="Optional. Left blank, the event lists as “Date to be confirmed”.">
-                            <CmsInput type="date" value={form.date}
-                                onChange={(e) => setForm({ ...form, date: e.target.value })} />
-                        </CmsField>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <CmsField label="Starts" hint="In your own timezone.">
-                                <CmsInput type="time" value={form.time}
-                                    onChange={(e) => setForm({ ...form, time: e.target.value })} />
-                            </CmsField>
-                            <CmsField label="Ends" hint="Optional.">
-                                <CmsInput type="time" value={form.endTime}
-                                    onChange={(e) => setForm({ ...form, endTime: e.target.value })} />
-                            </CmsField>
-                        </div>
-
-
-                        <div className="sm:col-span-2 grid gap-4 sm:grid-cols-2">
-                            <CmsField label="Location / venue">
-                                <CmsInput value={form.location}
-                                    onChange={(e) => setForm({ ...form, location: e.target.value })}
-                                    placeholder="Chennai Trade Centre, Nandambakkam" />
-                            </CmsField>
-
-                            {/*
-                              A datalist rather than a select: the chip list
-                              below is free text an editor can add to, and a
-                              closed dropdown would make an event uncategorisable
-                              until someone had also edited the chips. This
-                              suggests the existing chips and still accepts a new
-                              word — which then shows on the card as a badge and
-                              is matched by a chip the moment one is added.
-                            */}
-                            <CmsField
-                                label="Category"
-                                hint="Matches a filter chip on /events. Blank shows no badge."
-                            >
-                                <CmsInput
-                                    list="event-category-options"
-                                    value={form.category}
-                                    onChange={(e) => setForm({ ...form, category: e.target.value })}
-                                    placeholder="Conferences"
-                                />
-                                <datalist id="event-category-options">
-                                    {(settings?.categories || []).map((c, i) => (
-                                        <option key={i} value={c.label} />
-                                    ))}
-                                </datalist>
-                            </CmsField>
-                        </div>
-
-                        <div className="sm:col-span-2">
-                            {/* 16/9 — the shape of the banner on an event card. */}
-                            <MediaPicker
-                                label="Banner"
-                                aspect="16 / 9"
-                                value={form.media}
-                                onChange={(media) => setForm({ ...form, media })}
-                                hint="Upload a file or paste a URL. Blank means the card renders without an image."
-                            />
-                        </div>
-
-                        <div className="sm:col-span-2">
-                            <CmsField label="Description">
-                                <CmsTextarea rows={4} value={form.description}
-                                    onChange={(e) => setForm({ ...form, description: e.target.value })} />
-                            </CmsField>
-                        </div>
 
                         <EventDetailFields
                             value={form.detail}
@@ -1025,44 +1628,135 @@ export default function EventsManager({
                             eventId={editing}
                         />
 
-                        <CmsField label="Visibility" hint="A draft is stored but shown to nobody.">
+                        <CmsField label="Visibility">
                             <select
                                 value={form.status}
                                 onChange={(e) => setForm({ ...form, status: e.target.value as 'published' | 'draft' })}
-                                className="w-full bg-slate-50 dark:bg-black border border-slate-300 dark:border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-neutral-100"
+                                className={`w-full ${FILTER_SELECT}`}
                             >
                                 <option value="published">Published</option>
                                 <option value="draft">Draft</option>
                             </select>
                         </CmsField>
 
-                        <div className="sm:col-span-2 flex gap-2">
-                            <CmsButton type="submit" loading={saving}>
-                                {editing ? 'Save event' : 'Create event'}
-                            </CmsButton>
+                    </form>
+
+                        {/*
+                          * OUTSIDE the scrolling body, so Cancel and Create are
+                          * where they were when the dialog opened however far
+                          * down the form has been scrolled.
+                          *
+                          * `form="event-form"` is what still submits it from out
+                          * here — a submit button outside its form needs the id,
+                          * or the button does nothing and nothing says why.
+                          */}
+                        <footer className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-3 rounded-b-2xl px-5 sm:px-7 py-4
+                                           border-t border-slate-200 dark:border-[#1f1f1f]
+                                           bg-slate-50/95 backdrop-blur dark:bg-[#0d0d0d]/95">
                             <CmsButton type="button" variant="ghost" onClick={() => setShowForm(false)}>
                                 Cancel
                             </CmsButton>
-                        </div>
-                    </form>
-                </CmsCard>
+                            <CmsButton type="submit" form="event-form" loading={saving}>
+                                {editing ? 'Save event' : 'Create event'}
+                            </CmsButton>
+                        </footer>
+                    </div>
+                </div>
             )}
 
+            {!showForm && !wordingTab && (
             <CmsCard
-                title={`Events (${visibleEvents.length}${targetFilter === 'all' ? '' : ' of ' + events.length})`}
-                description="Aim an event at a region when you create it. The list can be narrowed to one audience below."
+                /* “3 of 8” whenever ANY filter is narrowing. The old count
+                   watched the target filter alone, so a search or a date
+                   filter showed a bare “Events (3)” on a screen holding
+                   eight — which is the number the association reported. */
+                title={`Events (${visibleEvents.length}`
+                    + `${visibleEvents.length === events.length ? '' : ' of ' + events.length})`}
+                description={channel === 'public'
+                    ? 'Everything on the onboarding site — the programme written here and anything the Super Admin posted there.'
+                    : 'Aim an event at a region when you create it.'}
                 actions={
-                    <div className="flex items-center gap-2 shrink-0">
-                        {/* Only targets actually in use. Offering the whole region
-                            tree here would be 6,966 blocks, nearly all of them
-                            matching nothing. */}
+                    /* ONE control in the header, and it is the one that
+                       creates something. The three filters narrow the table
+                       and belong over the table — up here they took their own
+                       width out of the row and left the description reading
+                       as a narrow column with an empty card beside it. */
+                    <CmsButton type="button" onClick={openNew}>
+                        <Plus className="w-4 h-4" /> Add event
+                    </CmsButton>
+                }
+            >
+                {events.length === 0 ? (
+                    <CmsEmpty title="No events yet" />
+                ) : (
+                  <>
+                    {/*
+                      WHY THE PUBLIC PAGE SHOWS FEWER THAN THIS LIST.
+
+                      `/events` and the home page carry what is still to come.
+                      Eight here and three there is the rule working — but no
+                      screen said so, so it read as a fault. It is stated where
+                      the question gets asked.
+                    */}
+                    {events.length > upcomingCount && (
+                        <p className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg
+                                      border border-slate-200 bg-slate-50 px-3 py-2.5
+                                      text-[1.1875rem] text-slate-600 dark:border-[#2a2a2a]
+                                      dark:bg-[#0f0f0f] dark:text-neutral-300">
+                            <span>
+                                <strong className="font-semibold text-slate-900 dark:text-white">
+                                    {upcomingCount} of these {upcomingCount === 1 ? 'is' : 'are'} on the
+                                    events page and the home page.
+                                </strong>{' '}
+                                The other {events.length - upcomingCount} have already been held —
+                                the events page and the home page show what is still to come.
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setWhen('past')}
+                                className="font-semibold text-blue-700 underline underline-offset-2
+                                           dark:text-blue-400"
+                            >
+                                Show the ones already held
+                            </button>
+                        </p>
+                    )}
+
+                    {/*
+                      THE FILTERS, over the table they narrow.
+
+                      They were in the card header, where they took their own
+                      width out of the title row. Here they sit with the search
+                      box, which is the other control that narrows this list.
+                    */}
+                    <div className="mb-4 flex flex-wrap items-center gap-2">
+                        {/* Only on the CMS surface, and only once there is
+                            something to separate: on the admin screen every row
+                            is the admin's, so the control would be a filter with
+                            one answer. */}
+                        {channel === 'public' && adminPosted > 0 && (
+                            <select
+                                value={originFilter}
+                                onChange={(e) => setOriginFilter(e.target.value as 'all' | 'cms' | 'admin')}
+                                aria-label="Filter events by where they came from"
+                                className={FILTER_SELECT}
+                            >
+                                <option value="all">Everything on the site</option>
+                                <option value="cms">Written here</option>
+                                <option value="admin">Posted by the Super Admin ({adminPosted})</option>
+                            </select>
+                        )}
+
+
+                        {/* Only targets actually in use. Offering the whole
+                            region tree here would be 6,966 blocks, nearly all
+                            of them matching nothing. */}
                         {targetOptions.length > 1 && (
                             <select
                                 value={targetFilter}
                                 onChange={(e) => setTargetFilter(e.target.value)}
                                 aria-label="Filter events by who sees them"
-                                className="bg-slate-50 dark:bg-black border border-slate-300 dark:border-[#2a2a2a]
-                                           rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-neutral-100"
+                                className={FILTER_SELECT}
                             >
                                 <option value="all">Every audience</option>
                                 {targetOptions.map(t => (
@@ -1070,55 +1764,124 @@ export default function EventsManager({
                                 ))}
                             </select>
                         )}
-                        <CmsButton type="button" onClick={openNew}><Plus className="w-4 h-4" /> Add event</CmsButton>
                     </div>
-                }
-            >
-                {events.length === 0 ? (
-                    <CmsEmpty title="No events yet" hint="Add one and it appears on the public site straight away." />
-                ) : (
+
+                    {/* Full width and above the table. */}
+                    <div className="relative mb-4">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2
+                                           w-4 h-4 text-neutral-400" />
+                        <input
+                            type="search"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder="Search by title, venue, category or region…"
+                            aria-label="Search events"
+                            className="w-full bg-slate-50 dark:bg-black border border-slate-300
+                                       dark:border-[#2a2a2a] rounded-lg pl-10 pr-3 py-2.5
+                                       text-[1.1875rem] text-slate-900 dark:text-neutral-100"
+                        />
+                    </div>
+
+                    {visibleEvents.length === 0 ? (
+                        <CmsEmpty
+                            title="Nothing matches"
+                            hint="No event answers all of the filters above. Clear one of them."
+                        />
+                    ) : (
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                        <table className="w-full text-[1.25rem]">
                             <thead>
                                 <tr className="text-left text-neutral-500 dark:text-neutral-400 border-b border-slate-200 dark:border-[#1f1f1f]">
-                                    <th className="pb-2 pr-4 font-medium w-16">Banner</th>
-                                    <th className="pb-2 pr-4 font-medium">Title</th>
-                                    <th className="pb-2 pr-4 font-medium">When</th>
-                                    <th className="pb-2 pr-4 font-medium">Where</th>
-                                    <th className="pb-2 pr-4 font-medium">Status</th>
-                                    <th className="pb-2 font-medium text-right">Actions</th>
+                                    <th className="pb-4 pr-4 text-[1.1875rem] sm:text-[1.0625rem] font-semibold uppercase tracking-wider w-16">Banner</th>
+                                    <th className="pb-4 pr-4 text-[1.1875rem] sm:text-[1.0625rem] font-semibold uppercase tracking-wider">Title</th>
+                                    <th className="pb-4 pr-4 text-[1.1875rem] sm:text-[1.0625rem] font-semibold uppercase tracking-wider">When</th>
+                                    <th className="pb-4 pr-4 text-[1.1875rem] sm:text-[1.0625rem] font-semibold uppercase tracking-wider">Where</th>
+                                    <th className="pb-4 pr-4 text-[1.1875rem] sm:text-[1.0625rem] font-semibold uppercase tracking-wider">Status</th>
+                                    <th className="pb-4 text-[1.1875rem] sm:text-[1.0625rem] font-semibold uppercase tracking-wider text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
+                                {/* The row rule was `border-slate-800/60` — a DARK
+                                    border on a table that is white in light mode, so
+                                    every row was separated by a near-black line while
+                                    the header a few lines up used `slate-200`. Matched
+                                    to the header, plus a hover tint to make a long row
+                                    readable across its whole width. */}
                                 {visibleEvents.map((e) => (
-                                    <tr key={e.id} className="border-b border-slate-800/60">
-                                        <td className="py-3 pr-4">
-                                            {e.media?.url ? (
-                                                <div className="w-14 h-10 rounded overflow-hidden bg-slate-100 dark:bg-[#161616]">
-                                                    <CmsMediaFrame media={e.media} />
-                                                </div>
-                                            ) : (
-                                                <div className="w-14 h-10 rounded bg-slate-100 dark:bg-[#161616]" />
-                                            )}
+                                    <tr
+                                        key={e.id}
+                                        className="border-b border-slate-200 transition-colors
+                                                   hover:bg-slate-50/70 dark:border-[#1f1f1f]
+                                                   dark:hover:bg-[#101010]"
+                                    >
+                                        <td className="py-4 pr-4">
+                                            {/*
+                                              TWO PLACES AN EVENT'S PICTURE CAN LIVE.
+
+                                              `media` is the shape every other CMS section
+                                              uses and carries the fit and the focal point;
+                                              `imageUrl` is the older field the mobile app
+                                              reads. Today the server fills both from
+                                              `bannerUrl`, so either would do.
+
+                                              Reading both anyway, because that is what
+                                              every public page does: a row whose picture
+                                              reached only one of them draws a grey box
+                                              here and a photograph on the live site, and
+                                              an editor trusting this column would add a
+                                              second picture to an event that has one.
+                                            */}
+                                            <div className="w-14 h-10 rounded overflow-hidden
+                                                            bg-slate-100 dark:bg-[#161616]">
+                                                {(e.media?.url || e.imageUrl) ? (
+                                                    <CmsMediaFrame
+                                                        media={e.media?.url ? e.media : {
+                                                            url: e.imageUrl,
+                                                            type: 'image',
+                                                            alt: e.title || '',
+                                                            fit: 'cover',
+                                                            position: 'center',
+                                                        }}
+                                                        width={160}
+                                                    />
+                                                ) : null}
+                                            </div>
                                         </td>
-                                        <td className="py-3 pr-4 text-slate-800 dark:text-neutral-200">
+                                        <td className="py-4 pr-4 text-slate-800 dark:text-neutral-200">
                                             {/* Named, not dashed. A row reading "—"
                                                 is indistinguishable from a row that
                                                 failed to load, and an untitled event
                                                 is a normal thing to have half-written
                                                 now that no field is required. */}
-                                            {e.title || (
-                                                <span className="italic text-neutral-400">Untitled event</span>
-                                            )}
+                                            <span className="block font-semibold leading-snug">
+                                                {e.title || (
+                                                    <span className="italic font-normal text-neutral-400">
+                                                        Untitled event
+                                                    </span>
+                                                )}
+                                            </span>
+
+                                            {/*
+                                              THE BADGES, ON THEIR OWN LINE.
+
+                                              Each carried `ml-2` and sat inline after
+                                              the title, so a long title and three
+                                              badges ran together on one baseline and
+                                              the row read as one unbroken string. A
+                                              wrapped flex row with a real gap puts the
+                                              title first and everything said ABOUT it
+                                              underneath.
+                                            */}
+                                            <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
                                             {/* The audience is a fact about the row that
                                                 the status column cannot carry: a published
                                                 members-only event and a published open one
                                                 both read "published". */}
                                             {e.audience === 'paid' ? (
-                                                <span className="ml-2 inline-flex items-center gap-1 text-[0.625rem]
+                                                <span className="inline-flex items-center gap-1 text-[1.0625rem]
                                                                  font-bold uppercase tracking-wide px-1.5 py-0.5
                                                                  rounded-full bg-blue-100 dark:bg-blue-950
-                                                                 text-blue-700 dark:text-blue-400 align-middle">
+                                                                 text-blue-700 dark:text-blue-400">
                                                     <Lock className="w-2.5 h-2.5" /> Members
                                                 </span>
                                             ) : null}
@@ -1141,15 +1904,32 @@ export default function EventsManager({
                                               reason.
                                             */}
                                             {channel === 'members' && isOnPublicSite(e) ? (
-                                                <span className="ml-2 inline-flex items-center gap-1 text-[0.625rem]
+                                                <span className="inline-flex items-center gap-1 text-[1.0625rem]
                                                                  font-bold uppercase tracking-wide px-1.5 py-0.5
                                                                  rounded-full bg-emerald-100 dark:bg-emerald-950
-                                                                 text-emerald-700 dark:text-emerald-400 align-middle">
+                                                                 text-emerald-700 dark:text-emerald-400">
                                                     <Globe className="w-2.5 h-2.5" /> Onboarding
                                                 </span>
                                             ) : null}
+                                            {/* WHOSE EVENT THIS IS. On the CMS
+                                                surface a members-channel row is
+                                                the super admin's, posted to the
+                                                onboarding site from their own
+                                                screen — worth marking, because
+                                                it is the row an editor did not
+                                                write and may not expect to
+                                                find. */}
+                                            {channel === 'public' && (e.channel || 'public') !== 'public' ? (
+                                                <span className="inline-flex items-center gap-1 text-[1.0625rem]
+                                                                 font-bold uppercase tracking-wide px-1.5 py-0.5
+                                                                 rounded-full bg-violet-100 dark:bg-violet-950
+                                                                 text-violet-700 dark:text-violet-400 align-middle"
+                                                    title="Posted from the Super Admin's events screen. Editable here as well.">
+                                                    <Shield className="w-2.5 h-2.5" /> Super Admin
+                                                </span>
+                                            ) : null}
                                             {channel === 'public' && !isOnPublicSite(e) ? (
-                                                <span className="ml-2 inline-flex items-center gap-1 text-[0.625rem]
+                                                <span className="inline-flex items-center gap-1 text-[1.0625rem]
                                                                  font-bold uppercase tracking-wide px-1.5 py-0.5
                                                                  rounded-full bg-amber-100 dark:bg-amber-950/60
                                                                  text-amber-700 dark:text-amber-400 align-middle"
@@ -1178,26 +1958,35 @@ export default function EventsManager({
                                               label you can see.
                                             */}
                                             {e.registrationEnabled ? (
-                                                <span className="ml-1.5 text-[0.625rem] font-medium
-                                                                 text-emerald-600 align-middle">
+                                                <span className="text-[1.0625rem] font-medium
+                                                                 text-emerald-600">
                                                     registration open
                                                 </span>
                                             ) : (
-                                                <span className="ml-1.5 inline-flex items-center gap-1
-                                                                 text-[0.625rem] font-semibold uppercase
+                                                <span className="inline-flex items-center gap-1
+                                                                 text-[1.0625rem] font-semibold uppercase
                                                                  tracking-wide px-1.5 py-0.5 rounded-full
                                                                  bg-amber-100 dark:bg-amber-950
-                                                                 text-amber-700 dark:text-amber-400
-                                                                 align-middle">
+                                                                 text-amber-700 dark:text-amber-400">
                                                     No registration
                                                 </span>
                                             )}
+                                            </span>
                                         </td>
-                                        <td className="py-3 pr-4 text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+                                        <td className="py-4 pr-4 text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
                                             {e.startAt ? new Date(e.startAt).toLocaleString() : '—'}
                                         </td>
-                                        <td className="py-3 pr-4 text-neutral-500 dark:text-neutral-400">
-                                            {e.location || '—'}
+                                        <td className="py-4 pr-4 text-neutral-500 dark:text-neutral-400">
+                                            {/*
+                                              An online event reads as "Online", or
+                                              "Online · Zoom" when the platform is
+                                              known — never as its old venue, which is
+                                              kept on the record but describes a room
+                                              nobody is going to.
+                                            */}
+                                            {e.mode === 'online'
+                                                ? `Online${e.onlinePlatform ? ` · ${e.onlinePlatform}` : ''}`
+                                                : (e.location || '—')}
                                             {/*
                                               Who it reaches, under where it is held.
                                               An event aimed at one block is invisible
@@ -1209,7 +1998,7 @@ export default function EventsManager({
                                                 column an administrator scans to answer "which
                                                 of these went to Ariyalur", and a targeted
                                                 event has to stand out from a national one. */}
-                                            <span className={`inline-block text-xs mt-1 px-2 py-0.5 rounded-full ${
+                                            <span className={`inline-block text-[1.1875rem] mt-1 px-2 py-0.5 rounded-full ${
                                                 e.targetLabel
                                                     ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300'
                                                     : 'bg-slate-100 dark:bg-[#161616] text-neutral-500 dark:text-neutral-400'
@@ -1217,8 +2006,8 @@ export default function EventsManager({
                                                 {e.targetLabel ? `${e.targetLabel} only` : 'Everyone'}
                                             </span>
                                         </td>
-                                        <td className="py-3 pr-4">
-                                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                        <td className="py-4 pr-4">
+                                            <span className={`text-[1.1875rem] px-2 py-0.5 rounded-full ${
                                                 e.status === 'published'
                                                     ? 'bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400'
                                                     : 'bg-slate-100 dark:bg-[#161616] text-neutral-500 dark:text-neutral-400'
@@ -1226,29 +2015,63 @@ export default function EventsManager({
                                                 {e.status}
                                             </span>
                                         </td>
-                                        <td className="py-3 text-right whitespace-nowrap">
-                                            <button onClick={() => openEdit(e)}
-                                                className="p-1.5 rounded text-neutral-500 dark:text-neutral-400 hover:bg-slate-100 dark:hover:bg-[#161616]" aria-label="Edit">
+
+                                        {/* A flex row with a real gap. The three
+                                            controls were `mr-1`/`ml-1` siblings, so
+                                            "Update copy" and "Delete" met with two
+                                            pixels between them. */}
+                                        <td className="py-4 text-right">
+                                            <div className="flex flex-wrap items-center justify-end gap-2">
+                                            {/* The same 36px box as the delete beside
+                                                it, so the two icons line up. */}
+                                            <button
+                                                type="button"
+                                                onClick={() => openEdit(e)}
+                                                title={`Edit “${e.title || 'this event'}”`}
+                                                aria-label={`Edit ${e.title || 'this event'}`}
+                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg
+                                                           border border-slate-300 text-neutral-500 transition-colors
+                                                           hover:bg-slate-100 dark:border-[#2a2a2a]
+                                                           dark:text-neutral-400 dark:hover:bg-[#161616]"
+                                            >
                                                 <Pencil className="w-4 h-4" />
                                             </button>
-                                            {/* Labelled, so it is not mistaken for the
-                                                pencil beside it. Both were 14px icons
-                                                two pixels apart; one is reversible. */}
-                                            <button onClick={() => handleDelete(e)}
-                                                className="ml-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium
-                                                           text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30
-                                                           hover:bg-red-500/10 transition-colors"
-                                                aria-label={`Delete ${e.title}`}>
-                                                <Trash2 className="w-3.5 h-3.5" /> Delete
+                                            {/*
+                                              AN ICON, as asked — the row already
+                                              carries two worded buttons and a third
+                                              made it unreadable.
+
+                                              It keeps what the word was there for: a
+                                              red bordered box it cannot be mistaken
+                                              for the pencil in, a tooltip, and an
+                                              `aria-label` naming the event — so a
+                                              screen reader still hears "Delete
+                                              <title>" rather than "button".
+                                            */}
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDelete(e)}
+                                                title={`Delete “${e.title || 'this event'}”`}
+                                                aria-label={`Delete ${e.title || 'this event'}`}
+                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg
+                                                           border border-red-200 text-red-600 transition-colors
+                                                           hover:bg-red-500/10 dark:border-red-500/30
+                                                           dark:text-red-400"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
                                             </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
+                    )}
+                  </>
                 )}
             </CmsCard>
+            )}
         </CmsPage>
     );
 }

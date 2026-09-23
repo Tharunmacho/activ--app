@@ -28,7 +28,22 @@ export interface NavItem {
     to: string;
     label: string;
     /** Which react-icons/fa glyph the sidebar renders. */
-    icon: 'home' | 'check' | 'users' | 'shield' | 'calendar' | 'megaphone' | 'cog';
+    icon: 'home' | 'check' | 'users' | 'shield' | 'calendar' | 'megaphone' | 'bell' | 'cog'
+    | 'ticket' | 'tags' | 'list';
+    /**
+     * A SECTION rather than a single destination.
+     *
+     * The entry becomes a disclosure: pressing it opens the children beneath it
+     * and navigates to the first of them. Used for Events, which is three
+     * screens that belong together — the programme, the categories it is filed
+     * under, and the bookings taken against it — and was previously two
+     * unrelated top-level entries with the third missing entirely.
+     *
+     * The parent's own `to` is the section's landing page and must equal the
+     * first child's `to`. They are the same screen; a parent pointing somewhere
+     * else would light two rail entries for one page, or none.
+     */
+    children?: NavItem[];
 }
 
 export interface TierConfig {
@@ -94,6 +109,25 @@ const withTierNav = (config: Omit<TierConfig, 'nav'>, showHub = false): TierConf
  * district admin the blocks of their district. A BLOCK admin has nothing beneath
  * them, so the entry is absent rather than present-and-empty: a drill-down with
  * nothing to drill into is a link that reads as broken.
+ *
+ * ------------------------------------------------- NO "ADMINS" ON A TIER RAIL
+ *
+ * There was an Admins entry beside the Hub, giving a state admin the district
+ * and block accounts of their state and a district admin the block accounts of
+ * their district. The association asked for it to come off both: creating,
+ * editing and deleting admin accounts is the Super Admin's, and one screen
+ * owning that is what keeps "who may appoint whom" a single answer rather than
+ * three tiers' worth of delegation rules.
+ *
+ * The page, the routes and the `/admin/team/admins` endpoints behind it went
+ * with the entry. A rail item is not a permission boundary, so leaving the API
+ * reachable would have moved the capability out of sight rather than removed
+ * it.
+ *
+ * The Hub still reports staffing — how many admins a region has, and which have
+ * none. That is the Super Admin's cue to appoint somebody, and a tier admin
+ * knowing their block is unstaffed is worth having; it is a count, not a
+ * control.
  */
 const TIER_NAV = (base: string, showHub = false): NavItem[] => [
     { to: base + '/dashboard', label: 'Dashboard', icon: 'home' },
@@ -101,9 +135,6 @@ const TIER_NAV = (base: string, showHub = false): NavItem[] => [
     { to: base + '/members', label: 'Members', icon: 'users' },
     ...(showHub ? [
         { to: base + '/hub', label: 'Hub', icon: 'shield' as const },
-        // Staffing the regions beneath them, mirroring the super admin's own
-        // Hub + Admins pair. A block admin has neither.
-        { to: base + '/admins', label: 'Admins', icon: 'users' as const },
     ] : []),
     { to: base + '/settings', label: 'Settings', icon: 'cog' },
 ];
@@ -156,13 +187,46 @@ export const TIERS: Record<AdminTier, TierConfig> = {
         nav: [
             { to: '/super-admin/dashboard', label: 'Hub', icon: 'home' },
             { to: '/super-admin/admins', label: 'Admins', icon: 'shield' },
-            { to: '/super-admin/events', label: 'Events', icon: 'calendar' },
+            /*
+             * EVENTS IS A SECTION, not a link.
+             *
+             * Three screens do one job and were not presented as doing it:
+             * the programme itself, the categories events are filed under
+             * (which had no screen at all — the chip list was reachable only
+             * through the CMS, on a page about the public site's furniture),
+             * and the bookings taken against them, which sat at the top level
+             * beside Membership as though it were unrelated to Events.
+             *
+             * The parent points at the same route as its first child, which is
+             * what makes pressing the section header do something rather than
+             * only toggle a disclosure.
+             */
+            {
+                to: '/super-admin/events',
+                label: 'Events',
+                icon: 'calendar',
+                children: [
+                    { to: '/super-admin/events', label: 'All events', icon: 'list' },
+                    // The chips an event is filed under, and the same rows the
+                    // public events grid filters by — see `eventcategory.service`.
+                    { to: '/super-admin/events/categories', label: 'Categories', icon: 'tags' },
+                    // The takings and the door list. Often a different person
+                    // from the one who writes the programme, and opened far
+                    // more often — so it is a peer of the editor, not a tab
+                    // buried inside it.
+                    { to: '/super-admin/bookings', label: 'Bookings', icon: 'ticket' },
+                ],
+            },
             // What a membership costs, and which commencement-year band earns
             // which plan. Only this role sets prices.
             { to: '/super-admin/membership', label: 'Membership', icon: 'shield' },
             // Association Updates. Only this role authors them, and they are
             // not events — an update has no date, no venue and no attendees.
             { to: '/super-admin/updates', label: 'Updates', icon: 'megaphone' },
+            // Whether the platform is actually reaching anybody. Only this role
+            // sees it: the log holds every address and phone number the system
+            // has ever messaged, which is not a geofenced tier admin's business.
+            { to: '/super-admin/notifications', label: 'Notifications', icon: 'bell' },
             { to: '/super-admin/settings', label: 'Settings', icon: 'cog' },
         ],
     },

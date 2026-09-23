@@ -4,10 +4,15 @@ import { MapPin, Phone, Mail, Clock, Loader2, MessageSquare, User, FileText, Sen
 import { getContactInfo, sendContactMessage, errorMessage, type ContactInfo } from '@/services/cmsApi';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
 import { CmsIcon } from '@/components/shared/CmsIcon';
-import { PAGE_CONTAINER } from '@/components/layout/pageContainer';
-import { SECTION_HEADING, SECTION_LEDE, EYEBROW } from '@/components/layout/typography';
+import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
+import { SECTION_HEADING, SECTION_LEDE, EYEBROW, BAND_MEASURE } from '@/components/layout/typography';
+
+/** The information column's own type, for the rows added to its cards. */
+const INFO_PROSE = 'text-[1.125rem] font-medium leading-relaxed text-gray-600';
 import { Reveal } from '@/components/shared/Reveal';
+import { sectionHidden, sectionFields } from '@/components/shared/cmsSections';
 import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
+import { SectionFields } from '@/components/shared/SectionFields';
 
 /**
  * The contact page.
@@ -35,14 +40,17 @@ export function ContactFormSection() {
         return () => { cancelled = true; };
     }, []);
 
-    const addressLines = info?.addressLines || [];
-    const workingHours = info?.workingHours || [];
-    const heroMedia = info?.heroMedia || [];
-    const phone = info?.phone || '';
-    const email = info?.email || '';
+    /* Each card on the Contact screen can be removed — see `cmsSections`. */
+    const removed = (key: string) => sectionHidden(info?.sections, key);
+
+    const addressLines = removed('contact.info') ? [] : (info?.addressLines || []);
+    const workingHours = removed('contact.info') ? [] : (info?.workingHours || []);
+    const heroMedia = removed('contact.header') ? [] : (info?.heroMedia || []);
+    const phone = removed('contact.info') ? '' : (info?.phone || '');
+    const email = removed('contact.info') ? '' : (info?.email || '');
     const formCard = info?.formCard;
-    const infoCard = info?.infoCard;
-    const banner = info?.banner;
+    const infoCard = removed('contact.info') ? undefined : info?.infoCard;
+    const banner = removed('contact.banner') ? undefined : info?.banner;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -75,8 +83,9 @@ export function ContactFormSection() {
     };
 
     const inputClass =
-        'w-full pl-11 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none ' +
-        'focus:ring-2 focus:ring-brand-600 focus:border-transparent transition-all placeholder:text-gray-400';
+        'w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl text-[1.25rem] focus:outline-none ' +
+        'focus:ring-2 focus:ring-brand-600 focus:border-transparent transition-all '
+        + 'font-semibold text-[#111827] placeholder:font-medium placeholder:text-gray-500';
 
     /** One detail in the right-hand card. Renders nothing when unset. */
     const detail = (label: string, icon: React.ReactNode, body: React.ReactNode, show: boolean, last = false) => {
@@ -89,7 +98,9 @@ export function ContactFormSection() {
                         {icon}
                     </div>
                     <div className="min-w-0">
-                        {label && <h4 className="text-[0.9375rem] font-bold text-[#111827] mb-2">{label}</h4>}
+                        {label && (
+                            <h4 className="text-[1.0625rem] font-bold text-[#111827] mb-1.5">{label}</h4>
+                        )}
                         {body}
                     </div>
                 </div>
@@ -98,11 +109,17 @@ export function ContactFormSection() {
         );
     };
 
-    const hasIntro = !!(info?.badgeText || info?.heading || info?.description);
-    const hasInfoCard = !!(addressLines.length || phone || email || workingHours.length || infoCard?.title);
+    const headerFields = removed('contact.header') ? [] : sectionFields(info?.sections, 'contact.header');
+    const formFields = removed('contact.form') ? [] : sectionFields(info?.sections, 'contact.form');
+    const infoFields = removed('contact.info') ? [] : sectionFields(info?.sections, 'contact.info');
+
+    const hasIntro = !removed('contact.header')
+        && !!(info?.badgeText || info?.heading || info?.description || headerFields.length);
+    const hasInfoCard = !!(addressLines.length || phone || email || workingHours.length
+        || infoCard?.title || infoFields.length);
 
     return (
-        <section className="w-full py-20 bg-white relative font-sans overflow-hidden">
+        <section className="w-full py-20 dot-band relative font-sans overflow-hidden">
 
             {/* Decorative only — not authored. */}
             <div className="absolute top-0 right-0 w-1/3 h-full -z-10 opacity-30 pointer-events-none">
@@ -117,7 +134,7 @@ export function ContactFormSection() {
             </div>
             <div className="absolute top-20 right-10 w-64 h-64 bg-brand-50/80 rounded-full blur-3xl -z-10 transform-gpu will-change-transform pointer-events-none" />
 
-            <div className={`${PAGE_CONTAINER} relative z-10`}>
+            <div className={`${SCREEN_CONTAINER} relative z-10`}>
 
                 {/* ---- heading and collage ---- */}
                 {(hasIntro || heroMedia.length > 0) && (
@@ -143,10 +160,15 @@ export function ContactFormSection() {
                                 )}
 
                                 {info?.description && (
-                                    <p className={`${SECTION_LEDE} text-gray-500 max-w-xl`}>
+                                    <p className={`${SECTION_LEDE} font-medium text-gray-600 ${BAND_MEASURE}`}>
                                         {info.description}
                                     </p>
                                 )}
+
+                                {/* The editor's own rows on this card. */}
+                                <div className={`${SECTION_LEDE} font-medium text-gray-600`}>
+                                    <CmsExtraFields fields={headerFields} className="mt-8" />
+                                </div>
                             </div>
                         )}
 
@@ -212,10 +234,14 @@ export function ContactFormSection() {
                                 </div>
                                 <div>
                                     {formCard.title && (
-                                        <h3 className="text-2xl font-bold text-[#111827]">{formCard.title}</h3>
+                                        <h3 className="text-[1.5625rem] font-extrabold tracking-tight text-[#111827]">
+                                            {formCard.title}
+                                        </h3>
                                     )}
                                     {formCard.subtitle && (
-                                        <p className="text-sm text-gray-500 mt-1">{formCard.subtitle}</p>
+                                        <p className="text-[1.125rem] font-medium text-gray-600 mt-1">
+                                            {formCard.subtitle}
+                                        </p>
                                     )}
                                 </div>
                             </div>
@@ -284,7 +310,7 @@ export function ContactFormSection() {
                             <div className="pt-2">
                                 <button
                                     type="submit" disabled={sending}
-                                    className="bg-brand-900 hover:bg-brand-900 text-white px-8 py-3.5 rounded-xl text-sm
+                                    className="bg-brand-900 hover:bg-brand-900 text-white px-9 py-4 rounded-xl text-[1.25rem]
                                                font-semibold transition-all inline-flex items-center gap-2 shadow-lg
                                                shadow-brand-900/20 disabled:opacity-70"
                                 >
@@ -293,12 +319,18 @@ export function ContactFormSection() {
                                 </button>
                             </div>
 
-                            {error && <p className="text-sm text-red-600 mt-2 font-medium">{error}</p>}
+                            {error && <p className="text-[1.25rem] text-red-600 mt-2 font-medium">{error}</p>}
                             {sent && !error && (
-                                <p className="text-sm text-green-600 mt-2 font-medium">
+                                <p className="text-[1.25rem] text-green-600 mt-2 font-medium">
                                     {formCard?.successMessage || 'Thank you — your message has been sent.'}
                                 </p>
                             )}
+
+                            {/* The editor's own rows on the form card, in the
+                                form's own type. */}
+                            <div className="text-[1.0625rem] font-medium leading-relaxed text-gray-600">
+                                <CmsExtraFields fields={formFields} variant="list" className="pt-2" />
+                            </div>
                         </form>
                     </Reveal>
 
@@ -320,10 +352,14 @@ export function ContactFormSection() {
                                     </div>
                                     <div>
                                         {infoCard.title && (
-                                            <h3 className="text-2xl font-bold text-[#111827]">{infoCard.title}</h3>
+                                            <h3 className="text-[1.5625rem] font-extrabold tracking-tight text-[#111827]">
+                                                {infoCard.title}
+                                            </h3>
                                         )}
                                         {infoCard.subtitle && (
-                                            <p className="text-sm text-gray-500 mt-1">{infoCard.subtitle}</p>
+                                            <p className="text-[1.125rem] font-medium text-gray-600 mt-1">
+                                                {infoCard.subtitle}
+                                            </p>
                                         )}
                                     </div>
                                 </div>
@@ -333,7 +369,8 @@ export function ContactFormSection() {
                                 {detail(
                                     infoCard?.addressLabel || '',
                                     <MapPin size={18} />,
-                                    <p className="text-base text-gray-500 leading-relaxed max-w-md">
+                                    <p className="text-[1.25rem] font-semibold text-gray-700 leading-relaxed
+                                                  max-w-md">
                                         {addressLines.map((line, i) => (
                                             <React.Fragment key={i}>
                                                 {line}
@@ -347,7 +384,7 @@ export function ContactFormSection() {
                                 {detail(
                                     infoCard?.phoneLabel || '',
                                     <Phone size={18} />,
-                                    <div className="text-sm text-gray-500 space-y-1">
+                                    <div className="text-[1.125rem] font-semibold text-gray-700 space-y-1">
                                         {[phone, info?.alternatePhone].filter(Boolean).map((p, i) => (
                                             <p key={i}>
                                                 <a
@@ -367,7 +404,7 @@ export function ContactFormSection() {
                                     <Mail size={18} />,
                                     <a
                                         href={`mailto:${email}`}
-                                        className="block py-3 -my-1.5 text-sm text-gray-500
+                                        className="block py-3 -my-1.5 text-[1.125rem] font-semibold text-gray-700
                                                    hover:text-brand-600 transition-colors"
                                     >
                                         {email}
@@ -378,7 +415,7 @@ export function ContactFormSection() {
                                 {detail(
                                     infoCard?.hoursLabel || '',
                                     <Clock size={18} />,
-                                    <div className="text-sm text-gray-500 space-y-1">
+                                    <div className="text-[1.125rem] font-semibold text-gray-700 space-y-1">
                                         {workingHours.map((line, i) => <p key={i}>{line}</p>)}
                                     </div>,
                                     workingHours.length > 0,
@@ -389,8 +426,14 @@ export function ContactFormSection() {
                                     number, a registration desk, whatever this
                                     association needs that the four above do not
                                     cover. Nothing is drawn when none are set. */}
+                                {/* The Banner and Social cards each offered the
+                                    control and had nothing drawing the answer —
+                                    a field added to either was saved and never
+                                    seen. Both are parts of this column. */}
+                                <SectionFields proseClass={INFO_PROSE} sections={info?.sections} sectionKey="contact.banner" />
+                                <SectionFields proseClass={INFO_PROSE} sections={info?.sections} sectionKey="contact.social" />
                                 <CmsExtraFields
-                                    fields={info?.extraFields}
+                                    fields={[...infoFields, ...(info?.extraFields || [])]}
                                     variant="list"
                                     className="pt-2"
                                 />
@@ -422,10 +465,12 @@ export function ContactFormSection() {
                             </div>
                             <div>
                                 {banner.title && (
-                                    <h3 className="text-lg md:text-xl font-bold text-[#111827]">{banner.title}</h3>
+                                    <h3 className="text-[1.375rem] md:text-[1.5625rem] font-bold text-[#111827]">{banner.title}</h3>
                                 )}
                                 {banner.subtitle && (
-                                    <p className="text-sm text-gray-500 mt-1">{banner.subtitle}</p>
+                                    <p className="text-[1.125rem] font-medium text-gray-600 mt-1">
+                                        {banner.subtitle}
+                                    </p>
                                 )}
                             </div>
                         </div>
@@ -435,7 +480,7 @@ export function ContactFormSection() {
                                 ? (
                                     <Link
                                         to={banner.ctaHref}
-                                        className="bg-brand-900 hover:bg-brand-900 text-white px-6 py-3 rounded-xl text-sm
+                                        className="bg-brand-900 hover:bg-brand-900 text-white px-7 py-3.5 rounded-xl text-[1.25rem]
                                                    font-semibold transition-all whitespace-nowrap shrink-0 shadow-md"
                                     >
                                         {banner.ctaLabel}
@@ -443,7 +488,7 @@ export function ContactFormSection() {
                                 ) : (
                                     <a
                                         href={banner.ctaHref || '#'}
-                                        className="bg-brand-900 hover:bg-brand-900 text-white px-6 py-3 rounded-xl text-sm
+                                        className="bg-brand-900 hover:bg-brand-900 text-white px-7 py-3.5 rounded-xl text-[1.25rem]
                                                    font-semibold transition-all whitespace-nowrap shrink-0 shadow-md"
                                     >
                                         {banner.ctaLabel}

@@ -261,15 +261,21 @@ const Settings = () => {
         <button
             type="button"
             onClick={onClick}
-            className={`w-full flex items-center gap-4 py-3.5 px-3 -mx-3 text-left rounded-lg
+            /*
+                The same scale as the business profile form: a 16px bold title
+                over a 14px line, in a row with room around it. It was 14px over
+                12px in a 56px row, which made Settings the one screen in the
+                business area a member had to lean in to read.
+            */
+            className={`w-full flex items-center gap-4 py-4 px-3 -mx-3 text-left rounded-xl
                         hover:bg-slate-50 transition-colors ${last ? '' : 'border-b border-slate-100'}`}
         >
-            <span className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                <Icon className="h-[1.125rem] w-[1.125rem] text-blue-600" />
+            <span className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                <Icon className="h-5 w-5 text-blue-600" />
             </span>
             <span className="flex-1 min-w-0">
-                <span className="block font-semibold text-sm text-slate-800">{title}</span>
-                <span className="block text-xs text-slate-500">{subtitle}</span>
+                <span className="block font-bold text-[1.25rem] text-slate-900">{title}</span>
+                <span className="block text-[1.1875rem] text-slate-500">{subtitle}</span>
             </span>
         </button>
     );
@@ -306,13 +312,13 @@ const Settings = () => {
                             </span>
                         )}
                         <div className="min-w-0">
-                            <p className="text-xs text-blue-600 font-semibold uppercase tracking-wider">
+                            <p className="text-[1.0625rem] text-blue-600 font-semibold uppercase tracking-wider">
                                 Active company
                             </p>
-                            <p className="text-lg font-bold text-slate-900 truncate">
+                            <p className="text-[1.375rem] font-bold text-slate-900 truncate">
                                 {companyName || 'None selected'}
                             </p>
-                            <p className="text-sm text-slate-500 truncate">
+                            <p className="text-[1.25rem] text-slate-500 truncate">
                                 {activeCompany?.businessType || 'Business'}
                                 {activeCompany?.location ? ` · ${activeCompany.location}` : ''}
                             </p>
@@ -335,7 +341,7 @@ const Settings = () => {
                 */}
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
                     <div className="space-y-6">
-                        <Card>
+                        <Card className="p-6">
                             <SectionHeading title="Company Profile" icon={Pencil} />
                             <Row
                                 Icon={Pencil}
@@ -364,21 +370,21 @@ const Settings = () => {
                             />
                         </Card>
 
-                        <Card>
+                        <Card className="p-6">
                             <SectionHeading title="Catalog" icon={Package} />
 
                             <div className="grid grid-cols-3 rounded-xl bg-slate-50 border border-slate-200 py-4 mb-3">
                                 <div className="text-center border-r border-slate-200">
-                                    <p className="text-2xl font-bold text-slate-900 tabular-nums">{catalogStats.total}</p>
-                                    <p className="text-xs text-slate-500 uppercase tracking-wider mt-0.5">Items</p>
+                                    <p className="text-[1.75rem] font-bold text-slate-900 tabular-nums">{catalogStats.total}</p>
+                                    <p className="text-[1.0625rem] text-slate-500 uppercase tracking-wider mt-0.5">Items</p>
                                 </div>
                                 <div className="text-center border-r border-slate-200">
-                                    <p className="text-2xl font-bold text-slate-900 tabular-nums">{catalogStats.active}</p>
-                                    <p className="text-xs text-slate-500 uppercase tracking-wider mt-0.5">Live</p>
+                                    <p className="text-[1.75rem] font-bold text-slate-900 tabular-nums">{catalogStats.active}</p>
+                                    <p className="text-[1.0625rem] text-slate-500 uppercase tracking-wider mt-0.5">Live</p>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-2xl font-bold text-slate-900 tabular-nums">{catalogStats.featured}</p>
-                                    <p className="text-xs text-slate-500 uppercase tracking-wider mt-0.5">Featured</p>
+                                    <p className="text-[1.75rem] font-bold text-slate-900 tabular-nums">{catalogStats.featured}</p>
+                                    <p className="text-[1.0625rem] text-slate-500 uppercase tracking-wider mt-0.5">Featured</p>
                                 </div>
                             </div>
 
@@ -399,7 +405,7 @@ const Settings = () => {
                     </div>
 
                     <div className="space-y-6">
-                        <Card>
+                        <Card className="p-6">
                             <SectionHeading title="Directory &amp; Reach" icon={Compass} />
 
                             <div className="flex items-center gap-4 py-3.5 border-b border-slate-100">
@@ -407,8 +413,8 @@ const Settings = () => {
                                     <Compass className="h-[1.125rem] w-[1.125rem] text-blue-600" />
                                 </span>
                                 <div className="flex-1 min-w-0">
-                                    <p className="font-semibold text-sm text-slate-800">List in Discover</p>
-                                    <p className="text-xs text-slate-500">
+                                    <p className="font-bold text-[1.25rem] text-slate-900">List in Discover</p>
+                                    <p className="text-[1.0625rem] text-slate-500">
                                         {isListed
                                             ? 'Other members can find this company and its products'
                                             : 'Hidden from search across the member network'}
@@ -440,7 +446,7 @@ const Settings = () => {
                             />
                         </Card>
 
-                        <Card>
+                        <Card className="p-6">
                             <SectionHeading title="Session" icon={LayoutDashboard} />
                             <Row
                                 Icon={LayoutDashboard}
@@ -452,7 +458,7 @@ const Settings = () => {
                         </Card>
 
                         {/* Irreversible actions, kept apart from everything else */}
-                        <Card className="border-red-200">
+                        <Card className="border-red-200 p-6">
                             <SectionHeading title="Danger Zone" icon={Trash2} />
                             <button
                                 type="button"
@@ -463,8 +469,8 @@ const Settings = () => {
                                     <Trash2 className="h-[1.125rem] w-[1.125rem] text-red-500" />
                                 </span>
                                 <span className="flex-1 min-w-0">
-                                    <span className="block font-semibold text-sm text-red-600">Delete This Company</span>
-                                    <span className="block text-xs text-slate-500">
+                                    <span className="block font-bold text-[1.25rem] text-red-600">Delete This Company</span>
+                                    <span className="block text-[1.0625rem] text-slate-500">
                                         Removes {companyName || 'the company'} and its catalog permanently
                                     </span>
                                 </span>

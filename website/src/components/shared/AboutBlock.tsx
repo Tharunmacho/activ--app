@@ -1,12 +1,14 @@
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
 import { CmsIcon } from '@/components/shared/CmsIcon';
 import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
+import { sectionHidden, sectionFields } from '@/components/shared/cmsSections';
 import { CountUp } from '@/components/shared/CountUp';
 import { Reveal } from '@/components/shared/Reveal';
 import { Tilt3D } from '@/components/shared/Tilt3D';
 import { MissionCarousel } from '@/components/shared/MissionCarousel';
-import type { CmsBullet, CmsMedia, CmsStat, CmsExtraField } from '@/services/cmsApi';
-import { PAGE_CONTAINER } from '@/components/layout/pageContainer';
+import { sizedMediaUrl } from '@/config/api.config';
+import type { CmsBullet, CmsMedia, CmsStat, CmsExtraField, CmsSectionOverride } from '@/services/cmsApi';
+import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
 import {
     SECTION_HEADING, SECTION_LEDE, EYEBROW, STAT_FIGURE, STAT_LABEL,
 } from '@/components/layout/typography';
@@ -53,37 +55,81 @@ interface Props {
     media?: CmsMedia | null;
     logoOverlay?: CmsMedia | null;
     statsBar?: CmsStat[];
+    /** The chairman’s words. Drawn first, above everything. */
+    quote?: { text?: string; author?: string; role?: string; photo?: CmsMedia | null } | null;
     /** Fields the editor named themselves, under the figures bar. */
     extraFields?: CmsExtraField[];
+    /**
+     * Which of this block's parts the editor removed, and what they added
+     * to each — see `cmsSections`.
+     *
+     * Passed IN rather than fetched here, because this block is rendered
+     * from two different documents: the home page's About block and the
+     * dedicated About page. They key their sections the same way and are
+     * stored separately, so removing the badge on one must leave the other
+     * alone. The caller knows which document it is holding; this does not.
+     */
+    sections?: CmsSectionOverride[];
 }
 
 export function AboutBlock({
     badgeIcon, badgeText, heading, headingHighlight,
-    body, bullets = [], media, logoOverlay, statsBar = [], extraFields = [],
+    body, bullets = [], media, logoOverlay, statsBar = [], quote, extraFields = [],
+    sections = [],
 }: Props) {
-    const hasMedia = !!media?.url;
-    const hasCopy = !!(badgeText || heading || headingHighlight || body);
+    /* Each part answers to its own card on the CMS screen. */
+    const showQuote = !sectionHidden(sections, 'about.quote');
+    const showBadge = !sectionHidden(sections, 'about.badge');
+    const showHeading = !sectionHidden(sections, 'about.heading');
+    const showPoints = !sectionHidden(sections, 'about.points');
+    const showImage = !sectionHidden(sections, 'about.image');
+    const showStats = !sectionHidden(sections, 'about.statsBar');
+    const hasMedia = showImage && !!media?.url;
 
-    if (!hasCopy && !hasMedia && !bullets.length && !statsBar.length && !extraFields.length) return null;
+    const hasQuote = showQuote && !!(quote && String(quote.text || '').trim());
+
+    const headingFields = showHeading ? sectionFields(sections, 'about.heading') : [];
+    const pointsFields = showPoints ? sectionFields(sections, 'about.points') : [];
+    const imageFields = showImage ? sectionFields(sections, 'about.image') : [];
+    const statsFields = showStats ? sectionFields(sections, 'about.statsBar') : [];
+    const badgeFields = showBadge ? sectionFields(sections, 'about.badge') : [];
+    const quoteFields = hasQuote ? sectionFields(sections, 'about.quote') : [];
+
+    /*
+     * A CARD WITH NOTHING BUT THE EDITOR'S OWN ROWS IS STILL A CARD.
+     *
+     * This asked only about the fields the LAYOUT declares — the badge, the
+     * heading, the body — so a block whose heading had never been filled in
+     * drew nothing, and the rows an editor added to that very card went down
+     * with it. They were saved, they were served, and they were on no page.
+     *
+     * The same reasoning as `hasIntro` on the contact section, which already
+     * counts its own rows. A row is content; content is a reason to draw.
+     */
+    const hasCopy = !!((showBadge && badgeText)
+        || (showHeading && (heading || headingHighlight || body))
+        || badgeFields.length || headingFields.length);
+
+    const showBullets = showPoints && bullets.length > 0;
+    const showStatsBar = showStats && statsBar.length > 0;
+
+    if (!hasCopy && !hasMedia && !showBullets && !showStatsBar && !hasQuote
+        && !extraFields.length && !badgeFields.length && !headingFields.length
+        && !pointsFields.length && !imageFields.length && !statsFields.length
+        && !quoteFields.length) return null;
 
     return (
-        <section className="w-full py-20 bg-[#fbfcff] flex flex-col items-center relative overflow-hidden font-sans">
+        <section className="w-full py-20 dot-band flex flex-col items-center relative overflow-hidden font-sans">
             {/* Decorative only — no content, so it is not authored.
                 `z-0`, not `-z-10`: a negative index puts this behind the
                 section's own background colour, which is opaque, so the pattern
                 was painted and then covered. The content above carries `z-10`. */}
-            <div className="absolute top-10 right-0 w-1/2 h-full z-0 opacity-40 pointer-events-none">
-                <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <pattern id="about-dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-                            <circle className="fill-brand-300" cx="2" cy="2" r="1.5" />
-                        </pattern>
-                    </defs>
-                    <rect x="0" y="0" width="100%" height="100%" fill="url(#about-dots)" />
-                </svg>
-            </div>
+            {/* The dot field is the PAGE's now (`.dot-band` in index.css),
+                so this block no longer draws its own half-width copy at its own
+                density on top of it — two grids at different pitches read as a
+                printing fault. */}
 
-            <div className={`${PAGE_CONTAINER} relative z-10`}>
+            <div className={`${SCREEN_CONTAINER} relative z-10`}>
 
                 <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 items-center">
 
@@ -91,7 +137,7 @@ export function AboutBlock({
                     {hasCopy && (
                         <Reveal variant="left" className={`w-full ${hasMedia ? 'lg:w-1/2' : ''}`}>
 
-                            {badgeText && (
+                            {showBadge && badgeText && (
                                 <div className="inline-flex items-center space-x-2 bg-brand-50 text-brand-600 px-4 py-1.5
                                                 rounded-full mb-6 border border-brand-100 shadow-sm">
                                     <CmsIcon name={badgeIcon} size={14} className="stroke-[3]" fallback="users" />
@@ -99,7 +145,7 @@ export function AboutBlock({
                                 </div>
                             )}
 
-                            {(heading || headingHighlight) && (
+                            {showHeading && (heading || headingHighlight) && (
                                 <h2 className={`${SECTION_HEADING} text-[#111827] mb-6`}>
                                     {heading}
                                     {heading && headingHighlight && <br />}
@@ -107,7 +153,7 @@ export function AboutBlock({
                                 </h2>
                             )}
 
-                            {body && (
+                            {showHeading && body && (
                                 // Authored HTML: the editor writes it, and only a
                                 // signed-in super admin can. It is not visitor input.
                                 <div
@@ -117,6 +163,24 @@ export function AboutBlock({
                                     dangerouslySetInnerHTML={{ __html: body }}
                                 />
                             )}
+
+                            {/*
+                              * The editor's own rows on the badge and heading
+                              * cards, IN THIS COLUMN'S TYPE.
+                              *
+                              * `CmsExtraFields` sets no size or weight — it
+                              * inherits — but the type here lives on the lede
+                              * `div` above, which is a SIBLING, so nothing was
+                              * inherited and the rows came out at the browser's
+                              * 16px beside 20px copy. The wrapper carries the
+                              * same class the lede carries.
+                              */}
+                            <div className={`${SECTION_LEDE} text-gray-600`}>
+                                <CmsExtraFields
+                                    fields={[...badgeFields, ...headingFields]}
+                                    className="mt-10"
+                                />
+                            </div>
                         </Reveal>
                     )}
 
@@ -180,20 +244,132 @@ export function AboutBlock({
                                     </div>
                                 </div>
                             </Tilt3D>
+
+                            <div className={`${SECTION_LEDE} text-gray-600`}>
+                                <CmsExtraFields fields={imageFields} className="mt-8" />
+                            </div>
                         </Reveal>
                     )}
                 </div>
+
+                {/*
+                  * ==========================================================
+                  * THE CHAIRMAN’S WORDS, BETWEEN WHAT WE ARE AND WHAT WE DO
+                  * ==========================================================
+                  *
+                  * Under the About block and over "Our Mission & Objectives",
+                  * which is where the association asked for it and is also
+                  * where it reads best: the badge, the heading and the prose
+                  * above say what ACTIV is in the third person, and the
+                  * objectives below say what it does. This is the one place
+                  * it speaks in the first, and it belongs between the two
+                  * rather than in front of them — a quotation before the
+                  * page has said whose it is has nobody to attribute to yet.
+                  *
+                  * Drawn as a PULL-QUOTE and not as a card with a heading: the
+                  * words are set large enough to be read before they are
+                  * scrolled past, the attribution small under them, and there
+                  * is no label saying "quote" because the mark and the scale
+                  * already say it.
+                  *
+                  * The portrait is optional and the block does not reserve
+                  * space for one — a quote with nobody’s face beside it is a
+                  * quote, and an empty circle where a face should be is a
+                  * page that looks broken.
+                  */}
+                {hasQuote && (
+                    <Reveal className="mt-16 sm:mt-20">
+                        <figure className="relative mx-auto max-w-4xl rounded-[1.75rem] border
+                                           border-brand-100 bg-white/80 px-7 py-9 text-center
+                                           shadow-[0_18px_50px_-30px_rgba(28,46,104,0.45)]
+                                           sm:px-12 sm:py-12">
+                            {/* The mark, behind the words rather than in the flow:
+                                a glyph on its own line above a quotation is a
+                                bullet point nobody can read. */}
+                            <span
+                                aria-hidden="true"
+                                className="pointer-events-none absolute left-6 top-1 select-none
+                                           font-serif text-[6rem] leading-none text-brand-100
+                                           sm:left-10 sm:text-[8rem]"
+                            >
+                                “
+                            </span>
+
+                            <blockquote
+                                className="relative text-[1.375rem] font-semibold leading-[1.6]
+                                           text-brand-900 sm:text-[1.75rem] sm:leading-[1.55]
+                                           [&_strong]:text-brand-600"
+                                dangerouslySetInnerHTML={{ __html: quote!.text || '' }}
+                            />
+
+                            {/* A bigger portrait needs more room above it and beside
+                                it, or the name sits hard against its edge. */}
+                            {(quote!.author || quote!.role || quote!.photo?.url) && (
+                                <figcaption className="relative mt-9 flex items-center justify-center
+                                                       gap-5">
+                                    {/*
+                                      A PORTRAIT, not a favicon.
+
+                                      56px under a 28px pull-quote read as an
+                                      avatar beside a comment rather than as the
+                                      face of the person the words belong to —
+                                      and a quote's whole weight comes from who
+                                      said it. 80px on a phone, 96px above it,
+                                      and the file is fetched at 240 so it is
+                                      still sharp on a retina screen.
+                                    */}
+                                    {quote!.photo?.url && (
+                                        <img
+                                            src={sizedMediaUrl(quote!.photo!.url, 240)}
+                                            alt={quote!.author || ''}
+                                            loading="lazy"
+                                            className="h-20 w-20 shrink-0 rounded-full object-cover
+                                                       ring-4 ring-brand-100 sm:h-24 sm:w-24"
+                                        />
+                                    )}
+                                    <span className="text-left">
+                                        {quote!.author && (
+                                            <span className="block text-[1.1875rem] font-extrabold
+                                                             text-brand-900">
+                                                {quote!.author}
+                                            </span>
+                                        )}
+                                        {quote!.role && (
+                                            <span className="block text-[1.0625rem] font-semibold
+                                                             text-brand-500">
+                                                {quote!.role}
+                                            </span>
+                                        )}
+                                    </span>
+                                </figcaption>
+                            )}
+                        </figure>
+
+                        {/* The editor's own rows on the quote card, in this
+                            column's type — see the note on the heading card. */}
+                        <div className={`${SECTION_LEDE} text-gray-600`}>
+                            <CmsExtraFields fields={quoteFields} className="mt-8" />
+                        </div>
+                    </Reveal>
+                )}
             </div>
 
             {/* Full width, so it breaks out of the content column above. */}
-            <div className="w-full">
-                <MissionCarousel bullets={bullets} />
-            </div>
+            {showPoints && (
+                <div className="w-full">
+                    <MissionCarousel bullets={bullets} />
+                    <div className={`${SCREEN_CONTAINER} relative z-10`}>
+                        <div className={`${SECTION_LEDE} text-gray-600`}>
+                            <CmsExtraFields fields={pointsFields} className="mt-8" />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Figures bar — column count follows the number authored, so three
                 or five entries do not leave a hole in the row. */}
-            {statsBar.length > 0 && (
-                <div className={`${PAGE_CONTAINER} relative z-10`}>
+            {showStatsBar && (
+                <div className={`${SCREEN_CONTAINER} relative z-10`}>
                     <Reveal
                         variant="scale"
                         className="bg-white rounded-3xl shadow-[0_20px_50px_rgb(0,0,0,0.06)] border border-gray-50
@@ -226,8 +402,13 @@ export function AboutBlock({
 
             {/* Whatever the editor added that this block does not know about.
                 Renders nothing at all when the list is empty. */}
-            <div className={`${PAGE_CONTAINER} relative z-10`}>
-                <CmsExtraFields fields={extraFields} className="mt-12" />
+            <div className={`${SCREEN_CONTAINER} relative z-10`}>
+                {/* The figures bar's own rows, then the page's — both in the
+                    block's type, as every other row on it now is. */}
+                <div className={`${SECTION_LEDE} text-gray-600`}>
+                    <CmsExtraFields fields={statsFields} className="mt-12" />
+                    <CmsExtraFields fields={extraFields} className="mt-12" />
+                </div>
             </div>
         </section>
     );

@@ -3,7 +3,8 @@ import { HeaderSection } from '../../components/layout/HeaderSection';
 import { FooterSection } from '../../components/layout/FooterSection';
 import { EventsHero } from './components/EventsHero';
 import { EventsExplorer } from './components/EventsExplorer';
-import { PAGE_CONTAINER } from '../../components/layout/pageContainer';
+import { SCREEN_CONTAINER } from '../../components/layout/pageContainer';
+import { AcrossIndia } from '@/components/shared/AcrossIndia';
 import {
     getCmsEvents, getEventsSettings, type CmsEvent, type EventsSettings,
 } from '../../services/cmsApi';
@@ -57,7 +58,7 @@ export default function EventsPage() {
                    arrives. */
                 <>
                     <div className="h-[26rem] w-full animate-pulse bg-brand-900" />
-                    <div className={PAGE_CONTAINER}>
+                    <div className={SCREEN_CONTAINER}>
                         <div className="-mt-10 h-20 animate-pulse rounded-2xl bg-white shadow-lg ring-1 ring-brand-100" />
                         <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                             {[1, 2, 3, 4, 5].map((i) => (
@@ -72,6 +73,9 @@ export default function EventsPage() {
                     <EventsExplorer events={events || []} settings={settings} />
                 </>
             )}
+
+            {/* Above the footer, on every content page — see `AcrossIndia`. */}
+            <AcrossIndia />
 
             <FooterSection />
         </div>

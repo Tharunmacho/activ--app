@@ -75,8 +75,11 @@ const BrowseMembersScreen: React.FC<Props> = ({
       // indistinguishable from a real record on screen and hardcodes a region
       // into the bargain.
 
+      // No stage is withheld any more: `upstream` and `closed` were the two an
+      // admin could see but not act on, and both belonged to a workflow where a
+      // file sat with one tier at a time. Every application in the region is
+      // this admin's to see, so the filter had nothing left to remove.
       const formatted: MemberItem[] = (Array.isArray(allApplicants) ? allApplicants : [])
-        .filter((a: any) => a?.stage !== 'upstream' && a?.stage !== 'closed')
         .map((a: any) => {
           const isAspirant =
             a?.memberType === 'aspirant' ||

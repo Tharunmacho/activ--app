@@ -8,7 +8,7 @@ import {
   TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { Applicant, ApplicantBuckets, AdminLevel } from '../types';
+import { Applicant, ApplicantBuckets, AdminLevel, normalizeApplicationStatus } from '../types';
 import { COLORS, FONTS, SPACING } from '../theme/theme';
 
 type FilterKey = keyof ApplicantBuckets;
@@ -31,27 +31,35 @@ const FILTER_TABS: { key: FilterKey; label: string }[] = [
   { key: 'all', label: 'All' },
 ];
 
+/*
+ * Why a queue is empty is more useful than the fact that it is.
+ *
+ * These sentences used to explain the relay - "applications appear here only
+ * after the Block Admin approves them" - which was the honest answer to an empty
+ * district queue and is now false. Every admin sees every application in their
+ * own patch from the moment it is submitted, so an empty queue means one thing:
+ * nobody has applied, or everything has been dealt with.
+ */
 const LEVEL_COPY: Record<AdminLevel, { title: string; waitingOn: string }> = {
   block: {
     title: 'Block Approvals',
-    waitingOn: 'New member applications land here first.',
+    waitingOn: 'Every application from your block, from the moment it is submitted.',
   },
   district: {
     title: 'District Approvals',
-    waitingOn: 'Applications appear here only after the Block Admin approves them.',
+    waitingOn: 'Every application from your district, from the moment it is submitted.',
   },
   state: {
     title: 'State Approvals',
-    waitingOn: 'Applications appear here only after the District Admin approves them.',
+    waitingOn: 'Every application from your state, from the moment it is submitted.',
   },
 };
 
+/* Three stages, because there are three answers - see `ApplicantStage`. */
 const STAGE_COLORS: Record<string, { bg: string; fg: string }> = {
   pending: { bg: '#FEF3C7', fg: '#D97706' },
   approved: { bg: '#DCFCE7', fg: '#16A34A' },
   rejected: { bg: '#FEE2E2', fg: '#DC2626' },
-  upstream: { bg: '#E0E7FF', fg: '#4F46E5' },
-  closed: { bg: '#F1F5F9', fg: '#64748B' },
 };
 
 const getInitials = (fullName?: string | null): string => {
@@ -115,8 +123,44 @@ const ApprovalQueue: React.FC<Props> = ({
     const stage = applicant?.stage || 'pending';
     const palette = STAGE_COLORS[stage] || STAGE_COLORS.pending;
     const isBusy = busyId === (applicant?.id || '');
-    const canAct = stage === 'pending';
+    // Undecided is the whole test. This queue is geofenced to the admin's own
+    // region, so an applicant they can see is one they can decide - until one
+    // of the other two tiers holding the same file gets there first.
+    /*
+     * THIS TIER'S OWN VERDICT IS THE WHOLE TEST — not "has anybody decided".
+     *
+     * The three tiers hold three separate verdicts. The State approving does
+     * not sign the District's slot, and the District's buttons stay live until
+     * the District itself acts. `canAct` is the server's answer; the stage
+     * fallback is the same answer for this tier and covers an older payload.
+     */
+    const canAct = applicant?.canAct ?? (stage === 'pending');
     const isRejecting = rejectingId === (applicant?.id || '');
+
+    /*
+     * The APPLICATION's outcome, which the badge above does not report. Only
+     * the State's approval enrols anybody, so a block admin's own "Approved"
+     * badge says nothing about whether this person is a member.
+     */
+    const outcome = String(applicant?.outcome || applicant?.status || '');
+    const enrolled = normalizeApplicationStatus(outcome) === 'Approved';
+    const declined = normalizeApplicationStatus(outcome) === 'Rejected';
+    const endorsement = String(applicant?.endorsementLine || '');
+    const grantsMembership = applicant?.decidesOutcome !== false;
+
+    /*
+     * One line under the attribution, built here rather than in three screens.
+     * Each half is withheld when it would restate the badge — a State admin's
+     * own approved card does not need "Approved" printed under it again.
+     */
+    const context = [
+      endorsement,
+      enrolled && stage !== 'approved' ? 'Approved — the member profile exists' : '',
+      declined && stage !== 'rejected' ? 'The State Admin rejected this application' : '',
+      canAct && !grantsMembership
+        ? 'Your decision is recorded for the file; the State Admin grants the membership'
+        : '',
+    ].filter(Boolean).join(' · ');
 
     // Prefer a real member code; fall back to a short form of the application
     // id, which is a genuine reference rather than an invented one.
@@ -201,9 +245,10 @@ const ApprovalQueue: React.FC<Props> = ({
           )}
         </View>
 
-        {/* An escalated file arrived here because the tier below has no admin.
-            Deciding on another tier's application without being told why is how
-            an admin loses trust in the queue, so the reason is always shown. */}
+        {/* Nobody at any tier covers this region, so it will sit here until the
+            Super Admin clears it or somebody is appointed. It used to explain an
+            escalation; nothing escalates now, because all three tiers hold every
+            pending file in their region from the start. */}
         {!!applicant?.orphaned && !!applicant?.fallbackReason && (
           <View style={styles.escalation}>
             <Icon name="trending-up" size={14} color="#B45309" />
@@ -217,10 +262,16 @@ const ApprovalQueue: React.FC<Props> = ({
           <Text
             style={[
               styles.attribution,
-              (stage === 'rejected' || stage === 'closed') && { color: '#DC2626' },
+              stage === 'rejected' && { color: '#DC2626' },
             ]}
           >
             {applicant.approvedByText}
+          </Text>
+        )}
+
+        {!!context && (
+          <Text style={styles.attribution} numberOfLines={3}>
+            {context}
           </Text>
         )}
 

@@ -11,7 +11,7 @@
  * compatibility surface over it and should eventually be deleted in favour of
  * importing that module directly.
  */
-import api, { clearSession, errorMessage } from '@/services/api';
+import api, { clearSession, errorMessage, loginPathFor } from '@/services/api';
 import {
     login as apiLogin,
     register as apiRegister,
@@ -29,12 +29,23 @@ export interface RegisterData {
     fullName: string;
     email: string;
     phoneNumber: string;
+    /**
+     * Where WhatsApp notifications go.
+     *
+     * Optional on the type so the mobile app, which does not send it yet, still
+     * compiles against this module. The server falls back to `phoneNumber` when
+     * it is absent, so an older client registers a usable member rather than one
+     * with an empty WhatsApp column that every notification would skip.
+     */
+    whatsappNumber?: string;
     password: string;
     confirmPassword?: string;
     state?: string;
     district?: string;
     block?: string;
     city?: string;
+    /** Members outside India: where they are, in place of state/district/block. */
+    place?: string;
 }
 
 export interface LoginData {
@@ -76,10 +87,20 @@ export const register = async (userData: RegisterData): Promise<AuthResponse> =>
             email: userData.email,
             password: userData.password,
             phoneNumber: userData.phoneNumber,
+            /*
+             * Listed EXPLICITLY, because this function picks fields one by one
+             * rather than spreading `userData`. A field that is not named here
+             * is dropped between the form and the request with nothing to show
+             * for it — the same silent loss Mongoose strict mode causes on the
+             * other side of the wire, and the reason the WhatsApp number has to
+             * be added in three places rather than one.
+             */
+            whatsappNumber: userData.whatsappNumber || userData.phoneNumber,
             state: userData.state || '',
             district: userData.district || '',
             block: userData.block || '',
             city: userData.city,
+            place: userData.place || '',
         });
 
         return {
@@ -144,9 +165,10 @@ export const getCurrentUser = async (): Promise<UserData | null> => {
 };
 
 export const logout = () => {
+    const signIn = loginPathFor();
     api.post('/auth/logout').catch(() => null);
     clearSession();
-    window.location.href = '/login';
+    window.location.href = signIn;
 };
 
 export const isAuthenticated = (): boolean => apiIsAuthenticated();

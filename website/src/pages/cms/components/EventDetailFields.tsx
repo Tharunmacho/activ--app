@@ -1,10 +1,16 @@
 import { useMemo, useState } from 'react';
-import { Plus, Trash2, Users, Clock, Lock, Globe, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
-import RegistrationFormBuilder, { type RegistrationField } from './RegistrationFormBuilder';
+import { Plus, Trash2, Users, Clock, ChevronDown, ChevronUp, Loader2, User, MapPin, Video } from 'lucide-react';
+// `RegistrationFormBuilder` itself is no longer rendered — the per-event
+// question builder was removed from the form. The TYPE stays: every saved
+// event still carries `registrationFields`, and dropping it from the shape
+// would silently discard the questions those events already ask.
+import { type RegistrationField } from './RegistrationFormBuilder';
 import { CmsField, CmsInput, CmsTextarea, CmsSection, CmsChoice } from './CmsUI';
 import { listEventRegistrations, type EventRegistration } from '@/services/memberHubApi';
 import { errorMessage } from '@/services/activApi';
 import type { CmsAgendaItem, CmsSpeaker } from '@/services/cmsApi';
+import { uploadMedia } from '@/services/cmsApi';
+import { resolveMediaUrl } from '@/config/api.config';
 
 /**
  * The advanced half of the event editor (EVT-001, EVT-002).
@@ -23,6 +29,20 @@ import type { CmsAgendaItem, CmsSpeaker } from '@/services/cmsApi';
 
 export interface EventDetail {
     audience: 'all' | 'paid';
+    /**
+     * HOW you attend it — in a room, or on a link.
+     *
+     * A different question from `category`, which says WHAT kind of event it is
+     * ("Workshops", "Conferences"). They are independent: there are online
+     * workshops and offline workshops. Collapsing them is what put "ZOOM" and
+     * "Webinars" into the category list beside "Tea party" — an editor with no
+     * field for "this one is online" reached for the only list on the form.
+     */
+    mode: 'offline' | 'online';
+    /** "Zoom", "Google Meet" — free text, like `category`. Online only. */
+    onlinePlatform: string;
+    /** The join link. Never public; see the model's note. Online only. */
+    onlineUrl: string;
     agenda: CmsAgendaItem[];
     speakers: CmsSpeaker[];
     venueAddress: string;
@@ -35,6 +55,21 @@ export interface EventDetail {
     capacity: string;
     /** Rupees, as typed. Blank and "0" both mean a free event. */
     registrationFee: string;
+    /**
+     * WHAT A MEMBER PAYS INSTEAD. Rupees, as typed.
+     *
+     * BLANK IS NOT ZERO HERE, and that is the whole reason this is a string
+     * rather than a number. Blank means "no member rate — one price for
+     * everybody"; a typed `0` means members attend free, which is a real and
+     * deliberate offer. A numeric field could not tell the two apart, and
+     * collapsing them would make an editor who typed nothing at all give the
+     * entire association free seats.
+     *
+     * `''` is sent to the server as "clear it" and only a real number sets a
+     * rate — see `sanitize` in `event.service.js`, which carries the same note
+     * from the other side.
+     */
+    memberFee: string;
     registrationNote: string;
     /** The questions THIS event asks, on top of the four standing ones. */
     registrationFields: RegistrationField[];
@@ -43,6 +78,11 @@ export interface EventDetail {
 
 export const BLANK_DETAIL: EventDetail = {
     audience: 'all',
+    // Offline, because that is what the association mostly runs and what every
+    // event written before this field existed actually was.
+    mode: 'offline',
+    onlinePlatform: '',
+    onlineUrl: '',
     agenda: [],
     speakers: [],
     venueAddress: '',
@@ -70,10 +110,65 @@ export const BLANK_DETAIL: EventDetail = {
     registrationDeadline: '',
     capacity: '',
     registrationFee: '',
+    // Blank: a new event charges one price until somebody sets a member rate.
+    memberFee: '',
     registrationNote: '',
     registrationFields: [],
     reminderOffsetsHours: [],
 };
+
+/**
+ * The saving, computed and said out loud under the member-price box.
+ *
+ * The single most valuable thing this form can print, because it is the answer
+ * to the question the field is asking and the editor would otherwise work it
+ * out on paper — and because the three ways of getting it wrong all look fine
+ * in an empty input: a member price ABOVE the public one, a member price equal
+ * to it, and a blank that the editor believes means free.
+ *
+ * Each of those gets its own sentence rather than a shared "check this value".
+ * A warning that does not say what is wrong is a warning that gets dismissed.
+ */
+function MemberPriceHint({ price, member }: { price: string; member: string }) {
+    const full = Math.max(0, Math.round(Number(price) || 0));
+    // Blank is NOT zero — the one distinction this whole field turns on.
+    const hasRate = String(member ?? '').trim() !== '';
+    // `null` when there is no rate, and every branch below that reads it is
+    // behind the `!hasRate` early return — so it is a plain number by then
+    // without a `!` anywhere. See the field's own note on why blank is not zero.
+    const rate = hasRate ? Math.max(0, Math.round(Number(member) || 0)) : 0;
+
+    if (!hasRate) {
+        return <>Leave blank and everyone pays the same. Fill it in and members with an
+            active membership pay this instead — which is what makes joining worth it.</>;
+    }
+
+    if (full <= 0) {
+        return <span className="text-amber-600 font-semibold">
+            The event is free for everyone, so a member price changes nothing.
+        </span>;
+    }
+
+    if (rate > full) {
+        return <span className="text-rose-600 font-semibold">
+            That is more than the price above. Members are never charged more than
+            everybody else — this will be ignored and they will pay ₹{full.toLocaleString('en-IN')}.
+        </span>;
+    }
+
+    if (rate === full) {
+        return <span className="text-amber-600 font-semibold">
+            The same as the price above, so members save nothing. Lower it to
+            advertise a discount, or clear it to charge one price.
+        </span>;
+    }
+
+    const saving = full - rate;
+    return <span className="text-emerald-600 font-semibold">
+        Members save ₹{saving.toLocaleString('en-IN')} ({Math.round((saving / full) * 100)}% off).
+        Shown on the booking page beside the full price.
+    </span>;
+}
 
 const BLANK_AGENDA: CmsAgendaItem = {
     startTime: '', endTime: '', title: '', description: '', speaker: '', location: '',
@@ -82,14 +177,6 @@ const BLANK_AGENDA: CmsAgendaItem = {
 const BLANK_SPEAKER: CmsSpeaker = {
     name: '', role: '', organization: '', bio: '', photoUrl: '',
 };
-
-/** The reminder offsets an editor can pick, in hours before the start. */
-const REMINDERS: { hours: number; label: string }[] = [
-    { hours: 168, label: '1 week' },
-    { hours: 48, label: '2 days' },
-    { hours: 24, label: '1 day' },
-    { hours: 2, label: '2 hours' },
-];
 
 /**
  * A `datetime-local` value from a stored instant, in LOCAL time.
@@ -109,6 +196,76 @@ export const toLocalDateTimeInput = (value?: string | null): string => {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
         `T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
+
+/**
+ * One speaker's photograph: a round preview that IS the upload button.
+ *
+ * Uploaded rather than pasted as a URL, like every other image on this form -
+ * asking for a URL would make this the one field that needs the editor to have
+ * hosted the file somewhere else first.
+ *
+ * Its own component so the failure state (a rejected file, a dead connection)
+ * belongs to the one row it happened on, rather than to a shared flag that
+ * would show the error under every speaker at once.
+ */
+function SpeakerPhoto({ url, onChange }: { url: string; onChange: (url: string) => void }) {
+    const [busy, setBusy] = useState(false);
+    const [failed, setFailed] = useState('');
+
+    const pick = async (file?: File | null) => {
+        if (!file) return;
+        setBusy(true);
+        setFailed('');
+        try {
+            const { url: uploaded } = await uploadMedia(file);
+            onChange(uploaded);
+        } catch (error) {
+            setFailed(errorMessage(error));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <div className="shrink-0 w-20">
+            <label className="block cursor-pointer">
+                <span className="w-20 h-20 rounded-full overflow-hidden border border-slate-200
+                                 dark:border-[#2a2a2a] bg-slate-50 dark:bg-[#141414] flex items-center
+                                 justify-center text-neutral-400 hover:border-blue-300 transition-colors">
+                    {busy ? <Loader2 className="w-5 h-5 animate-spin" />
+                        : url ? (
+                            <img
+                                src={resolveMediaUrl(url)}
+                                alt=""
+                                className="w-full h-full object-cover"
+                            />
+                        ) : <User className="w-6 h-6" />}
+                </span>
+                <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => { pick(e.target.files && e.target.files[0]); e.target.value = ''; }}
+                />
+                <span className="mt-1.5 block text-center text-[1.0625rem] font-medium text-blue-600
+                                 dark:text-blue-400">
+                    {url ? 'Change' : 'Photo'}
+                </span>
+            </label>
+
+            {url && (
+                <button
+                    type="button"
+                    onClick={() => onChange('')}
+                    className="mt-0.5 w-full text-center text-[1.0625rem] text-neutral-500 hover:text-red-500"
+                >
+                    Remove
+                </button>
+            )}
+            {failed && <p className="mt-1 text-[1.0625rem] text-red-500 break-words">{failed}</p>}
+        </div>
+    );
+}
 
 export default function EventDetailFields({
     value,
@@ -148,15 +305,6 @@ export default function EventDetailFields({
         set({ speakers });
     };
 
-    const toggleReminder = (hours: number) => {
-        const current = value.reminderOffsetsHours || [];
-        set({
-            reminderOffsetsHours: current.includes(hours)
-                ? current.filter((h) => h !== hours)
-                : [...current, hours].sort((a, b) => b - a),
-        });
-    };
-
     return (
         <div className="sm:col-span-2 border-t border-slate-200 dark:border-[#1f1f1f] pt-4">
             <button
@@ -165,10 +313,10 @@ export default function EventDetailFields({
                 className="w-full flex items-center justify-between gap-3 text-left"
             >
                 <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-slate-900 dark:text-neutral-100">
+                    <span className="block text-[1.25rem] font-semibold text-slate-900 dark:text-neutral-100">
                         Programme, speakers and registration
                     </span>
-                    <span className="block text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    <span className="block text-[1.1875rem] text-neutral-500 dark:text-neutral-400 mt-0.5">
                         {summarise(value)}
                     </span>
                 </span>
@@ -179,44 +327,30 @@ export default function EventDetailFields({
 
             {open ? (
                 <div className="mt-4 space-y-0">
-                    {/* ---------------------------------------------- audience */}
-                    <CmsSection
-                        title="Who can see it"
-                        hint="Separate from the draft/published control: that is whether it is ready, this is who it is for."
-                    >
-                        {/* Exclusive by construction — `audience` is one field —
-                            and now exclusive to a keyboard and a screen reader
-                            too. See `CmsChoice`. */}
-                        <CmsChoice<'all' | 'paid'>
-                            label="Who can see this event"
-                            value={value.audience === 'paid' ? 'paid' : 'all'}
-                            onChange={(audience) => set({ audience })}
-                            options={[
-                                {
-                                    value: 'all',
-                                    icon: <Globe className="w-4 h-4" />,
-                                    title: 'Everyone',
-                                    detail: 'On the public site and visible to every signed-in member.',
-                                },
-                                {
-                                    value: 'paid',
-                                    icon: <Lock className="w-4 h-4" />,
-                                    title: 'Members only',
-                                    detail: 'Only members with an active membership. Kept off the public site entirely.',
-                                },
-                            ]}
-                        />
-                    </CmsSection>
+                    {/*
+                      * THE "EVERYONE / MEMBERS ONLY" CHOICE IS GONE FROM THE FORM.
+                      *
+                      * Who receives an event is decided by the regions above and
+                      * by the onboarding tick beside them; a third audience
+                      * control asked a fourth time and was the one editors read
+                      * as contradicting the others.
+                      *
+                      * `audience` REMAINS on the schema and on every saved event
+                      * — `event.service.listEvents` still withholds a `paid`
+                      * event from members without an active membership, and any
+                      * event already set that way still behaves that way. Only
+                      * the control is gone.
+                      */}
 
                     {/* ---------------------------------------------- agenda */}
                     <CmsSection
                         title="Agenda"
-                        hint="Times are on the event's own day. Rows are sorted by start time when saved, so they can be added in any order."
+
                         actions={
                             <button
                                 type="button"
                                 onClick={() => set({ agenda: [...value.agenda, { ...BLANK_AGENDA }] })}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[1.1875rem]
                                            font-medium text-blue-600 dark:text-blue-400 border
                                            border-blue-200 dark:border-blue-500/30 hover:bg-blue-500/10"
                             >
@@ -225,7 +359,7 @@ export default function EventDetailFields({
                         }
                     >
                         {value.agenda.length === 0 ? (
-                            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                            <p className="text-[1.25rem] text-neutral-500 dark:text-neutral-400">
                                 No agenda. The event page shows its description instead.
                             </p>
                         ) : (
@@ -271,22 +405,22 @@ export default function EventDetailFields({
                                                         />
                                                     </CmsField>
                                                 </div>
-                                                <div className="sm:col-span-2">
-                                                    <CmsField label="Room / hall">
-                                                        <CmsInput
-                                                            value={row.location}
-                                                            onChange={(e) => updateAgenda(index, { location: e.target.value })}
-                                                        />
-                                                    </CmsField>
-                                                </div>
-                                                <div className="sm:col-span-4">
-                                                    <CmsField label="Notes">
-                                                        <CmsInput
-                                                            value={row.description}
-                                                            onChange={(e) => updateAgenda(index, { description: e.target.value })}
-                                                        />
-                                                    </CmsField>
-                                                </div>
+                                                {/*
+                                                  * "Room / hall" and "Notes"
+                                                  * removed.
+                                                  *
+                                                  * An agenda line is a time, a
+                                                  * title and who is speaking.
+                                                  * The other two turned every
+                                                  * row into a four-field form
+                                                  * and were, on the events in
+                                                  * this database, never filled
+                                                  * in. The FIELDS stay on the
+                                                  * schema — a session that
+                                                  * already carries a room or a
+                                                  * note still shows it on the
+                                                  * event page.
+                                                  */}
                                             </div>
 
                                             <button
@@ -304,15 +438,28 @@ export default function EventDetailFields({
                         )}
                     </CmsSection>
 
-                    {/* ---------------------------------------------- speakers */}
+                    {/* -------------------------------------------- speakers */}
+                    {/*
+                      * WHO IS SPEAKING - name, designation, organisation, photo.
+                      *
+                      * Not a duplicate of the name on an agenda line. That line
+                      * says who is taking a session; this is the person, with
+                      * the photograph and the designation the event page prints
+                      * on their card. An agenda entry cannot carry either, and
+                      * these are the fields the association specified.
+                      *
+                      * Nothing here is required. A speaker announced before
+                      * their designation is confirmed is a normal state, and
+                      * the event page prints whichever parts exist.
+                      */}
                     <CmsSection
                         title="Speakers"
-                        hint="Listed on the event page. A session can name a speaker who is not listed here."
+                        hint="Shown as cards on the event page. Add as many as you need."
                         actions={
                             <button
                                 type="button"
                                 onClick={() => set({ speakers: [...value.speakers, { ...BLANK_SPEAKER }] })}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[1.1875rem]
                                            font-medium text-blue-600 dark:text-blue-400 border
                                            border-blue-200 dark:border-blue-500/30 hover:bg-blue-500/10"
                             >
@@ -321,88 +468,87 @@ export default function EventDetailFields({
                         }
                     >
                         {value.speakers.length === 0 ? (
-                            <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                                No speakers listed.
+                            <p className="text-[1.25rem] text-neutral-500 dark:text-neutral-400">
+                                No speakers yet. The event page simply leaves the section out.
                             </p>
                         ) : (
                             <div className="space-y-3">
                                 {value.speakers.map((row, index) => (
                                     <div
                                         key={index}
-                                        className="rounded-lg border border-slate-200 dark:border-[#2a2a2a] p-3
-                                                   flex items-start gap-2"
+                                        className="rounded-lg border border-slate-200 dark:border-[#2a2a2a] p-3"
                                     >
-                                        <div className="grid gap-3 sm:grid-cols-2 flex-1 min-w-0">
-                                            <CmsField label="Name">
-                                                <CmsInput
-                                                    value={row.name}
-                                                    onChange={(e) => updateSpeaker(index, { name: e.target.value })}
-                                                />
-                                            </CmsField>
-                                            <CmsField label="Role">
-                                                <CmsInput
-                                                    value={row.role}
-                                                    placeholder="Chief Guest"
-                                                    onChange={(e) => updateSpeaker(index, { role: e.target.value })}
-                                                />
-                                            </CmsField>
-                                            <CmsField label="Organisation">
-                                                <CmsInput
-                                                    value={row.organization}
-                                                    onChange={(e) => updateSpeaker(index, { organization: e.target.value })}
-                                                />
-                                            </CmsField>
-                                            <CmsField label="Photo URL" hint="Optional. Initials are shown without one.">
-                                                <CmsInput
-                                                    value={row.photoUrl}
-                                                    onChange={(e) => updateSpeaker(index, { photoUrl: e.target.value })}
-                                                />
-                                            </CmsField>
-                                            <div className="sm:col-span-2">
-                                                <CmsField label="Short bio">
-                                                    <CmsTextarea
-                                                        rows={2}
-                                                        value={row.bio}
-                                                        onChange={(e) => updateSpeaker(index, { bio: e.target.value })}
+                                        <div className="flex items-start gap-3">
+                                            <SpeakerPhoto
+                                                url={row.photoUrl}
+                                                onChange={(photoUrl) => updateSpeaker(index, { photoUrl })}
+                                            />
+
+                                            <div className="grid gap-3 sm:grid-cols-2 flex-1 min-w-0">
+                                                <CmsField label="Name">
+                                                    <CmsInput
+                                                        value={row.name}
+                                                        placeholder="As it should be printed"
+                                                        onChange={(e) => updateSpeaker(index, { name: e.target.value })}
                                                     />
                                                 </CmsField>
+                                                <CmsField label="Designation">
+                                                    <CmsInput
+                                                        value={row.role}
+                                                        placeholder="Managing Director"
+                                                        onChange={(e) => updateSpeaker(index, { role: e.target.value })}
+                                                    />
+                                                </CmsField>
+                                                <div className="sm:col-span-2">
+                                                    <CmsField label="Organisation">
+                                                        <CmsInput
+                                                            value={row.organization}
+                                                            placeholder="Company or department"
+                                                            onChange={(e) => updateSpeaker(index, { organization: e.target.value })}
+                                                        />
+                                                    </CmsField>
+                                                </div>
+                                                <div className="sm:col-span-2">
+                                                    <CmsField label="Short bio">
+                                                        <CmsInput
+                                                            value={row.bio}
+                                                            placeholder="One line, optional"
+                                                            onChange={(e) => updateSpeaker(index, { bio: e.target.value })}
+                                                        />
+                                                    </CmsField>
+                                                </div>
                                             </div>
-                                        </div>
 
-                                        <button
-                                            type="button"
-                                            aria-label="Remove speaker"
-                                            onClick={() => set({ speakers: value.speakers.filter((_, i) => i !== index) })}
-                                            className="p-1.5 mt-2 rounded text-red-500 hover:bg-red-500/10 shrink-0"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                                            <button
+                                                type="button"
+                                                aria-label="Remove speaker"
+                                                onClick={() => set({
+                                                    speakers: value.speakers.filter((_, i) => i !== index),
+                                                })}
+                                                className="p-1.5 mt-2 rounded text-red-500 hover:bg-red-500/10 shrink-0"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
                         )}
                     </CmsSection>
 
-                    {/* ---------------------------------------------- venue */}
-                    <CmsSection title="Venue and contact" hint="Shown beside the agenda on the member event page.">
+                    {/* --------------------------------------------- contact
+                      *
+                      * "Where it happens" — the In person / Online choice and
+                      * the venue or joining fields that follow from it — is NOT
+                      * here any more. It sits beside Category on the basics
+                      * form, because it is decided at the same moment as the
+                      * date and the kind of event, and burying it four screens
+                      * down inside a panel headed "Programme, speakers and
+                      * registration" meant an editor creating an event never
+                      * met it. Reported as exactly that.
+                      */}
+                    <CmsSection title="Contact">
                         <div className="grid gap-4 sm:grid-cols-2">
-                            <div className="sm:col-span-2">
-                                <CmsField label="Full address" hint="Under the venue name.">
-                                    <CmsInput
-                                        value={value.venueAddress}
-                                        onChange={(e) => set({ venueAddress: e.target.value })}
-                                    />
-                                </CmsField>
-                            </div>
-                            <div className="sm:col-span-2">
-                                <CmsField label="Map link" hint="Opens in a new tab.">
-                                    <CmsInput
-                                        value={value.venueMapUrl}
-                                        placeholder="https://maps.app.goo.gl/…"
-                                        onChange={(e) => set({ venueMapUrl: e.target.value })}
-                                    />
-                                </CmsField>
-                            </div>
                             <CmsField label="Contact name">
                                 <CmsInput
                                     value={value.contactName}
@@ -430,7 +576,6 @@ export default function EventDetailFields({
                     {/* ---------------------------------------------- registration */}
                     <CmsSection
                         title="Registration"
-                        hint="Members take a seat from their dashboard. Leaving this off simply announces the event."
                     >
                         <label className="flex items-center gap-2.5 mb-4 cursor-pointer">
                             <input
@@ -439,7 +584,7 @@ export default function EventDetailFields({
                                 onChange={(e) => set({ registrationEnabled: e.target.checked })}
                                 className="w-4 h-4 rounded border-slate-300 text-blue-600"
                             />
-                            <span className="text-sm text-slate-800 dark:text-neutral-200">
+                            <span className="text-[1.25rem] text-slate-800 dark:text-neutral-200">
                                 Members can register for this event
                             </span>
                         </label>
@@ -448,7 +593,6 @@ export default function EventDetailFields({
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <CmsField
                                     label="Capacity"
-                                    hint="Blank or zero means unlimited. Beyond it, members join a waiting list."
                                 >
                                     <CmsInput
                                         type="number"
@@ -468,8 +612,7 @@ export default function EventDetailFields({
                                   * not here.
                                   */}
                                 <CmsField
-                                    label="Registration fee (₹)"
-                                    hint="Blank or zero is a free event. A fee adds a payment step before the seat is confirmed."
+                                    label="Price (₹)"
                                 >
                                     <CmsInput
                                         type="number"
@@ -481,72 +624,90 @@ export default function EventDetailFields({
                                     />
                                 </CmsField>
 
+                                {/*
+                                  * THE MEMBERSHIP DISCOUNT, TYPED AS A PRICE.
+                                  *
+                                  * "Discount: 1000" against "Price: 1000" reads
+                                  * two ways — free for members, or no discount at
+                                  * all — and the two readings differ by the whole
+                                  * ticket. A price has one reading, so the editor
+                                  * types what will be charged and the line beneath
+                                  * computes the saving. Nobody has to hold the
+                                  * distinction in their head, and nothing that
+                                  * charges money has to guess.
+                                  *
+                                  * BLANK AND ZERO ARE DIFFERENT ANSWERS. See the
+                                  * note on the field's type.
+                                  */}
                                 <CmsField
-                                    label="Registration closes"
-                                    hint="Blank closes it when the event starts."
+                                    label="Member price (₹)"
+                                    hint={<MemberPriceHint
+                                        price={value.registrationFee}
+                                        member={value.memberFee}
+                                    />}
                                 >
                                     <CmsInput
-                                        type="datetime-local"
-                                        value={value.registrationDeadline}
-                                        onChange={(e) => set({ registrationDeadline: e.target.value })}
+                                        type="number"
+                                        min={0}
+                                        step={1}
+                                        placeholder="Same as the price above"
+                                        value={value.memberFee}
+                                        onChange={(e) => set({ memberFee: e.target.value })}
                                     />
                                 </CmsField>
 
-                                <div className="sm:col-span-2">
-                                    <CmsField label="Note for registrants" hint="Shown above the register button.">
-                                        <CmsInput
-                                            value={value.registrationNote}
-                                            placeholder="Please bring your membership certificate."
-                                            onChange={(e) => set({ registrationNote: e.target.value })}
-                                        />
-                                    </CmsField>
-                                </div>
-
-                                {/*
-                                  * The form this event asks, built here.
-                                  *
-                                  * Inside the `registrationEnabled` branch on
-                                  * purpose: questions for a form nobody can
-                                  * submit are questions nobody will ever answer,
-                                  * and showing the builder anyway invites an
-                                  * editor to spend ten minutes on one.
-                                  */}
-                                <div className="sm:col-span-2">
-                                    <RegistrationFormBuilder
-                                        fields={value.registrationFields}
-                                        onChange={(registrationFields) => set({ registrationFields })}
+                                <CmsField
+                                    label="Registration closes"
+                                >
+                                    {/*
+                                      * A DATE, not a date AND a time.
+                                      *
+                                      * `datetime-local` puts six fields in one
+                                      * box — day, month, year, hour, minute,
+                                      * meridiem — to answer a question nobody
+                                      * has ever answered to the minute. The
+                                      * stored value keeps its time component:
+                                      * a date alone is normalised to the end of
+                                      * that day on save, so "closes on the 17th"
+                                      * means the whole of the 17th rather than
+                                      * midnight at the start of it.
+                                      */}
+                                    <CmsInput
+                                        type="date"
+                                        value={(value.registrationDeadline || '').slice(0, 10)}
+                                        onChange={(e) => set({
+                                            registrationDeadline: e.target.value
+                                                ? `${e.target.value}T23:59`
+                                                : '',
+                                        })}
                                     />
-                                </div>
+                                </CmsField>
 
-                                <div className="sm:col-span-2">
-                                    <CmsField
-                                        label="Remind registrants"
-                                        hint="Shown on the event page. Delivery is not wired up yet."
-                                    >
-                                        <div className="flex flex-wrap gap-2">
-                                            {REMINDERS.map(({ hours, label }) => {
-                                                const on = (value.reminderOffsetsHours || []).includes(hours);
-                                                return (
-                                                    <button
-                                                        key={hours}
-                                                        type="button"
-                                                        onClick={() => toggleReminder(hours)}
-                                                        className={`px-3 py-1.5 rounded-full text-xs font-medium
-                                                                    transition-colors ${
-                                                            on
-                                                                ? 'bg-blue-600 text-white'
-                                                                : 'bg-slate-100 dark:bg-[#161616] text-neutral-500'
-                                                        }`}
-                                                    >
-                                                        {label} before
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </CmsField>
-                                </div>
                             </div>
-                        ) : null}
+                        ) : (
+                            /*
+                             * SAY WHAT IS BEHIND THE TICK.
+                             *
+                             * This branch rendered `null`, so an editor opening
+                             * an event with registration switched off saw one
+                             * lonely checkbox and no price, no seat count and no
+                             * member rate anywhere on the form — which reads as
+                             * "those fields do not exist" rather than as "this
+                             * event is an announcement". It was reported exactly
+                             * that way.
+                             *
+                             * Naming the hidden fields costs one line and turns a
+                             * missing-feature bug report into a tick.
+                             */
+                            <p className="text-[1.25rem] text-slate-500 dark:text-[#A1A1AA] leading-relaxed">
+                                This event is an announcement — nobody can book a seat on it.
+                                Tick the box above to set the{' '}
+                                <strong className="font-semibold text-slate-700 dark:text-neutral-300">
+                                    number of seats, the price, the member price
+                                </strong>{' '}
+                                and the registration form.
+                            </p>
+                        )}
 
                         {eventId ? <RegistrationList eventId={eventId} /> : null}
                     </CmsSection>
@@ -565,6 +726,13 @@ function summarise(detail: EventDetail): string {
     if (detail.speakers.length) parts.push(`${detail.speakers.length} speakers`);
     if (detail.registrationEnabled) {
         parts.push(Number(detail.capacity) > 0 ? `${detail.capacity} seats` : 'registration open');
+        // The member rate belongs on the summary too: an event carrying one and
+        // not showing it makes the editor open the form to find out whether
+        // they ever set it.
+        if (String(detail.memberFee ?? '').trim() !== ''
+            && Number(detail.memberFee) < Number(detail.registrationFee)) {
+            parts.push(`members ₹${Number(detail.memberFee).toLocaleString('en-IN')}`);
+        }
     }
 
     return parts.join(' · ');
@@ -635,7 +803,7 @@ function RegistrationList({ eventId }: { eventId: string }) {
                     type="button"
                     onClick={load}
                     disabled={loading}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[1.1875rem] font-medium
                                text-slate-700 dark:text-neutral-200 border border-slate-200
                                dark:border-[#2a2a2a] hover:bg-slate-100 dark:hover:bg-[#161616]
                                disabled:opacity-60"
@@ -645,17 +813,17 @@ function RegistrationList({ eventId }: { eventId: string }) {
                 </button>
             ) : (
                 <>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">
+                    <p className="text-[1.1875rem] text-neutral-500 dark:text-neutral-400 mb-3">
                         {counts.registered || 0} registered
                         {counts.waitlist ? ` · ${counts.waitlist} waiting` : ''}
                         {counts.cancelled ? ` · ${counts.cancelled} cancelled` : ''}
                     </p>
 
                     {rows.length === 0 ? (
-                        <p className="text-sm text-neutral-500 dark:text-neutral-400">Nobody yet.</p>
+                        <p className="text-[1.25rem] text-neutral-500 dark:text-neutral-400">Nobody yet.</p>
                     ) : (
                         <div className="max-h-72 overflow-y-auto">
-                            <table className="w-full text-xs">
+                            <table className="w-full text-[1.1875rem]">
                                 <thead>
                                     <tr className="text-left text-neutral-500 border-b border-slate-200 dark:border-[#1f1f1f]">
                                         <th className="pb-2 pr-3 font-medium">Name</th>
@@ -725,7 +893,7 @@ function RegistrationList({ eventId }: { eventId: string }) {
                 </>
             )}
 
-            {error ? <p className="text-xs text-red-500 mt-2">{error}</p> : null}
+            {error ? <p className="text-[1.1875rem] text-red-500 mt-2">{error}</p> : null}
         </div>
     );
 }

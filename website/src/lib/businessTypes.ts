@@ -13,11 +13,18 @@
  * form (retail, wholesale, technology, food, healthcare, education…). Neither
  * overlapped the database enum except for "Service Provider", so picking
  * almost anything produced a server error after the whole form was filled in.
+ *
+ * `Dealer` and `Franchise` were added for the business-creation account: a
+ * dealership and a franchise are neither manufacture nor plain trade, and the
+ * members filing as one had to pick `Others`, the value that tells a report
+ * nothing.
  */
 export const BUSINESS_TYPES = [
     'Manufacturing',
     'Trader',
     'Service Provider',
+    'Dealer',
+    'Franchise',
     'Others',
 ] as const;
 

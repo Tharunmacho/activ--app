@@ -37,6 +37,35 @@ export interface CmsMedia {
 }
 
 /**
+ * A photograph inside a gallery album.
+ *
+ * It has a page of its own at `/gallery/:id/photo/:n`, so it carries what a
+ * page carries: a name, a description, and whatever else the association
+ * wants recorded about THAT picture. `customFields` is the same pair list
+ * the album itself uses — the editor names the field, and the page prints
+ * the name they typed.
+ */
+export interface GalleryPhotoMedia extends CmsMedia {
+    /** The heading on its page. Falls back to `caption`, then to "Untitled". */
+    title?: string;
+    /** The one line under the heading. Predates `title`; see the schema. */
+    caption?: string;
+    /** The write-up, printed as "About this photograph". */
+    description?: string;
+    /** "Photographer", "Chief Guest" — whatever the editor named. */
+    customFields?: GalleryField[];
+}
+
+/**
+ * A field the editor named, on a gallery album or on one of its photographs.
+ *
+ * The same shape as every other named field on the site now — the icon and
+ * the placement moved onto `CmsExtraField` when they were rolled out. Kept as
+ * a name because a dozen call sites read well with it.
+ */
+export type GalleryField = CmsExtraField;
+
+/**
  * A field the editor named themselves.
  *
  * Every page carries a list of these. The fields a page declares are the ones
@@ -46,6 +75,61 @@ export interface CmsMedia {
 export interface CmsExtraField {
     label: string;
     value: string;
+    /**
+     * The mark drawn beside it where the surface draws one.
+     *
+     * A name from the CMS icon set, chosen by the editor. It is asked for
+     * rather than guessed: a glyph cannot be inferred from a label somebody
+     * typed a moment ago, and a card that rings every row left an empty
+     * circle next to any field that had none.
+     */
+    icon?: string;
+    /**
+     * WHERE it appears, and this is the one that was missing everywhere.
+     *
+     *   `card`    a labelled fact in the page's details card.
+     *   `content` a section of its own in the body, the label as the heading
+     *             and the value as the prose under it.
+     *
+     * Every named field on every screen used to be a card field, so an editor
+     * with a paragraph to write had only a box built for one-line facts to
+     * put it in. Defaulted to `card` because that is where every existing row
+     * already appears, and a default that moved them would rearrange live
+     * pages nobody had edited.
+     */
+    placement?: 'card' | 'content';
+}
+
+/**
+ * ==========================================================================
+ * WHAT THE EDITOR DID TO ONE CARD ON A CMS SCREEN
+ * ==========================================================================
+ *
+ * `extraFields` above is what the PAGE wants to add. This is the same
+ * question one level down, per section, plus the answer to a question the
+ * CMS could not previously be asked: do you want this section at all.
+ *
+ * `key` is a slug this repo owns — `carousel.buttons`, `about.points` —
+ * never editor input, so it survives a rewording of the card's title and
+ * cannot collide. A key nothing renders any more is an inert row, not an
+ * error: bringing the card back under the same key brings its rows with it.
+ *
+ * Only `hidden` takes a section off the public page. Removing a card keeps
+ * the fields inside it, because an editor who removes one and restores it
+ * the next morning should find their work where they left it.
+ */
+export interface CmsSectionOverride {
+    key: string;
+    hidden: boolean;
+    /**
+     * The editor's own heading for this card, where they set one.
+     *
+     * Optional because every row written before this existed has none, and
+     * blank means "use the heading the code ships" — which is what the CMS
+     * and the public page both fall back to. It never affects `key`.
+     */
+    title?: string;
+    fields: CmsExtraField[];
 }
 
 export const EMPTY_MEDIA: CmsMedia = { url: '', type: 'image', alt: '', fit: 'cover', position: 'center' };
@@ -87,6 +171,30 @@ export interface SiteSettings {
     };
     /** Fields the editor named themselves. Rendered as a labelled list. */
     extraFields: CmsExtraField[];
+    /** Cards the editor removed, and the rows they added to each. */
+    sections: CmsSectionOverride[];
+    /**
+     * The band above the footer, on every page.
+     *
+     * "Across India / Find ACTIV where you are", over the region tiles. The
+     * tiles are built from the published region pages and are not authored;
+     * only the wording over them is. It lives on the site settings because
+     * seven pages draw it — it is furniture, like the footer.
+     */
+    acrossIndia: {
+        enabled: boolean;
+        eyebrow: string;
+        heading: string;
+        subtitle: string;
+        /**
+         * Region keys the band does NOT draw.
+         *
+         * A deny list, not an allow list: the tiles are derived from the
+         * published region pages, so an allow list would make every new
+         * region invisible until somebody remembered to tick it.
+         */
+        hidden: string[];
+    };
 }
 
 // ---------------------------------------------------------------- home
@@ -115,7 +223,6 @@ export interface HomeCarousel {
      */
     galleryPosters: {
         enabled: boolean;
-        limit: number;
         /** Before or after the authored slides above. */
         position: 'after' | 'before';
     };
@@ -156,6 +263,26 @@ export interface HomeAbout {
 export interface HomeContent {
     carousel: HomeCarousel;
     about: HomeAbout;
+    /**
+     * Cards the editor removed, and the rows they added to each.
+     *
+     * On the DOCUMENT, not in either block: the screen's cards run across
+     * both, so a per-block list would make `carousel.slides` and
+     * `about.points` two different kinds of key. It rides along with
+     * whichever block is saved.
+     */
+    sections: CmsSectionOverride[];
+    /**
+     * The READ did not succeed — not the same as nothing being authored.
+     *
+     * Every reader here catches and returns the empty shape, which is right
+     * for a page with no content and wrong for a page that could not be
+     * asked: the two look identical to a caller, so the home page rendered
+     * as a blank sheet whenever the API was unreachable.
+     *
+     * Optional, so nothing that ignores it changes behaviour.
+     */
+    failed?: boolean;
 }
 
 // ---------------------------------------------------------------- about page
@@ -172,8 +299,24 @@ export interface AboutContent {
     media: CmsMedia;
     logoOverlay: CmsMedia;
     statsBar: CmsStat[];
+    /**
+     * The chairman’s words — the one thing on the page written by a person.
+     *
+     * Four fields and not one: the page sets the words large and the
+     * attribution small, and it cannot tell them apart if they arrive as a
+     * single string. All optional; with no `text` the block is not drawn.
+     */
+    quote: {
+        /** HTML — an editor pasting from a letter brings emphasis with them. */
+        text: string;
+        author: string;
+        role: string;
+        photo: CmsMedia;
+    };
     /** Fields the editor named themselves. Rendered as a labelled list. */
     extraFields: CmsExtraField[];
+    /** Cards the editor removed, and the rows they added to each. */
+    sections: CmsSectionOverride[];
 }
 
 // ---------------------------------------------------------------- events page
@@ -209,15 +352,27 @@ export interface EventsSettings {
     emptyText: string;
     /** Shown when a filter matches nothing. `{query}` is substituted. */
     emptyFilterText: string;
-    homeLimit: number;
 
     /** The call-to-action strip under the grid. */
     banner: {
         enabled: boolean; icon: string; title: string;
         subtitle: string; ctaLabel: string; ctaHref: string;
     };
+    /**
+     * Where a visitor is sent for events that have already happened.
+     *
+     * `/events` is upcoming only. Without this the page answers a visitor's
+     * question by showing them nothing, which reads as a page that lost its
+     * content rather than one that never held it.
+     */
+    pastLink: {
+        enabled: boolean; icon: string; title: string;
+        subtitle: string; label: string; href: string;
+    };
     /** Fields the editor named themselves. Rendered as a labelled list. */
     extraFields: CmsExtraField[];
+    /** Cards the editor removed, and the rows they added to each. */
+    sections: CmsSectionOverride[];
 }
 
 // ---------------------------------------------------------------- gallery
@@ -232,6 +387,13 @@ export interface GallerySettings {
     categories: { label: string; icon: string }[];
     viewMoreLabel: string;
     pageSize: number;
+    /**
+     * The band saying what this page IS: the record of every past event.
+     *
+     * The other half of `EventsSettings.pastLink` — one sends a visitor here,
+     * this one confirms they arrived at the right place.
+     */
+    pastEvents: { enabled: boolean; icon: string; title: string; subtitle: string };
     emptyText: string;
     /** `{category}` is replaced with the chip the visitor picked. */
     emptyFilterText: string;
@@ -239,6 +401,8 @@ export interface GallerySettings {
     detail: GalleryDetailCopy;
     /** Fields the editor named themselves. Rendered as a labelled list. */
     extraFields: CmsExtraField[];
+    /** Cards the editor removed, and the rows they added to each. */
+    sections: CmsSectionOverride[];
 }
 
 export interface GalleryDetailCopy {
@@ -259,6 +423,8 @@ export interface GalleryItem {
     title: string;
     caption: string;
     category: string;
+    /** The industry — the gallery's second dropdown is built from these. */
+    sector?: string;
     eventDate: string;
     location: string;
     /**
@@ -269,13 +435,14 @@ export interface GalleryItem {
     /** Bullet points beside the write-up. */
     highlights?: string[];
     /** Further photographs from the same event, under the poster. */
-    photos?: CmsMedia[];
+    /** The album's photographs, each with its own description. */
+    photos?: GalleryPhotoMedia[];
     /**
      * Fields the editor named themselves — chief guest, host chapter, sponsor,
      * anything this schema does not know about. Rendered as a labelled list on
      * the item's own page, in the order they were entered.
      */
-    customFields?: { label: string; value: string }[];
+    customFields?: GalleryField[];
     featured: boolean;
     /**
      * Leads both the banner and the gallery grid.
@@ -319,8 +486,16 @@ export interface ContactInfo {
     mapEmbedUrl: string;
     social: { facebook: string; instagram: string; linkedin: string; youtube: string };
     banner: { enabled: boolean; icon: string; title: string; subtitle: string; ctaLabel: string; ctaHref: string };
+    /**
+     * The regions band as the Contact page draws it: its own wording, and
+     * tiles that open each region's or state's contact section. Blank fields
+     * fall back to the shipped wording in `AcrossIndia`.
+     */
+    regionsBand: { enabled: boolean; eyebrow: string; heading: string; subtitle: string };
     /** Fields the editor named themselves — extra rows in the details card. */
     extraFields: CmsExtraField[];
+    /** Cards the editor removed, and the rows they added to each. */
+    sections: CmsSectionOverride[];
 }
 
 export interface CmsEvent {
@@ -351,6 +526,15 @@ export interface CmsEvent {
      */
     showOnOnboarding?: boolean;
     /**
+     * On the home page's upcoming strip.
+     *
+     * A THIRD question, not a restatement of the two above: `status` is
+     * "written yet", `showOnOnboarding` is "may the public read it", and
+     * this is "is it one of the few on the landing page". True unless
+     * somebody turned it off, so a new event needs no second step.
+     */
+    showOnHome?: boolean;
+    /**
      * Which site the event was authored for — `public` is the CMS's onboarding
      * programme, `members` the association's own. Optional for the same reason.
      */
@@ -363,6 +547,17 @@ export interface CmsEvent {
     reachEveryone?: boolean;
     /** Rupees. 0 is free. A fee adds a payment step before the seat confirms. */
     registrationFee?: number;
+    /**
+     * The member rate. `null` means NO member rate — one price for everybody.
+     *
+     * Nullable and not merely optional, because `0` is a real answer (members
+     * attend free) and `undefined` would be indistinguishable from it in any
+     * check written with `||`. The form reads it with `== null`.
+     */
+    memberFee?: number | null;
+    /** Resolved by the server: the lower of the two. Read-only. */
+    memberPrice?: number;
+    hasMemberRate?: boolean;
     /** The questions this event asks, designed per event by the super admin. */
     registrationFields?: {
         key: string;
@@ -405,6 +600,22 @@ export interface CmsEvent {
     audience?: 'all' | 'paid';
     agenda?: CmsAgendaItem[];
     speakers?: CmsSpeaker[];
+    /**
+     * HOW the event is attended: in a room, or on a link.
+     *
+     * A different question from `category`, which says what KIND of event it
+     * is. Absent on every row written before the field existed, which the
+     * readers treat as `offline` — what those events actually were.
+     */
+    mode?: 'offline' | 'online';
+    /** "Zoom", "Google Meet". Public: it says what people need open. */
+    onlinePlatform?: string;
+    /**
+     * The join link. Present ONLY for a signed-in content admin — the server
+     * withholds it from every public read, because a link on a public page is
+     * a seat given away. Whoever books gets it on their confirmation instead.
+     */
+    onlineUrl?: string;
     venueAddress?: string;
     venueMapUrl?: string;
     contactName?: string;
@@ -455,13 +666,26 @@ export interface ContactMessage {
  * — the server rejects anything else, and the renderer falls back on anything
  * it does not recognise, so a mismatch degrades rather than breaks.
  */
+/**
+ * EVERY MARK THE SITE CAN DRAW, grouped for the picker.
+ *
+ * This list and `ICONS` in `CmsIcon` and `ICON_NAMES` on the server are three
+ * copies of one set, and they had drifted: ten names the renderer draws and
+ * the server accepts — `factory`, `leaf`, `graduation-cap`, `ship`, `info`,
+ * `camera`, `tag`, `users-2`, `quote` — were simply not in the picker, so the
+ * only way to use one was to already know it existed. (`landmark` was worse:
+ * drawable here and REJECTED by the server, which swapped it for `star`
+ * without a word.) All three lists carry the same names now.
+ */
 export const ICON_GROUPS: { label: string; icons: string[] }[] = [
-    { label: 'People', icons: ['users', 'user', 'handshake', 'heart-handshake', 'building', 'briefcase'] },
+    { label: 'People', icons: ['users', 'users-2', 'user', 'handshake', 'heart-handshake', 'building', 'briefcase'] },
     { label: 'Growth', icons: ['trending-up', 'award', 'target', 'lightbulb', 'star', 'heart', 'rocket'] },
-    { label: 'Trust', icons: ['shield', 'shield-check', 'scale'] },
+    { label: 'Industry & learning', icons: ['factory', 'leaf', 'graduation-cap', 'ship', 'hard-hat'] },
+    { label: 'Trust', icons: ['shield', 'shield-check', 'scale', 'landmark'] },
     { label: 'Place & time', icons: ['globe', 'map-pin', 'calendar', 'calendar-days', 'clock'] },
-    { label: 'Events & media', icons: ['image', 'images', 'monitor-play', 'play', 'tent', 'book-open', 'hard-hat', 'grid', 'party-popper', 'mic'] },
-    { label: 'Contact', icons: ['phone', 'mail', 'message-square', 'send', 'file-text'] },
+    { label: 'Events & media', icons: ['image', 'images', 'camera', 'monitor-play', 'play', 'tent', 'book-open', 'grid', 'party-popper', 'mic'] },
+    { label: 'Notes & labels', icons: ['info', 'tag', 'quote', 'file-text'] },
+    { label: 'Contact', icons: ['phone', 'mail', 'message-square', 'send'] },
     { label: 'Navigation', icons: ['arrow-right', 'external-link', 'home'] },
     { label: 'Social', icons: ['facebook', 'instagram', 'linkedin', 'twitter', 'youtube'] },
 ];
@@ -481,6 +705,14 @@ export const EMPTY_SITE: SiteSettings = {
         socials: [], copyright: '', legalLinks: [], note: '',
     },
     extraFields: [],
+    sections: [],
+    acrossIndia: {
+        enabled: true,
+        eyebrow: 'Across India',
+        heading: 'Find ACTIV where you are',
+        subtitle: '',
+        hidden: [],
+    },
 };
 
 export const EMPTY_HOME: HomeContent = {
@@ -488,7 +720,7 @@ export const EMPTY_HOME: HomeContent = {
         slides: [], headline: '', headlineHighlight: '', subheadline: '',
         ctaLabel: '', ctaHref: '', ctaIcon: 'heart',
         secondaryCtaLabel: '', secondaryCtaHref: '', secondaryCtaIcon: 'play',
-        galleryPosters: { enabled: true, limit: 6, position: 'after' },
+        galleryPosters: { enabled: true, position: 'after' },
         highlightCard: { enabled: true, icon: 'users', eyebrow: '', value: '', caption: '', stats: [] },
     },
     about: {
@@ -496,13 +728,16 @@ export const EMPTY_HOME: HomeContent = {
         body: '', bullets: [], media: { ...EMPTY_MEDIA }, logoOverlay: { ...EMPTY_MEDIA },
         linkLabel: '', linkHref: '', statsBar: [], extraFields: [],
     },
+    sections: [],
 };
 
 export const EMPTY_ABOUT: AboutContent = {
     badgeIcon: 'users', badgeText: '', heading: '', headingHighlight: '',
     body: '', bullets: [], bulletPoints: [],
     media: { ...EMPTY_MEDIA }, logoOverlay: { ...EMPTY_MEDIA }, statsBar: [],
+    quote: { text: '', author: '', role: '', photo: { ...EMPTY_MEDIA } },
     extraFields: [],
+    sections: [],
 };
 
 export const EMPTY_EVENTS_SETTINGS: EventsSettings = {
@@ -513,17 +748,32 @@ export const EMPTY_EVENTS_SETTINGS: EventsSettings = {
     searchPlaceholder: 'Search events...',
     categories: [],
     viewAllLabel: '', viewAllHref: '/events',
-    emptyText: '', emptyFilterText: '', homeLimit: 3,
+    emptyText: '', emptyFilterText: '',
     banner: {
         enabled: true, icon: 'calendar-days', title: '',
         subtitle: '', ctaLabel: '', ctaHref: '',
     },
+    pastLink: {
+        enabled: true,
+        icon: 'image',
+        title: 'Looking for an event that has already happened?',
+        subtitle: 'Every conclave, seminar and meeting we have held is in the gallery, with its photographs.',
+        label: 'Open the gallery',
+        href: '/gallery',
+    },
     extraFields: [],
+    sections: [],
 };
 
 export const EMPTY_GALLERY_SETTINGS: GallerySettings = {
     badgeIcon: 'image', badgeText: '', heading: '', headingHighlight: '', description: '',
     noteLines: [], categories: [], viewMoreLabel: '', pageSize: 8,
+    pastEvents: {
+        enabled: true,
+        icon: 'calendar-days',
+        title: 'Our past events',
+        subtitle: 'Every conclave, seminar and meeting we have held — open one for its photographs, the write-up and where it was.',
+    },
     emptyText: '', emptyFilterText: '',
     detail: {
         backLabel: 'Back to Gallery',
@@ -535,6 +785,7 @@ export const EMPTY_GALLERY_SETTINGS: GallerySettings = {
         missingText: 'This item is no longer available.',
     },
     extraFields: [],
+    sections: [],
 };
 
 export const EMPTY_CONTACT: ContactInfo = {
@@ -553,7 +804,9 @@ export const EMPTY_CONTACT: ContactInfo = {
     addressLines: [], phone: '', alternatePhone: '', email: '', workingHours: [], mapEmbedUrl: '',
     social: { facebook: '', instagram: '', linkedin: '', youtube: '' },
     banner: { enabled: true, icon: 'users', title: '', subtitle: '', ctaLabel: '', ctaHref: '' },
+    regionsBand: { enabled: true, eyebrow: '', heading: '', subtitle: '' },
     extraFields: [],
+    sections: [],
 };
 
 /** Anchor a stored `/uploads/...` path to the API origin we are talking to. */
@@ -624,8 +877,14 @@ const refresh = <T>(key: string, load: () => Promise<T>): Promise<T> => {
  * fails is swallowed for the same reason: the caller already has a usable
  * answer, and an unhandled rejection would surface in the console as an error
  * on a page that rendered perfectly well.
+ *
+ * EXPORTED so `cmsRegionsApi` can use it too. The region and state pages were
+ * the only public reads outside this module and the only ones NOT going through
+ * here, which is why moving between them showed a full skeleton every time — the
+ * header's region menu and the page's own document were re-fetched from nothing
+ * on each navigation, including a return to a page the reader had just left.
  */
-const cached = async <T>(key: string, load: () => Promise<T>): Promise<T> => {
+export const cached = async <T>(key: string, load: () => Promise<T>): Promise<T> => {
     const hit = cache.get(key);
 
     if (hit) {
@@ -666,6 +925,12 @@ const getSiteSettingsUncached = async (): Promise<SiteSettings> => {
             header: { ...EMPTY_SITE.header, ...(data.header || {}) },
             footer: { ...EMPTY_SITE.footer, ...(data.footer || {}) },
             extraFields: data.extraFields || [],
+            sections: data.sections || [],
+            acrossIndia: {
+                ...EMPTY_SITE.acrossIndia,
+                ...(data.acrossIndia || {}),
+                hidden: (data.acrossIndia || {}).hidden || [],
+            },
         };
     } catch {
         return EMPTY_SITE;
@@ -707,9 +972,11 @@ const getHomeUncached = async (): Promise<HomeContent> => {
                 bullets: about.bullets || [],
                 statsBar: about.statsBar || [],
             },
+            sections: data.sections || [],
         };
     } catch {
-        return EMPTY_HOME;
+        // Marked, so a caller can tell “could not ask” from “nothing to say”.
+        return { ...EMPTY_HOME, failed: true };
     }
 };
 
@@ -738,7 +1005,13 @@ export const getAbout = () => cached('about', getAboutUncached);
 const getEventsSettingsUncached = async (): Promise<EventsSettings> => {
     try {
         const data = unwrap<any>(await api.get('/cms/events-settings'), EMPTY_EVENTS_SETTINGS);
-        return { ...EMPTY_EVENTS_SETTINGS, ...data };
+        return {
+            ...EMPTY_EVENTS_SETTINGS,
+            ...data,
+            // A level deeper than the spread reaches: a document saved
+            // before this block existed carries none of it.
+            pastLink: { ...EMPTY_EVENTS_SETTINGS.pastLink, ...(data.pastLink || {}) },
+        };
     } catch {
         return EMPTY_EVENTS_SETTINGS;
     }
@@ -758,6 +1031,7 @@ const getGallerySettingsUncached = async (): Promise<GallerySettings> => {
             // saved before this block existed carries none of it, and the poster
             // page would otherwise get `undefined`.
             detail: { ...EMPTY_GALLERY_SETTINGS.detail, ...(data.detail || {}) },
+            pastEvents: { ...EMPTY_GALLERY_SETTINGS.pastEvents, ...(data.pastEvents || {}) },
         };
     } catch {
         return EMPTY_GALLERY_SETTINGS;
@@ -799,8 +1073,29 @@ export const getGallery = (includeHidden = false) =>
 
 const getHomeGalleryUncached = async (): Promise<GalleryItem[]> => {
     try {
+        /*
+         * NO `limit`. The switch on the image is the whole control.
+         *
+         * This asked for twelve. `CarouselSection` had its OWN cap of six and
+         * that one was removed — "the per-image switch says which images
+         * belong in the banner, and a number on another card quietly
+         * overruling it meant an editor who turned nine on got six" — but the
+         * cap in the REQUEST survived the same argument, one layer down, where
+         * nothing on any screen mentions it.
+         *
+         * So the Home Page card counted the rows it had switched on and told
+         * the editor "18 of 75 images are switched on. All 18 ride the
+         * banner", and thirteen through eighteen never left the server. The
+         * card was not lying about its own field; it could not see that
+         * something else had trimmed the answer.
+         *
+         * The payload is still defended, by the SERVER, and better: `homeOnly`
+         * projects away the write-up, the bullets and the extra photographs,
+         * so a banner row is a title, a date and one image URL. Weight was the
+         * reason for the cap and the projection is the answer to it.
+         */
         const data = unwrap<GalleryItem[]>(
-            await api.get('/cms/gallery', { params: { home: 'true', limit: 12 } }),
+            await api.get('/cms/gallery', { params: { home: 'true' } }),
             [],
         );
         return (data || []).map(resolveItemMedia);
@@ -814,10 +1109,10 @@ const getHomeGalleryUncached = async (): Promise<GalleryItem[]> => {
  * first, and nothing else.
  *
  * Its own request rather than a slice of `getGallery()`. The landing page is
- * the one page on the site whose payload is worth defending, and this answer is
- * a dozen rows without the write-ups or the extra photographs. The server caps
- * it at twelve; the section renders as many of those as the CMS limit allows,
- * so changing that number needs no new request.
+ * the one page on the site whose payload is worth defending, and this answer
+ * is the switched-on rows WITHOUT their write-ups or extra photographs — see
+ * `listGallery`'s projection, which is what defends the weight now that the
+ * count is the editor's to decide.
  */
 export const getHomeGallery = () => cached('gallery:home', getHomeGalleryUncached);
 
@@ -845,6 +1140,7 @@ const getContactInfoUncached = async (): Promise<ContactInfo> => {
             infoCard: { ...EMPTY_CONTACT.infoCard, ...(data.infoCard || {}) },
             social: { ...EMPTY_CONTACT.social, ...(data.social || {}) },
             banner: { ...EMPTY_CONTACT.banner, ...(data.banner || {}) },
+            regionsBand: { ...EMPTY_CONTACT.regionsBand, ...(data.regionsBand || {}) },
         };
     } catch {
         return EMPTY_CONTACT;
@@ -1069,3 +1365,169 @@ export const getEventReach = async (
         }),
         { members: 0, excludedByAudience: 0 },
     );
+
+// ============================================================ legal documents
+
+/**
+ * The association's legal notices — Privacy, Terms, Return, Cancellation.
+ *
+ * =========================================================================
+ * THE TEXT LIVES IN THE DATABASE. THIS FILE HAS NO COPY OF IT.
+ * =========================================================================
+ *
+ * It used to be compiled into the bundle, which made every wording change a
+ * deploy and left the browser holding a policy that could disagree with the one
+ * the server believed was live. Everything below reads `/cms/legal`, so a Super
+ * Admin's edit is on the public site at the next page load.
+ *
+ * There is deliberately NO fallback table here. Every other CMS read in this
+ * file falls back to an empty shape, which renders an unfinished page — right
+ * for a hero with no headline yet. A legal notice is different: a Privacy
+ * Policy page showing invented or stale wording is worse than one that says it
+ * could not be loaded, because a visitor cannot tell the difference and may act
+ * on it. `getLegalDocument` throws and the page renders its own error state.
+ */
+
+export interface LegalSection {
+    /** Absent for an opening run of paragraphs that belongs under no heading. */
+    heading: string;
+    /** Paragraphs, in order. */
+    body: string[];
+    bullets: string[];
+    links: { label: string; href: string }[];
+}
+
+export interface LegalDocument {
+    /** The URL, and the identity: `privacy-policy` serves `/privacy-policy`. */
+    slug: string;
+    title: string;
+    lede: string;
+    /** What the footer calls it. The server already falls back to the title. */
+    footerLabel: string;
+    sections: LegalSection[];
+    /**
+     * Fields the editor named themselves, printed as labelled rows.
+     *
+     * Optional because rows written before the field existed do not carry
+     * it, and every reader has to cope with that rather than assume an
+     * array is there.
+     */
+    extraFields?: CmsExtraField[];
+    status: 'published' | 'draft';
+    order: number;
+    /**
+     * When this WORDING took effect — the editor's answer, not `updatedAt`.
+     * `null` when they have not given one, which renders as nothing rather than
+     * as a date the page invented.
+     */
+    effectiveFrom: string | null;
+    /** Counts up on every save. `1` is the text as first supplied. */
+    version: number;
+    updatedAt: string | null;
+    editedBy?: { email: string; at: string } | null;
+}
+
+/** One row of a document's history. Headings and sizes, not the whole text. */
+export interface LegalRevision {
+    slug: string;
+    version: number;
+    title: string;
+    status: string;
+    effectiveFrom: string | null;
+    savedBy: string;
+    savedAt: string | null;
+    note: string;
+    sectionCount: number;
+    wordCount: number;
+}
+
+/**
+ * Every published document, in footer order.
+ *
+ * A signed-in editor also gets their own drafts — the server decides that from
+ * the token, so there is no flag here to get wrong.
+ */
+export const getLegalDocuments = async (): Promise<LegalDocument[]> =>
+    cached('legal', async () => unwrap<LegalDocument[]>(await api.get('/cms/legal'), []));
+
+/**
+ * Label and href only — what the footer draws on every page.
+ *
+ * Its own endpoint rather than mapping `getLegalDocuments`, because the footer
+ * is on every page and does not need several thousand words of Terms to draw
+ * four links. Falls back to an empty list: a footer missing its legal row is a
+ * smaller failure than a footer that fails to render.
+ */
+export const getLegalLinks = async (): Promise<{ label: string; href: string }[]> =>
+    cached('legal:links', async () =>
+        unwrap<{ label: string; href: string }[]>(await api.get('/cms/legal/links'), []));
+
+/**
+ * One document, in full.
+ *
+ * NOT cached through `cached()`: that helper serves a stale copy while it
+ * refreshes, which is right for a hero image and wrong for the text of an
+ * agreement. It is also the one read here that must be allowed to THROW — see
+ * the note at the top of this section.
+ */
+export const getLegalDocument = async (slug: string): Promise<LegalDocument> => {
+    const res = await api.get(`/cms/legal/${encodeURIComponent(slug)}`);
+    const doc = unwrap<LegalDocument | null>(res, null);
+    if (!doc || !doc.slug) throw new Error('Policy not found');
+    return doc;
+};
+
+/** Create or replace a policy. Archives the previous wording server-side. */
+export const saveLegalDocument = async (slug: string, payload: Partial<LegalDocument> & {
+    /** The editor's note about what changed. Stored on the archived revision. */
+    changeNote?: string;
+}): Promise<LegalDocument> => {
+    const saved = unwrap<LegalDocument>(
+        await api.put(`/cms/legal/${encodeURIComponent(slug)}`, payload),
+        {} as LegalDocument,
+    );
+    // Both keys: the document list AND the footer's link list, which carries
+    // the label and would otherwise keep showing the old one for five seconds
+    // on every page of the site.
+    invalidateCmsCache('legal');
+    invalidateCmsCache('legal:links');
+    return saved;
+};
+
+/** A document's history, newest first. */
+export const getLegalRevisions = async (slug: string): Promise<LegalRevision[]> =>
+    unwrap<LegalRevision[]>(await api.get(`/cms/legal/${encodeURIComponent(slug)}/revisions`), []);
+
+/** One revision in full, for reading before restoring it. */
+export const getLegalRevision = async (slug: string, version: number): Promise<LegalDocument> =>
+    unwrap<LegalDocument>(
+        await api.get(`/cms/legal/${encodeURIComponent(slug)}/revisions/${version}`),
+        {} as LegalDocument,
+    );
+
+/**
+ * Put an earlier wording back.
+ *
+ * A save, not a rewind: the version number goes UP and the text being replaced
+ * is archived in its turn, so the history stays a sequence.
+ */
+export const restoreLegalRevision = async (slug: string, version: number): Promise<LegalDocument> => {
+    const saved = unwrap<LegalDocument>(
+        await api.post(`/cms/legal/${encodeURIComponent(slug)}/revisions/${version}/restore`),
+        {} as LegalDocument,
+    );
+    invalidateCmsCache('legal');
+    invalidateCmsCache('legal:links');
+    return saved;
+};
+
+/** Take a policy off the site. Unpublishes; never deletes. */
+export const retireLegalDocument = async (slug: string): Promise<LegalDocument> => {
+    const saved = unwrap<LegalDocument>(
+        await api.delete(`/cms/legal/${encodeURIComponent(slug)}`),
+        {} as LegalDocument,
+    );
+    invalidateCmsCache('legal');
+    invalidateCmsCache('legal:links');
+    return saved;
+};

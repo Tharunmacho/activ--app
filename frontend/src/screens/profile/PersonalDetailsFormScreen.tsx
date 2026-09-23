@@ -22,11 +22,11 @@ import { getStates, getDistricts, getBlocks, RegionNode } from '../../services/r
 type PersonalDetailsFormScreenProps = NativeStackScreenProps<RootStackParamList, 'PersonalDetailsForm'>;
 
 const RELIGION_OPTIONS = [
-  'Hinduism',
-  'Christianity',
-  'Islam',
-  'Sikhism',
-  'Buddhism',
+  'Hindu',
+  'Christian',
+  'Muslim',
+  'Sikh',
+  'Buddhist',
   'Jainism',
   'Others',
 ];

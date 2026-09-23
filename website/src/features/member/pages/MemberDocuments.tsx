@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-    FileText, FileBadge, ShieldCheck, Lock, Download, ChevronRight, CheckCircle2, Clock,
-} from 'lucide-react';
+import { BadgeCheck, CheckCircle2, ChevronRight, Clock, Download, FileBadge, FileText, Lock, ReceiptText, ShieldCheck } from 'lucide-react';
 import MemberPageShell from '@/pages/member/MemberPageShell';
 import { SectionCard, RowsSkeleton, MembershipGate } from '@/features/member/components/MemberUI';
 import { useProfile } from '@/contexts/ProfileContext';
@@ -55,14 +53,27 @@ const CERTIFICATES: CertificateRow[] = [
         to: '/member/certificate/tax-exemption',
         icon: ShieldCheck,
     },
+    {
+        key: 'receipt',
+        label: 'Payment Receipt',
+        detail: 'What you paid for your membership, with the transaction reference.',
+        to: '/member/payment-success?view=receipt',
+        icon: ReceiptText,
+    },
 ];
 
-/** The four sections of the application, in the order the member filled them. */
+/**
+ * The three sections of the application, in the order the member filled them.
+ *
+ * `Financial Details` was the third, pointing at `?step=3`. Financial
+ * information is asked per company in the Business Creation Account now, so it
+ * is not a step of the application at all — and the link would have opened the
+ * declaration, which is what step 3 is today.
+ */
 const APPLICATION_FORMS = [
     { label: 'Personal Details', to: '/member/profile?step=1' },
     { label: 'Business Details', to: '/member/profile?step=2' },
-    { label: 'Financial Details', to: '/member/profile?step=3' },
-    { label: 'Declaration', to: '/member/profile?step=4' },
+    { label: 'Declaration', to: '/member/profile?step=3' },
 ];
 
 const formatDate = (value?: string | null): string => {
@@ -126,21 +137,26 @@ export default function MemberDocuments() {
                                 <Link
                                     key={key}
                                     to={to}
-                                    className="flex items-center justify-between gap-3 p-4 rounded-xl
-                                               border border-slate-200 hover:border-blue-400 hover:bg-blue-50
-                                               transition-colors"
+                                    className="flex items-center justify-between gap-3 rounded-2xl border
+                                               border-slate-200 bg-white p-5 transition-all
+                                               hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md"
                                 >
                                     <span className="flex items-center gap-3 min-w-0">
-                                        <span className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600
-                                                         flex items-center justify-center shrink-0">
-                                            <Icon className="w-5 h-5" />
+                                        <span className="flex h-12 w-12 shrink-0 items-center justify-center
+                                                         rounded-xl bg-blue-50 text-blue-600">
+                                            <Icon className="h-6 w-6" />
                                         </span>
                                         <span className="min-w-0">
-                                            <span className="block text-sm font-semibold text-slate-900 truncate">
+                                            <span className="block truncate text-[1.1875rem] font-semibold text-slate-900">
                                                 {label}
                                             </span>
-                                            <span className="block text-xs text-slate-500">
-                                                View, print or save as PDF
+                                            <span className="mt-0.5 block text-[1.0625rem] text-slate-500">
+                                                {detail}
+                                            </span>
+                                            <span className="mt-2 inline-flex items-center gap-1.5 rounded-full
+                                                             bg-emerald-50 px-2.5 py-1 text-[1.0625rem]
+                                                             font-bold text-emerald-700">
+                                                <BadgeCheck className="h-4 w-4" /> Issued
                                             </span>
                                         </span>
                                     </span>
@@ -158,18 +174,18 @@ export default function MemberDocuments() {
                                  */
                                 <div
                                     key={key}
-                                    className="flex items-start gap-3 p-4 rounded-xl border border-dashed
-                                               border-slate-300 bg-slate-50"
+                                    className="flex items-start gap-3 rounded-2xl border border-dashed
+                                               border-slate-300 bg-slate-50 p-5"
                                 >
-                                    <span className="w-10 h-10 rounded-lg bg-white border border-slate-200
-                                                     text-slate-400 flex items-center justify-center shrink-0">
-                                        <Lock className="w-4 h-4" />
+                                    <span className="flex h-12 w-12 shrink-0 items-center justify-center
+                                                     rounded-xl border border-slate-200 bg-white text-slate-400">
+                                        <Lock className="h-5 w-5" />
                                     </span>
                                     <span className="min-w-0 flex-1">
-                                        <span className="block text-sm font-semibold text-slate-700">
+                                        <span className="block text-[1.1875rem] font-semibold text-slate-700">
                                             {label}
                                         </span>
-                                        <span className="block text-xs text-slate-500 mt-0.5 leading-snug">
+                                        <span className="mt-1 block text-[1.0625rem] leading-snug text-slate-500">
                                             {detail}
                                         </span>
                                     </span>
@@ -203,10 +219,10 @@ export default function MemberDocuments() {
                                     </span>
 
                                     <span className="min-w-0 flex-1">
-                                        <span className="block text-sm font-semibold text-slate-900">
+                                        <span className="block text-[1.1875rem] font-semibold text-slate-900">
                                             {label}
                                         </span>
-                                        <span className="block text-xs text-slate-400 mt-0.5">
+                                        <span className="block text-[1.0625rem] text-slate-400 mt-0.5">
                                             {done ? 'Submitted' : 'Not submitted yet'}
                                         </span>
                                     </span>
@@ -222,7 +238,7 @@ export default function MemberDocuments() {
                                     {done ? (
                                         <Link
                                             to="/member/profile-view"
-                                            className="shrink-0 text-[0.8125rem] font-semibold text-blue-600
+                                            className="shrink-0 text-[1.0625rem] font-semibold text-blue-600
                                                        hover:underline"
                                         >
                                             View
@@ -230,7 +246,7 @@ export default function MemberDocuments() {
                                     ) : (
                                         <Link
                                             to={to}
-                                            className="shrink-0 inline-flex items-center gap-0.5 text-[0.8125rem]
+                                            className="shrink-0 inline-flex items-center gap-0.5 text-[1.0625rem]
                                                        font-semibold text-blue-600 hover:underline"
                                         >
                                             Complete <ChevronRight className="w-3.5 h-3.5" />

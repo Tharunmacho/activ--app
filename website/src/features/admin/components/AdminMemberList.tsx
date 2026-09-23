@@ -45,7 +45,15 @@ export default function AdminMemberList({
     loading?: boolean;
     emptyHint?: string;
     onOpen: (member: AdminMemberRow) => void;
-    /** Block an active member, or unblock a blocked one. */
+    /**
+     * Block an active member, or unblock a blocked one.
+     *
+     * OMITTED, NOT DISABLED, when the caller does not supply it. Both of these
+     * used to render as a greyed-out icon for a tier that could not use them,
+     * which reads as "this is broken" rather than "this is not yours" — and a
+     * disabled control still tells an admin the capability exists and invites
+     * them to ask why it will not work for them.
+     */
     onToggleActive?: (member: AdminMemberRow, nextActive: boolean) => void;
     /** Permanent, cascading delete. The caller confirms before calling. */
     onDelete?: (member: AdminMemberRow) => void;
@@ -79,8 +87,8 @@ export default function AdminMemberList({
             <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] py-16">
                 <div className="flex flex-col items-center text-center px-4">
                     <Users className="w-10 h-10 text-slate-300 mb-3" />
-                    <p className="text-base font-semibold text-slate-700">No members found</p>
-                    {emptyHint ? <p className="text-sm text-slate-500 mt-1">{emptyHint}</p> : null}
+                    <p className="text-[1.25rem] font-semibold text-slate-700">No members found</p>
+                    {emptyHint ? <p className="text-[1.25rem] text-slate-500 mt-1">{emptyHint}</p> : null}
                 </div>
             </div>
         );
@@ -114,7 +122,7 @@ export default function AdminMemberList({
                             onClick={() => onOpen(member)}
                             className="flex items-center gap-4 flex-1 min-w-0 text-left"
                         >
-                            <span className="w-11 h-11 rounded-full bg-indigo-50 text-indigo-600 font-bold text-sm flex items-center justify-center shrink-0">
+                            <span className="w-11 h-11 rounded-full bg-indigo-50 text-indigo-600 font-bold text-[1.25rem] flex items-center justify-center shrink-0">
                                 {initials(member.name)}
                             </span>
 
@@ -122,14 +130,14 @@ export default function AdminMemberList({
                                 <span className="block font-semibold text-slate-900 truncate">
                                     {member.name || 'Name not provided'}
                                 </span>
-                                <span className="block text-sm text-slate-500 truncate">
+                                <span className="block text-[1.25rem] text-slate-500 truncate">
                                     {member.email || 'No email'}
                                 </span>
                                 {/* Only shown when there is one — an active member
                                     has no reason to display, and an empty line
                                     under every active row is noise. */}
                                 {inactive && member.inactiveReason ? (
-                                    <span className="block text-xs text-red-500 truncate mt-0.5">
+                                    <span className="block text-[1.1875rem] text-red-500 truncate mt-0.5">
                                         {member.inactiveReason}
                                     </span>
                                 ) : null}
@@ -148,7 +156,7 @@ export default function AdminMemberList({
                         */}
                         <span
                             className={`shrink-0 hidden sm:inline-flex items-center gap-1.5 rounded-full
-                                        border px-2.5 py-1 text-xs font-semibold transition-colors ${
+                                        border px-2.5 py-1 text-[1.1875rem] font-semibold transition-colors ${
                                 inactive
                                     ? 'border-rose-200 bg-rose-50 text-rose-700'
                                     : 'border-emerald-200 bg-emerald-50 text-emerald-700'
@@ -171,35 +179,39 @@ export default function AdminMemberList({
                                 <Eye className="w-4 h-4" />
                             </button>
 
-                            <button
-                                type="button"
-                                disabled={busy || !onToggleActive}
-                                /* "Block", not "Suspend": the action now stops the
-                                   member signing in at all, and the word an admin
-                                   reads should match what actually happens. */
-                                title={inactive
-                                    ? 'Unblock this member — they can sign in again'
-                                    : 'Block this member — they will not be able to sign in'}
-                                aria-label={inactive ? `Unblock ${member.name || 'member'}` : `Block ${member.name || 'member'}`}
-                                onClick={() => onToggleActive?.(member, inactive)}
-                                className={`${iconBtn} ${inactive
-                                    ? 'text-green-600 hover:bg-green-50'
-                                    : 'text-amber-600 hover:bg-amber-50'
-                                    }`}
-                            >
-                                {inactive ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
-                            </button>
+                            {!!onToggleActive && (
+                                <button
+                                    type="button"
+                                    disabled={busy}
+                                    /* "Block", not "Suspend": the action now stops the
+                                       member signing in at all, and the word an admin
+                                       reads should match what actually happens. */
+                                    title={inactive
+                                        ? 'Unblock this member — they can sign in again'
+                                        : 'Block this member — they will not be able to sign in'}
+                                    aria-label={inactive ? `Unblock ${member.name || 'member'}` : `Block ${member.name || 'member'}`}
+                                    onClick={() => onToggleActive(member, inactive)}
+                                    className={`${iconBtn} ${inactive
+                                        ? 'text-green-600 hover:bg-green-50'
+                                        : 'text-amber-600 hover:bg-amber-50'
+                                        }`}
+                                >
+                                    {inactive ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
+                                </button>
+                            )}
 
-                            <button
-                                type="button"
-                                disabled={busy || !onDelete}
-                                title="Delete permanently"
-                                aria-label={`Delete ${member.name || 'member'}`}
-                                onClick={() => onDelete?.(member)}
-                                className={`${iconBtn} text-red-600 hover:bg-red-50`}
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </button>
+                            {!!onDelete && (
+                                <button
+                                    type="button"
+                                    disabled={busy}
+                                    title="Delete permanently"
+                                    aria-label={`Delete ${member.name || 'member'}`}
+                                    onClick={() => onDelete(member)}
+                                    className={`${iconBtn} text-red-600 hover:bg-red-50`}
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            )}
                         </div>
                     </div>
                 );

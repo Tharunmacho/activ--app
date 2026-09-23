@@ -1,9 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   User, Building2, Wallet, ClipboardCheck, Check, X, Loader2, type LucideIcon,
 } from "lucide-react";
@@ -132,6 +130,33 @@ const asBool = (v: unknown): boolean | undefined => {
   return undefined;
 };
 
+/**
+ * One of the four submitted forms.
+ *
+ * ===========================================================================
+ * A GRID, NOT A FLEX ROW WITH A FIXED-WIDTH LABEL
+ * ===========================================================================
+ *
+ * The rows were `flex` with `dt` at a hard `w-44`. That lines the values up
+ * only while every label fits in 176px: one that does not wraps, its own row
+ * grows, and the value beside it sits at a different height from the value
+ * above — which is exactly the ragged column this section was reported for.
+ * `grid-cols-[minmax(0,11rem)_1fr]` gives every row the same two tracks, so the
+ * values share one left edge whatever the labels do, and the label column can
+ * still shrink on a narrow screen instead of squeezing the value to nothing.
+ *
+ * The header is a slate strip with the icon in a tinted tile rather than a
+ * fully tinted band: four sections each washed in their own colour read as four
+ * unrelated documents, and the colour is more useful identifying the form than
+ * covering it.
+ */
+/** The stage, as a pill — the same three the queue card shows. */
+const STATUS_PILL: Record<string, string> = {
+  pending: "border-amber-200 bg-amber-50 text-amber-700",
+  approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  rejected: "border-red-200 bg-red-50 text-red-700",
+};
+
 const Section = ({
   title, subtitle, icon: Icon, tint, rows,
 }: {
@@ -141,19 +166,27 @@ const Section = ({
   const visible = rows.filter((r) => hasValue(r.value));
   if (!visible.length) return null;
   return (
-    <section className="rounded-xl border border-slate-200 overflow-hidden">
-      <header className={`flex items-start gap-3 px-5 py-4 ${tint}`}>
-        <Icon className="w-5 h-5 mt-0.5 shrink-0" />
-        <div>
-          <h3 className="font-bold text-slate-900">{title}</h3>
-          <p className="text-xs text-slate-600">{subtitle}</p>
+    <section className="rounded-xl border border-slate-200 overflow-hidden bg-white
+                        shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+      <header className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-5 py-3.5">
+        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tint}`}>
+          <Icon className="w-[18px] h-[18px]" />
+        </span>
+        <div className="min-w-0">
+          <h3 className="text-[1.25rem] font-extrabold tracking-tight text-slate-900">{title}</h3>
+          <p className="text-[1.1875rem] font-medium text-slate-500">{subtitle}</p>
         </div>
       </header>
-      <dl className="divide-y divide-slate-100 bg-white">
+      <dl className="divide-y divide-slate-100">
         {visible.map((r) => (
-          <div key={r.label} className="flex items-start gap-4 px-5 py-3">
-            <dt className="w-44 shrink-0 text-sm text-slate-500">{r.label}</dt>
-            <dd className="text-sm font-medium text-slate-800 break-words min-w-0">{show(r.value)}</dd>
+          <div
+            key={r.label}
+            className="grid grid-cols-[minmax(0,11rem)_1fr] items-baseline gap-4 px-5 py-3"
+          >
+            <dt className="text-[1.1875rem] font-semibold text-slate-500">{r.label}</dt>
+            <dd className="text-[1.25rem] font-semibold text-slate-900 break-words min-w-0">
+              {show(r.value)}
+            </dd>
           </div>
         ))}
       </dl>
@@ -203,10 +236,24 @@ export default function ProfileViewModal({ open, onClose, profile, loading, onRe
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] p-0 gap-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-200">
-          <DialogTitle className="text-xl">Application Details</DialogTitle>
-          <DialogDescription>
+      {/*
+        * `flex flex-col`, overriding the dialog's own `grid`.
+        *
+        * The body used to be a `ScrollArea` with `max-h-[52vh]` — a guess at
+        * how much room was left once the header, the identity strip and the
+        * footer had taken theirs. It was the wrong guess in both directions:
+        * short applications left a gap under the footer, and long ones cut a
+        * row clean through the middle at an arbitrary height. As a flex column
+        * the body simply takes what is left, and the cut always lands on the
+        * footer's own border.
+        */}
+      <DialogContent className="max-w-3xl max-h-[90vh] p-0 gap-0 flex flex-col overflow-hidden
+                                rounded-2xl border-slate-200">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b border-slate-200 text-left">
+          <DialogTitle className="text-[1.625rem] font-extrabold tracking-tight text-slate-900">
+            Application Details
+          </DialogTitle>
+          <DialogDescription className="text-[1.25rem] font-medium text-slate-500">
             Complete application information submitted by the member
           </DialogDescription>
         </DialogHeader>
@@ -214,39 +261,60 @@ export default function ProfileViewModal({ open, onClose, profile, loading, onRe
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-3" />
-            <p className="text-sm text-slate-500">Loading application…</p>
+            <p className="text-[1.25rem] text-slate-500">Loading application…</p>
           </div>
         ) : !profile ? (
           <div className="py-20 text-center">
-            <p className="text-sm text-slate-500">No application data to show.</p>
+            <p className="text-[1.25rem] text-slate-500">No application data to show.</p>
           </div>
         ) : (
           <>
             {/* Identity, matching mobile's hero: name, role pill, status. */}
-            <div className="px-6 py-4 flex flex-wrap items-center gap-3 border-b border-slate-200 bg-slate-50">
-              <span className="w-12 h-12 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center shrink-0">
+            <div className="shrink-0 px-6 py-4 flex flex-wrap items-center gap-3.5
+                            border-b border-slate-200 bg-white">
+              <span className="w-12 h-12 rounded-full bg-blue-600 text-white text-[1.25rem] font-bold
+                               flex items-center justify-center shrink-0">
                 {displayName.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="font-bold text-slate-900 truncate">{displayName}</p>
-                <div className="flex flex-wrap items-center gap-2 mt-1">
-                  <Badge className={isAspirant ? "bg-emerald-600" : "bg-blue-600"}>{roleLabel}</Badge>
-                  {!!p.statusLabel && <Badge variant="outline">{p.statusLabel}</Badge>}
+                <p className="text-[1.375rem] font-extrabold tracking-tight text-slate-900 truncate">
+                  {displayName}
+                </p>
+                {/* Both pills the same height and the same case, so the pair
+                    reads as one row rather than as two controls. */}
+                <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                  <span className={`inline-flex h-6 items-center rounded-full px-2.5 text-[0.9375rem]
+                                    font-bold text-white
+                                    ${isAspirant ? "bg-emerald-600" : "bg-blue-600"}`}>
+                    {roleLabel}
+                  </span>
+                  {!!p.statusLabel && (
+                    <span className={`inline-flex h-6 items-center rounded-full border px-2.5
+                                      text-[0.9375rem] font-bold ${STATUS_PILL[stage] || STATUS_PILL.pending}`}>
+                      {p.statusLabel}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
 
-            {!!p.rejectionReason && (
-              <div className="mx-6 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-                <p className="text-sm text-red-800">
-                  <span className="font-semibold">Rejection reason: </span>
-                  {p.rejectionReason}
-                </p>
-              </div>
-            )}
-
-            <ScrollArea className="max-h-[52vh] px-6 py-4">
+            {/*
+              * Inside the scrolling body, not pinned above it.
+              *
+              * It sat between the identity strip and the scroll area, so on a
+              * long reason it ate the room the forms needed and could not be
+              * scrolled away from.
+              */}
+            <div className="flex-1 min-h-0 overflow-y-auto bg-slate-50 px-6 py-5">
               <div className="space-y-4">
+                {!!p.rejectionReason && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3.5">
+                    <p className="text-[0.9375rem] font-extrabold uppercase tracking-widest text-red-700">
+                      Rejection reason
+                    </p>
+                    <p className="mt-1.5 text-[1.25rem] font-semibold text-red-900">{p.rejectionReason}</p>
+                  </div>
+                )}
                 <Section
                   title="Form 1: Personal & Demographic Details"
                   subtitle="Basic contact and demographic information"
@@ -353,14 +421,14 @@ export default function ProfileViewModal({ open, onClose, profile, loading, onRe
                   ]}
                 />
               </div>
-            </ScrollArea>
+            </div>
 
             {/* Decisions, for the queue that can make them. */}
             {canAct && (
-              <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
+              <div className="shrink-0 px-6 py-4 border-t border-slate-200 bg-white">
                 {rejecting ? (
                   <div className="space-y-3">
-                    <label className="text-sm font-semibold text-slate-700">Reason for rejection</label>
+                    <label className="text-[1.25rem] font-semibold text-slate-700">Reason for rejection</label>
                     <Textarea
                       value={reason}
                       onChange={(e) => setReason(e.target.value)}

@@ -35,7 +35,11 @@ type Props = {
 const NAV_GROUPS: { label: string; keys: string[] }[] = [
     { label: 'Overview', keys: ['dashboard'] },
     { label: 'My account', keys: ['profile', 'business', 'application'] },
-    { label: 'Association', keys: ['explore', 'events', 'updates'] },
+    /* `messages` last, matching its place in `MEMBER_NAV`. A key missing from
+       this list is an entry the sidebar simply does not draw — so adding one
+       to the table without adding it here is how a new rail entry goes
+       missing with nothing reporting it. */
+    { label: 'Association', keys: ['explore', 'events', 'updates', 'messages'] },
     { label: 'Support', keys: ['help', 'settings'] },
 ];
 
@@ -58,6 +62,20 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
     useEffect(() => {
         try { localStorage.setItem('activ:railCollapsed', collapsed ? '1' : '0'); } catch { /* storage unavailable */ }
     }, [collapsed]);
+
+    /**
+     * The page behind the open drawer does not scroll.
+     *
+     * Without it a finger drag scrolls the dashboard underneath a rail that
+     * stays put, which reads as the menu having come loose from the page. The
+     * previous value is restored rather than assumed to be `''`.
+     */
+    useEffect(() => {
+        if (!isOpen || typeof document === 'undefined') return;
+        const previous = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = previous; };
+    }, [isOpen]);
 
     const [userName, setUserName] = useState(() => localStorage.getItem("userName") || "");
     const [userEmail, setUserEmail] = useState(() => localStorage.getItem("userEmail") || "");
@@ -86,7 +104,26 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
         fill(localStorage.getItem('userEmail') || '', setUserEmail);
         fill(localStorage.getItem('userProfilePhoto') || '', setProfilePhoto);
         fill(localStorage.getItem('userOrganization') || '', setOrganizationName);
-        setPaymentStatus(localStorage.getItem('paymentStatus') || 'pending');
+
+        /*
+         * THE SAME RULE, AND THIS LINE WAS THE ONE BREAKING IT.
+         *
+         * It read `localStorage.getItem('paymentStatus') || 'pending'` and
+         * assigned it — so on every navigation a paid member whose mirror was
+         * absent or stale was reset to `pending`. `access.membershipActive` is
+         * `paymentStatus === 'completed'`, so the rail collapsed to the unpaid
+         * set on every click and came back when the fetch caught up. That is
+         * the flicker: entries locked on the membership — Member Directory and
+         * Messages — disappearing and returning as the member walked around
+         * their own dashboard.
+         *
+         * Fill, never blank, exactly as the comment above this block says: a
+         * stored `completed` is adopted, anything else leaves whatever the API
+         * resolved in place.
+         */
+        if (localStorage.getItem('paymentStatus') === 'completed') {
+            setPaymentStatus('completed');
+        }
     }, [location.pathname]);
 
     useEffect(() => {
@@ -268,7 +305,23 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
         };
         
         checkBusinessAccount();
-    }, [location.pathname]);
+
+        /*
+         * ONCE, and again when a company actually changes.
+         *
+         * This was keyed on `location.pathname`, so `/business-profiles/me`
+         * was re-requested on every navigation — and `setHasBusinessAccount`
+         * is only called inside `if (response.ok)`, so a slow or failed reply
+         * left the Business Account entry drawn from whatever the previous
+         * page had decided.
+         *
+         * A business account does not appear or vanish because somebody
+         * clicked Events. `companyUpdated` is the event that changes the
+         * answer, and this component already listens to it elsewhere.
+         */
+        window.addEventListener('companyUpdated', checkBusinessAccount);
+        return () => window.removeEventListener('companyUpdated', checkBusinessAccount);
+    }, []);
 
     /**
      * The sidebar, built from the progressive-unlock table.
@@ -509,7 +562,7 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
                             */}
                             <div className={`mb-2 flex items-center gap-2 ${collapsed ? 'px-0 justify-center' : 'px-3.5'}`}>
                                 {!collapsed && (
-                                    <p className="flex-1 min-w-0 text-[0.8125rem] font-bold uppercase
+                                    <p className="flex-1 min-w-0 text-[1.0625rem] font-bold uppercase
                                                   tracking-[0.06em] text-slate-900 truncate">
                                         {group.label}
                                     </p>
@@ -557,7 +610,7 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
                                             to={item.to}
                                             title={item.label}
                                             className={`relative flex items-center gap-3.5 py-3.5 rounded-xl
-                                                        text-lg transition-colors
+                                                        text-[1.375rem] transition-colors
                                                         ${collapsed ? 'px-0 justify-center' : 'px-3.5'} ${
                                                 active
                                                     ? 'bg-blue-50 text-blue-700 font-semibold'
@@ -585,7 +638,7 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
                                             {!collapsed && item.badge !== undefined && item.badge !== null && (
                                                 <Badge
                                                     className={`h-5 min-w-5 flex items-center justify-center px-1.5
-                                                                text-xs font-bold shrink-0 ${
+                                                                text-[1.0625rem] font-bold shrink-0 ${
                                                         active
                                                             ? 'bg-blue-600 text-white'
                                                             : 'bg-blue-50 text-blue-700'
@@ -646,14 +699,14 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
                         />
                     ) : (
                         <span className="w-11 h-11 rounded-xl shrink-0 bg-blue-600 text-white
-                                         flex items-center justify-center text-sm font-bold">
+                                         flex items-center justify-center text-[1.1875rem] font-bold">
                             {(userName || 'M').split(' ').filter(Boolean).slice(0, 2)
                                 .map(n => n[0]).join('').toUpperCase()}
                         </span>
                     )}
                     {!collapsed && (
                     <span className="min-w-0 flex-1">
-                        <span className="block text-[0.9375rem] font-semibold text-slate-900 truncate">
+                        <span className="block text-[1.1875rem] font-semibold text-slate-900 truncate">
                             {userName || 'Member'}
                         </span>
                         {/*
@@ -667,7 +720,7 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
                           Falls back to the role when no address is stored, so the
                           second line is never empty.
                         */}
-                        <span className="block text-[0.8125rem] text-slate-500 truncate">
+                        <span className="block text-[1.0625rem] text-slate-500 truncate">
                             {userEmail || (paymentStatus === 'completed' ? 'Member' : 'Applicant')}
                         </span>
                     </span>
@@ -714,9 +767,16 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
 
             {/* Mobile: Slide-out Menu - Only on small screens */}
             {isOpen && (
-                <div className="fixed inset-0 z-50 lg:hidden">
-                    <div className="absolute inset-0 bg-black opacity-50" onClick={onClose}></div>
-                    <div className="absolute left-0 top-0 bottom-0 w-[85%] max-w-[22rem] bg-white flex flex-col shadow-2xl">
+                /*
+                 * `h-[100dvh]`, not `inset-0` alone — on a phone browser the
+                 * address bar collapses as the page scrolls and `100vh` is the
+                 * taller of the two states, so a `vh`-sized panel overhangs the
+                 * screen while the bar is showing. `dvh` is the height actually
+                 * on screen, so the rail reaches the bottom edge in both.
+                 */
+                <div className="fixed inset-0 z-50 h-[100dvh] lg:hidden">
+                    <div className="absolute inset-0 bg-black/50" onClick={onClose}></div>
+                    <div className="absolute left-0 top-0 h-full w-[85%] max-w-[22rem] bg-white flex flex-col shadow-2xl">
                         <SidebarContent />
                     </div>
                 </div>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
     MapPin, Clock, Users, Phone, Mail, CalendarDays, BadgeCheck, Lock,
@@ -74,8 +74,23 @@ export default function MemberEventDetail() {
      */
     const awaitingPayment = !!registration && registration.payment?.status === 'pending';
 
-    /** What a seat costs. 0 is free — there is no third state. See the model. */
-    const fee = Number(event?.registrationFee || 0);
+    /**
+     * What THIS member will be charged — resolved by the server.
+     *
+     * `registrationFee` is the COMMON price. An event can carry a member rate,
+     * and `event.service.register` charges `priceFor(event, context).amount` —
+     * so reading the common price here quoted a paid-up member the full ₹1,000
+     * and then took ₹600 from them. The price shown and the price charged must
+     * be one lookup, and `yourPrice` IS that lookup, sent down already resolved
+     * against this member's live membership.
+     *
+     * `?? registrationFee` for an older server that does not send it — falling
+     * back to the COMMON price, which is the safe direction to be wrong in.
+     */
+    const fee = Number(event?.yourPrice ?? event?.registrationFee ?? 0);
+    /** The common price, for showing what the membership saved. */
+    const listFee = Number(event?.registrationFee || 0);
+    const savedByMembership = Number(event?.yourSaving || 0);
 
     /** The questions the super admin designed for this event. */
     const customFields = useMemo(() => event?.registrationFields || [], [event]);
@@ -122,7 +137,7 @@ export default function MemberEventDetail() {
                         <button
                             type="button"
                             onClick={() => navigate('/member/events')}
-                            className="text-[0.8125rem] font-semibold text-blue-600 hover:underline"
+                            className="text-[1.0625rem] font-semibold text-blue-600 hover:underline"
                         >
                             Back to events
                         </button>
@@ -137,14 +152,17 @@ export default function MemberEventDetail() {
 
     return (
         <MemberPageShell
-            title={event.title}
+            /* Never an empty heading. A blank one reads as a page that failed
+               to load; "Untitled event" reads as an event still being written,
+               which is what it is. Same fallback the list card uses. */
+            title={event.title || 'Untitled event'}
             subtitle={formatWhen(event)}
             width="standard"
             actions={
                 <button
                     type="button"
                     onClick={() => navigate('/member/events')}
-                    className="text-[0.8125rem] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+                    className="text-[1.0625rem] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
                 >
                     All events
                 </button>
@@ -171,14 +189,14 @@ export default function MemberEventDetail() {
                         >
                             <div className="flex flex-wrap gap-2 mb-4">
                                 {event.audience === 'paid' ? (
-                                    <span className="inline-flex items-center gap-1 text-[0.6875rem] font-bold
+                                    <span className="inline-flex items-center gap-1 text-[1.0625rem] font-bold
                                                      uppercase tracking-wide text-blue-700 bg-blue-50
                                                      px-2.5 py-1 rounded-full">
                                         <Lock className="w-3 h-3" /> Members only
                                     </span>
                                 ) : null}
                                 {past ? (
-                                    <span className="text-[0.6875rem] font-bold uppercase tracking-wide
+                                    <span className="text-[1.0625rem] font-bold uppercase tracking-wide
                                                      text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
                                         Past event
                                     </span>
@@ -186,11 +204,11 @@ export default function MemberEventDetail() {
                             </div>
 
                             {event.description ? (
-                                <p className="text-[0.9375rem] text-slate-700 leading-relaxed whitespace-pre-line">
+                                <p className="text-[1.1875rem] text-slate-700 leading-relaxed whitespace-pre-line">
                                     {event.description}
                                 </p>
                             ) : (
-                                <p className="text-[0.8125rem] text-slate-400">
+                                <p className="text-[1.0625rem] text-slate-400">
                                     No description was published for this event.
                                 </p>
                             )}
@@ -211,11 +229,11 @@ export default function MemberEventDetail() {
                                                 as a column rather than a ragged
                                                 edge. */}
                                             <div className="w-[4.25rem] shrink-0 text-right">
-                                                <p className="text-[0.8125rem] font-bold text-slate-900 tabular-nums">
+                                                <p className="text-[1.0625rem] font-bold text-slate-900 tabular-nums">
                                                     {item.startTime || '—'}
                                                 </p>
                                                 {item.endTime ? (
-                                                    <p className="text-[0.6875rem] text-slate-400 tabular-nums">
+                                                    <p className="text-[1.0625rem] text-slate-400 tabular-nums">
                                                         {item.endTime}
                                                     </p>
                                                 ) : null}
@@ -226,25 +244,25 @@ export default function MemberEventDetail() {
                                                 <span className="absolute -left-[5px] top-1.5 w-2.5 h-2.5
                                                                  rounded-full bg-blue-600" />
 
-                                                <p className="text-sm font-semibold text-slate-900 leading-snug">
+                                                <p className="text-[1.1875rem] font-semibold text-slate-900 leading-snug">
                                                     {item.title || 'Session'}
                                                 </p>
 
                                                 {item.speaker ? (
-                                                    <p className="text-[0.8125rem] text-blue-700 mt-0.5 font-medium">
+                                                    <p className="text-[1.0625rem] text-blue-700 mt-0.5 font-medium">
                                                         {item.speaker}
                                                     </p>
                                                 ) : null}
 
                                                 {item.location ? (
-                                                    <p className="text-xs text-slate-500 mt-0.5
+                                                    <p className="text-[1.0625rem] text-slate-500 mt-0.5
                                                                   inline-flex items-center gap-1">
                                                         <MapPin className="w-3 h-3" /> {item.location}
                                                     </p>
                                                 ) : null}
 
                                                 {item.description ? (
-                                                    <p className="text-[0.8125rem] text-slate-600 mt-1 leading-relaxed">
+                                                    <p className="text-[1.0625rem] text-slate-600 mt-1 leading-relaxed">
                                                         {item.description}
                                                     </p>
                                                 ) : null}
@@ -278,7 +296,7 @@ export default function MemberEventDetail() {
                                                 ) : (
                                                     <span className="w-14 h-14 rounded-full bg-blue-600 text-white
                                                                      shrink-0 flex items-center justify-center
-                                                                     text-sm font-bold">
+                                                                     text-[1.1875rem] font-bold">
                                                         {(speaker.name || '?')
                                                             .split(' ').filter(Boolean).slice(0, 2)
                                                             .map((part) => part[0]).join('').toUpperCase()}
@@ -286,21 +304,21 @@ export default function MemberEventDetail() {
                                                 )}
 
                                                 <div className="min-w-0">
-                                                    <p className="text-sm font-semibold text-slate-900 truncate">
+                                                    <p className="text-[1.1875rem] font-semibold text-slate-900 truncate">
                                                         {speaker.name}
                                                     </p>
                                                     {speaker.role ? (
-                                                        <p className="text-[0.8125rem] text-slate-600 truncate">
+                                                        <p className="text-[1.0625rem] text-slate-600 truncate">
                                                             {speaker.role}
                                                         </p>
                                                     ) : null}
                                                     {speaker.organization ? (
-                                                        <p className="text-xs text-slate-400 truncate">
+                                                        <p className="text-[1.0625rem] text-slate-400 truncate">
                                                             {speaker.organization}
                                                         </p>
                                                     ) : null}
                                                     {speaker.bio ? (
-                                                        <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                                                        <p className="text-[1.0625rem] text-slate-600 mt-1 leading-relaxed">
                                                             {speaker.bio}
                                                         </p>
                                                     ) : null}
@@ -318,23 +336,23 @@ export default function MemberEventDetail() {
                         <SectionCard title="When and where" icon={<MapPin className="w-5 h-5" />}>
                             <dl className="space-y-3.5">
                                 <div>
-                                    <dt className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-400">
+                                    <dt className="text-[1.0625rem] font-semibold uppercase tracking-wide text-slate-400">
                                         Date and time
                                     </dt>
-                                    <dd className="text-sm text-slate-900 font-medium mt-0.5">
+                                    <dd className="text-[1.1875rem] text-slate-900 font-medium mt-0.5">
                                         {formatWhen(event)}
                                     </dd>
                                 </div>
 
                                 {event.venue || event.venueAddress ? (
                                     <div>
-                                        <dt className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-400">
+                                        <dt className="text-[1.0625rem] font-semibold uppercase tracking-wide text-slate-400">
                                             Venue
                                         </dt>
-                                        <dd className="text-sm text-slate-900 font-medium mt-0.5">
+                                        <dd className="text-[1.1875rem] text-slate-900 font-medium mt-0.5">
                                             {event.venue}
                                             {event.venueAddress ? (
-                                                <span className="block text-[0.8125rem] text-slate-600 font-normal mt-0.5">
+                                                <span className="block text-[1.0625rem] text-slate-600 font-normal mt-0.5">
                                                     {event.venueAddress}
                                                 </span>
                                             ) : null}
@@ -345,7 +363,7 @@ export default function MemberEventDetail() {
                                                 href={event.venueMapUrl}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="mt-1.5 inline-flex items-center gap-1 text-[0.8125rem]
+                                                className="mt-1.5 inline-flex items-center gap-1 text-[1.0625rem]
                                                            font-semibold text-blue-600 hover:underline"
                                             >
                                                 Open in maps <ExternalLink className="w-3.5 h-3.5" />
@@ -356,10 +374,10 @@ export default function MemberEventDetail() {
 
                                 {[event.block, event.district, event.state].filter(Boolean).length > 0 ? (
                                     <div>
-                                        <dt className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-400">
+                                        <dt className="text-[1.0625rem] font-semibold uppercase tracking-wide text-slate-400">
                                             Region
                                         </dt>
-                                        <dd className="text-sm text-slate-700 mt-0.5">
+                                        <dd className="text-[1.1875rem] text-slate-700 mt-0.5">
                                             {[event.block, event.district, event.state].filter(Boolean).join(', ')}
                                         </dd>
                                     </div>
@@ -367,10 +385,10 @@ export default function MemberEventDetail() {
 
                                 {event.contactName || event.contactPhone || event.contactEmail ? (
                                     <div>
-                                        <dt className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-400">
+                                        <dt className="text-[1.0625rem] font-semibold uppercase tracking-wide text-slate-400">
                                             Contact
                                         </dt>
-                                        <dd className="text-sm text-slate-700 mt-0.5 space-y-1">
+                                        <dd className="text-[1.1875rem] text-slate-700 mt-0.5 space-y-1">
                                             {event.contactName ? <p>{event.contactName}</p> : null}
                                             {event.contactPhone ? (
                                                 <a
@@ -411,19 +429,19 @@ export default function MemberEventDetail() {
                                 <div className="space-y-4">
                                     <div className="rounded-2xl bg-blue-600
                                                     text-white p-5 shadow-lg">
-                                        <p className="text-[0.6875rem] font-bold uppercase tracking-wider
+                                        <p className="text-[1.0625rem] font-bold uppercase tracking-wider
                                                       text-blue-200">
                                             Amount due
                                         </p>
-                                        <p className="text-4xl font-extrabold mt-1 tabular-nums">
+                                        <p className="text-[2.5625rem] font-extrabold mt-1 tabular-nums">
                                             ₹{registration.payment.amount.toLocaleString('en-IN')}
                                         </p>
-                                        <p className="text-xs text-blue-100 mt-2 leading-snug">
+                                        <p className="text-[1.0625rem] text-blue-100 mt-2 leading-snug">
                                             Your seat is held. It is confirmed the moment this is paid.
                                         </p>
 
                                         {registration.payment.reference ? (
-                                            <p className="mt-4 pt-3 border-t border-white/20 text-[0.6875rem]
+                                            <p className="mt-4 pt-3 border-t border-white/20 text-[1.0625rem]
                                                           text-blue-200">
                                                 Reference{' '}
                                                 <span className="font-semibold tracking-wider text-white">
@@ -445,7 +463,7 @@ export default function MemberEventDetail() {
                                     <button
                                         type="button"
                                         onClick={() => navigate(`/member/events/${event.id}/register`)}
-                                        className="w-full h-12 rounded-xl bg-emerald-600 text-white text-sm
+                                        className="w-full h-12 rounded-xl bg-emerald-600 text-white text-[1.1875rem]
                                                    font-bold hover:bg-emerald-700
                                                    transition-colors inline-flex items-center justify-center gap-2
                                                    shadow-sm"
@@ -460,7 +478,7 @@ export default function MemberEventDetail() {
                                             type="button"
                                             onClick={cancel}
                                             disabled={working}
-                                            className="w-full h-10 rounded-xl text-[0.8125rem] font-semibold
+                                            className="w-full h-10 rounded-xl text-[1.0625rem] font-semibold
                                                        text-slate-500 hover:text-slate-700 disabled:opacity-60"
                                         >
                                             Give up this seat instead
@@ -474,7 +492,7 @@ export default function MemberEventDetail() {
                                             ? 'bg-amber-50 border border-amber-200'
                                             : 'bg-emerald-50 border border-emerald-200'
                                     }`}>
-                                        <p className={`text-sm font-bold flex items-center gap-1.5 ${
+                                        <p className={`text-[1.1875rem] font-bold flex items-center gap-1.5 ${
                                             registration.status === 'waitlist'
                                                 ? 'text-amber-800' : 'text-emerald-800'
                                         }`}>
@@ -483,7 +501,7 @@ export default function MemberEventDetail() {
                                                 ? 'You are on the waiting list'
                                                 : 'You are registered'}
                                         </p>
-                                        <p className="text-[0.8125rem] text-slate-600 mt-1">
+                                        <p className="text-[1.0625rem] text-slate-600 mt-1">
                                             {registration.status === 'waitlist'
                                                 ? 'You will move into a seat automatically if one is given up.'
                                                 : `Registered on ${formatDate(registration.registeredAt)}.`}
@@ -499,7 +517,7 @@ export default function MemberEventDetail() {
                                     */}
                                     {registration.payment?.status === 'paid' ? (
                                         <div className="rounded-xl border border-slate-200 p-4">
-                                            <p className="text-[0.6875rem] font-bold uppercase tracking-wide
+                                            <p className="text-[1.0625rem] font-bold uppercase tracking-wide
                                                           text-slate-500 flex items-center gap-1.5">
                                                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                                                 Payment received
@@ -536,7 +554,7 @@ export default function MemberEventDetail() {
                                             type="button"
                                             onClick={cancel}
                                             disabled={working}
-                                            className="w-full h-11 rounded-xl border border-slate-200 text-sm
+                                            className="w-full h-11 rounded-xl border border-slate-200 text-[1.1875rem]
                                                        font-semibold text-slate-600 hover:bg-slate-50
                                                        disabled:opacity-60 transition-colors
                                                        inline-flex items-center justify-center gap-2"
@@ -563,16 +581,16 @@ export default function MemberEventDetail() {
                                                      mb-3 flex items-center justify-center">
                                         <Lock className="w-5 h-5" />
                                     </span>
-                                    <p className="text-sm font-semibold text-slate-700">
+                                    <p className="text-[1.1875rem] font-semibold text-slate-700">
                                         Registration is not open
                                     </p>
-                                    <p className="text-[0.8125rem] text-slate-500 mt-1 max-w-xs mx-auto
+                                    <p className="text-[1.0625rem] text-slate-500 mt-1 max-w-xs mx-auto
                                                   leading-relaxed">
                                         {gate.reason || 'The organiser has not opened registration for this event.'}
                                     </p>
 
                                     {event.contactPhone || event.contactEmail ? (
-                                        <p className="text-[0.8125rem] text-slate-500 mt-3">
+                                        <p className="text-[1.0625rem] text-slate-500 mt-3">
                                             Contact{' '}
                                             {event.contactName ? (
                                                 <span className="font-semibold text-slate-700">
@@ -609,7 +627,7 @@ export default function MemberEventDetail() {
                             ) : (
                                 <div className="space-y-3">
                                     {event.registrationNote ? (
-                                        <p className="text-[0.8125rem] text-slate-600 leading-relaxed">
+                                        <p className="text-[1.0625rem] text-slate-600 leading-relaxed">
                                             {event.registrationNote}
                                         </p>
                                     ) : null}
@@ -627,24 +645,66 @@ export default function MemberEventDetail() {
                                                 <Ticket className="w-4 h-4" />
                                             </span>
                                             <span className="min-w-0 flex-1">
-                                                <span className="block text-xl font-extrabold text-slate-900
+                                                <span className="block text-[1.5625rem] font-extrabold text-slate-900
                                                                  tabular-nums leading-none">
                                                     ₹{fee.toLocaleString('en-IN')}
                                                 </span>
-                                                <span className="block text-xs text-slate-500 mt-1">
+                                                {/*
+                                                  * SHOWN ONLY WHEN IT APPLIES.
+                                                  *
+                                                  * A "you saved" line on every
+                                                  * event, including the ones
+                                                  * with no member rate, is a
+                                                  * claim about a discount that
+                                                  * does not exist. This renders
+                                                  * only when the server says
+                                                  * this member is actually
+                                                  * getting the lower price.
+                                                  */}
+                                                {savedByMembership > 0 ? (
+                                                    <span className="block text-[1.1875rem] font-semibold text-emerald-600 mt-1">
+                                                        Member price — you save
+                                                        ₹{savedByMembership.toLocaleString('en-IN')}
+                                                        <span className="text-slate-400 font-normal line-through ml-1.5">
+                                                            ₹{listFee.toLocaleString('en-IN')}
+                                                        </span>
+                                                    </span>
+                                                ) : event?.hasMemberRate
+                                                    && Number(event?.memberPrice) < listFee ? (
+                                                    /*
+                                                     * SIGNED IN, BUT NOT PAYING THE MEMBER RATE.
+                                                     *
+                                                     * A member whose membership has lapsed or was
+                                                     * never completed was shown the full price and
+                                                     * nothing else — the one reader for whom the
+                                                     * discount is both relevant and one payment
+                                                     * away. They have an account already, so this
+                                                     * points at the plans rather than at signing up.
+                                                     */
+                                                    <Link
+                                                        to="/payment/membership-plans"
+                                                        className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg
+                                                                   bg-amber-50 px-2.5 py-1 text-[1.1875rem] font-bold
+                                                                   text-amber-800 hover:bg-amber-100 transition-colors"
+                                                    >
+                                                        Members pay ₹{Number(event.memberPrice).toLocaleString('en-IN')}
+                                                        {' '}— activate your membership
+                                                    </Link>
+                                                ) : null}
+                                                <span className="block text-[1.0625rem] text-slate-500 mt-1">
                                                     per seat
                                                 </span>
                                             </span>
                                         </div>
                                     ) : (
-                                        <p className="text-[0.8125rem] font-semibold text-emerald-700
+                                        <p className="text-[1.0625rem] font-semibold text-emerald-700
                                                       inline-flex items-center gap-1.5">
                                             <Ticket className="w-3.5 h-3.5" /> Free to attend
                                         </p>
                                     )}
 
                                     {left !== null ? (
-                                        <p className={`text-[0.8125rem] font-semibold ${
+                                        <p className={`text-[1.0625rem] font-semibold ${
                                             left === 0 ? 'text-amber-600' : 'text-slate-600'
                                         }`}>
                                             {left === 0
@@ -654,37 +714,58 @@ export default function MemberEventDetail() {
                                     ) : null}
 
                                     {event.registrationDeadline ? (
-                                        <p className="text-[0.8125rem] text-slate-500">
+                                        <p className="text-[1.0625rem] text-slate-500">
                                             Registration closes {formatDate(event.registrationClosesAt)}.
                                         </p>
                                     ) : null}
 
                                     {/*
-                                      * Registration opens its own screen.
+                                      * Booking opens its own screen — the SAME
+                                      * one the public site uses.
                                       *
                                       * It used to expand into this column: six
                                       * fields, a fee, a payment method and a
                                       * receipt, in a third of the width beside the
-                                      * agenda. Registration is a transaction with
-                                      * steps and money in it, and the questions an
-                                      * organiser adds have no room here — eight of
-                                      * them turn the sidebar into a scroll.
+                                      * agenda. Booking is a transaction with steps
+                                      * and money in it, and it has no room here.
+                                      *
+                                      * It also used to go to
+                                      * `/member/events/:id/register`, which books
+                                      * ONE seat — the member's own. That is not
+                                      * what the association asked for: a member
+                                      * bringing two colleagues could not say so,
+                                      * and the seats they took were counted in a
+                                      * different collection from every booking
+                                      * made through the public page, so the
+                                      * organiser had two attendee lists for one
+                                      * room. It is one booking system for both
+                                      * audiences; a signed-in member is
+                                      * recognised by the token the request
+                                      * already carries, so it is attached to
+                                      * their account rather than taken as a
+                                      * guest booking.
+                                      *
+                                      * It opens at `/member/events/:id/book`,
+                                      * which is that same page rendered in the
+                                      * member shell — the booking no longer
+                                      * throws the member out to the public site
+                                      * to pay.
                                       */}
                                     <button
                                         type="button"
-                                        onClick={() => navigate(`/member/events/${event.id}/register`)}
-                                        className="w-full h-11 rounded-xl bg-blue-600 text-white text-sm
+                                        onClick={() => navigate(`/member/events/${event.id}/book`)}
+                                        className="w-full h-11 rounded-xl bg-blue-600 text-white text-[1.1875rem]
                                                    font-bold hover:bg-blue-700 transition-colors
                                                    inline-flex items-center justify-center gap-1.5"
                                     >
-                                        {left === 0 ? 'Join the waiting list' : 'Register for this event'}
+                                        {left === 0 ? 'Join the waiting list' : 'Book Now'}
                                         <ChevronRight className="w-4 h-4" />
                                     </button>
                                 </div>
                             )}
 
                             {reminders ? (
-                                <p className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500
+                                <p className="mt-4 pt-3 border-t border-slate-100 text-[1.0625rem] text-slate-500
                                               inline-flex items-center gap-1.5">
                                     <Bell className="w-3.5 h-3.5" /> {reminders}
                                 </p>
@@ -706,8 +787,8 @@ export default function MemberEventDetail() {
 function ReceiptRow({ label, value }: { label: string; value: string }) {
     return (
         <div className="flex items-baseline justify-between gap-3">
-            <span className="text-xs text-slate-500 shrink-0">{label}</span>
-            <span className="text-[0.8125rem] font-semibold text-slate-900 text-right break-all tabular-nums">
+            <span className="text-[1.0625rem] text-slate-500 shrink-0">{label}</span>
+            <span className="text-[1.0625rem] font-semibold text-slate-900 text-right break-all tabular-nums">
                 {value}
             </span>
         </div>

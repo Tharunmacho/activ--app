@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useDistrictAdminData } from './context/DistrictAdminContext';
@@ -22,7 +22,7 @@ const isInactiveMember = (member: any) =>
   member?.memberStatus === 'Inactive' || member?.isActive === false;
 
 const DistrictMembersScreen = ({ navigation }: any) => {
-  const { applicants, members, memberAction, pendingActionId, refreshing, fetchDashboardData } = useDistrictAdminData();
+  const { applicants, members, pendingActionId, refreshing, fetchDashboardData } = useDistrictAdminData();
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
   // The server's directory: approved members plus rejected applicants.
@@ -58,44 +58,23 @@ const DistrictMembersScreen = ({ navigation }: any) => {
     </View>
   );
 
-  /**
-   * Suspend / reactivate, and delete.
+  /*
+   * NO BLOCK, NO DELETE ON THIS TIER.
    *
-   * `Alert.alert` rather than a `<Modal>`: a transparent modal opened from
-   * inside a bottom-tab screen throws WindowManager BadTokenException on
-   * Android and kills the process (crash-proof directive, Rule 2).
+   * Both actions are the State Admin's and the Super Admin's now — see
+   * `adminService.memberAction`, which refuses them from here, and
+   * `AdminMembersScreen` on the website, which hides the same two icons.
+   * Delete went with block rather than being left behind as the more dangerous
+   * half of a pair: it cascades through the application, the login, the member
+   * record and the three additional forms, and cannot be undone.
    *
-   * Delete is confirmed because it cascades on the server and cannot be undone.
+   * The `confirmToggle` and `confirmDelete` dialogs went with the buttons. A
+   * confirmation for an action the server will refuse is a confirmation that
+   * ends in an error toast.
+   *
+   * Everything reading stays: the directory, the filter tabs, and the full
+   * application behind each row.
    */
-  const confirmToggle = (member: any) => {
-    const inactive = isInactiveMember(member);
-    const name = member?.fullName || 'this member';
-    Alert.alert(
-      inactive ? 'Reactivate member' : 'Suspend member',
-      inactive
-        ? `Reactivate ${name}? They will be able to sign in again.`
-        : `Suspend ${name}? They will be blocked from signing in.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: inactive ? 'Reactivate' : 'Suspend',
-          onPress: () => memberAction(member, inactive ? 'activate' : 'suspend'),
-        },
-      ],
-    );
-  };
-
-  const confirmDelete = (member: any) => {
-    const name = member?.fullName || 'this member';
-    Alert.alert(
-      'Delete permanently',
-      `Permanently delete ${name}?\n\nThis removes their application, login, member record, business, financial and declaration forms. It cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => memberAction(member, 'delete') },
-      ],
-    );
-  };
 
   const renderMemberItem = (member: Applicant, originalIndex: number) => {
     const inactive = isInactiveMember(member);
@@ -125,28 +104,6 @@ const DistrictMembersScreen = ({ navigation }: any) => {
             onPress={() => navigation.navigate('ApplicantDetail', { applicant: member })}
           >
             <Icon name="visibility" size={20} color="#6366F1" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.moreBtn}
-            activeOpacity={0.7}
-            disabled={busy}
-            accessibilityLabel={inactive ? 'Reactivate member' : 'Suspend member'}
-            onPress={() => confirmToggle(member)}
-          >
-            <Icon
-              name={inactive ? 'person-add' : 'person-off'}
-              size={20}
-              color={busy ? '#CBD5E1' : inactive ? '#10B981' : '#F59E0B'}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.moreBtn}
-            activeOpacity={0.7}
-            disabled={busy}
-            accessibilityLabel="Delete member"
-            onPress={() => confirmDelete(member)}
-          >
-            <Icon name="delete-outline" size={20} color={busy ? '#CBD5E1' : '#EF4444'} />
           </TouchableOpacity>
         </View>
       </View>

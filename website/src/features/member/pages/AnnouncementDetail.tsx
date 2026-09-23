@@ -9,6 +9,7 @@ import { getAnnouncement, type Announcement } from '@/services/memberHubApi';
 import { errorMessage } from '@/services/activApi';
 import { resolveMediaUrl } from '@/config/api.config';
 
+import { PAGE_TITLE } from '@/components/layout/appTypography';
 /**
  * One Association Update, in full.
  *
@@ -57,7 +58,7 @@ export default function AnnouncementDetail() {
                 <button
                     type="button"
                     onClick={() => navigate('/member/updates')}
-                    className="text-[0.8125rem] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+                    className="text-[1.0625rem] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
                 >
                     All updates
                 </button>
@@ -92,50 +93,50 @@ export default function AnnouncementDetail() {
                     <div className="p-5 lg:p-7">
                         <div className="flex flex-wrap items-center gap-2 mb-3">
                             {style ? (
-                                <span className={`text-[0.6875rem] font-bold uppercase tracking-wide px-2 py-0.5
+                                <span className={`text-[1.0625rem] font-bold uppercase tracking-wide px-2 py-0.5
                                                   rounded-full ${style.cls}`}>
                                     {style.label}
                                 </span>
                             ) : null}
 
                             {update.pinned ? (
-                                <span className="inline-flex items-center gap-1 text-[0.6875rem] font-bold
+                                <span className="inline-flex items-center gap-1 text-[1.0625rem] font-bold
                                                  uppercase tracking-wide text-blue-700">
                                     <Pin className="w-3 h-3" /> Pinned
                                 </span>
                             ) : null}
 
-                            <span className="text-xs text-slate-400">
+                            <span className="text-[1.0625rem] text-slate-400">
                                 {formatDate(update.publishedAt)}
                             </span>
                         </div>
 
-                        <h1 className="text-xl lg:text-2xl font-bold text-slate-900 leading-tight">
+                        <h1 className={`${PAGE_TITLE} text-slate-900`}>
                             {update.title}
                         </h1>
 
                         {update.targetLabel ? (
-                            <p className="mt-2 inline-flex items-center gap-1.5 text-[0.8125rem] text-slate-500">
+                            <p className="mt-2 inline-flex items-center gap-1.5 text-[1.0625rem] text-slate-500">
                                 <MapPin className="w-3.5 h-3.5" />
                                 For {update.targetLabel}
                             </p>
                         ) : (
-                            <p className="mt-2 text-[0.8125rem] text-slate-500">For all members</p>
+                            <p className="mt-2 text-[1.0625rem] text-slate-500">For all members</p>
                         )}
 
                         {update.summary ? (
-                            <p className="mt-4 text-[0.9375rem] text-slate-700 leading-relaxed font-medium">
+                            <p className="mt-4 text-[1.1875rem] text-slate-700 leading-relaxed font-medium">
                                 {update.summary}
                             </p>
                         ) : null}
 
                         {update.body ? (
                             <div
-                                className="mt-4 text-[0.9375rem] text-slate-700 leading-relaxed
+                                className="mt-4 text-[1.1875rem] text-slate-700 leading-relaxed
                                            [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3
                                            [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-3
-                                           [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-slate-900 [&_h2]:mt-5 [&_h2]:mb-2
-                                           [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-slate-900 [&_h3]:mt-4 [&_h3]:mb-2
+                                           [&_h2]:text-[1.375rem] [&_h2]:font-bold [&_h2]:text-slate-900 [&_h2]:mt-5 [&_h2]:mb-2
+                                           [&_h3]:text-[1.25rem] [&_h3]:font-bold [&_h3]:text-slate-900 [&_h3]:mt-4 [&_h3]:mb-2
                                            [&_a]:text-blue-600 [&_a]:underline [&_strong]:font-semibold"
                                 // Sanitised server-side by `richText.js` — see the
                                 // note at the top of this file for why not here.
@@ -158,10 +159,10 @@ export default function AnnouncementDetail() {
                                         <Paperclip className="w-5 h-5" />
                                     </span>
                                     <span className="min-w-0">
-                                        <span className="block text-sm font-semibold text-slate-900 truncate">
+                                        <span className="block text-[1.1875rem] font-semibold text-slate-900 truncate">
                                             {update.attachmentLabel || 'Attachment'}
                                         </span>
-                                        <span className="block text-xs text-slate-500">Opens in a new tab</span>
+                                        <span className="block text-[1.0625rem] text-slate-500">Opens in a new tab</span>
                                     </span>
                                 </span>
                                 <Download className="w-5 h-5 text-blue-500 shrink-0" />

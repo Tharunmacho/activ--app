@@ -4,7 +4,7 @@ import Autoplay from 'embla-carousel-autoplay';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { CmsBullet } from '@/services/cmsApi';
 import { CmsIcon } from '@/components/shared/CmsIcon';
-import { PAGE_CONTAINER } from '@/components/layout/pageContainer';
+import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
 import { Tilt3D } from '@/components/shared/Tilt3D';
 import { Reveal } from '@/components/shared/Reveal';
 import { SECTION_HEADING, EYEBROW, CARD_BODY } from '@/components/layout/typography';
@@ -93,7 +93,7 @@ export function MissionCarousel({
     if (!items.length) return null;
 
     return (
-        <section className="w-full py-20 md:py-24 relative overflow-hidden font-sans">
+        <section className="w-full py-20 md:py-24 dot-band relative overflow-hidden font-sans">
             {/*
               Decorative depth. Two out-of-focus brand blooms drifting on
               different clocks, so the band behind the cards is never quite
@@ -105,7 +105,7 @@ export function MissionCarousel({
                 <div className="absolute -bottom-32 right-0 h-96 w-96 rounded-full bg-brand-100/60 blur-3xl animate-activ-float" />
             </div>
 
-            <div className={PAGE_CONTAINER}>
+            <div className={SCREEN_CONTAINER}>
                 <Reveal className="flex flex-col items-center text-center mb-12 md:mb-16">
                     {eyebrow && (
                         <div className="flex items-center gap-4 mb-5">

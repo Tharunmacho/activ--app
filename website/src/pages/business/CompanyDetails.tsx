@@ -17,11 +17,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import BusinessPageShell from './BusinessPageShell';
-import { Card, SectionHeading, StatTile, Loading, Chip } from './BusinessUI';
+import { Card, SectionHeading, StatTile, Loading, Chip, companyName } from './BusinessUI';
 import { apiFetch } from "@/services/activApi";
 import { resolveMediaUrl } from "@/config/api.config";
 import { useActiveCompanyStore } from "@/contexts/ActiveCompanyContext";
 
+import { CARD_TITLE } from '@/components/layout/appTypography';
 interface Company {
   _id: string;
   businessName: string;
@@ -32,6 +33,8 @@ interface Company {
   area: string;
   location: string;
   logo: string;
+  /** What the company makes or does, as NIC categories. */
+  productCategories?: { code?: string; description?: string; industryType?: string }[];
   /**
    * `pending | active | inactive` — the enum on `company.model.js`. This was
    * typed `'pending' | 'approved' | 'rejected'`, which are *application*
@@ -123,7 +126,7 @@ const CompanyDetails = () => {
   const handleSetActive = () => {
     if (!company?._id) return;
     setActiveCompany(company._id);
-    toast.success(`Now working on ${company.businessName}`);
+    toast.success(`Now working on ${companyName(company)}`);
     window.dispatchEvent(new Event('companyUpdated'));
   };
 
@@ -163,8 +166,8 @@ const CompanyDetails = () => {
         <Card>
           <div className="text-center py-16">
             <Building2 className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-lg font-semibold text-slate-800">Company not found</p>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-[1.375rem] font-semibold text-slate-800">Company not found</p>
+            <p className="text-[1.25rem] text-slate-500 mt-1">
               The company you are looking for does not exist.
             </p>
           </div>
@@ -183,7 +186,7 @@ const CompanyDetails = () => {
   return (
     <BusinessPageShell
       title="Company Profile"
-      subtitle={company.businessName}
+      subtitle={companyName(company)}
       width="standard"
       actions={
         <>
@@ -222,7 +225,7 @@ const CompanyDetails = () => {
             {company.logo ? (
               <img
                 src={resolveMediaUrl(company.logo)}
-                alt={company.businessName}
+                alt={companyName(company)}
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -231,8 +234,8 @@ const CompanyDetails = () => {
           </span>
 
           <div className="flex-1 min-w-0">
-            <h2 className="text-2xl font-bold text-slate-900 truncate">{company.businessName}</h2>
-            <p className="text-sm text-slate-500">{company.businessType}</p>
+            <h2 className={`${CARD_TITLE} text-slate-900 truncate`}>{companyName(company)}</h2>
+            <p className="text-[1.25rem] text-slate-500">{company.businessType}</p>
             <div className="flex flex-wrap items-center gap-2 mt-3">
               <Chip tone={tone.tone} icon={tone.Icon}>
                 <span className="capitalize">{status}</span>
@@ -269,32 +272,65 @@ const CompanyDetails = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           <Card>
             <SectionHeading title="About" icon={Building2} />
-            <p className="text-sm text-slate-600 leading-relaxed">
+            <p className="text-[1.25rem] text-slate-600 leading-relaxed">
               {company.description || 'No description provided.'}
             </p>
+
+            {/*
+                The NIC categories, printed with their codes.
+
+                The code is shown rather than kept as a hidden key: it is what
+                makes this company findable by industry, and a member checking
+                their own record has to be able to see the classification they
+                will be counted under.
+            */}
+            {(company.productCategories || []).length > 0 && (
+              <div className="mt-5 pt-5 border-t border-slate-100">
+                <p className="text-[1.1875rem] font-bold uppercase tracking-wider text-slate-400 mb-3">
+                  Product categories
+                </p>
+                <ul className="flex flex-wrap gap-2">
+                  {(company.productCategories || []).map((category, index) => (
+                    <li
+                      key={`${category?.code || ''}-${index}`}
+                      className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5"
+                    >
+                      <span className="block text-[1.25rem] text-slate-700">
+                        {category?.description || '—'}
+                      </span>
+                      <span className="block text-[1rem] text-slate-500 mt-0.5">
+                        {category?.code
+                          ? `NIC ${category.code}${category?.industryType ? ` · ${category.industryType}` : ''}`
+                          : 'Custom category'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </Card>
 
           <Card>
             <SectionHeading title="Contact Information" icon={Phone} />
-            <dl className="space-y-3 text-sm">
+            <dl className="space-y-3 text-[1.25rem]">
               <div className="flex items-start gap-3">
                 <Phone className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
                 <div className="min-w-0">
-                  <dt className="text-slate-500 text-xs uppercase tracking-wider">Mobile</dt>
+                  <dt className="text-slate-500 text-[1.1875rem] uppercase tracking-wider">Mobile</dt>
                   <dd className="text-slate-800 font-medium">{company.mobileNumber || '—'}</dd>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <Mail className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
                 <div className="min-w-0">
-                  <dt className="text-slate-500 text-xs uppercase tracking-wider">Email</dt>
+                  <dt className="text-slate-500 text-[1.1875rem] uppercase tracking-wider">Email</dt>
                   <dd className="text-slate-800 font-medium truncate">{company.email || '—'}</dd>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <MapPin className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
                 <div className="min-w-0">
-                  <dt className="text-slate-500 text-xs uppercase tracking-wider">Location</dt>
+                  <dt className="text-slate-500 text-[1.1875rem] uppercase tracking-wider">Location</dt>
                   <dd className="text-slate-800 font-medium">
                     {[company.area, company.location].filter(Boolean).join(', ') || '—'}
                   </dd>
@@ -305,7 +341,7 @@ const CompanyDetails = () => {
 
           <Card className="lg:col-span-2">
             <SectionHeading title="Timeline" icon={Clock} />
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[1.25rem]">
               <div className="flex items-center justify-between rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
                 <dt className="text-slate-500">Registered</dt>
                 <dd className="text-slate-800 font-medium">{formatDate(company.createdAt)}</dd>
@@ -324,7 +360,7 @@ const CompanyDetails = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Company</AlertDialogTitle>
             <AlertDialogDescription>
-              Permanently delete "{company.businessName}"? Its products and listing are
+              Permanently delete "{companyName(company)}"? Its products and listing are
               removed with it. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>

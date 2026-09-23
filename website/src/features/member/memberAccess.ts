@@ -110,6 +110,21 @@ export interface MemberNavItem {
     unlock: UnlockKey;
     /** Shown beside the entry in Upcoming Features, so the member knows the cost. */
     requirement: string;
+    /**
+     * The fact that TAKES THIS ENTRY AWAY once it becomes true — the mirror of
+     * `unlock`, and left undefined by almost everything here.
+     *
+     * Only an entry whose subject stops existing has one. Every other entry
+     * names something a member keeps having; an application is a request to be
+     * admitted, and a granted request is history.
+     *
+     * Read by BOTH list builders, which is why it is a field and not a
+     * predicate at one call site: `upcomingFeatures` has to drop a retired
+     * entry as well, or it does not disappear — it moves down into “Upcoming
+     * Features” and tells a full member that Application Status is something
+     * still ahead of them.
+     */
+    retires?: UnlockKey;
 }
 
 /**
@@ -123,12 +138,16 @@ export interface MemberNavItem {
  * the association's notices is the one who completes a membership; one who is
  * shown a locked door is the one who leaves.
  *
- * Two screens are deliberately NOT in this table: Messages and Documents. They
- * exist and they are routable, but they are reached from the icon strip at the
- * top of the member area rather than from the rail — messages and alerts are
- * things a member checks in passing, from wherever they happen to be, and a rail
- * entry pulls them out of the screen they are working on to do it. See
- * `MemberTopBar`.
+ * DOCUMENTS is deliberately not in this table: it is reached from the icon
+ * strip at the top of the member area, because alerts are things a member
+ * checks in passing from wherever they happen to be. See `MemberTopBar`.
+ *
+ * MESSAGES was kept out for the same reason and is back, at the association's
+ * request. The argument for the icon strip holds for a NOTIFICATION — glanced
+ * at, dismissed, returned from — and not for a conversation: a member goes to
+ * their messages to do a piece of work and stays there, which is what a rail
+ * entry is for. The icon in the strip stays too; the two are not exclusive and
+ * both reach the same screen.
  *
  * Ordering is the *finished* sidebar's ordering, so entries appear in place as
  * they unlock rather than being appended to the end and reshuffling what the
@@ -169,23 +188,22 @@ export const MEMBER_NAV: MemberNavItem[] = [
      * scrolls them to it, and `View Full Timeline` on the card itself is the one
      * route into `/member/application-status`.
      *
-     * A paid member has no such card — their dashboard is a different screen —
-     * so for them the entry resolves to the dedicated page instead.
+     * GATED AT BOTH ENDS, and the only entry that is.
      *
-     * This is the one entry still gated on a milestone, and the milestone is
-     * the entry's own subject: before an application exists there is no status
-     * to show, and a tracker of four empty stages is not information.
+     * Before an application exists there is no status to show, and a tracker of
+     * four empty stages is not information. After the membership is granted
+     * there is no longer a request outstanding — the association asked for it
+     * to go, and they are right: a full member opening this screen is reading
+     * the history of how they got in, and it sits in the rail claiming to be
+     * something they still have to see to.
      */
     {
         key: 'application',
         label: 'Application Status',
-        to: ({ membershipActive }) => (
-            membershipActive
-                ? '/member/application-status'
-                : '/member/unpaid-dashboard#application-status'
-        ),
+        to: '/member/unpaid-dashboard#application-status',
         icon: 'clipboard',
         unlock: 'applicationSubmitted',
+        retires: 'membershipActive',
         requirement: 'Submit your application',
     },
     /*
@@ -198,18 +216,25 @@ export const MEMBER_NAV: MemberNavItem[] = [
      * against the whole membership. The old path still resolves to the new
      * screen so that a bookmark does not 404.
      *
-     * Open to an applicant. Browsing is not contacting — the directory exposes
-     * no email address and no phone number to anybody (see `directory.service`)
-     * — and seeing who is already a member is the most persuasive thing an
-     * association can show someone deciding whether to join.
+     * A MEMBERSHIP BENEFIT, and it was open to an applicant.
+     *
+     * The argument for leaving it open was that browsing is not contacting —
+     * the directory exposes no email address and no telephone number to
+     * anybody (see `directory.service`) — and that showing who is already a
+     * member is persuasive to somebody deciding whether to join.
+     *
+     * The association's decision is the other way, and it is consistent with
+     * the business directory beside it: who the members ARE is the thing the
+     * membership buys. An applicant is told how many there are and what that
+     * opens; the names wait until they have joined.
      */
     {
         key: 'explore',
         label: 'Member Directory',
         to: '/member/directory',
         icon: 'search',
-        unlock: null,
-        requirement: '',
+        unlock: 'membershipActive',
+        requirement: 'Complete your membership',
     },
     /*
      * The member events screen, not the public marketing page.
@@ -247,6 +272,27 @@ export const MEMBER_NAV: MemberNavItem[] = [
         unlock: null,
         requirement: '',
     },
+    /*
+     * Member-to-member messages — LAST in the association group.
+     *
+     * Under the directory and the programme rather than above them: those
+     * are what a member browses, and a conversation is what comes OUT of
+     * browsing. Reading the group top to bottom now follows the order the
+     * work actually happens in.
+     *
+     * Locked on the membership for a reason, not for symmetry:
+     * `assertCanMessage` requires BOTH ends to hold an active membership,
+     * so an entry an applicant could open would lead to a screen that
+     * refuses every send.
+     */
+    {
+        key: 'messages',
+        label: 'Messages',
+        to: '/member/messages',
+        icon: 'message',
+        unlock: 'membershipActive',
+        requirement: 'Complete your membership',
+    },
 
     /*
      * Support inside the member area, not a link to the public Contact page.
@@ -274,9 +320,18 @@ export const MEMBER_NAV: MemberNavItem[] = [
 export const isUnlocked = (item: MemberNavItem, access: MemberAccess): boolean =>
     item.unlock === null ? true : !!access[item.unlock];
 
+/**
+ * Has the entry's subject been settled, so that it no longer belongs anywhere?
+ *
+ * Checked by the unlocked list AND the upcoming list, so a retired entry leaves
+ * the rail rather than sliding into “Upcoming Features”.
+ */
+export const isRetired = (item: MemberNavItem, access: MemberAccess): boolean =>
+    !!item.retires && !!access[item.retires];
+
 /** Unlocked *and* reachable — the entries that render as links, in table order. */
 export const unlockedNav = (access: MemberAccess): MemberNavItem[] =>
-    MEMBER_NAV.filter(item => isUnlocked(item, access) && item.to !== null);
+    MEMBER_NAV.filter(item => isUnlocked(item, access) && !isRetired(item, access) && item.to !== null);
 
 /**
  * What is still ahead, as readable text rather than dead links.
@@ -288,7 +343,9 @@ export const unlockedNav = (access: MemberAccess): MemberNavItem[] =>
  * link; a named upcoming feature reads as a reason to carry on.
  */
 export const upcomingFeatures = (access: MemberAccess): MemberNavItem[] =>
-    MEMBER_NAV.filter(item => !isUnlocked(item, access) || item.to === null);
+    MEMBER_NAV.filter(item => (
+        !isRetired(item, access) && (!isUnlocked(item, access) || item.to === null)
+    ));
 
 /**
  * What kind of applicant this is, read the way the backend reads it.
@@ -352,11 +409,19 @@ export const resolveApplicantKind = (application: any | null): ApplicantKind => 
     return isAspirant ? 'aspirant' : (doingBusiness ? 'business' : '');
 };
 
-/** The same answer, phrased for a person. Empty when nothing is known yet. */
+/**
+ * The same answer, phrased for a person. Empty when nothing is known yet.
+ *
+ * The two labels are the two answers and nothing else: `Business`, `Aspirant`.
+ * `business` used to read "Business Applicant", which put a word on one side of
+ * the pair that the other side did not have — under a "Member Type" heading, on
+ * a screen that also prints the application id and its stage, "Applicant" is
+ * the one thing already established by everything around it.
+ */
 export const applicantKindLabel = (application: any | null): string => {
     const kind = resolveApplicantKind(application);
     if (kind === 'aspirant') return 'Aspirant';
-    if (kind === 'business') return 'Business Applicant';
+    if (kind === 'business') return 'Business';
     return '';
 };
 

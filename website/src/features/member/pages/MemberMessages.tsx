@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-    MessageSquare, Users, CalendarDays, Megaphone, FileBadge, Handshake, Inbox,
+    MessageSquare, Users, CalendarDays, Megaphone, FileBadge, Handshake,
 } from 'lucide-react';
 import MemberPageShell from '@/pages/member/MemberPageShell';
-import { EmptyState, MembershipGate, GateBenefit } from '@/features/member/components/MemberUI';
+import { MembershipGate, GateBenefit } from '@/features/member/components/MemberUI';
+import MemberInbox from '@/features/member/pages/MemberInbox';
 import { useProfile } from '@/contexts/ProfileContext';
 import { getMyApplication } from '@/services/activApi';
 import useMembershipGate from '@/features/member/useMembershipGate';
@@ -27,10 +28,12 @@ import {
  * rather than pointing everyone at a payment screen that would refuse most of
  * them.
  *
- * For a member whose membership IS active this is an inbox with nothing in it
- * yet — stated plainly, because the messaging transport is not built. Showing
- * them the applicant's upgrade card would be worse than useless: it would ask
- * someone who has already paid to pay.
+ * For a member whose membership IS active it hands off to `MemberInbox`, which
+ * is the working thing. The split is deliberate: THIS file decides whether the
+ * member may message at all and makes the offer when they may not; that one
+ * knows nothing about gating and is only ever rendered on the paid side.
+ * Showing a paid member the applicant's upgrade card would be worse than
+ * useless — it would ask someone who has already paid to pay.
  */
 export default function MemberMessages() {
     const { profileCompletion } = useProfile();
@@ -69,18 +72,8 @@ export default function MemberMessages() {
 
     if (access.membershipActive) {
         return (
-            <MemberPageShell title="Messages" subtitle="Member conversations" width="standard">
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
-                    <EmptyState
-                        icon={<Inbox className="w-6 h-6" />}
-                        title="Your inbox is empty"
-                        detail={
-                            'Direct messages from other members will appear here. Member-to-member '
-                            + 'messaging is being rolled out — until it is live, the member directory '
-                            + 'is the way to find who else is in your region.'
-                        }
-                    />
-                </div>
+            <MemberPageShell title="Messages" subtitle="Member conversations" width="wide">
+                <MemberInbox />
             </MemberPageShell>
         );
     }
@@ -94,7 +87,7 @@ export default function MemberMessages() {
                 cta={cta}
             >
                 <div>
-                    <p className="text-[0.6875rem] font-bold uppercase tracking-wide text-slate-500 mb-3">
+                    <p className="text-[1.0625rem] font-bold uppercase tracking-wide text-slate-500 mb-3">
                         What your membership covers
                     </p>
                     <ul className="grid gap-4 sm:grid-cols-2">

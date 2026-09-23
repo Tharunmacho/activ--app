@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { apiFetch } from "@/services/activApi";
 
+import { CARD_TITLE } from '@/components/layout/appTypography';
 interface ProfileEditModalProps {
     open: boolean;
     onClose: () => void;
@@ -308,7 +309,7 @@ const ProfileEditModal = ({ open, onClose, adminData, onProfileUpdate }: Profile
         <Dialog open={open} onOpenChange={handleClose}>
             <DialogContent className="sm:max-w-[37.5rem] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+                    <DialogTitle className="text-[1.75rem] font-bold flex items-center gap-2">
                         <Lock className="w-6 h-6 text-blue-600" />
                         Update Profile
                     </DialogTitle>
@@ -325,7 +326,7 @@ const ProfileEditModal = ({ open, onClose, adminData, onProfileUpdate }: Profile
                                 {avatarPreview ? (
                                     <AvatarImage src={avatarPreview} className="object-cover" />
                                 ) : (
-                                    <AvatarFallback className="bg-blue-600 text-white font-bold text-2xl">
+                                    <AvatarFallback className="bg-blue-600 text-white font-bold text-[1.75rem]">
                                         {avatarInitials}
                                     </AvatarFallback>
                                 )}
@@ -345,7 +346,7 @@ const ProfileEditModal = ({ open, onClose, adminData, onProfileUpdate }: Profile
                             onChange={handleAvatarChange}
                             className="hidden"
                         />
-                        <p className="text-xs text-slate-500 text-center">
+                        <p className="text-[1.1875rem] text-slate-500 text-center">
                             Click avatar or camera icon to change photo<br />
                             (Max 2MB, JPG/PNG)
                         </p>
@@ -353,7 +354,7 @@ const ProfileEditModal = ({ open, onClose, adminData, onProfileUpdate }: Profile
 
                     {/* Profile Information Section */}
                     <div className="space-y-4 border-t pt-4">
-                        <h3 className="font-semibold text-lg flex items-center gap-2">
+                        <h3 className={`${CARD_TITLE} flex items-center gap-2`}>
                             <User className="w-5 h-5 text-blue-600" />
                             Profile Information
                         </h3>
@@ -423,7 +424,7 @@ const ProfileEditModal = ({ open, onClose, adminData, onProfileUpdate }: Profile
                                     onChange={handleChange}
                                     placeholder={`Enter your ${regionKey}`}
                                 />
-                                <p className="text-xs text-slate-500">
+                                <p className="text-[1.1875rem] text-slate-500">
                                     This decides which applications reach your queue.
                                 </p>
                             </div>
@@ -441,7 +442,7 @@ const ProfileEditModal = ({ open, onClose, adminData, onProfileUpdate }: Profile
 
                     {/* Change Password Section */}
                     <div className="space-y-4 border-t pt-4">
-                        <h3 className="font-semibold text-lg flex items-center gap-2">
+                        <h3 className={`${CARD_TITLE} flex items-center gap-2`}>
                             <Lock className="w-5 h-5 text-blue-600" />
                             Change Password
                         </h3>
@@ -476,7 +477,7 @@ const ProfileEditModal = ({ open, onClose, adminData, onProfileUpdate }: Profile
                                 placeholder="Enter new password"
                                 autoComplete="new-password"
                             />
-                            <p className="text-xs text-slate-500">Must be at least 6 characters</p>
+                            <p className="text-[1.1875rem] text-slate-500">Must be at least 6 characters</p>
                         </div>
 
                         {/* Confirm Password */}

@@ -9,9 +9,8 @@ import {
 import { ArrowLeft, ImagePlus, Package, IndianRupee, Store } from "lucide-react";
 import { toast } from "sonner";
 import BusinessPageShell from "./BusinessPageShell";
-import { Card, SectionHeading, FieldGrid, Field } from "./BusinessUI";
+import { Card, SectionHeading, FieldGrid, Field, companyName } from "./BusinessUI";
 import { apiFetch } from "@/services/activApi";
-import { PRODUCT_CATEGORIES } from "@/lib/productCategories";
 import { useActiveCompanyStore } from "@/contexts/ActiveCompanyContext";
 
 const AddProduct = () => {
@@ -28,10 +27,7 @@ const AddProduct = () => {
     const [formData, setFormData] = useState({
         name: "",
         description: "",
-        category: "",
         price: "",
-        stock: "",
-        sku: "",
         image: null as File | null,
     });
 
@@ -58,7 +54,7 @@ const AddProduct = () => {
     };
 
     const handleSave = async () => {
-        if (!formData.name || !formData.category || !formData.price) {
+        if (!formData.name || !formData.price) {
             toast.error("Please fill in all required fields");
             return;
         }
@@ -69,11 +65,9 @@ const AddProduct = () => {
             return;
         }
 
-        const stockNum = formData.stock ? parseInt(formData.stock) : 0;
-        if (isNaN(stockNum) || stockNum < 0) {
-            toast.error("Please enter a valid stock quantity");
-            return;
-        }
+        /* No stock check: the field came off this form, so there is no
+           number to validate and a guard on one refuses a save nobody
+           can satisfy. */
 
         setLoading(true);
 
@@ -105,10 +99,7 @@ const AddProduct = () => {
             if (activeCompany?._id) payload.append('companyId', activeCompany._id);
             payload.append('name', formData.name.trim());
             payload.append('description', formData.description.trim());
-            payload.append('category', formData.category);
-            payload.append('sku', formData.sku.trim() || `SKU-${Date.now()}`);
             payload.append('price', String(priceNum));
-            payload.append('stock', String(stockNum));
             if (formData.image) payload.append('image', formData.image);
 
             // `apiFetch` drops its own Content-Type for FormData so the browser
@@ -133,7 +124,7 @@ const AddProduct = () => {
     return (
         <BusinessPageShell
             title="Add Product / Service"
-            subtitle={activeCompany ? `Adding to ${activeCompany.businessName}` : 'No active company selected'}
+            subtitle={activeCompany ? `Adding to ${companyName(activeCompany)}` : 'No active company selected'}
             width="standard"
             actions={
                 <>
@@ -162,46 +153,69 @@ const AddProduct = () => {
                 prefix at all — so a 375px screen got a ~110px image dropzone that
                 still carried `min-h-[18.75rem]`, beside two columns of fields.
             */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                <Card className="lg:sticky lg:top-0">
-                    <SectionHeading title="Product Media" icon={ImagePlus} />
+            {/*
+                ONE CARD, one column, four fields.
 
-                    <label
-                        htmlFor="product-image"
-                        className="block rounded-xl border-2 border-dashed border-slate-300 hover:border-blue-500
-                                   transition-colors cursor-pointer overflow-hidden bg-slate-50"
-                    >
-                        {imagePreview ? (
-                            <img src={imagePreview} alt="Product preview" className="w-full h-56 object-cover" />
-                        ) : (
-                            <div className="flex flex-col items-center justify-center h-56 px-4 text-center">
-                                <ImagePlus className="h-10 w-10 text-slate-400 mb-3" />
-                                <p className="text-sm font-semibold text-slate-700">Upload Product Image</p>
-                                <p className="text-xs text-slate-500 mt-1">JPG or PNG, max 5MB</p>
-                            </div>
-                        )}
-                    </label>
-                    <input
-                        id="product-image"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                    />
-                    {imagePreview ? (
-                        <p className="text-xs text-slate-500 mt-2 text-center">Click the image to change it</p>
-                    ) : null}
-                </Card>
+                This was a three-card grid — media, details, pricing — with a
+                sticky rail on the left, for a picture, a name, a description
+                and a price. The furniture was the bulk of the screen. A single
+                form reads as the small task it is, and the picture sits beside
+                the fields rather than in a card of its own.
+            */}
+            <div className="mx-auto w-full max-w-4xl">
+                <Card>
+                    <SectionHeading title="Product" icon={Package} />
 
-                <div className="lg:col-span-2 space-y-6">
-                    <Card>
-                        <SectionHeading title="Product Details" icon={Package} />
-                        <FieldGrid>
+                    <div className="grid gap-6 md:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] items-start">
+                        <div>
+                            <label
+                                htmlFor="product-image"
+                                className="block rounded-xl border-2 border-dashed border-slate-300
+                                           hover:border-blue-500 transition-colors cursor-pointer
+                                           overflow-hidden bg-slate-50"
+                            >
+                                {imagePreview ? (
+                                    <img src={imagePreview} alt="Product preview"
+                                        className="w-full h-52 object-cover" />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-52 px-4 text-center">
+                                        <ImagePlus className="h-9 w-9 text-slate-400 mb-2.5" />
+                                        <p className="text-[1.25rem] font-semibold text-slate-700">Add a picture</p>
+                                        <p className="text-[1.1875rem] text-slate-500 mt-1">JPG or PNG, max 5MB</p>
+                                    </div>
+                                )}
+                            </label>
+                            <input
+                                id="product-image"
+                                type="file"
+                                accept="image/*"
+                                onChange={handleImageUpload}
+                                className="hidden"
+                            />
+                            {imagePreview ? (
+                                <p className="text-[1.1875rem] text-slate-500 mt-2 text-center">
+                                    Click the image to change it
+                                </p>
+                            ) : null}
+                        </div>
+
+                        <div className="space-y-5">
                             <Field label="Product Name" required full>
                                 <Input
                                     placeholder="Enter product / service name"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    className="h-11 border-slate-200 focus-visible:ring-blue-500"
+                                />
+                            </Field>
+
+                            <Field label="Price (₹)" required full>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    placeholder="0.00"
+                                    value={formData.price}
+                                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                                     className="h-11 border-slate-200 focus-visible:ring-blue-500"
                                 />
                             </Field>
@@ -215,73 +229,25 @@ const AddProduct = () => {
                                 />
                             </Field>
 
-                            <Field label="Category" required>
-                                {/*
-                                    One shared list — `@/lib/productCategories`, mirroring
-                                    the backend definition. This screen offered nine
-                                    categories of its own (Fashion, Home & Garden, Food &
-                                    Beverage…) while Edit Product offered six different
-                                    ones and mobile offered fourteen. Only "Electronics"
-                                    and "Other" appeared in all three.
-                                */}
-                                <Select
-                                    value={formData.category}
-                                    onValueChange={(value) => setFormData({ ...formData, category: value })}
-                                >
-                                    <SelectTrigger className="h-11 border-slate-200 focus:ring-blue-500">
-                                        <SelectValue placeholder="Select a category" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {PRODUCT_CATEGORIES.map((category) => (
-                                            <SelectItem key={category} value={category}>{category}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </Field>
+                            {/*
+                                NO CATEGORY AND NO SKU. The company answered
+                                "what do you make" once, on its own profile,
+                                against NIC — a better classification than a
+                                nine-item list, and the one the directory
+                                searches. The server still generates a SKU and
+                                stores a category, so nothing downstream loses a
+                                field.
+                            */}
+                        </div>
+                    </div>
+                </Card>
 
-                            <Field label="SKU" hint="Left blank, one is generated for you.">
-                                <Input
-                                    placeholder="e.g. PRD-2024-001"
-                                    value={formData.sku}
-                                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                                    className="h-11 border-slate-200 focus-visible:ring-blue-500"
-                                />
-                            </Field>
-                        </FieldGrid>
-                    </Card>
-
-                    <Card>
-                        <SectionHeading title="Pricing &amp; Inventory" icon={IndianRupee} />
-                        <FieldGrid>
-                            <Field label="Price (₹)" required>
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    placeholder="0.00"
-                                    value={formData.price}
-                                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                    className="h-11 border-slate-200 focus-visible:ring-blue-500"
-                                />
-                            </Field>
-
-                            <Field label="Stock Quantity">
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    placeholder="e.g. 100"
-                                    value={formData.stock}
-                                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                                    className="h-11 border-slate-200 focus-visible:ring-blue-500"
-                                />
-                            </Field>
-                        </FieldGrid>
-                    </Card>
-
+                <div className="mt-6">
                     {!activeCompany && (
                         <Card className="border-amber-200 bg-amber-50">
                             <div className="flex items-start gap-3">
                                 <Store className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                                <p className="text-sm text-amber-800">
+                                <p className="text-[1.25rem] text-amber-800">
                                     No active company is selected, so this product would be filed
                                     against whichever company the server considers latest. Pick one
                                     from My Companies first.

@@ -3,7 +3,6 @@ import {
   listEvents,
   getMyProfile,
   getBusinessInfo,
-  getFinancialInfo,
   getDeclarationInfo,
   getMyApplication,
   getStoredRole,
@@ -65,14 +64,24 @@ interface ProfileProviderProps {
 export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) => {
   const [profileCompletion, setProfileCompletion] = useState(0);
   const [formsCompleted, setFormsCompleted] = useState<string[]>([]);
-  const [totalFormsRequired, setTotalFormsRequired] = useState(4);
+  /**
+   * THREE forms: Personal, Business, Declaration.
+   *
+   * It was four, with Financial & Compliance dropping out for an aspirant — so
+   * the denominator moved depending on an answer given halfway through the
+   * flow, and a member who changed it watched their percentage jump. Financial
+   * details are asked in the Business Creation Account now, which is not part
+   * of the application, so the count is the same for everybody.
+   */
+  const TOTAL_FORMS = 3;
+  const [totalFormsRequired, setTotalFormsRequired] = useState(TOTAL_FORMS);
   const [memberType, setMemberType] = useState('Standard');
   const [isFullyCompleted, setIsFullyCompleted] = useState(false);
   const [upcomingEventsCount, setUpcomingEventsCount] = useState(0);
   const [unreadHelpMessages, setUnreadHelpMessages] = useState(0);
 
   /**
-   * How much of the four-form profile is done.
+   * How much of the three-form profile is done.
    *
    * Every field test here was wrong before: it looked for `name`, `pan`,
    * `declarationAccepted` and `doingBusiness === 'yes'`, while the backend
@@ -88,10 +97,9 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
     if (!isMemberSession()) return;
 
     try {
-      const [profile, business, financial, declaration, application] = await Promise.all([
+      const [profile, business, declaration, application] = await Promise.all([
         getMyProfile().catch(() => ({} as any)),
         getBusinessInfo().catch(() => ({} as any)),
-        getFinancialInfo().catch(() => ({} as any)),
         getDeclarationInfo().catch(() => ({} as any)),
         getMyApplication().catch(() => null),
       ]);
@@ -100,43 +108,28 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
 
       if (profile?.fullName) completed.push('Personal Details');
 
-      // A boolean, not the string 'yes'. An aspirant declares no business and
-      // is not asked for financial details, so their profile is three forms.
+      // A boolean, not the string 'yes'. It no longer changes the denominator —
+      // it only decides whether this member is shown as a business or as an
+      // aspirant.
       const isDoingBusiness = business?.doingBusiness === true;
       if (business && business.doingBusiness !== null && business.doingBusiness !== undefined) {
         completed.push('Business Details');
       }
-      const totalForms = isDoingBusiness ? 4 : 3;
 
-      /**
-       * "Has the financial form been submitted", not "is the PAN filled in".
-       *
-       * This tested `financial?.panNumber`. PAN is optional on both financial
-       * forms — mobile only validates it `if (formData.panNumber)`, and neither
-       * website form marks it required — so a member could complete the whole
-       * step with GST, turnover, ITR and schemes and still never have it count.
-       * Their profile would sit at 75% permanently with nothing left to fill in
-       * and no way to reach 100%.
-       *
-       * `updateMember` sets `status: 'submitted'` on the financial record every
-       * time that step saves, so it is the signal that actually means what this
-       * check is asking.
-       */
       /**
        * Submitted **or beyond**, not the literal string 'submitted'.
        *
-       * `updateMember` writes 'submitted' when the step saves, but an admin
+       * `updateMember` writes 'submitted' when a step saves, but an admin
        * review moves it on to 'verified' and then 'approved'. Testing one exact
-       * value meant a member whose financial details had been verified stopped
-       * counting as having filled them in, so their profile fell back a quarter
-       * after an admin acted on it — the opposite direction to the one the bar
-       * is supposed to move.
+       * value meant a member whose details had been verified stopped counting
+       * as having filled them in, so their profile fell back after an admin
+       * acted on it — the opposite direction to the one the bar is supposed to
+       * move.
        */
       const SUBMITTED_OR_BEYOND = ['submitted', 'verified', 'approved', 'completed'];
       const isSubmitted = (value: unknown) =>
         SUBMITTED_OR_BEYOND.includes(String(value || '').toLowerCase());
 
-      if (isDoingBusiness && isSubmitted(financial?.status)) completed.push('Financial Details');
       if (declaration?.agreeToDeclaration || isSubmitted(declaration?.status)) completed.push('Declaration');
 
       // Once the application is in, or the membership is paid, the profile is
@@ -149,11 +142,11 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
 
       const percentage = hasSubmitted || isPaid
         ? 100
-        : Math.min(100, Math.round((completed.length / totalForms) * 100));
+        : Math.min(100, Math.round((completed.length / TOTAL_FORMS) * 100));
 
       setProfileCompletion(percentage);
       setFormsCompleted(completed);
-      setTotalFormsRequired(totalForms);
+      setTotalFormsRequired(TOTAL_FORMS);
       setMemberType(isDoingBusiness ? 'Business' : 'Standard');
       setIsFullyCompleted(percentage === 100);
 

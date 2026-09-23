@@ -216,6 +216,25 @@ export interface MemberEvent {
     capacity: number;
     /** Rupees. 0 is free; anything above it adds a payment step. */
     registrationFee: number;
+    /**
+     * The member rate, and what it saves — resolved by the server.
+     *
+     * `null` when the event carries no member rate. A card that showed only
+     * `registrationFee` told a member the full price they are not being asked
+     * to pay, which is the one number on an event card that must not be wrong.
+     */
+    memberFee?: number | null;
+    memberPrice?: number;
+    hasMemberRate?: boolean;
+    /**
+     * WHAT THIS MEMBER PAYS, resolved server-side against their live
+     * membership. The one number to print beside a Register button.
+     */
+    yourPrice?: number;
+    memberRateApplies?: boolean;
+    yourSaving?: number;
+    /** The chip the event is filed under — "Awareness", "Coffee Meet". */
+    category?: string;
     /*
      * The questions THIS event asks, designed per event by the super admin.
      *

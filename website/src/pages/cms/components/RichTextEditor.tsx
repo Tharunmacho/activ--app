@@ -1,25 +1,46 @@
-import { useEffect, useRef, useState } from 'react';
-import { Bold, Italic, Link2, Link2Off, Eraser, Code2 } from 'lucide-react';
+import { useMemo, useRef } from 'react';
 
 /**
- * A small formatting editor for the fields stored as HTML.
+ * ============================================================================
+ * A PLAIN TEXT BOX FOR THE FIELDS THAT ARE STORED AS HTML
+ * ============================================================================
  *
- * The About body and each bullet were raw `<textarea>`s: to make a phrase bold
- * an admin had to type `<strong>` around it and know that was the right tag.
- * This gives them a toolbar instead.
+ * This was a `contentEditable` with a B / I / link toolbar. The association
+ * asked for it to go: "editable box don't keep like this in the CMS, that
+ * makes it difficult — keep as a simple box so they can type easily, change it
+ * wherever this box is."
  *
- * Deliberately not a library. TipTap or Quill would add ~100 KB to a bundle
- * that already warns about its size, to provide tables and images and
- * collaborative cursors that these two fields cannot store. The toolbar here
- * offers exactly what the server's whitelist accepts — bold, italic, a link —
- * so there is no button that produces markup the backend then strips, which is
- * the most confusing thing a rich editor can do.
+ * They are right, and the reason is worth writing down. `contentEditable` is
+ * uncontrolled by nature, so the box could not be driven from React state the
+ * way every other field on these screens is. The caret jumps to the end when
+ * anything re-renders, a paste arrives as markup that then has to be stripped,
+ * Enter produces a different tag in every browser, and the box looks nothing
+ * like the input directly above it. Six fields on four screens behaved unlike
+ * the two hundred others.
  *
- * `contentEditable` is uncontrolled by nature: writing React state back into it
- * on every keystroke moves the caret to the end. So the DOM owns the text while
- * the field has focus, and `value` is only pushed in when it differs from what
- * is already there — which happens on load and after a save returns the
- * server's sanitised copy.
+ * So: an ordinary `<textarea>`, controlled, identical to `CmsTextarea`. The
+ * component keeps its name and its props, because five call sites pass it a
+ * `value` that is HTML and expect HTML back.
+ *
+ * ---------------------------------------------------------------- the trade
+ *
+ * The stored value is still HTML — the public pages render it as HTML and the
+ * server sanitises it on the way in. What changed is what the editor types:
+ * paragraphs separated by blank lines, and nothing else.
+ *
+ * WHAT HAPPENS TO FORMATTING THAT IS ALREADY THERE:
+ *
+ *   - a field nobody touches keeps every tag it has, exactly. See `emit`:
+ *     when the text in the box round-trips to the same text the stored HTML
+ *     produces, the ORIGINAL HTML is passed through untouched. Opening a page
+ *     and pressing Save cannot flatten anything;
+ *   - a field that is EDITED is re-serialised from what is in the box, so the
+ *     bold that was in it becomes ordinary text. That is the trade the plain
+ *     box buys, and it is the one that was asked for.
+ *
+ * A bare URL on its own is still turned into a link on save, because a URL an
+ * editor typed and cannot click is the one piece of formatting they would
+ * genuinely miss.
  */
 
 interface Props {
@@ -29,153 +50,116 @@ interface Props {
     placeholder?: string;
 }
 
-export default function RichTextEditor({ value, onChange, rows = 5, placeholder }: Props) {
-    const ref = useRef<HTMLDivElement>(null);
-    const [showSource, setShowSource] = useState(false);
-    const [focused, setFocused] = useState(false);
+/** `<` `&` `>` as text, never as markup. React escapes what it prints; this is
+ *  what we are about to STORE, and it is read back as HTML. */
+const escapeHtml = (text: string) => text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 
-    // Push `value` in only when it genuinely differs, so typing is not
-    // interrupted by a re-render putting the caret back at the start.
-    useEffect(() => {
-        const el = ref.current;
-        if (!el || showSource) return;
-        if (el.innerHTML !== value) el.innerHTML = value || '';
-    }, [value, showSource]);
+/**
+ * The stored HTML, as the plain text an editor reads and types.
+ *
+ * Block tags become line breaks, everything else is dropped, and the entities
+ * come back as characters. `DOMParser` rather than a regular expression: the
+ * value may contain anything the sanitiser allowed, and a regex that strips
+ * tags is the one that mangles the first `<` in a sentence.
+ */
+const htmlToText = (html: string): string => {
+    const source = String(html ?? '');
+    if (!source) return '';
+    // No tags at all: it is already text, and parsing would only cost a DOM.
+    if (!/[<&]/.test(source)) return source;
 
-    const emit = () => {
-        if (ref.current) onChange(ref.current.innerHTML);
-    };
+    try {
+        const doc = new DOMParser().parseFromString(
+            source
+                .replace(/<\s*br\s*\/?\s*>/gi, '\n')
+                .replace(/<\/\s*(p|div|li|h[1-6])\s*>/gi, '\n\n')
+                .replace(/<\s*li[^>]*>/gi, '• '),
+            'text/html',
+        );
+        return (doc.body.textContent || '')
+            // Three or more blank lines is never what anybody meant.
+            .replace(/\n{3,}/g, '\n\n')
+            .replace(/[ \t]+\n/g, '\n')
+            .trim();
+    } catch {
+        return source;
+    }
+};
 
-    /**
-     * `execCommand` is deprecated but not replaced.
-     *
-     * Every browser still implements it, and the alternative — hand-rolling
-     * Selection and Range manipulation — is materially more code and more bugs
-     * for the same three commands. Revisit if a browser actually removes it.
-     */
-    const run = (command: string, arg?: string) => {
-        ref.current?.focus();
-        try {
-            document.execCommand(command, false, arg);
-        } catch {
-            // A command the browser refuses is not worth an error; the editor
-            // stays usable and the admin can use the source view instead.
-        }
-        emit();
-    };
+/**
+ * Plain text, as the HTML the public pages render.
+ *
+ * One `<p>` per block of text, blank lines separating them, single line breaks
+ * inside a block kept as `<br>` — which is how everybody types an address or a
+ * list of names into a box.
+ */
+const textToHtml = (text: string): string => {
+    const clean = String(text ?? '').replace(/\r\n/g, '\n').trim();
+    if (!clean) return '';
 
-    const addLink = () => {
-        const selection = window.getSelection()?.toString();
-        if (!selection) {
-            window.alert('Select the words you want to turn into a link first.');
-            return;
-        }
-        const href = window.prompt('Link to:', 'https://');
-        if (!href) return;
-        run('createLink', href);
-    };
-
-    const Btn = ({ onClick, title, children }: {
-        onClick: () => void; title: string; children: React.ReactNode;
-    }) => (
-        <button
-            type="button"
-            // `onMouseDown` with preventDefault, not `onClick`: a click would
-            // blur the editable area first and the selection would be gone by
-            // the time the command ran.
-            onMouseDown={(e) => { e.preventDefault(); onClick(); }}
-            title={title}
-            aria-label={title}
-            className="p-1.5 rounded text-slate-600 dark:text-neutral-300
-                       hover:bg-slate-200 dark:hover:bg-[#242424] transition-colors"
-        >
-            {children}
-        </button>
+    const linked = (line: string) => escapeHtml(line).replace(
+        /(https?:\/\/[^\s<]+)/g,
+        (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`,
     );
 
+    return clean
+        .split(/\n{2,}/)
+        .map((block) => `<p>${block.split('\n').map(linked).join('<br>')}</p>`)
+        .join('');
+};
+
+export default function RichTextEditor({ value, onChange, rows = 5, placeholder }: Props) {
+    /*
+     * The HTML this box was last shown, and the text it produced.
+     *
+     * Kept so `emit` can tell "they retyped it" from "they touched nothing" —
+     * the difference between re-serialising the field and passing the stored
+     * markup through untouched.
+     */
+    const original = useRef({ html: '', text: '' });
+
+    const text = useMemo(() => {
+        const asText = htmlToText(value);
+        original.current = { html: String(value ?? ''), text: asText };
+        return asText;
+    }, [value]);
+
+    const emit = (next: string) => {
+        /*
+         * UNCHANGED TEXT MEANS UNCHANGED HTML.
+         *
+         * Without this, simply focusing a field and tabbing out would rewrite
+         * `<strong>ACTIV</strong>` as plain text — a silent edit nobody asked
+         * for, on a save that was about something else entirely.
+         */
+        if (next === original.current.text) {
+            onChange(original.current.html);
+            return;
+        }
+        onChange(textToHtml(next));
+    };
+
     return (
-        <div
-            className={`rounded-lg border transition-colors ${
-                focused
-                    ? 'border-blue-600 ring-2 ring-blue-600/30'
-                    : 'border-slate-300 dark:border-[#2a2a2a]'
-            }`}
-        >
-            <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-slate-200
-                            dark:border-[#2a2a2a] bg-slate-50 dark:bg-[#1a1a1a] rounded-t-lg">
-                <Btn onClick={() => run('bold')} title="Bold"><Bold size={15} /></Btn>
-                <Btn onClick={() => run('italic')} title="Italic"><Italic size={15} /></Btn>
+        <div>
+            {/* The same textarea as every other multi-line field on these
+                screens — `CmsTextarea`'s classes, deliberately, so this field
+                is not the one that looks different. */}
+            <textarea
+                value={text}
+                onChange={(e) => emit(e.target.value)}
+                rows={rows}
+                placeholder={placeholder}
+                className="w-full bg-slate-50 dark:bg-black border border-slate-300 dark:border-[#2a2a2a]
+                           rounded-lg px-3 py-2 text-[1.25rem] text-slate-900 dark:text-neutral-100
+                           placeholder:text-neutral-400 focus:outline-none focus:border-blue-600
+                           focus:ring-2 focus:ring-blue-600/30 transition-colors resize-y"
+            />
 
-                <span className="w-px h-4 bg-slate-300 dark:bg-[#242424] mx-1" />
-
-                <Btn onClick={addLink} title="Add link"><Link2 size={15} /></Btn>
-                <Btn onClick={() => run('unlink')} title="Remove link"><Link2Off size={15} /></Btn>
-
-                <span className="w-px h-4 bg-slate-300 dark:bg-[#242424] mx-1" />
-
-                <Btn onClick={() => run('removeFormat')} title="Clear formatting"><Eraser size={15} /></Btn>
-
-                {/* Kept because the sanitiser is the authority on what survives:
-                    when a paste comes out unexpectedly, seeing the markup is the
-                    only way to understand why. */}
-                <button
-                    type="button"
-                    onMouseDown={(e) => { e.preventDefault(); setShowSource(v => !v); }}
-                    title={showSource ? 'Back to formatted view' : 'Edit the HTML directly'}
-                    className={`ml-auto p-1.5 rounded transition-colors ${
-                        showSource
-                            ? 'bg-blue-600 text-white'
-                            : 'text-neutral-500 hover:bg-slate-200 dark:hover:bg-[#242424]'
-                    }`}
-                >
-                    <Code2 size={15} />
-                </button>
-            </div>
-
-            {showSource ? (
-                <textarea
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    rows={rows}
-                    spellCheck={false}
-                    onFocus={() => setFocused(true)}
-                    onBlur={() => setFocused(false)}
-                    className="w-full bg-slate-50 dark:bg-black px-3 py-2 text-xs font-mono
-                               text-slate-900 dark:text-neutral-100 rounded-b-lg focus:outline-none resize-y"
-                />
-            ) : (
-                <div
-                    ref={ref}
-                    contentEditable
-                    suppressContentEditableWarning
-                    role="textbox"
-                    aria-multiline="true"
-                    onInput={emit}
-                    onBlur={() => { setFocused(false); emit(); }}
-                    onFocus={() => setFocused(true)}
-                    // Paste as plain text: pasting from a word processor
-                    // otherwise brings a page of inline styles that the server
-                    // strips anyway, so what is stored would not match what the
-                    // editor showed.
-                    onPaste={(e) => {
-                        e.preventDefault();
-                        const text = e.clipboardData.getData('text/plain');
-                        document.execCommand('insertText', false, text);
-                        emit();
-                    }}
-                    data-placeholder={placeholder || ''}
-                    style={{ minHeight: `${rows * 1.6}rem` }}
-                    className="w-full bg-slate-50 dark:bg-black px-3 py-2 text-sm rounded-b-lg
-                               text-slate-900 dark:text-neutral-100 focus:outline-none overflow-y-auto
-                               [&_strong]:font-bold [&_b]:font-bold [&_em]:italic [&_i]:italic
-                               [&_a]:text-blue-600 [&_a]:underline
-                               [&:empty]:before:content-[attr(data-placeholder)]
-                               [&:empty]:before:text-neutral-400 [&:empty]:before:pointer-events-none"
-                />
-            )}
-
-            <p className="px-3 py-1.5 text-[0.6875rem] text-neutral-500 border-t border-slate-200 dark:border-[#1f1f1f]">
-                Bold, italic and links are kept. Anything else is removed when saved.
+            <p className="mt-1 text-[1.0625rem] text-neutral-500">
+                Leave a blank line between paragraphs. A web address becomes a link.
             </p>
         </div>
     );

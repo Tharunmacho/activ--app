@@ -3,13 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Users, CheckCircle, XCircle, Menu, ArrowLeft } from "lucide-react";
+import { Search, Users, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import AdminSidebar from "./AdminSidebar";
 import AdminMemberList from "./AdminMemberList";
 import ProfileViewModal from "@/components/ui/profile-view-modal";
 import { getAdminDashboard, getApplicationProfile, memberAction, errorMessage } from "@/services/activApi";
 import { TIERS, type AdminTier } from "./tierConfig";
+import { AdminPageHeader, ADMIN_BG, ADMIN_PAGE } from './AdminUI';
 
 /**
  * The admin Members directory, shared by every tier.
@@ -32,13 +33,32 @@ import { TIERS, type AdminTier } from "./tierConfig";
  * the three triggers cannot drift apart.
  */
 const TAB_TRIGGER =
-    'flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold '
+    'flex items-center justify-center gap-2 py-2.5 rounded-lg text-[1.25rem] font-semibold '
     + 'text-slate-600 transition-colors hover:text-slate-900 '
     + 'data-[state=active]:bg-blue-600 data-[state=active]:text-white '
     + 'data-[state=active]:shadow-sm';
 
 export default function AdminMembersScreen({ tier }: { tier: AdminTier }) {
     const config = TIERS[tier];
+
+    /**
+     * WHO MAY BLOCK OR DELETE A MEMBER.
+     *
+     * The State Admin and the Super Admin. Every tier had both, and the
+     * association asked for them to sit higher up — delete cascades through the
+     * application, the login, the member record and the three additional forms,
+     * and cannot be undone, so it went with block rather than being left behind
+     * as the more dangerous half of a pair.
+     *
+     * A block or district admin keeps everything reading: the directory, the
+     * search, the Active / Inactive tabs and the full application behind each
+     * row. This only decides whether the two action icons are drawn.
+     *
+     * NOT A PERMISSION BOUNDARY. `POST /admin/users/:id/:action` is restricted
+     * to the same two roles, and `adminService.memberAction` re-checks it —
+     * this is the screen not offering what the server would refuse.
+     */
+    const mayManageMembers = tier === 'state' || tier === 'super';
 
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
@@ -194,56 +214,45 @@ This removes their application, login, member record, business, financial and de
     };
 
     return (
-        <div className="min-h-screen flex bg-white">
+        <div className={`min-h-screen flex ${ADMIN_BG}`}>
             <AdminSidebar tier={tier} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
             <div className="flex-1 min-w-0 flex flex-col">
-                {/* Mobile header — the only way to reach the drawer below md. */}
-                <div className="md:hidden flex items-center justify-between p-4 bg-white border-b shadow-sm">
-                    <button
-                        onClick={() => setSidebarOpen(true)}
-                        className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                        aria-label="Open menu"
-                    >
-                        <Menu className="w-6 h-6" />
-                    </button>
-                    <h1 className="text-xl font-bold text-slate-900">Members</h1>
-                    <span className="w-10" />
-                </div>
-
                 {/*
-                  A PAGE HEADER, NOT A BANNER.
+                  * `AdminPageHeader`, not two hand-built bars.
+                  *
+                  * This screen carried its own mobile bar AND its own desktop
+                  * header — the menu button, the back button and the title,
+                  * written twice and kept in step by hand. The shared header is
+                  * what Approvals, Manage Admins, Membership, Events, Bookings
+                  * and Settings all open with, and it is the thing that decides
+                  * where the title sits relative to the cards beneath it. Two
+                  * implementations meant this screen's heading was a different
+                  * size and a different distance from its content than every
+                  * other screen in the product.
+                  */}
+                <AdminPageHeader
+                    title="Members"
+                    subtitle={
+                        /*
+                         * "in your region" is a lie for the SUPER admin, who is
+                         * not geofenced at all — `tierConfig` gives them
+                         * `regionKey: null` for exactly that reason. The three
+                         * geofenced tiers see their own patch; the super admin
+                         * sees the association.
+                         */
+                        tier === 'super'
+                            ? 'Every approved and rejected applicant, across the association'
+                            : `${config.label} members — approved and rejected applicants in your region`
+                    }
+                    onMenu={() => setSidebarOpen(true)}
+                />
 
-                  This screen opened with a solid blue block carrying its own
-                  title, while Approvals, Manage Admins and Settings beside it
-                  open with a white bar and a back button. One product should not
-                  introduce itself two different ways — and the blue block also
-                  spent the loudest colour on the page on a heading rather than
-                  on a figure.
-                */}
-                <header className="hidden md:flex bg-white border-b border-slate-200 px-6 py-4
-                                   flex-wrap items-center gap-3">
-                    <button
-                        type="button"
-                        onClick={() => navigate(config.base + '/dashboard')}
-                        aria-label="Back to dashboard"
-                        className="w-9 h-9 -ml-1 rounded-xl flex items-center justify-center text-slate-500
-                                   transition-colors hover:bg-slate-100 hover:text-slate-900"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                    </button>
-                    <div className="min-w-0 flex-1">
-                        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900">
-                            Members
-                        </h1>
-                        <p className="text-sm text-slate-500 mt-0.5">
-                            {config.label} members — approved and rejected applicants in your region
-                        </p>
-                    </div>
-                </header>
-
-                <div className="flex-1 p-6 overflow-auto">
-                    <div className="w-full max-w-[90rem] space-y-6">
+                {/* `ADMIN_PAGE` — the shared padding and the centred 90rem
+                    column. This was `p-6` with a `max-w-[90rem]` that had no
+                    `mx-auto`, so on a wide display the content hugged the left
+                    and left a band of empty page on the right. */}
+                <div className={`flex-1 overflow-y-auto ${ADMIN_PAGE}`}>
                         <Card className="border border-slate-200 rounded-2xl overflow-hidden
                                          shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                             <CardContent className="pt-6">
@@ -311,10 +320,9 @@ This removes their application, login, member record, business, financial and de
                                     : "There are no members to display yet."
                             }
                             onOpen={(m) => handleViewProfile(m.applicationId)}
-                            onToggleActive={handleToggleActive}
-                            onDelete={handleDelete}
+                            onToggleActive={mayManageMembers ? handleToggleActive : undefined}
+                            onDelete={mayManageMembers ? handleDelete : undefined}
                         />
-                    </div>
                 </div>
             </div>
 

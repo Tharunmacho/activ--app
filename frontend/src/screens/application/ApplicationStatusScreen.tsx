@@ -1,8 +1,11 @@
 // Application Status Screen
 //
-// Presentation is a gradient status hero + an animated review timeline. The
-// data layer below (fetch, stage derivation, 3-tier status rules) is unchanged;
-// only how it is rendered was rebuilt.
+// Presentation is a gradient status hero + an animated review timeline.
+//
+// THE REVIEW IS ONE STAGE, NOT THREE. An application is submitted to the Block,
+// District and State admin of the member's own area at the same time, and the
+// first of them to decide decides it - see `buildStagesFromData` below, which
+// is where the four-rung rail this screen used to draw came apart.
 //
 // Motion uses the RN Animated API on the native driver, with every animation
 // stopped on unmount so a backgrounded screen never keeps the UI thread busy.
@@ -24,7 +27,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../types';
+import { RootStackParamList, ApplicationStatus, normalizeApplicationStatus } from '../../types';
 import api, { getUserData } from '../../services/api';
 
 type ApplicationStatusProps = {
@@ -262,36 +265,50 @@ const ApplicationStatusScreen: React.FC<ApplicationStatusProps> = ({ navigation 
         : (response.data.applications || []);
 
       if (response.data.success && appsList.length > 0) {
-        // Select the most advanced application status
+        /*
+         * The most advanced application, not the newest.
+         *
+         * A member can hold more than one row - a resubmission, or a legacy
+         * duplicate - and date order can put an untouched record ahead of one
+         * that has already been decided, which would tell someone nobody had
+         * looked at their application when it had been approved.
+         *
+         * Two ranks now, not four: decided beats undecided. Every spelling of
+         * "not decided" - `Pending`, `PENDING`, `Pending-District` and the
+         * snake_case ones in older rows - folds through
+         * `normalizeApplicationStatus`.
+         */
+        const rank = (a: any) => normalizeApplicationStatus(a?.status);
         const app =
-          appsList.find((a: any) => a.status === 'Approved') ||
-          appsList.find((a: any) => a.status === 'Pending-State') ||
-          appsList.find((a: any) => a.status === 'Pending-District') ||
+          appsList.find((a: any) => rank(a) === ApplicationStatus.APPROVED) ||
+          appsList.find((a: any) => rank(a) === ApplicationStatus.REJECTED) ||
           appsList[0];
 
-        // Transform data - Add helper flags deriving from status & timestamps
-        const isBlockApproved =
-          app.status === 'Approved' ||
-          app.status === 'Pending-State' ||
-          app.status === 'Pending-District' ||
-          !!app.blockApprovedAt;
-
-        const isDistrictApproved =
-          app.status === 'Approved' ||
-          app.status === 'Pending-State' ||
-          !!app.districtApprovedAt;
-
-        const isStateApproved =
-          app.status === 'Approved' ||
-          !!app.stateApprovedAt;
+        /*
+         * THE THREE TIER FLAGS ALL MEAN "APPROVED" NOW.
+         *
+         * They used to record how far up the relay a file had travelled. The
+         * relay is gone: the application goes to the Block, District and State
+         * admin of the member's own area together and the first of them to
+         * decide decides it, so "the block has signed but the district has not"
+         * is no longer a state an application can be in.
+         *
+         * The three are kept rather than removed because the stage-building
+         * code below and the screens that read `ApplicationData` all use them,
+         * and one of them being true while the application was not approved is
+         * exactly what those screens print as progress.
+         */
+        const normalized = normalizeApplicationStatus(app.status);
+        const isApproved =
+          normalized === ApplicationStatus.APPROVED || !!app.stateApprovedAt;
 
         const transformedApp: ApplicationData = {
           ...app,
           _id: app._id,
-          isBlockApproved,
-          isDistrictApproved,
-          isStateApproved,
-          isRejected: app.status === 'Rejected',
+          isBlockApproved: isApproved,
+          isDistrictApproved: isApproved,
+          isStateApproved: isApproved,
+          isRejected: normalized === ApplicationStatus.REJECTED,
         };
 
         setApplicationData(transformedApp);
@@ -312,100 +329,92 @@ const ApplicationStatusScreen: React.FC<ApplicationStatusProps> = ({ navigation 
     }
   };
 
-  const buildStagesFromData = (app: ApplicationData): ApplicationStage[] => {
-    const stages: ApplicationStage[] = [];
-
-    // Stage 1: Block Admin Review
-    stages.push({
-      name: 'block_admin',
-      displayName: 'Block Admin Review',
-      status: getStageStatus('block', app),
-      reviewer: app.assignedBlockAdmin?.fullName || 'Not assigned yet',
-      reviewDate: app.blockApprovedAt,
-      message: app.blockReviewMessage || getStageMessage('block', app),
-      statusColor: getStageColor(getStageStatus('block', app)),
-      icon: getStageIcon(getStageStatus('block', app)),
-      isCompleted: app.isBlockApproved,
-      isActive: app.status === 'Pending-Block',
-    });
-
-    // Stage 2: District Admin Review
-    stages.push({
-      name: 'district_admin',
-      displayName: 'District Admin Review',
-      status: getStageStatus('district', app),
-      reviewer: app.assignedDistrictAdmin?.fullName || 'Not assigned yet',
-      reviewDate: app.districtApprovedAt,
-      message: app.districtReviewMessage || getStageMessage('district', app),
-      statusColor: getStageColor(getStageStatus('district', app)),
-      icon: getStageIcon(getStageStatus('district', app)),
-      isCompleted: app.isDistrictApproved,
-      isActive: app.status === 'Pending-District',
-    });
-
-    // Stage 3: State Admin Review
-    stages.push({
-      name: 'state_admin',
-      displayName: 'State Admin Review',
-      status: getStageStatus('state', app),
-      reviewer: app.assignedStateAdmin?.fullName || 'Not assigned yet',
-      reviewDate: app.stateApprovedAt,
-      message: app.stateReviewMessage || getStageMessage('state', app),
-      statusColor: getStageColor(getStageStatus('state', app)),
-      icon: getStageIcon(getStageStatus('state', app)),
-      isCompleted: app.isStateApproved,
-      isActive: app.status === 'Pending-State',
-    });
-
-    // Stage 4: Payment Ready
-    stages.push({
-      name: 'payment',
-      displayName: 'Ready for Payment',
-      status: app.status === 'Approved' ? 'approved' : 'pending',
-      reviewer: 'ACTIV System',
-      reviewDate: app.stateApprovedAt,
-      message: app.status === 'Approved' 
-        ? 'Your application is approved! Please proceed with membership payment.' 
-        : '',
-      statusColor: app.status === 'Approved' ? '#4CAF50' : '#90CAF9',
-      icon: app.status === 'Approved' ? '💳' : '○',
-      isCompleted: app.status === 'Approved',
-      isActive: app.status === 'Approved',
-    });
-
-    return stages;
+  /**
+   * =======================================================================
+   * ONE REVIEW, THEN THE PAYMENT
+   * =======================================================================
+   *
+   * This built four stages - Block Admin Review, District Admin Review, State
+   * Admin Review, Ready for Payment - because an application used to clear one
+   * tier at a time. It does not. It is put in front of all three admins for the
+   * member's area at once and the first of them to decide decides it.
+   *
+   * Four rows would now be wrong in both directions: before any decision, two
+   * of them read "Waiting" for a turn that was never coming, and after an
+   * approval by (say) the block admin, two would stay grey forever on a
+   * membership that had already been granted. The member would read their own
+   * status screen as half-finished work.
+   *
+   * WHO decided it comes off `approvedBy` / `rejectedBy`, which the server
+   * stamps with the acting tier. It cannot be inferred from the region, because
+   * all three tiers hold the file and only one of them signs.
+   */
+  const REVIEWER_LABELS: Record<string, string> = {
+    BlockAdmin: 'Block Admin',
+    DistrictAdmin: 'District Admin',
+    StateAdmin: 'State Admin',
+    SuperAdmin: 'ACTIV Head Office',
   };
 
+  const decidedBy = (app: ApplicationData): string => {
+    const anyApp = app as any;
+    if (app.isRejected) return REVIEWER_LABELS[String(anyApp?.rejectedBy?.adminType || '')] || '';
+    if (app.isStateApproved) return REVIEWER_LABELS[String(anyApp?.approvedBy?.adminType || '')] || '';
+    return '';
+  };
+
+  const buildStagesFromData = (app: ApplicationData): ApplicationStage[] => {
+    const reviewStatus = getStageStatus('review', app);
+
+    return [
+      {
+        name: 'review',
+        displayName: 'Application Review',
+        status: reviewStatus,
+        // Before a decision there is no one reviewer, and saying "Not assigned
+        // yet" would be wrong twice over - three admins have it, and nobody is
+        // going to be assigned.
+        reviewer: decidedBy(app) || 'Block, District and State Admin',
+        // `stateApprovedAt` is stamped by every approval whichever tier signed
+        // it, so this is the approval date without having to ask which.
+        reviewDate: app.stateApprovedAt,
+        message: getStageMessage('review', app),
+        statusColor: getStageColor(reviewStatus),
+        icon: getStageIcon(reviewStatus),
+        isCompleted: app.isStateApproved,
+        isActive: reviewStatus === 'in_progress',
+      },
+      {
+        name: 'payment',
+        displayName: 'Ready for Payment',
+        status: app.isStateApproved ? 'approved' : 'pending',
+        reviewer: 'ACTIV System',
+        reviewDate: app.stateApprovedAt,
+        message: app.isStateApproved
+          ? 'Your application is approved! Please proceed with membership payment.'
+          : '',
+        statusColor: app.isStateApproved ? '#4CAF50' : '#90CAF9',
+        icon: app.isStateApproved ? '\u{1F4B3}' : '\u25CB',
+        isCompleted: app.isStateApproved,
+        isActive: app.isStateApproved,
+      },
+    ];
+  };
+
+  /**
+   * The review's state. One answer, whichever key is passed.
+   *
+   * The tier keys are still accepted because other code passes them, and every
+   * one of them gets the same answer - which is the honest one: no tier is
+   * waiting on another.
+   */
   const getStageStatus = (
-    stage: 'block' | 'district' | 'state',
+    _stage: 'review' | 'block' | 'district' | 'state',
     app: ApplicationData
   ): 'pending' | 'in_progress' | 'approved' | 'rejected' => {
-    if (app.isRejected) {
-      // Check which stage rejected it
-      if (stage === 'block' && !app.isBlockApproved) return 'rejected';
-      if (stage === 'district' && app.isBlockApproved && !app.isDistrictApproved) return 'rejected';
-      if (stage === 'state' && app.isDistrictApproved && !app.isStateApproved) return 'rejected';
-    }
-
-    if (stage === 'block') {
-      if (app.isBlockApproved) return 'approved';
-      if (app.status === 'Pending-Block') return 'in_progress';
-      return 'pending';
-    }
-
-    if (stage === 'district') {
-      if (app.isDistrictApproved) return 'approved';
-      if (app.status === 'Pending-District' && app.isBlockApproved) return 'in_progress';
-      return 'pending';
-    }
-
-    if (stage === 'state') {
-      if (app.isStateApproved) return 'approved';
-      if (app.status === 'Pending-State' && app.isDistrictApproved) return 'in_progress';
-      return 'pending';
-    }
-
-    return 'pending';
+    if (app.isRejected) return 'rejected';
+    if (app.isStateApproved) return 'approved';
+    return 'in_progress';
   };
 
   const getStageColor = (status: string): string => {
@@ -436,29 +445,39 @@ const ApplicationStatusScreen: React.FC<ApplicationStatusProps> = ({ navigation 
     }
   };
 
+  /**
+   * The per-stage copy.
+   *
+   * "at this stage" is gone from both sentences. There is one stage, so the
+   * qualifier implied a next one and left an approved applicant looking for the
+   * rest of a process that had already finished.
+   */
   const getStageMessage = (
-    stage: 'block' | 'district' | 'state',
+    stage: 'review' | 'block' | 'district' | 'state',
     app: ApplicationData
   ): string => {
     const status = getStageStatus(stage, app);
 
     if (status === 'approved') {
-      return 'Application approved at this stage.';
+      return 'Your application has been approved.';
     }
 
     if (status === 'in_progress') {
-      return 'Your application is currently being reviewed. Please check back later.';
+      return 'Your Block, District and State Admin can all see your application. '
+        + 'Any of them can approve it, and you will be notified as soon as one does.';
     }
 
     if (status === 'rejected') {
-      return app.rejectionReason || 'Application was rejected at this stage.';
+      return app.rejectionReason || 'Your application was not approved.';
     }
 
     return ''; // Pending - no message
   };
 
   const handlePaymentNavigation = () => {
-    if (applicationData?.status === 'Approved') {
+    // Through the derived flag, not the raw status: live rows carry `approved`
+    // in lower case and other legacy spellings besides.
+    if (applicationData?.isStateApproved) {
       navigation.navigate('CompleteMembership');
     }
   };

@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
+import { RegionsMenu, RegionsAccordion } from './RegionsMenu';
+import { SchemesMenu, SchemesAccordion } from './SchemesMenu';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { getSiteSettings, type SiteSettings } from '@/services/cmsApi';
+import { sectionHidden } from '@/components/shared/cmsSections';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
 import { BAR_CONTAINER } from './pageContainer';
 import { useFluidScale } from './useFluidScale';
@@ -42,8 +45,17 @@ export function HeaderSection() {
     useEffect(() => { setMenuOpen(false); }, [pathname]);
 
     const brand = site?.brand;
-    const navLinks = site?.header?.navLinks || [];
-    const ctaLabel = site?.header?.ctaLabel || '';
+    /*
+     * Each card on the Header & Footer screen can be removed — see
+     * `cmsSections`. Removing one empties what it controls here rather
+     * than being checked at every use: `navLinks.length > 0` already
+     * guards the desktop row, the mobile row and the burger, and three
+     * separate `hidden` checks would be three chances to miss one.
+     */
+    const removed = (key: string) => sectionHidden(site?.sections, key);
+
+    const navLinks = removed('header.navLinks') ? [] : (site?.header?.navLinks || []);
+    const ctaLabel = removed('header.cta') ? '' : (site?.header?.ctaLabel || '');
     const ctaHref = site?.header?.ctaHref || '/login';
 
     /**
@@ -59,8 +71,10 @@ export function HeaderSection() {
      * compiles the classes it can see in the source — a colour that only exists
      * in the database at runtime produces no CSS at all.
      */
-    const background = site?.header?.background || '#ffffff';
-    const accent = site?.header?.textColor || '#1c2e68';
+    /* A removed Colours card falls back to the defaults the header shipped
+       with, which is what 'not set' has always meant here. */
+    const background = (removed('header.colours') ? '' : site?.header?.background) || '#ffffff';
+    const accent = (removed('header.colours') ? '' : site?.header?.textColor) || '#1c2e68';
 
     // '/' and '/onboarding' are the same page, so both light the Home link.
     const isActive = (href: string) =>
@@ -74,6 +88,9 @@ export function HeaderSection() {
      * labels shifted up by a pixel as you moved between pages. Reserving the
      * space means the baseline never moves.
      */
+    /* The menu link that becomes the Schemes dropdown — see `SchemesMenu`. */
+    const isSchemes = (href?: string) => String(href || '').replace(/\/+$/, '') === '/schemes';
+
     const navItemStyle = (href: string) =>
         isActive(href)
             ? { color: accent, borderColor: accent }
@@ -115,7 +132,17 @@ export function HeaderSection() {
                         */}
                         {brand?.logo?.url && (
                             <span className="block h-11 lg:h-12 w-auto max-w-[9rem] sm:max-w-[11.5rem] shrink-0">
-                                <CmsMediaFrame media={brand.logo} className="object-contain object-left" />
+                                <CmsMediaFrame
+                                    media={brand.logo}
+                                    /*
+                                      The mark is a transparent PNG, so it must
+                                      not be given the frame's loading plate:
+                                      nothing ever paints over it, and it stayed
+                                      on screen as a grey card behind the logo.
+                                    */
+                                    transparent
+                                    className="object-contain object-left"
+                                />
                             </span>
                         )}
 
@@ -128,15 +155,95 @@ export function HeaderSection() {
                         {brand?.logo?.url && brand?.fullName && (
                             <span
                                 aria-hidden="true"
-                                className="hidden md:block h-8 lg:h-9 w-px shrink-0"
+                                /* The same widths as the name it divides —
+                                   see the threshold note below. A rule with
+                                   nothing on its right is a stray line. */
+                                className="hidden md:block lg:hidden min-[1700px]:block h-8 lg:h-9 w-px shrink-0"
                                 style={{ backgroundColor: `${accent}33` }}
                             />
                         )}
 
+                        {/*
+                          * THE FULL NAME YIELDS TO THE MENU.
+                          *
+                          * Shown on a tablet, where the menu is behind the
+                          * hamburger, and on a wide desktop; hidden between
+                          * 1024px and 1536px, where eight links and Regions
+                          * need the room. With both drawn there, the name ran
+                          * into "Home" and "Contact Us" broke over two lines.
+                          * The logo still names the association at every width.
+                          */}
                         {brand?.fullName && (
                             <span
-                                className="hidden md:block text-[0.7rem] lg:text-xs font-bold uppercase
-                                           leading-[1.35] tracking-[0.06em] max-w-[17rem]"
+                                /*
+                                 * TWO LINES, NOT THREE.
+                                 *
+                                 * At `max-w-[17rem]` the name broke as
+                                 * ADIDRAVIDAR / CONFEDERATION OF TRADE / AND
+                                 * INDUSTRIAL VISION — three short lines in a
+                                 * 5.5rem bar, so the lockup was taller than the
+                                 * mark beside it and the first line was one
+                                 * word on its own.
+                                 *
+                                 * THE MEASURE IS WHAT PUTS "TRADE" ON THE
+                                 * SECOND LINE, and it is a measured number.
+                                 *
+                                 * At 17px with 1.02px of tracking the three
+                                 * candidate first lines are:
+                                 *
+                                 *     ADIDRAVIDAR CONFEDERATION          292px
+                                 *     ADIDRAVIDAR CONFEDERATION OF       322px
+                                 *     ADIDRAVIDAR CONFEDERATION OF TRADE 387px
+                                 *
+                                 * so any cap between 322 and 386 breaks after
+                                 * OF and gives "TRADE AND INDUSTRIAL VISION"
+                                 * as the second line.
+                                 *
+                                 * `em`, NOT `rem`, AND THAT IS THE WHOLE
+                                 * POINT. This type is 16px below `lg` and
+                                 * 17px above it, so a fixed 23rem cap sat
+                                 * inside the window at 17px and OUTSIDE it at
+                                 * 16px — at 900px wide the whole line was ~6%
+                                 * narrower, "… OF TRADE" fitted in 368px, and
+                                 * the break moved back a word. An `em` cap is
+                                 * a multiple of this element's own size, so
+                                 * the ratio between the words and the measure
+                                 * is the same at both, and so is the break.
+                                 * 21.6em is 367px at 17px and 346px at 16px,
+                                 * inside the window at each.
+                                 *
+                                 * `text-wrap: balance` WAS TRIED AND REMOVED.
+                                 * It works, and it chooses the other split:
+                                 * balancing minimises the WIDEST line, and
+                                 * "OF TRADE AND INDUSTRIAL VISION" is 319px
+                                 * against 322 for the line above, so it wins
+                                 * by three pixels and carries OF down with it.
+                                 * More even, and not the reading the
+                                 * association wants.
+                                 *
+                                 * `shrink-0`, AND THE DESKTOP THRESHOLD IS
+                                 * 1700px RATHER THAN 2xl. At exactly 1536 the
+                                 * nav and the name both wanted the row, the
+                                 * name lost (it is the flexible item) and was
+                                 * squeezed to 190px — FOUR lines, one word
+                                 * each. A max-width only caps a box; it does
+                                 * not stop flex taking the room back. So the
+                                 * name refuses to shrink, and it is simply not
+                                 * drawn until there is room for it, which is
+                                 * the rule this header already had — the
+                                 * threshold was just set a breakpoint too low.
+                                 * Below it the mark still names the
+                                 * association, as it does from 1024 to 1700.
+                                 *
+                                 * No `<br>`, because this string is CMS
+                                 * content (Header & footer -> Brand -> Full
+                                 * name). A hand-placed break would survive a
+                                 * rename and sit in the middle of the wrong
+                                 * word; a measure just wraps the new words.
+                                 */
+                                className="hidden md:block lg:hidden min-[1700px]:block shrink-0
+                                           text-[1rem] lg:text-[1.0625rem] font-bold uppercase
+                                           leading-[1.35] tracking-[0.06em] max-w-[21.6em]"
                                 style={{ color: accent }}
                             >
                                 {brand.fullName}
@@ -150,8 +257,17 @@ export function HeaderSection() {
                         `justify-between` happened to produce at a given width. */}
                     <div className="ml-auto flex items-center gap-5 lg:gap-8">
                         {navLinks.length > 0 && (
-                            <nav className="hidden lg:flex items-center gap-7 xl:gap-9" aria-label="Main">
-                                {navLinks.map((item, i) => (
+                            <nav className="hidden lg:flex shrink-0 items-center gap-5 xl:gap-7 2xl:gap-8" aria-label="Main">
+                                {navLinks.map((item, i) => isSchemes(item.href) ? (
+                                    /* The CMS's "Schemes" link opens a dropdown like
+                                       Regions — Central, then each region's states. */
+                                    <SchemesMenu
+                                        key={`${item.href}-${i}`}
+                                        accent={accent}
+                                        label={item.label}
+                                        active={pathname.startsWith('/schemes')}
+                                    />
+                                ) : (
                                     <Link
                                         key={`${item.href}-${i}`}
                                         to={item.href || '/'}
@@ -165,7 +281,7 @@ export function HeaderSection() {
                                           button. With bottom padding only, the
                                           whole nav rode 3px high.
                                         */
-                                        className={`text-[0.9375rem] pt-1.5 pb-1 border-b-2 transition ${
+                                        className={`whitespace-nowrap text-[1.0625rem] pt-1.5 pb-1 border-b-2 transition ${
                                             isActive(item.href)
                                                 ? 'font-semibold'
                                                 : 'font-medium opacity-70 hover:opacity-100'
@@ -175,6 +291,18 @@ export function HeaderSection() {
                                         {item.label}
                                     </Link>
                                 ))}
+
+                                {/*
+                                  * REGIONS, after the CMS's own links.
+                                  *
+                                  * Not one of `navLinks`: those are single
+                                  * links an editor types, and this is a
+                                  * two-level menu built from
+                                  * `/cms/regions/map`. Putting it last keeps
+                                  * the editor in charge of everything before
+                                  * it.
+                                  */}
+                                <RegionsMenu accent={accent} />
                             </nav>
                         )}
 
@@ -183,7 +311,7 @@ export function HeaderSection() {
                                 <Link
                                     to={ctaHref}
                                     className="inline-flex items-center justify-center h-11 px-7 rounded-full
-                                               text-white text-[0.9375rem] font-semibold whitespace-nowrap shadow-sm
+                                               text-white text-[1.0625rem] font-semibold whitespace-nowrap shadow-sm
                                                transition-opacity hover:opacity-90"
                                     style={{ backgroundColor: accent }}
                                 >
@@ -215,12 +343,19 @@ export function HeaderSection() {
                         style={{ borderColor: `${accent}1A` }}
                         aria-label="Main"
                     >
-                        {navLinks.map((item, i) => (
+                        {navLinks.map((item, i) => isSchemes(item.href) ? (
+                            <SchemesAccordion
+                                key={`m-${item.href}-${i}`}
+                                accent={accent}
+                                label={item.label}
+                                onNavigate={() => setMenuOpen(false)}
+                            />
+                        ) : (
                             <Link
                                 key={`m-${item.href}-${i}`}
                                 to={item.href || '/'}
                                 aria-current={isActive(item.href) ? 'page' : undefined}
-                                className={`px-3 py-2.5 rounded-lg text-sm transition-colors hover:bg-black/5 ${
+                                className={`px-3 py-2.5 rounded-lg text-[1.0625rem] transition-colors hover:bg-black/5 ${
                                     isActive(item.href) ? 'font-semibold bg-black/5' : 'font-medium'
                                 }`}
                                 style={{ color: accent }}
@@ -228,6 +363,10 @@ export function HeaderSection() {
                                 {item.label}
                             </Link>
                         ))}
+
+                        {/* An accordion here, not the flyout — see the note in
+                            RegionsMenu about the first tap on a touch screen. */}
+                        <RegionsAccordion accent={accent} onNavigate={() => setMenuOpen(false)} />
                     </nav>
                 )}
             </div>

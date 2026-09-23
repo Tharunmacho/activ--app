@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Check, ArrowLeft, ArrowRight, Loader2, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+import { PAGE_SUBTITLE, PAGE_TITLE, CARD_TITLE } from '@/components/layout/appTypography';
 /**
  * The shell the four registration forms render inside.
  *
@@ -20,10 +21,22 @@ import { Button } from "@/components/ui/button";
  * and there is exactly one of it.
  */
 
-export type StepIndex = 1 | 2 | 3 | 4;
+export type StepIndex = 1 | 2 | 3;
 
-/** The four steps, in the order mobile visits them. */
-const TOTAL_STEPS = 4;
+/**
+ * THREE steps: Personal, Business, Declaration.
+ *
+ * Financial & Compliance used to sit between the last two. It has moved to the
+ * Business Creation Account, alongside the business details it belongs with — a
+ * PAN, a GSTIN and a turnover band describe a COMPANY, and a member trading
+ * through two of them had one set of answers here describing whichever was
+ * filled in last.
+ *
+ * What is left in this flow is the application itself: who you are, whether you
+ * trade and since when, and the declaration. Everything about the business is
+ * asked once, in the account that owns it.
+ */
+const TOTAL_STEPS = 3;
 
 export function FormCard({
     icon: Icon,
@@ -43,8 +56,8 @@ export function FormCard({
                     <Icon className="w-5 h-5 text-blue-600" />
                 </span>
                 <div className="min-w-0">
-                    <h2 className="text-base font-bold text-slate-900">{title}</h2>
-                    {subtitle ? <p className="text-sm text-slate-500 mt-0.5">{subtitle}</p> : null}
+                    <h2 className={`${CARD_TITLE} text-slate-900`}>{title}</h2>
+                    {subtitle ? <p className="text-[1.1875rem] text-slate-500 mt-0.5">{subtitle}</p> : null}
                 </div>
             </div>
             <div className="space-y-5">{children}</div>
@@ -70,13 +83,13 @@ export function FormField({
 }) {
     return (
         <div className={full ? "md:col-span-2" : undefined}>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label className="block text-[1.1875rem] font-semibold text-slate-700 mb-2">
                 {label}
                 {required ? <span className="text-red-500 ml-0.5">*</span> : null}
             </label>
             {children}
-            {error ? <p className="text-xs text-red-600 mt-1.5">{error}</p> : null}
-            {!error && hint ? <p className="text-xs text-slate-500 mt-1.5">{hint}</p> : null}
+            {error ? <p className="text-[1.0625rem] text-red-600 mt-1.5">{error}</p> : null}
+            {!error && hint ? <p className="text-[1.0625rem] text-slate-500 mt-1.5">{hint}</p> : null}
         </div>
     );
 }
@@ -96,7 +109,7 @@ function Stepper({ current }: { current: StepIndex }) {
                 return (
                     <div key={step} className="flex items-center">
                         <span
-                            className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${done
+                            className={`w-9 h-9 rounded-full flex items-center justify-center text-[1.1875rem] font-bold shrink-0 ${done
                                 ? "bg-blue-600 text-white"
                                 : active
                                     ? "bg-blue-600 text-white ring-4 ring-blue-100"
@@ -162,10 +175,10 @@ export default function RegistrationFormShell({
                         <ArrowLeft className="w-5 h-5" />
                     </button>
                     <div className="min-w-0">
-                        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-slate-900 truncate">{title}</h1>
-                        <p className="text-sm text-slate-500 mt-0.5 truncate hidden sm:block">{description}</p>
+                        <h1 className={`${PAGE_TITLE} text-slate-900 truncate`}>{title}</h1>
+                        <p className={`${PAGE_SUBTITLE} text-slate-500 mt-0.5 truncate hidden sm:block`}>{description}</p>
                     </div>
-                    <span className="ml-auto text-sm font-medium text-slate-500 shrink-0">
+                    <span className="ml-auto text-[1.1875rem] font-medium text-slate-500 shrink-0">
                         Step {step} of {TOTAL_STEPS}
                     </span>
                 </header>

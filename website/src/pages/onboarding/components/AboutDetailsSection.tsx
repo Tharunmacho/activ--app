@@ -33,7 +33,9 @@ export function AboutDetailsSection() {
             media={about.media}
             logoOverlay={about.logoOverlay}
             statsBar={about.statsBar}
+            quote={about.quote}
             extraFields={about.extraFields}
+            sections={about.sections}
         />
     );
 }

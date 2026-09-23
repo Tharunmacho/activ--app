@@ -173,7 +173,16 @@ const DistrictDashboardScreen = ({ navigation }: any) => {
 
       <ScrollView contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchDashboardData(true)} />}>
         <View style={styles.statsGrid}>
-          {renderStatCard('Total Members', stats?.totalMembers || applicants.all?.length || 0, ACCENTS.purple, ACCENTS.lightPurple, 'groups')}
+          {/*
+            THE FOUR TILES ARE ONE SUM — see the website's `AdminDashboardScreen`.
+
+            `stats?.totalMembers || applicants.all?.length` was the same fault
+            in client form: the server's figure meant "approved, unless nothing
+            is approved" and the `||` then hid a legitimate 0 behind the list
+            length. `totalApplications` is the region's applicants, and the
+            three tiles beside it are the buckets they fall into.
+          */}
+          {renderStatCard('Total Applicants', stats?.totalApplications ?? (applicants.all?.length || 0), ACCENTS.purple, ACCENTS.lightPurple, 'groups')}
           {renderStatCard('Pending', stats?.pendingApplications || applicants.pending?.length || 0, ACCENTS.orange, ACCENTS.lightOrange, 'schedule')}
           {renderStatCard('Approved', stats?.approvedApplications || applicants.approved?.length || 0, ACCENTS.green, ACCENTS.lightGreen, 'check-circle')}
           {renderStatCard('Rejected', stats?.rejectedApplications || applicants.rejected?.length || 0, ACCENTS.red, ACCENTS.lightRed, 'cancel')}

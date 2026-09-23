@@ -111,12 +111,32 @@ interface Props {
      * too large and the saving is lost, so pass the frame's real width.
      */
     width?: number;
+    /**
+     * Turn the loading plate off, for media that is meant to be transparent.
+     *
+     * The plate (`bg-slate-100`) is right for a photograph: it holds the frame
+     * while the file is in flight and it is covered the moment the picture
+     * paints. A LOGO is the one case where it is wrong — a transparent PNG
+     * never covers it, so the plate stays visible for the life of the page as a
+     * grey card behind the mark, which is exactly what "the logo is not
+     * transparent" describes. There is nothing to hold in that case either: the
+     * box around it already has a definite height.
+     *
+     * A dead URL still degrades to an empty box of the right size; it simply
+     * degrades to a transparent one.
+     */
+    transparent?: boolean;
 }
 
 export function CmsMediaFrame({
     media, className = '', fallback = null, priority = false, width = 900,
+    transparent = false,
 }: Props) {
     const m = { ...EMPTY_MEDIA, ...(media || {}) };
+
+    // See `transparent` above. Written once so the three render paths below
+    // cannot disagree about whether this frame has a plate.
+    const plate = transparent ? '' : 'bg-slate-100';
 
     const [failed, setFailed] = useState(false);
 
@@ -138,7 +158,7 @@ export function CmsMediaFrame({
         return (
             <video
                 src={m.url}
-                className={`w-full h-full bg-slate-100 ${className}`}
+                className={`w-full h-full ${plate} ${className}`}
                 style={style}
                 autoPlay
                 muted
@@ -154,7 +174,7 @@ export function CmsMediaFrame({
     // Same box, same classes, no image — so a dead URL cannot change the layout
     // around it.
     if (failed) {
-        return <div aria-hidden="true" className={`w-full h-full bg-slate-100 ${className}`} />;
+        return <div aria-hidden="true" className={`w-full h-full ${plate} ${className}`} />;
     }
 
     return (
@@ -177,7 +197,7 @@ export function CmsMediaFrame({
             {...{ fetchpriority: priority ? 'high' : undefined }}
             decoding="async"
             onError={() => setFailed(true)}
-            className={`w-full h-full bg-slate-100 ${className}`}
+            className={`w-full h-full ${plate} ${className}`}
             style={style}
         />
     );

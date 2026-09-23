@@ -26,7 +26,6 @@ const EditProduct = () => {
         description: "",
         category: "",
         price: "",
-        stock: "",
         sku: "",
         image: null as File | null,
     });
@@ -65,7 +64,6 @@ const EditProduct = () => {
                      */
                     category: normalizeProductCategory(product.category),
                     price: String(product.price ?? 0),
-                    stock: String(product.stock ?? 0),
                     sku: product.sku || "",
                     image: null
                 });
@@ -116,8 +114,24 @@ const EditProduct = () => {
     };
 
     const handleSave = async () => {
-        if (!formData.name || !formData.category || !formData.price) {
-            toast.error("Please fill in all required fields");
+        /*
+         * NAME AND PRICE. NOT CATEGORY — THIS FORM HAS NO CATEGORY FIELD.
+         *
+         * The category and SKU inputs were removed from both product forms
+         * deliberately: the company answers "what do you make" once, on its own
+         * profile, against NIC. `AddProduct` dropped `category` from its guard
+         * at the same time; this one did not, so it went on requiring a value
+         * from a control that is no longer on the screen.
+         *
+         * The result was a form that could not be submitted at all. Every field
+         * it showed was filled in and it answered "Please fill in all required
+         * fields" — naming no field, because the field it meant was not there
+         * to name. `normalizeProductCategory` makes it worse rather than
+         * better: it blanks any category the current lists do not recognise, so
+         * even a product that HAS one arrives here with ''.
+         */
+        if (!formData.name || !formData.price) {
+            toast.error("A product needs a name and a price");
             return;
         }
 
@@ -127,11 +141,8 @@ const EditProduct = () => {
             return;
         }
 
-        const stockNum = formData.stock ? parseInt(formData.stock) : 0;
-        if (isNaN(stockNum) || stockNum < 0) {
-            toast.error("Please enter a valid stock quantity");
-            return;
-        }
+        /* No stock check: the field came off this form, so there is no
+           number to validate. */
 
         setLoading(true);
 
@@ -153,10 +164,19 @@ const EditProduct = () => {
             const payload = new FormData();
             payload.append('name', formData.name.trim());
             payload.append('description', formData.description.trim());
-            payload.append('category', formData.category);
-            payload.append('sku', formData.sku.trim());
+            /*
+             * Only sent when there is one to send.
+             *
+             * `formData.category` is '' for any product whose stored category
+             * the current lists no longer recognise, and the server writes
+             * whichever keys arrive — so appending it unconditionally erased a
+             * real category on every save, from a form that does not show the
+             * field and gives nobody a chance to notice. Omitted, the stored
+             * value is left alone, exactly as `imageUrl` is above.
+             */
+            if (formData.category) payload.append('category', formData.category);
+            if (formData.sku.trim()) payload.append('sku', formData.sku.trim());
             payload.append('price', String(priceNum));
-            payload.append('stock', String(stockNum));
             if (formData.image) payload.append('image', formData.image);
 
             const response = await apiFetch(`/products/${id}`, { method: 'PUT', body: payload });
@@ -214,51 +234,64 @@ const EditProduct = () => {
                 </>
             }
         >
-            {/* One column on a phone, three from lg up — this was an
-                unconditional `grid grid-cols-3`. */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                <Card className="lg:sticky lg:top-0">
-                    <SectionHeading title="Product Media" icon={ImagePlus} />
+            {/* ONE CARD, as on Add Product — a picture, a name, a price and a
+                description. See the note there for why the three-card grid went;
+                and there is no stock count: nothing member-facing reads it and a
+                figure nobody updates tells a visitor something untrue. */}
+            <div className="mx-auto w-full max-w-4xl">
+                <Card>
+                    <SectionHeading title="Product" icon={Package} />
 
-                    <label
-                        htmlFor="product-image"
-                        className="block rounded-xl border-2 border-dashed border-slate-300 hover:border-blue-500
-                                   transition-colors cursor-pointer overflow-hidden bg-slate-50"
-                    >
-                        {imagePreview ? (
-                            <img src={imagePreview} alt="Product preview" className="w-full h-56 object-cover" />
-                        ) : (
-                            <div className="flex flex-col items-center justify-center h-56 px-4 text-center">
-                                <ImagePlus className="h-10 w-10 text-slate-400 mb-3" />
-                                <p className="text-sm font-semibold text-slate-700">Upload Product Image</p>
-                                <p className="text-xs text-slate-500 mt-1">JPG or PNG, max 5MB</p>
-                            </div>
-                        )}
-                    </label>
-                    <input
-                        id="product-image"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                    />
-                    {imagePreview ? (
-                        <p className="text-xs text-slate-500 mt-2 text-center">Click the image to change it</p>
-                    ) : null}
-                </Card>
+                    <div className="grid gap-6 md:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] items-start">
+                        <div>
+                            <label
+                                htmlFor="product-image"
+                                className="block rounded-xl border-2 border-dashed border-slate-300
+                                           hover:border-blue-500 transition-colors cursor-pointer
+                                           overflow-hidden bg-slate-50"
+                            >
+                                {imagePreview ? (
+                                    <img src={imagePreview} alt="Product preview"
+                                        className="w-full h-52 object-cover" />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-52 px-4 text-center">
+                                        <ImagePlus className="h-9 w-9 text-slate-400 mb-2.5" />
+                                        <p className="text-[1.25rem] font-semibold text-slate-700">Add a picture</p>
+                                        <p className="text-[1.1875rem] text-slate-500 mt-1">JPG or PNG, max 5MB</p>
+                                    </div>
+                                )}
+                            </label>
+                            <input
+                                id="product-image"
+                                type="file"
+                                accept="image/*"
+                                onChange={handleImageUpload}
+                                className="hidden"
+                            />
+                            {imagePreview ? (
+                                <p className="text-[1.1875rem] text-slate-500 mt-2 text-center">
+                                    Click the image to change it
+                                </p>
+                            ) : null}
+                        </div>
 
-                <div className="lg:col-span-2 space-y-6">
-                    <Card>
-                        {/* Same grouping as Add Product. Category had drifted into
-                            "Pricing & Inventory" on this form only, so the two
-                            sibling screens described a product differently. */}
-                        <SectionHeading title="Product Details" icon={Package} />
-                        <FieldGrid>
+                        <div className="space-y-5">
                             <Field label="Product Name" required full>
                                 <Input
                                     placeholder="Enter product / service name"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    className="h-11 border-slate-200 focus-visible:ring-blue-500"
+                                />
+                            </Field>
+
+                            <Field label="Price (₹)" required full>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    placeholder="0.00"
+                                    value={formData.price}
+                                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                                     className="h-11 border-slate-200 focus-visible:ring-blue-500"
                                 />
                             </Field>
@@ -271,61 +304,9 @@ const EditProduct = () => {
                                     className="min-h-[7.5rem] border-slate-200 focus-visible:ring-blue-500"
                                 />
                             </Field>
-
-                            <Field label="Category" required>
-                                <Select
-                                    value={formData.category}
-                                    onValueChange={(value) => setFormData({ ...formData, category: value })}
-                                >
-                                    <SelectTrigger className="h-11 border-slate-200 focus:ring-blue-500">
-                                        <SelectValue placeholder="Select a category" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {PRODUCT_CATEGORIES.map((category) => (
-                                            <SelectItem key={category} value={category}>{category}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </Field>
-
-                            <Field label="SKU">
-                                <Input
-                                    placeholder="e.g. PRD-2024-001"
-                                    value={formData.sku}
-                                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                                    className="h-11 border-slate-200 focus-visible:ring-blue-500"
-                                />
-                            </Field>
-                        </FieldGrid>
-                    </Card>
-
-                    <Card>
-                        <SectionHeading title="Pricing &amp; Inventory" icon={IndianRupee} />
-                        <FieldGrid>
-                            <Field label="Price (₹)" required>
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    placeholder="0.00"
-                                    value={formData.price}
-                                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                    className="h-11 border-slate-200 focus-visible:ring-blue-500"
-                                />
-                            </Field>
-
-                            <Field label="Stock Quantity">
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    placeholder="e.g. 100"
-                                    value={formData.stock}
-                                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                                    className="h-11 border-slate-200 focus-visible:ring-blue-500"
-                                />
-                            </Field>
-                        </FieldGrid>
-                    </Card>
-                </div>
+                        </div>
+                    </div>
+                </Card>
             </div>
         </BusinessPageShell>
     );

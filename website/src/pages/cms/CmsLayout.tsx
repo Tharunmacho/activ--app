@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
-    Home, LayoutGrid, FileText, PartyPopper, Images, PanelTop,
-    Phone, Inbox, LogOut, ChevronsUpDown, Sun, Moon, Menu, X, Shield,
-    Search, Bell, ExternalLink, CornerDownLeft,
+    Home, LayoutGrid, FileText, PartyPopper, Images, Newspaper, Landmark, BadgeCheck, PanelTop,
+    Phone, Inbox, LogOut, ChevronsUpDown, Sun, Moon, Menu, X, Shield, MessageSquare,
+    Search, Bell, ExternalLink, CornerDownLeft, Scale, MapPin,
 } from 'lucide-react';
 import { getStoredRole, logout } from '@/services/activApi';
 import { listContactMessages, getSiteSettings, type SiteSettings } from '@/services/cmsApi';
+import { listLeaderMessages } from '@/services/cmsLeaderMessagesApi';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
 import { STORAGE_KEYS } from '@/config/api.config';
 
+import { PAGE_TITLE } from '@/components/layout/appTypography';
 /**
  * The CMS shell.
  *
@@ -36,7 +38,7 @@ type NavItem = {
     icon: typeof Home;
     end?: boolean;
     superOnly?: boolean;
-    badge?: 'unread';
+    badge?: 'unread' | 'leaderUnread';
     /** Extra words the top-bar search should match on. */
     keywords?: string;
 };
@@ -57,13 +59,41 @@ const CONTENT_NAV: NavItem[] = [
     { to: '/cms/site', label: 'Header & Footer', icon: PanelTop, keywords: 'logo brand nav menu colours' },
     { to: '/cms/home', label: 'Home Page', icon: Home, keywords: 'carousel hero slides about stats' },
     { to: '/cms/about', label: 'About Us', icon: FileText, keywords: 'story bullets figures' },
+    /* After About, because the two are the pages a visitor reads to decide */
+    /* whether to join, and the prospectus is the longer answer. */
+    { to: '/cms/membership', label: 'Membership', icon: BadgeCheck, keywords: 'prospectus advantages join journey benefits why' },
     { to: '/cms/events', label: 'Events', icon: PartyPopper, keywords: 'agenda speakers venue audience' },
     { to: '/cms/gallery', label: 'Gallery', icon: Images, keywords: 'photos images album' },
+    /* After Gallery, because it is posted the same way and read on the same
+       kind of page. Schemes follow News: they used to be a tab inside it, and
+       have their own page at /schemes now. */
+    { to: '/cms/news', label: 'News', icon: Newspaper, keywords: 'news article press headline newspaper hindu source link youtube' },
+    { to: '/cms/schemes', label: 'Schemes', icon: Landmark, keywords: 'scheme schemes benefit subsidy central national state district apply government' },
+    { to: '/cms/regions', label: 'Zones & States', icon: MapPin, keywords: 'zone region state leadership chairman focus states south north east west gallery' },
     { to: '/cms/contact', label: 'Contact Details', icon: Phone, keywords: 'address phone email map' },
+    // Last in the content group because it is opened rarely and deliberately —
+    // and because it is the only screen here that keeps a version history.
+    { to: '/cms/legal', label: 'Legal Notices', icon: Scale, keywords: 'privacy terms conditions refund return cancellation policy' },
 ];
 
 const SUPPORT_NAV: NavItem[] = [
     { to: '/cms/messages', label: 'Inbox', icon: Inbox, badge: 'unread', keywords: 'messages enquiries contact form' },
+    /*
+     * Separate from the Inbox above, and it has to be.
+     *
+     * The contact form is one destination: the association. These are
+     * addressed to a PERSON and carry the district the sender was reading —
+     * which is the whole value of them, because it is a lead for that
+     * district's schemes and events. Folded into one list they would be
+     * sorted by date beside enquiries that need none of that context.
+     */
+    {
+        to: '/cms/leader-messages',
+        label: 'Leader enquiries',
+        icon: MessageSquare,
+        badge: 'leaderUnread',
+        keywords: 'leader office bearer message district contact callback membership scheme',
+    },
 ];
 
 /** The heading shown in the top bar for each route. */
@@ -72,10 +102,15 @@ const TITLES: Record<string, string> = {
     '/cms/site': 'Header & Footer',
     '/cms/home': 'Home Page',
     '/cms/about': 'About Us',
+    '/cms/membership': 'Membership',
     '/cms/events': 'Events',
     '/cms/gallery': 'Gallery',
+    '/cms/news': 'News',
+    '/cms/schemes': 'Schemes',
     '/cms/contact': 'Contact Details',
+    '/cms/legal': 'Legal Notices',
     '/cms/messages': 'Inbox',
+    '/cms/leader-messages': 'Leader enquiries',
 };
 
 const THEME_KEY = 'cms_theme';
@@ -87,6 +122,8 @@ export default function CmsLayout() {
     const [drawer, setDrawer] = useState(false);
     const [userOpen, setUserOpen] = useState(false);
     const [unread, setUnread] = useState(0);
+    /* Counted apart from the contact inbox — see the note on the nav item. */
+    const [leaderUnread, setLeaderUnread] = useState(0);
     const [query, setQuery] = useState('');
     const [site, setSite] = useState<SiteSettings | null>(null);
     const searchRef = useRef<HTMLInputElement | null>(null);
@@ -122,7 +159,7 @@ export default function CmsLayout() {
     const initial = displayName.charAt(0).toUpperCase();
 
     useEffect(() => {
-        if (!canEdit) navigate('/login', { replace: true });
+        if (!canEdit) navigate('/admin/login', { replace: true });
     }, [canEdit, navigate]);
 
     /**
@@ -165,6 +202,10 @@ export default function CmsLayout() {
         listContactMessages({ limit: 1 })
             .then((r) => { if (!cancelled) setUnread(r.unread || 0); })
             .catch(() => { /* a badge is not worth an error */ });
+
+        listLeaderMessages({ limit: 1 })
+            .then((r) => { if (!cancelled) setLeaderUnread(r.unread || 0); })
+            .catch(() => { /* likewise */ });
         return () => { cancelled = true; };
     }, [location.pathname]);
 
@@ -189,12 +230,26 @@ export default function CmsLayout() {
         return () => window.removeEventListener('keydown', onKey);
     }, []);
 
-    const visible = (items: NavItem[]) => items.filter(i => !i.superOnly || role === 'super_admin');
+    /*
+     * Memoised on `role`, which is the only thing it reads.
+     *
+     * `visible` used to be a plain function in the component body and this
+     * memo called it. The behaviour was right — a new `visible` every
+     * render closes over the current `role`, and `role` is the dependency
+     * — but the rule cannot see that, and an exception it reports on every
+     * run is an exception people learn to scroll past.
+     */
+    const visible = useMemo(
+        () => (items: NavItem[]) => items.filter(
+            (i) => !i.superOnly || role === 'super_admin',
+        ),
+        [role],
+    );
 
     /** Every destination the search can reach, in one flat list. */
     const allNav = useMemo(
         () => [...visible(WORKSPACE_NAV), ...CONTENT_NAV, ...SUPPORT_NAV],
-        [role],
+        [visible],
     );
 
     const matches = useMemo(() => {
@@ -208,7 +263,7 @@ export default function CmsLayout() {
 
     const handleLogout = async () => {
         await logout();
-        navigate('/login', { replace: true });
+        navigate('/admin/login', { replace: true });
     };
 
     /*
@@ -256,7 +311,7 @@ export default function CmsLayout() {
      * miss; the bar is what makes "where am I" answerable without reading.
      */
     const linkClass = ({ isActive }: { isActive: boolean }) =>
-        `relative flex items-center gap-3.5 pl-4 pr-3 py-3 rounded-lg text-base font-medium
+        `relative flex items-center gap-3.5 pl-4 pr-3 py-3 rounded-lg text-[1.25rem] font-medium
          transition-colors ${isActive
             ? `${t.active} before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2
                before:h-5 before:w-[3px] before:rounded-full before:bg-[#2563EB]`
@@ -267,7 +322,7 @@ export default function CmsLayout() {
 
     const NavGroup = ({ label, items }: { label: string; items: NavItem[] }) => (
         <div className="mb-6 last:mb-0">
-            <p className={`px-4 pb-2.5 text-[0.75rem] font-semibold uppercase tracking-[0.14em] ${t.faint}`}>
+            <p className={`px-4 pb-2.5 text-[1.0625rem] font-semibold uppercase tracking-[0.14em] ${t.faint}`}>
                 {label}
             </p>
             <div className="space-y-0.5">
@@ -276,9 +331,15 @@ export default function CmsLayout() {
                         <Icon className="w-[1.25rem] h-[1.25rem] shrink-0" />
                         <span className="truncate flex-1">{text}</span>
                         {badge === 'unread' && unread > 0 && (
-                            <span className="text-[0.6875rem] font-bold bg-[#DC2626] text-white
+                            <span className="text-[1.0625rem] font-bold bg-[#DC2626] text-white
                                              rounded-full min-w-[1.25rem] text-center px-1.5 py-0.5 shrink-0">
                                 {unread}
+                            </span>
+                        )}
+                        {badge === 'leaderUnread' && leaderUnread > 0 && (
+                            <span className="text-[1.0625rem] font-bold bg-[#DC2626] text-white
+                                             rounded-full min-w-[1.25rem] text-center px-1.5 py-0.5 shrink-0">
+                                {leaderUnread}
                             </span>
                         )}
                     </NavLink>
@@ -302,21 +363,43 @@ export default function CmsLayout() {
                             h-screen min-h-0 flex flex-col transition-transform duration-200 ${t.side}
                             ${drawer ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
             >
-                {/* brand — the site's own mark, uploaded in Header & Footer */}
-                <div className={`h-[5.5rem] shrink-0 flex items-center gap-3 px-5 border-b ${t.divide}`}>
+                {/*
+                  * brand — the site's own mark, uploaded in Header & Footer.
+                  *
+                  * CENTRED, and the two changes that took to do it are both about
+                  * the mark being WIDER THAN ITS BOX:
+                  *
+                  *   `justify-center` on the band centres the logo against the
+                  *   rail rather than pinning it to the left padding, which left
+                  *   it sitting off to one side of a 17rem column.
+                  *
+                  *   `object-center`, not `object-left`. The frame is `h-12` with
+                  *   `w-auto` capped at 13rem, so a wide mark is letterboxed inside
+                  *   it — and `object-left` then pushed the artwork to the left of
+                  *   its own frame, which undid the centring one level down.
+                  *
+                  * The close button keeps `ml-auto` and is `absolute` on a phone so
+                  * it cannot pull the logo off centre by taking width in the row.
+                  */}
+                <div className={`relative h-[5.5rem] shrink-0 flex items-center justify-center px-5
+                                 border-b ${t.divide}`}>
                     {logo?.url ? (
                         <span className="block h-12 w-auto max-w-[13rem] shrink-0">
-                            <CmsMediaFrame media={logo} className="object-contain object-left" />
+                            <CmsMediaFrame media={logo} transparent className="object-contain object-center" />
                         </span>
                     ) : (
                         // Only until the mark loads or if none is uploaded yet.
                         <span className="w-10 h-10 rounded-xl bg-[#2563EB] text-white flex items-center
-                                         justify-center font-display font-extrabold text-base shrink-0">
+                                         justify-center font-display font-extrabold text-[1.25rem] shrink-0">
                             A
                         </span>
                     )}
 
-                    <button className={`lg:hidden ml-auto ${t.muted}`} onClick={() => setDrawer(false)} aria-label="Close menu">
+                    <button
+                        className={`lg:hidden absolute right-4 top-1/2 -translate-y-1/2 ${t.muted}`}
+                        onClick={() => setDrawer(false)}
+                        aria-label="Close menu"
+                    >
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -341,14 +424,14 @@ export default function CmsLayout() {
                             className="w-full flex items-center gap-3 p-3 text-left"
                         >
                             <span className="w-9 h-9 rounded-lg bg-[#2563EB] text-white flex items-center
-                                             justify-center text-[0.875rem] font-bold shrink-0">
+                                             justify-center text-[1.0625rem] font-bold shrink-0">
                                 {initial}
                             </span>
                             <span className="min-w-0 flex-1">
-                                <span className={`block text-[0.9375rem] font-semibold truncate ${t.title}`}>
+                                <span className={`block text-[1.1875rem] font-semibold truncate ${t.title}`}>
                                     {displayName}
                                 </span>
-                                <span className={`block text-[0.8125rem] truncate ${t.muted}`}>
+                                <span className={`block text-[1.0625rem] truncate ${t.muted}`}>
                                     {email || 'Administrator'}
                                 </span>
                             </span>
@@ -360,7 +443,7 @@ export default function CmsLayout() {
                                 <button
                                     onClick={handleLogout}
                                     className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg
-                                               text-[0.875rem] font-medium text-[#F87171]
+                                               text-[1.0625rem] font-medium text-[#F87171]
                                                hover:bg-[#DC2626]/10 transition-colors"
                                 >
                                     <LogOut className="w-4 h-4" />
@@ -380,7 +463,7 @@ export default function CmsLayout() {
                                 onClick={() => setDark(wants)}
                                 aria-pressed={dark === wants}
                                 className={`flex items-center justify-center gap-2 py-2 rounded-lg
-                                            text-[0.875rem] font-medium transition-colors
+                                            text-[1.0625rem] font-medium transition-colors
                                             ${dark === wants ? t.toggleOn : t.muted}`}
                             >
                                 <Icon className="w-4 h-4" />
@@ -393,7 +476,7 @@ export default function CmsLayout() {
 
             {/* =================================================== main column */}
             <div className="flex-1 min-w-0 min-h-0 flex flex-col">
-                <header className={`h-[5.5rem] shrink-0 border-b flex items-center gap-3 px-5 lg:px-8
+                <header className={`h-[5.5rem] shrink-0 border-b flex items-center gap-2 sm:gap-3 px-4 sm:px-5 lg:px-8
                                     backdrop-blur ${t.head}`}>
                     <button className={`lg:hidden ${t.muted}`} onClick={() => setDrawer(true)} aria-label="Open menu">
                         <Menu className="w-5 h-5" />
@@ -411,10 +494,10 @@ export default function CmsLayout() {
                             }}
                             placeholder="Search sections…"
                             aria-label="Search CMS sections"
-                            className={`w-full h-12 pl-11 pr-16 rounded-xl border text-[0.9375rem]
+                            className={`w-full h-12 pl-11 pr-16 rounded-xl border text-[1.1875rem]
                                         outline-none focus:border-[#2563EB] transition-colors ${t.field}`}
                         />
-                        <kbd className={`absolute right-3 top-1/2 -translate-y-1/2 text-[0.6875rem]
+                        <kbd className={`absolute right-3 top-1/2 -translate-y-1/2 text-[1.0625rem]
                                          font-medium px-1.5 py-0.5 rounded border ${t.divide} ${t.faint}`}>
                             ⌘K
                         </kbd>
@@ -428,7 +511,7 @@ export default function CmsLayout() {
                                         type="button"
                                         onClick={() => navigate(to)}
                                         className={`w-full flex items-center gap-3 px-4 py-2.5 text-left
-                                                    text-[0.875rem] ${t.item}`}
+                                                    text-[1.0625rem] ${t.item}`}
                                     >
                                         <Icon className="w-4 h-4 shrink-0" />
                                         <span className="flex-1 truncate">{label}</span>
@@ -439,7 +522,7 @@ export default function CmsLayout() {
                         )}
                     </div>
 
-                    <h1 className={`sm:hidden font-display text-[1.125rem] font-bold tracking-tight ${t.title}`}>
+                    <h1 className={`sm:hidden font-display ${PAGE_TITLE} ${t.title}`}>
                         {pageTitle}
                     </h1>
 
@@ -447,7 +530,7 @@ export default function CmsLayout() {
                         {/* The public site is live and this panel edits it — worth
                             saying on every screen, because that is the whole risk. */}
                         <span className={`hidden md:inline-flex items-center gap-2 h-9 px-3 rounded-full
-                                          border text-[0.75rem] font-semibold ${t.card} ${t.muted}`}>
+                                          border text-[1.0625rem] font-semibold ${t.card} ${t.muted}`}>
                             <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E]" />
                             Live
                         </span>
@@ -460,7 +543,7 @@ export default function CmsLayout() {
                         >
                             <Bell className="w-4 h-4" />
                             {unread > 0 && (
-                                <span className="absolute -top-1 -right-1 min-w-[1.125rem] text-[0.625rem]
+                                <span className="absolute -top-1 -right-1 min-w-[1.125rem] text-[1.0625rem]
                                                  font-bold bg-[#DC2626] text-white rounded-full px-1 py-0.5">
                                     {unread}
                                 </span>
@@ -472,7 +555,7 @@ export default function CmsLayout() {
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-[#2563EB]
-                                       hover:bg-[#1D4ED8] text-white text-[0.9375rem] font-semibold
+                                       hover:bg-[#1D4ED8] text-white text-[1.1875rem] font-semibold
                                        transition-colors"
                         >
                             <ExternalLink className="w-4 h-4" />
@@ -481,7 +564,7 @@ export default function CmsLayout() {
                     </div>
                 </header>
 
-                <main className="flex-1 min-h-0 overflow-y-auto p-5 lg:p-8">
+                <main className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 lg:p-8">
                     <Outlet context={{ dark }} />
                 </main>
             </div>

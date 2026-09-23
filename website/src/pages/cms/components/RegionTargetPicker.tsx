@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-    Globe, MapPin, Search, Users, AlertTriangle, Loader2, ChevronRight, X,
-    RefreshCw, Check,
+    Globe, MapPin, AlertTriangle, Loader2, X, Plus,
 } from 'lucide-react';
 import { getRegionTree } from '@/services/activApi';
-import { getEventReach } from '@/services/cmsApi';
-import { CmsSection, CmsModeCard } from './CmsUI';
+import { CmsSection, CmsChoice } from './CmsUI';
 
 /**
  * Who a piece of content is for — any number of states, districts and blocks.
@@ -113,6 +111,47 @@ export default function RegionTargetPicker({
      */
     const [openStates, setOpenStates] = useState<Set<string>>(new Set());
     const [openDistricts, setOpenDistricts] = useState<Set<string>>(new Set());
+
+    /**
+     * The three cascading steps, as a draft that is not a target until Added.
+     *
+     * A DRAFT, not a direct write. Choosing a state would otherwise immediately
+     * aim the event at the whole state, and the editor on their way to one
+     * block would broadcast it to 38 districts for as long as it took them to
+     * pick the next field. Nothing is added to `targets` until the button says
+     * so, which is also what lets the same three fields express three different
+     * levels.
+     */
+    const [draftState, setDraftState] = useState('');
+    const [draftDistrict, setDraftDistrict] = useState('');
+    const [draftBlock, setDraftBlock] = useState('');
+
+    /** The districts of the chosen state, and the blocks of the chosen district. */
+    const draftDistricts = useMemo(
+        () => states.find((st) => st.name === draftState)?.districts || [],
+        [states, draftState],
+    );
+    const draftBlocks = useMemo(
+        () => draftDistricts.find((d) => d.name === draftDistrict)?.blocks || [],
+        [draftDistricts, draftDistrict],
+    );
+
+    /*
+     * A narrower choice cannot outlive the wider one it belonged to.
+     *
+     * Changing the state with a district still selected would leave a district
+     * that does not exist inside the new state — and the Add button would
+     * cheerfully write it, producing a target nothing can ever match.
+     */
+    const chooseState = (name: string) => {
+        setDraftState(name);
+        setDraftDistrict('');
+        setDraftBlock('');
+    };
+    const chooseDistrict = (name: string) => {
+        setDraftDistrict(name);
+        setDraftBlock('');
+    };
 
     /** Add or remove one key, without mutating the set React is rendering. */
     const toggleIn = (
@@ -276,381 +315,223 @@ export default function RegionTargetPicker({
 
     // ---------------------------------------------------------------- reach
 
-    const [reach, setReach] = useState<{ members: number; excludedByAudience: number } | null>(null);
-    const [reachLoading, setReachLoading] = useState(false);
-
-    // Serialised, because `list` is a fresh array identity on every render of
-    // the parent form — depending on it directly would re-ask the server on
-    // every keystroke typed into the event's title.
-    /*
-     * The EFFECTIVE audience, not the ticks.
-     *
-     * `effective` is `[]` while "Everyone" is on, which is the audience the
-     * server will apply. Keying on the raw ticks instead would report "reaches
-     * 40 members in Ariyalur" for an event that is in fact going to all 4,000.
-     */
-    const reachKey = useMemo(
-        () => JSON.stringify({ effective, audience }),
-        [effective, audience],
-    );
-
-    useEffect(() => {
-        let cancelled = false;
-        setReachLoading(true);
-
-        const timer = window.setTimeout(() => {
-            getEventReach(effective, audience)
-                .then((data) => { if (!cancelled) setReach(data); })
-                // A failed count keeps the last known answer: "0 members" is the
-                // one wrong answer that would stop an editor publishing
-                // something perfectly correct.
-                .catch(() => { /* keep what was last known */ })
-                .finally(() => { if (!cancelled) setReachLoading(false); });
-        }, 300);
-
-        return () => { cancelled = true; window.clearTimeout(timer); };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [reachKey]);
-
     // ---------------------------------------------------------------- render
 
     return (
         <CmsSection
             title={title || 'Who sees this'}
-            hint={hint || 'Tick as many states, districts or blocks as you like. The event goes to '
-                + 'everyone inside any of them, and to nobody else.'}
+            hint={hint || 'Either the whole association, or the regions you choose. '
+                + 'Pick a state, then narrow it to a district or a block if you want to.'}
         >
-            {/* ------------------------------------------- options ---------
-              TWO CARDS, BOTH OPTIONAL, EITHER OR BOTH.
+            {/* ------------------------------------------- the choice -------
+              EXACTLY ONE OF TWO, as a radio group.
 
-              The original treatment — thick border, tinted fill, no checkbox
-              square — with checkbox semantics behind it. They were a forced
-              either/or, so there was no way to say "everyone, and these are the
-              regions I care about" without one tick erasing the other, and the
-              erased one did not come back on reopening the event.
+              This was two checkbox cards that could both be ticked, on the
+              argument that "everyone, and these are the regions I care about"
+              is a real thing to want. It is — but on screen two ticked cards
+              read as a contradiction, and no editor could tell from looking
+              which audience the event actually had.
 
-                everyone only   -> every member, wherever they are
-                regions only    -> only members inside them
-                BOTH ticked     -> everyone. Everyone UNION Tamil Nadu is
-                                   everyone; the regions stay ticked, and stay
-                                   SAVED, simply not narrowing anything while
-                                   the first card is on.
-                NEITHER ticked  -> everyone, which is what an empty target list
-                                   has always meant.
+              `CmsChoice` is the house component for a pick-one: role=radiogroup,
+              a drawn radio mark, roving tabindex and arrow keys. Never two
+              `aria-pressed` buttons — see its own note.
 
-              All four survive a save and a reopen, because the two answers are
-              two fields — see `reachEveryone` on the Event schema. The reach
-              line at the bottom of this section reports which of the four is in
-              force, so nothing here has to restate it.
+              THE REGIONS ARE STILL SAVED while "Everyone" is selected. Only the
+              UI is exclusive; `reachEveryone` and `targets` remain two fields,
+              so switching back restores what was picked rather than starting
+              from a blank list. That was the entire reason they were split.
             */}
-            <div className="grid gap-3 sm:grid-cols-2 mb-4">
-                <CmsModeCard
-                    checked={everyone}
-                    onChange={(next) => onReachEveryoneChange?.(next)}
-                    icon={<Globe className="w-4 h-4" />}
-                    title="Everyone in the association"
-                    detail={list.length && everyone
-                        ? `Every member, wherever they are. The ${list.length} `
-                          + `${list.length === 1 ? 'region' : 'regions'} below stay saved, and are not `
-                          + 'narrowing anything while this is ticked.'
-                        : 'Every member, wherever they are.'}
-                />
-                <CmsModeCard
-                    checked={list.length > 0}
-                    onChange={(next) => {
-                        // Ticking cannot invent a region, so it opens the tree
-                        // and waits; unticking clears what was chosen.
-                        if (next) setOpenState(states[0]?.name || '');
-                        else onChange([]);
-                    }}
-                    icon={<MapPin className="w-4 h-4" />}
-                    title="Only chosen regions"
-                    detail={list.length
-                        ? `${list.length} ${list.length === 1 ? 'region' : 'regions'} selected`
-                        : 'Pick states, districts or blocks below.'}
-                />
-            </div>
+            <CmsChoice
+                label="Who sees this event"
+                size="lg"
+                value={everyone ? 'everyone' : 'regions'}
+                onChange={(next) => onReachEveryoneChange?.(next === 'everyone')}
+                options={[
+                    {
+                        value: 'everyone',
+                        icon: <Globe className="w-4 h-4" />,
+                        title: 'Everyone in the association',
+                        detail: list.length
+                            ? `Every member, wherever they are. Your ${list.length} `
+                              + `${list.length === 1 ? 'region is' : 'regions are'} kept, `
+                              + 'and come back if you switch.'
+                            : 'Every member, wherever they are.',
+                    },
+                    {
+                        value: 'regions',
+                        icon: <MapPin className="w-4 h-4" />,
+                        title: 'Only chosen regions',
+                        detail: list.length
+                            ? `${list.length} ${list.length === 1 ? 'region' : 'regions'} chosen.`
+                            : 'Choose a state, then narrow it if you want to.',
+                    },
+                ]}
+            />
 
-            {/* ---------------------------------------------- chips ----------
-              Kept on screen while "Everyone" is ticked, dimmed, so the editor
-              can see what unticking that card would go back to. */}
-            {list.length > 0 ? (
-                <ul className={`flex flex-wrap gap-2 mb-4 ${everyone ? 'opacity-60' : ''}`}>
-                    {list.map((target) => (
-                        <li
-                            key={label(target)}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 dark:bg-[#101a2e]
-                                       border border-blue-200 dark:border-[#1e3a5f] pl-2.5 pr-1 py-1"
-                        >
-                            <MapPin size={12} className="shrink-0 text-blue-600 dark:text-blue-400" />
-                            <span className="text-xs font-semibold text-slate-800 dark:text-neutral-100">
-                                {label(target)}
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() => deselect(target)}
-                                aria-label={`Remove ${label(target)}`}
-                                className="shrink-0 w-5 h-5 rounded flex items-center justify-center
-                                           text-slate-400 hover:text-red-600 transition-colors"
-                            >
-                                <X size={12} />
-                            </button>
-                        </li>
-                    ))}
+            {/* ------------------------------------------- the three steps ---
+              HIDDEN ENTIRELY WHILE "EVERYONE" IS SELECTED.
 
-                    <li>
-                        <button
-                            type="button"
-                            onClick={() => onChange([])}
-                            className="text-xs font-semibold text-slate-500 hover:text-slate-700
-                                       dark:hover:text-neutral-200 px-2 py-1.5"
-                        >
-                            Clear all
-                        </button>
-                    </li>
-                </ul>
-            ) : null}
-
-            {/* ---------------------------------------------- the tree -------
-              One line of instruction, because the two gestures on every row look
-              identical and do different things.
-
-              The box takes the whole region; the chevron opens what is inside
-              it. Without this said, the only way to learn that ticking a state
-              already covers all 402 of its blocks is to open it and start
-              ticking them one at a time — which several editors did.
+              The controls used to stay on screen with the first card ticked,
+              which invited exactly the question the association asked: why am I
+              being shown a region picker for an event that goes everywhere.
             */}
-            <p className="mb-2 text-xs text-slate-500 dark:text-[#A1A1AA]">
-                Tick a state or district to take <strong className="font-semibold">all</strong> of it.
-                Use the arrow to open it and pick individual districts or blocks instead.
-            </p>
-
-            <div className="rounded-xl border border-slate-200 dark:border-[#2a2a2a] overflow-hidden">
-                <div className="relative border-b border-slate-200 dark:border-[#2a2a2a]">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                        type="search"
-                        value={term}
-                        onChange={(e) => setTerm(e.target.value)}
-                        placeholder="Search a state, district or block"
-                        className="w-full h-10 pl-9 pr-3 bg-white dark:bg-black text-sm
-                                   text-slate-900 dark:text-neutral-100 focus:outline-none"
-                    />
-                </div>
-
-                {/*
-                  Taller, and it earns the space.
-
-                  At 20rem this showed about seven rows, so choosing a block —
-                  state, then district, then block, each pushing the last one up —
-                  meant scrolling a 38-district list inside a window that could
-                  hold a fifth of it. `min` keeps it from taking over a short
-                  screen: on a laptop in a browser window it is the viewport that
-                  runs out first, not the list.
-                */}
-                <div className="max-h-[min(60vh,32rem)] overflow-y-auto">
+            {!everyone ? (
+                <div className="mt-4">
                     {loading ? (
-                        <div className="p-4 space-y-2" aria-hidden>
-                            {[0, 1, 2].map((i) => (
-                                <div key={i} className="h-8 rounded bg-slate-100 dark:bg-[#141414] animate-pulse" />
-                            ))}
-                        </div>
+                        <p className="flex items-center gap-2 text-[1.25rem] text-slate-500 dark:text-[#A1A1AA]">
+                            <Loader2 size={14} className="animate-spin" /> Loading regions…
+                        </p>
                     ) : loadError ? (
-                        <div className="p-5 text-center">
-                            <AlertTriangle size={18} className="mx-auto text-amber-500 mb-2" />
-                            <p className="text-xs text-slate-600 dark:text-[#A1A1AA] max-w-xs mx-auto
-                                          leading-relaxed">
-                                {loadError}
-                            </p>
-                            <button
-                                type="button"
-                                onClick={() => loadTree(true)}
-                                className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold
-                                           text-blue-600 hover:underline"
-                            >
-                                <RefreshCw size={12} /> Try again
-                            </button>
-                        </div>
-                    ) : filtered.length === 0 ? (
-                        <p className="p-5 text-center text-xs text-slate-500 dark:text-[#A1A1AA]">
-                            Nothing matches “{term}”.
+                        <p className="flex items-start gap-2 text-[1.25rem] text-amber-700 dark:text-amber-400">
+                            <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                            <span>{loadError}</span>
                         </p>
                     ) : (
-                        <ul className="divide-y divide-slate-100 dark:divide-[#1a1a1a]">
-                            {filtered.map((s) => {
-                                const stateName = s.name || '';
-                                const stateTarget = { state: stateName, district: '', block: '' };
-                                const status = statusOf(stateTarget);
-                                const districtCount = (s.districts || []).length;
-                                /*
-                                 * A STATE WITH NO DISTRICTS IS STILL A TARGET.
-                                 *
-                                 * It appears the moment a state admin exists,
-                                 * before anyone has staffed a district beneath
-                                 * it — and it is tickable exactly like any
-                                 * other, because ticking it means "everyone in
-                                 * this state" and that is a real audience
-                                 * whether or not the tree under it has been
-                                 * filled in.
-                                 *
-                                 * What it must NOT get is an expand control. A
-                                 * chevron that opens an empty list reads as a
-                                 * failed load, and an editor who presses it
-                                 * concludes the districts are missing rather
-                                 * than absent. `note` says so in words instead.
-                                 */
-                                const expandable = districtCount > 0;
-                                const expanded = expandable && (openStates.has(stateName) || !!term);
+                        <>
+                            {/*
+                              STATE, THEN DISTRICT, THEN BLOCK — each locked
+                              until the one before it is answered, and each
+                              saying so rather than sitting greyed and silent.
 
-                                return (
-                                    <li key={stateName}>
-                                        <Row
-                                            depth={0}
-                                            status={status}
-                                            name={stateName}
-                                            note={expandable
-                                                ? `${districtCount} ${districtCount === 1 ? 'district' : 'districts'}`
-                                                : 'state-wide only'}
-                                            noteTitle={expandable ? undefined
-                                                : 'No district or block admin exists here yet. Ticking this state '
-                                                  + 'reaches its state admin and every member standing in it.'}
-                                            expanded={expandable ? expanded : undefined}
-                                            onToggleCheck={() => toggle(stateTarget)}
-                                            onToggleOpen={expandable
-                                                ? () => toggleIn(setOpenStates, stateName)
-                                                : undefined}
-                                        />
+                              Stopping after the state aims the event at the
+                              whole state; stopping after the district takes the
+                              district. That is what makes three fields express
+                              three levels without a tree.
+                            */}
+                            <div className="grid gap-4 sm:grid-cols-3">
+                                <Step
+                                    n={1}
+                                    label="State"
+                                    value={draftState}
+                                    onChange={chooseState}
+                                    options={states.map((st) => st.name || '').filter(Boolean)}
+                                    placeholder="Choose a state"
+                                    locked={false}
+                                />
+                                <Step
+                                    n={2}
+                                    label="District"
+                                    value={draftDistrict}
+                                    onChange={chooseDistrict}
+                                    options={draftDistricts.map((d) => d.name || '').filter(Boolean)}
+                                    placeholder={draftDistricts.length
+                                        ? 'All districts'
+                                        : 'No districts in this state'}
+                                    locked={!draftState}
+                                    lockedNote="Choose a state first"
+                                    optionalNote="Leave as All districts to take the whole state"
+                                />
+                                <Step
+                                    n={3}
+                                    label="Block"
+                                    value={draftBlock}
+                                    onChange={setDraftBlock}
+                                    options={draftBlocks.map((b) => b.name || '').filter(Boolean)}
+                                    placeholder={draftBlocks.length
+                                        ? 'All blocks'
+                                        : 'No blocks in this district'}
+                                    locked={!draftDistrict}
+                                    lockedNote="Choose a district first"
+                                    optionalNote="Leave as All blocks to take the whole district"
+                                />
+                            </div>
 
-                                        {expanded ? (
-                                            <ul>
-                                                {(s.districts || []).map((d) => {
-                                                    const districtName = d.name || '';
-                                                    const districtTarget = {
-                                                        state: stateName, district: districtName, block: '',
-                                                    };
-                                                    const dStatus = statusOf(districtTarget);
-                                                    const dKey = stateName + '/' + districtName;
-                                                    const blockCount = (d.blocks || []).length;
-                                                    // Same rule as the state row: a
-                                                    // chevron onto an empty list reads
-                                                    // as a failed load.
-                                                    const dExpandable = blockCount > 0;
-                                                    const dOpen = dExpandable
-                                                        && (openDistricts.has(dKey) || !!term);
+                            <div className="mt-4 flex flex-wrap items-center gap-3">
+                                <button
+                                    type="button"
+                                    disabled={!draftState}
+                                    onClick={() => {
+                                        select({
+                                            state: draftState,
+                                            district: draftDistrict,
+                                            block: draftBlock,
+                                        });
+                                        // Cleared back to the state, not to
+                                        // nothing: the commonest next pick is
+                                        // another district of the same state.
+                                        setDraftDistrict('');
+                                        setDraftBlock('');
+                                    }}
+                                    /*
+                                     * A SECONDARY control, and a constant label.
+                                     *
+                                     * In solid blue it was the loudest thing on
+                                     * the form and read as the button that posts
+                                     * the event — which is the one mistake this
+                                     * button must not invite. An outline says
+                                     * "this adds a row", and the only solid blue
+                                     * on the form stays Create event.
+                                     *
+                                     * The label was "Add all of Tamil Nadu",
+                                     * rewriting itself on every keystroke of the
+                                     * three fields; a control whose words move
+                                     * while you are reading them is harder to
+                                     * trust, not clearer. The three fields above
+                                     * already say what will be added.
+                                     */
+                                    className="inline-flex items-center gap-2 h-12 px-5 rounded-xl border
+                                               border-slate-300 bg-white text-[1.25rem] font-semibold
+                                               text-slate-700 transition-colors hover:bg-slate-50
+                                               hover:border-slate-400 disabled:opacity-40
+                                               dark:bg-transparent dark:text-neutral-200 dark:border-[#2a2a2a]"
+                                >
+                                    <Plus size={16} /> Add
+                                </button>
 
-                                                    return (
-                                                        <li key={dKey}>
-                                                            <Row
-                                                                depth={1}
-                                                                status={dStatus}
-                                                                name={districtName}
-                                                                note={dExpandable
-                                                                    ? `${blockCount} ${blockCount === 1 ? 'block' : 'blocks'}`
-                                                                    : 'district-wide only'}
-                                                                noteTitle={dExpandable ? undefined
-                                                                    : 'No block admin exists here yet. Ticking this '
-                                                                      + 'district reaches everyone standing in it.'}
-                                                                expanded={dExpandable ? dOpen : undefined}
-                                                                onToggleCheck={() => toggle(districtTarget)}
-                                                                onToggleOpen={dExpandable
-                                                                    ? () => toggleIn(setOpenDistricts, dKey)
-                                                                    : undefined}
-                                                            />
+                                {!draftState ? (
+                                    <span className="text-[1.25rem] text-slate-500 dark:text-[#A1A1AA]">
+                                        Start by choosing a state.
+                                    </span>
+                                ) : null}
+                            </div>
 
-                                                            {dOpen ? (
-                                                                <ul>
-                                                                    {(d.blocks || []).map((b) => {
-                                                                        const blockTarget = {
-                                                                            state: stateName,
-                                                                            district: districtName,
-                                                                            block: b.name || '',
-                                                                        };
-
-                                                                        return (
-                                                                            <li key={dKey + '/' + b.name}>
-                                                                                <Row
-                                                                                    depth={2}
-                                                                                    status={statusOf(blockTarget)}
-                                                                                    name={b.name || ''}
-                                                                                    onToggleCheck={() =>
-                                                                                        toggle(blockTarget)}
-                                                                                />
-                                                                            </li>
-                                                                        );
-                                                                    })}
-                                                                </ul>
-                                                            ) : null}
-                                                        </li>
-                                                    );
-                                                })}
-                                            </ul>
-                                        ) : null}
-                                    </li>
-                                );
-                            })}
-                        </ul>
+                            {/* ------------------------------------- chosen -- */}
+                            {list.length > 0 ? (
+                                <div className="mt-5">
+                                    <p className="text-[1.0625rem] font-semibold uppercase
+                                                  tracking-wider text-slate-400 mb-2">
+                                        Chosen regions
+                                    </p>
+                                    <ul className="flex flex-wrap gap-2">
+                                        {list.map((target) => (
+                                            <li
+                                                key={`${target.state}|${target.district}|${target.block}`}
+                                                className="inline-flex items-center gap-2 h-9 pl-3 pr-2 rounded-full
+                                                           bg-blue-50 dark:bg-blue-500/10 text-blue-700
+                                                           dark:text-blue-300 text-[1.25rem] font-semibold"
+                                            >
+                                                {/* Read left to right, widest first, so a
+                                                    state-wide target cannot be mistaken for
+                                                    a block of the same name. */}
+                                                {[target.state, target.district, target.block]
+                                                    .filter(Boolean).join(' › ')}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => deselect(target)}
+                                                    aria-label={`Remove ${target.block || target.district || target.state}`}
+                                                    className="w-6 h-6 rounded-full inline-flex items-center
+                                                               justify-center hover:bg-blue-100
+                                                               dark:hover:bg-blue-500/20"
+                                                >
+                                                    <X size={13} />
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            ) : (
+                                /* No "nothing chosen yet" line. The three
+                                   fields and the empty chip row already say it,
+                                   and a sentence restating them under the button
+                                   was the third thing on screen making the same
+                                   point. */
+                                null
+                            )}
+                        </>
                     )}
                 </div>
-            </div>
+            ) : null}
 
-            {/* ---------------------------------------------- the reach ------ */}
-            {/*
-              The one number an editor needs before publishing.
-
-              Not the list read back — they can see the list. This is the
-              intersection of the regions above and the members-only switch
-              elsewhere on the form, which is what neither control shows and what
-              silently emptied an event's audience once already.
-            */}
-            <div className="mt-4 rounded-lg border border-slate-200 dark:border-[#2a2a2a]
-                            bg-slate-50 dark:bg-[#0d0d0d] px-3.5 py-3">
-                <p className="flex items-center gap-2 text-xs text-slate-600 dark:text-[#A1A1AA]">
-                    {reachLoading
-                        ? <Loader2 size={13} className="shrink-0 animate-spin" />
-                        : everywhere
-                            ? <Globe size={13} className="shrink-0" />
-                            : <Users size={13} className="shrink-0" />}
-
-                    {reach ? (
-                        <span>
-                            This reaches{' '}
-                            <strong className="text-slate-900 dark:text-neutral-100">
-                                {reach.members} {reach.members === 1 ? 'member' : 'members'}
-                            </strong>
-                            {everywhere
-                                ? ' — everyone in the association.'
-                                : ` in ${list.length} ${list.length === 1 ? 'region' : 'regions'}.`}
-                        </span>
-                    ) : (
-                        <span>
-                            {everywhere
-                                ? 'Everyone in the association will see this.'
-                                : `Aimed at ${list.length} ${list.length === 1 ? 'region' : 'regions'}.`}
-                        </span>
-                    )}
-                </p>
-
-                {reach && reach.excludedByAudience > 0 ? (
-                    <p className="mt-2 flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400">
-                        <AlertTriangle size={13} className="shrink-0 mt-0.5" />
-                        <span>
-                            <strong>{reach.excludedByAudience}</strong>{' '}
-                            {reach.excludedByAudience === 1 ? 'member is' : 'members are'} in these regions
-                            but will NOT see this, because it is set to members with an active membership only.
-                        </span>
-                    </p>
-                ) : null}
-
-                {reach && reach.members === 0 ? (
-                    <p className="mt-2 flex items-start gap-2 text-xs text-red-600 dark:text-red-400">
-                        <AlertTriangle size={13} className="shrink-0 mt-0.5" />
-                        <span>
-                            Nobody will see this. Widen the regions, or turn off members-only, unless you
-                            are posting ahead of a membership drive.
-                        </span>
-                    </p>
-                ) : null}
-            </div>
         </CmsSection>
     );
 }
@@ -658,99 +539,93 @@ export default function RegionTargetPicker({
 // ---------------------------------------------------------------- pieces
 
 /**
- * One row of the region tree.
+ * One of the three cascading steps.
  *
- * `partial` is its own state and not a half-hearted `on`. A state with three of
- * its forty blocks ticked is neither selected nor unselected, and rendering it
- * as either loses information the editor needs: as `on` it claims the whole
- * state is included, as `off` it hides that anything inside is.
+ * A LOCKED STEP SAYS WHY IT IS LOCKED. A `disabled` select that sits grey and
+ * silent is the commonest way a cascading form stalls somebody: they click it,
+ * nothing happens, and there is nothing on screen connecting it to the field
+ * above. The note under the control is the whole difference between a form that
+ * teaches its own order and one that has to be explained.
+ *
+ * The optional note matters as much. Leaving District on "All districts" is how
+ * an editor takes a whole state, and there is nothing about an untouched
+ * dropdown that says so — so it is written under the field rather than left to
+ * be discovered.
+ *
+ * An empty options list is its OWN case, not a lock: a state genuinely without
+ * districts is a complete answer, and "No districts in this state" tells the
+ * editor their state-wide pick is the only one available rather than implying
+ * they have missed a step.
  */
-function Row({
-    depth,
-    status,
-    name,
-    note,
-    noteTitle,
-    expanded,
-    onToggleCheck,
-    onToggleOpen,
+function Step({
+    n,
+    label,
+    value,
+    onChange,
+    options,
+    placeholder,
+    locked,
+    lockedNote,
+    optionalNote,
 }: {
-    depth: 0 | 1 | 2;
-    status: 'on' | 'partial' | 'off';
-    name: string;
-    note?: string;
-    /** Hover text for the note, where the short form needs explaining. */
-    noteTitle?: string;
-    expanded?: boolean;
-    onToggleCheck: () => void;
-    /** Omitted for a row with nothing inside it — see the note on `expandable`. */
-    onToggleOpen?: () => void;
+    n: number;
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+    options: string[];
+    placeholder: string;
+    locked: boolean;
+    lockedNote?: string;
+    optionalNote?: string;
 }) {
-    const PAD = ['pl-3', 'pl-9', 'pl-16'][depth];
+    const empty = !locked && options.length === 0;
 
     return (
-        <div className={`${PAD} pr-3 py-2 flex items-center gap-2.5 hover:bg-slate-50
-                         dark:hover:bg-[#0f0f0f] transition-colors`}>
-            <button
-                type="button"
-                onClick={onToggleCheck}
-                aria-pressed={status === 'on'}
-                aria-label={`${status === 'on' ? 'Remove' : 'Add'} ${name}`}
-                className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center
-                            transition-colors ${
-                    status === 'on'
-                        ? 'bg-blue-600 border-blue-600 text-white'
-                        : status === 'partial'
-                            ? 'border-blue-500 bg-blue-100 dark:bg-blue-950'
-                            : 'border-slate-300 dark:border-[#3a3a3a]'
-                }`}
-            >
-                {status === 'on' ? <Check size={11} strokeWidth={3} /> : null}
-                {status === 'partial' ? (
-                    <span className="w-1.5 h-1.5 rounded-sm bg-blue-600" />
-                ) : null}
-            </button>
-
-            <button
-                type="button"
-                onClick={onToggleOpen || onToggleCheck}
-                className="min-w-0 flex-1 flex items-center gap-2 text-left"
-            >
-                <span className={`truncate ${
-                    depth === 0
-                        ? 'text-sm font-semibold text-slate-800 dark:text-neutral-100'
-                        : depth === 1
-                            ? 'text-[0.8125rem] font-medium text-slate-700 dark:text-neutral-200'
-                            : 'text-[0.8125rem] text-slate-600 dark:text-neutral-300'
-                }`}>
-                    {name}
+        <div className="min-w-0">
+            <label className="flex items-center gap-2 mb-2">
+                {/* The number is the instruction. Three fields in a row do not
+                    read as a sequence without it. */}
+                <span className={`w-6 h-6 rounded-full inline-flex items-center justify-center
+                                  text-[1.0625rem] font-bold shrink-0 ${locked
+                        ? 'bg-slate-100 text-slate-400 dark:bg-[#1a1a1a]'
+                        : 'bg-blue-600 text-white'}`}>
+                    {n}
                 </span>
-                {note ? (
-                    /*
-                      `truncate` and `min-w-0`, not `shrink-0`.
-                      
-                      The note is the row's least important text, so on a narrow
-                      card it is the part that should give way. Held rigid it
-                      pushed the row wider than the panel, and the card has no
-                      horizontal scroll to reach the overflow with.
-                    */
-                    <span
-                        title={noteTitle}
-                        className="min-w-0 truncate text-[0.625rem] text-slate-400"
-                    >
-                        {note}
-                    </span>
-                ) : null}
-            </button>
+                <span className={`text-[1.25rem] font-semibold ${locked
+                    ? 'text-slate-400 dark:text-[#6b6b6b]'
+                    : 'text-slate-800 dark:text-neutral-200'}`}>
+                    {label}
+                </span>
+            </label>
 
-            {onToggleOpen ? (
-                <ChevronRight
-                    size={14}
-                    className={`shrink-0 text-slate-400 transition-transform ${
-                        expanded ? 'rotate-90' : ''
-                    }`}
-                />
-            ) : null}
+            <select
+                value={value}
+                disabled={locked || empty}
+                onChange={(e) => onChange(e.target.value)}
+                className="w-full h-12 rounded-xl border border-slate-200 dark:border-[#2a2a2a]
+                           bg-white dark:bg-black px-3.5 text-[1.25rem] text-slate-900 dark:text-neutral-100
+                           outline-none transition-colors focus:border-blue-500
+                           focus:ring-4 focus:ring-blue-500/10
+                           disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed
+                           dark:disabled:bg-[#0d0d0d]"
+            >
+                <option value="">{placeholder}</option>
+                {options.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                ))}
+            </select>
+
+            {/* Slate, not amber. Amber reads as a WARNING — something has
+                gone wrong — and nothing has: the step is simply next in the
+                order. It is the same weight as the other notes now, just the
+                one that happens to say what to do first. */}
+            <p className={`mt-2 text-[1.1875rem] ${locked
+                ? 'text-slate-700 dark:text-neutral-300 font-semibold'
+                : 'text-slate-500 dark:text-[#A1A1AA]'}`}>
+                {locked ? lockedNote : empty ? placeholder : optionalNote || '\u00a0'}
+            </p>
         </div>
     );
 }
+
+

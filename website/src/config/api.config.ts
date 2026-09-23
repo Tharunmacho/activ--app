@@ -153,6 +153,53 @@ export const resolveMediaUrl = (value?: string | null): string => {
 };
 
 /**
+ * Hosts that serve a sized rendition when asked for one.
+ *
+ * Unsplash and the picture services take `?w=`; a file on our own `/uploads`
+ * does not, and asking would just add a query string nothing reads.
+ */
+const RESIZABLE_MEDIA_HOSTS = [
+    'images.unsplash.com',
+    'res.cloudinary.com',
+    'ik.imagekit.io',
+];
+
+/**
+ * The same address, at the size it is actually drawn.
+ *
+ * A seeded photograph is an original camera file — 7442px wide in one case —
+ * and a card that paints it into a 56px thumbnail still downloads and DECODES
+ * every one of those pixels. That decode is what stops a page answering a
+ * scroll; it does not show up as a slow frame, it shows up as a page that feels
+ * stuck. Measured on the region pages: 116 megapixels for eighteen images.
+ *
+ * Pass the width of the slot, not of the file. An editor who has already sized
+ * a URL themselves (`w` is present) is left alone, and anything we host is
+ * returned untouched.
+ */
+export const sizedMediaUrl = (value?: string | null, width = 900): string => {
+    const resolved = resolveMediaUrl(value);
+    if (!resolved || resolved.startsWith('data:') || resolved.startsWith('blob:')) return resolved;
+
+    try {
+        const url = new URL(
+            resolved,
+            typeof window === 'undefined' ? 'http://localhost' : window.location.origin,
+        );
+        if (!RESIZABLE_MEDIA_HOSTS.includes(url.hostname)) return resolved;
+        if (url.searchParams.has('w')) return resolved;
+        url.searchParams.set('w', String(Math.round(width)));
+        /* 75 is the quality these services default to for a resized rendition
+           and is indistinguishable at these sizes; the seeded URLs ask for 80. */
+        if (!url.searchParams.has('q')) url.searchParams.set('q', '75');
+        return url.toString();
+    } catch {
+        return resolved;
+    }
+};
+
+
+/**
  * Every endpoint this backend exposes, exactly as `backend/src/routes.js`
  * mounts them. Mirrors the mobile app's ENDPOINTS map.
  */
@@ -269,10 +316,6 @@ export const ENDPOINTS = {
          * manage whom from the token. The `/super/*` paths above stay for the
          * mobile app, which is super-admin only.
          */
-        TEAM_ADMINS: '/admin/team/admins',
-        TEAM_ADMIN_BY_ID: (id: string) => `/admin/team/admins/${id}`,
-        TEAM_ADMIN_REMOVAL_PREVIEW: (id: string) => `/admin/team/admins/${id}/removal-preview`,
-        TEAM_ADMIN_REGIONS: '/admin/team/admins/regions',
         SUPER_ADMIN_BY_ID: (id: string) => `/admin/super/admins/${id}`,
         SUPER_ADMIN_REGIONS: '/admin/super/admins/regions',
         SUPER_ADMIN_REMOVAL_PREVIEW: (id: string) => `/admin/super/admins/${id}/removal-preview`,
@@ -305,6 +348,86 @@ export const ENDPOINTS = {
         REGISTRATIONS: (id: string) => `/events/${id}/registrations`,
         // The audience preview. A literal path, declared above `/:id` server-side.
         REACH: '/events/reach',
+
+        /*
+         * The organiser's view of the public "Book Now" bookings.
+         *
+         * Under `/events` and therefore behind the members' token — taking a
+         * booking is something a stranger does, reading everyone's name, mobile
+         * and what they paid is not. The public half lives in `EVENT_BOOKINGS`
+         * below, on its own unauthenticated mount.
+         */
+        BOOKINGS: (id: string) => `/events/${id}/bookings`,
+        BOOKING: (id: string, ref: string) => `/events/${id}/bookings/${ref}`,
+        RECORD_BOOKING_PAYMENT: (id: string, ref: string) =>
+            `/events/${id}/bookings/${ref}/record-payment`,
+        CANCEL_BOOKING: (id: string, ref: string) => `/events/${id}/bookings/${ref}/cancel`,
+
+        /*
+         * Every event with its seat figures — the Booking Events landing table.
+         *
+         * A LITERAL PATH under `/events`, and the server declares it above
+         * `/:id` for that reason. Written here exactly as the router has it:
+         * a mismatch would be read as the event id "bookings" and answer 400.
+         */
+        BOOKING_OVERVIEW: '/events/bookings/overview',
+
+        /*
+         * The contact book — everyone who has booked anything, and one person's
+         * whole history. Literal paths above `/:id`, as the router declares them.
+         *
+         * The person is addressed by a QUERY parameter rather than a path
+         * segment: an email address carries dots, and something in front of the
+         * app eventually reads a trailing `.com` as a file extension.
+         */
+        BOOKING_PEOPLE: '/events/bookings/people',
+        BOOKING_PERSON: '/events/bookings/person',
+
+        /** One row per PERSON, rather than per booking — the door list. */
+        ATTENDEES: (id: string) => `/events/${id}/attendees`,
+
+        /**
+         * The CSV download.
+         *
+         * FETCHED AS A BLOB, never opened as a plain `<a href>`. This route sits
+         * behind the same `verifyToken` as the rest of `/events`, and a bare
+         * link carries no Authorization header — the browser would navigate away
+         * from the admin screen to a 401 JSON body. `exportBookingsCsv` in
+         * `eventBookingAdminApi` requests it through the axios instance that
+         * holds the token and hands the blob to a download.
+         */
+        EXPORT_BOOKINGS: (id: string) => `/events/${id}/bookings/export`,
+
+        /*
+         * The category chips an event is filed under. The SAME rows the public
+         * events grid filters by — see `eventcategory.service.js`.
+         *
+         * `/events/categories` is a literal above `/:id` server-side, for the
+         * third time in this block.
+         */
+        CATEGORIES: '/events/categories',
+        CATEGORY: (categoryId: string) => `/events/categories/${categoryId}`,
+        CATEGORY_MOVE: (categoryId: string) => `/events/categories/${categoryId}/move`,
+        CATEGORIES_STANDARD: '/events/categories/standard',
+    },
+
+    /**
+     * Public event bookings — "Book Now", with no account.
+     *
+     * A SEPARATE MOUNT, not a path under `/events`. That router opens with a
+     * blanket `verifyToken`; these are the guest paths and must answer without
+     * a token. See `backend/src/modules/events/eventbooking.routes.js`.
+     */
+    EVENT_BOOKINGS: {
+        /** The event as the booking page needs it: price, seats left, deadline. */
+        EVENT: (eventId: string) => `/event-bookings/event/${eventId}`,
+        /** Take a booking. Sends no amount — the server prices it. */
+        CREATE: (eventId: string) => `/event-bookings/event/${eventId}`,
+        /** One booking by its reference, which is all a guest has. */
+        BY_REF: (ref: string) => `/event-bookings/${ref}`,
+        /** The step a real gateway replaces. */
+        AUTHORIZE: (ref: string) => `/event-bookings/${ref}/authorize`,
+        PAY: (ref: string) => `/event-bookings/${ref}/pay`,
     },
 
     /** Association Updates (MEM-001) — news targeted at a member's region. */
@@ -319,6 +442,17 @@ export const ENDPOINTS = {
         LIST: '/notifications',
         MARK_READ: (id: string) => `/notifications/${id}/read`,
         MARK_ALL_READ: '/notifications/read-all',
+
+        /*
+         * Super-admin delivery oversight. Every email and WhatsApp message the
+         * platform has attempted, whether it left the building, and why it did
+         * not. Role-gated on the server.
+         */
+        LOGS: '/notifications/logs',
+        DELIVERY_STATUS: '/notifications/delivery-status',
+        RETRY: (id: string) => `/notifications/retry/${id}`,
+        ROUTING_PREVIEW: '/notifications/routing-preview',
+        TEST_SEND: '/notifications/test-send',
     },
 
     ANALYTICS: {
@@ -341,6 +475,9 @@ export const ENDPOINTS = {
     },
 
     PAYMENT: {
+        /** Which checkout is live — mock, or a hosted gateway. */
+        CONFIG: '/payment/config',
+        /** Start a hosted (Instamojo) payment. Returns the URL to send them to. */
         CREATE_REQUEST: '/payment/create-request',
         STATUS: (id: string) => `/payment/status/${id}`,
         RENEW: '/payment/renew',
@@ -357,11 +494,19 @@ export const ENDPOINTS = {
     },
 } as const;
 
-/** Membership prices, enforced server-side in `payment.routes.js`. */
-export const MEMBERSHIP_PRICES: Record<string, number> = {
-    starter: 500,
-    intermediate: 1000,
-    advanced: 2000,
-    lifetime: 2500,
-    aspirant: 500,
-};
+/*
+ * THERE IS NO PRICE TABLE HERE, AND THERE MUST NOT BE ONE.
+ *
+ * `MEMBERSHIP_PRICES` stood here — starter 500, intermediate 1000, advanced
+ * 2000, lifetime 2500 — and nothing imported it. That is worse than a table in
+ * use, not better: a dead one attracts the next person who needs a price and
+ * hands them figures that were correct on the day they were typed. The Super
+ * Admin has owned membership pricing since it moved to the `membershipPlans`
+ * collection, and a copy in a client is a WRONG price the moment they edit one.
+ *
+ * Prices come from the server, every time:
+ *   `GET /membership/plans`       every active plan
+ *   `GET /membership/plans/mine`  the plan THIS applicant is offered
+ * and an event's price from the event's own availability payload, which
+ * resolves the member rate against the reader's live membership.
+ */

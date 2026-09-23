@@ -188,7 +188,9 @@ export const DistrictAdminProvider: React.FC<{ children: ReactNode }> = ({ child
         const nextPending = (prev.pending || []).filter(a => a.id !== applicant.id);
         const updatedApplicant: any = {
           ...applicant,
-          status: action === 'approve' ? 'Pending-State' : 'Rejected',
+          // See the block admin's context: one decision ends the review, so an
+          // approval is final and there is no `Pending-State` to move to.
+          status: action === 'approve' ? 'Approved' : 'Rejected',
           stage: action === 'approve' ? 'approved' : 'rejected',
           statusLabel: action === 'approve' ? 'Approved' : 'Rejected',
           approvedByText: action === 'approve'

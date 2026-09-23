@@ -14,6 +14,7 @@ import {
 } from '@/services/memberHubApi';
 import { resolveMediaUrl } from '@/config/api.config';
 
+import { CARD_TITLE } from '@/components/layout/appTypography';
 /**
  * Stock management (BUS-002).
  *
@@ -176,7 +177,7 @@ export default function Stock() {
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             placeholder="Search your catalogue"
-                            className="w-full h-11 pl-9 pr-3 rounded-xl border border-slate-200 text-sm
+                            className="w-full h-11 pl-9 pr-3 rounded-xl border border-slate-200 text-[1.1875rem]
                                        focus:outline-none focus:ring-2 focus:ring-blue-500/30
                                        focus:border-blue-400"
                         />
@@ -191,7 +192,7 @@ export default function Stock() {
                                     key={key}
                                     type="button"
                                     onClick={() => setFilter(key)}
-                                    className={`flex-1 min-w-0 px-2 py-2 rounded-xl text-[0.78125rem] font-semibold
+                                    className={`flex-1 min-w-0 px-2 py-2 rounded-xl text-[0.9375rem] font-semibold
                                                 inline-flex items-center justify-center gap-1.5
                                                 transition-colors ${
                                         active
@@ -200,7 +201,7 @@ export default function Stock() {
                                     }`}
                                 >
                                     <span className="truncate">{label}</span>
-                                    <span className={`shrink-0 text-[0.65625rem] font-bold px-1.5 rounded-full ${
+                                    <span className={`shrink-0 text-[0.8125rem] font-bold px-1.5 rounded-full ${
                                         active ? 'bg-white/25' : 'bg-white text-slate-600'
                                     }`}>
                                         {count}
@@ -243,16 +244,16 @@ export default function Stock() {
                 {/* ---------- history ---------- */}
                 {movements.length > 0 ? (
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-                        <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <h2 className={`${CARD_TITLE} text-slate-900 flex items-center gap-2`}>
                             <History className="w-4 h-4 text-slate-400" /> Recent adjustments
                         </h2>
-                        <p className="text-[0.78125rem] text-slate-500 mt-0.5 mb-4">
+                        <p className="text-[0.9375rem] text-slate-500 mt-0.5 mb-4">
                             Every change, and the reason given for it.
                         </p>
 
                         <ul className="divide-y divide-slate-100">
                             {movements.map((movement) => (
-                                <li key={movement.id} className="py-2.5 flex items-center gap-3 text-[0.8125rem]">
+                                <li key={movement.id} className="py-2.5 flex items-center gap-3 text-[1rem]">
                                     <span className={`shrink-0 w-14 text-right font-bold tabular-nums ${
                                         movement.delta > 0 ? 'text-emerald-600' : 'text-red-600'
                                     }`}>
@@ -263,13 +264,13 @@ export default function Stock() {
                                         <span className="block font-medium text-slate-800 truncate">
                                             {movement.productName || 'Product'}
                                         </span>
-                                        <span className="block text-[0.71875rem] text-slate-400 truncate">
+                                        <span className="block text-[0.875rem] text-slate-400 truncate">
                                             {REASONS.find((r) => r.value === movement.reason)?.label || movement.reason}
                                             {movement.note ? ` — ${movement.note}` : ''}
                                         </span>
                                     </span>
 
-                                    <span className="shrink-0 text-[0.71875rem] text-slate-400 tabular-nums">
+                                    <span className="shrink-0 text-[0.875rem] text-slate-400 tabular-nums">
                                         {movement.at ? new Date(movement.at).toLocaleDateString('en-GB') : ''}
                                     </span>
                                 </li>
@@ -395,20 +396,20 @@ function StockCard({
                 )}
 
                 <span className="min-w-0 flex-1">
-                    <span className="block text-[0.875rem] font-semibold text-slate-900 truncate">
+                    <span className="block text-[1.0625rem] font-semibold text-slate-900 truncate">
                         {row.name}
                     </span>
-                    <span className="block text-[0.75rem] text-slate-500 truncate">
+                    <span className="block text-[0.9375rem] text-slate-500 truncate">
                         {row.category}
                         {row.isActive === false ? ' · Unpublished' : ''}
                     </span>
                 </span>
 
                 <span className="shrink-0 text-right">
-                    <span className="block text-lg font-bold text-slate-900 tabular-nums leading-none">
+                    <span className="block text-[1.375rem] font-bold text-slate-900 tabular-nums leading-none">
                         {Number(row.stock || 0)}
                     </span>
-                    <span className={`inline-block mt-1 text-[0.65625rem] font-bold uppercase tracking-wide
+                    <span className={`inline-block mt-1 text-[0.8125rem] font-bold uppercase tracking-wide
                                       px-2 py-0.5 rounded-full ${style.cls}`}>
                         {style.label}
                     </span>
@@ -419,7 +420,7 @@ function StockCard({
                 <div className="border-t border-slate-100 p-4 space-y-4 bg-slate-50/60">
                     {/* ---- adjust ---- */}
                     <div>
-                        <p className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-500 mb-2">
+                        <p className="text-[0.8125rem] font-semibold uppercase tracking-wide text-slate-500 mb-2">
                             Adjust stock
                         </p>
 
@@ -431,7 +432,7 @@ function StockCard({
                                 value={delta}
                                 onChange={(e) => setDelta(e.target.value)}
                                 placeholder="Quantity"
-                                className="w-28 h-11 px-3 rounded-xl border border-slate-200 text-sm bg-white
+                                className="w-28 h-11 px-3 rounded-xl border border-slate-200 text-[1.1875rem] bg-white
                                            focus:outline-none focus:ring-2 focus:ring-blue-500/30
                                            focus:border-blue-400"
                             />
@@ -440,7 +441,7 @@ function StockCard({
                                 value={reason}
                                 onChange={(e) => setReason(e.target.value as StockReason)}
                                 className="flex-1 min-w-[9.375rem] h-11 px-3 rounded-xl border border-slate-200
-                                           text-sm bg-white focus:outline-none focus:ring-2
+                                           text-[1.1875rem] bg-white focus:outline-none focus:ring-2
                                            focus:ring-blue-500/30 focus:border-blue-400"
                             >
                                 {REASONS.map((option) => (
@@ -454,7 +455,7 @@ function StockCard({
                             value={note}
                             onChange={(e) => setNote(e.target.value)}
                             placeholder="Note (optional) — invoice number, who took it"
-                            className="w-full h-11 px-3 mt-2 rounded-xl border border-slate-200 text-sm bg-white
+                            className="w-full h-11 px-3 mt-2 rounded-xl border border-slate-200 text-[1.1875rem] bg-white
                                        focus:outline-none focus:ring-2 focus:ring-blue-500/30
                                        focus:border-blue-400"
                         />
@@ -464,7 +465,7 @@ function StockCard({
                                 type="button"
                                 disabled={working}
                                 onClick={() => apply(Math.abs(Math.round(Number(delta) || 0)))}
-                                className="flex-1 h-11 rounded-xl bg-emerald-600 text-white text-[0.8125rem] font-bold
+                                className="flex-1 h-11 rounded-xl bg-emerald-600 text-white text-[1rem] font-bold
                                            hover:bg-emerald-700 disabled:opacity-60 transition-colors
                                            inline-flex items-center justify-center gap-1.5"
                             >
@@ -475,7 +476,7 @@ function StockCard({
                                 type="button"
                                 disabled={working}
                                 onClick={() => apply(-Math.abs(Math.round(Number(delta) || 0)))}
-                                className="flex-1 h-11 rounded-xl bg-slate-700 text-white text-[0.8125rem] font-bold
+                                className="flex-1 h-11 rounded-xl bg-slate-700 text-white text-[1rem] font-bold
                                            hover:bg-slate-800 disabled:opacity-60 transition-colors
                                            inline-flex items-center justify-center gap-1.5"
                             >
@@ -487,7 +488,7 @@ function StockCard({
 
                     {/* ---- threshold ---- */}
                     <div className="pt-3 border-t border-slate-200">
-                        <p className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-500 mb-2">
+                        <p className="text-[0.8125rem] font-semibold uppercase tracking-wide text-slate-500 mb-2">
                             Warn me below
                         </p>
 
@@ -498,7 +499,7 @@ function StockCard({
                                 min={0}
                                 value={minimum}
                                 onChange={(e) => setMinimum(e.target.value)}
-                                className="w-28 h-11 px-3 rounded-xl border border-slate-200 text-sm bg-white
+                                className="w-28 h-11 px-3 rounded-xl border border-slate-200 text-[1.1875rem] bg-white
                                            focus:outline-none focus:ring-2 focus:ring-blue-500/30
                                            focus:border-blue-400"
                             />
@@ -506,7 +507,7 @@ function StockCard({
                                 type="button"
                                 disabled={working}
                                 onClick={saveMinimum}
-                                className="px-4 h-11 rounded-xl border border-slate-200 bg-white text-[0.8125rem]
+                                className="px-4 h-11 rounded-xl border border-slate-200 bg-white text-[1rem]
                                            font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60
                                            inline-flex items-center gap-1.5"
                             >
@@ -514,7 +515,7 @@ function StockCard({
                             </button>
                         </div>
 
-                        <p className="text-[0.71875rem] text-slate-400 mt-1.5">
+                        <p className="text-[0.875rem] text-slate-400 mt-1.5">
                             Zero means this line is never flagged as low.
                         </p>
                     </div>
@@ -525,7 +526,7 @@ function StockCard({
                             type="button"
                             disabled={working}
                             onClick={togglePublished}
-                            className="inline-flex items-center gap-1.5 text-[0.8125rem] font-semibold
+                            className="inline-flex items-center gap-1.5 text-[1rem] font-semibold
                                        text-slate-600 hover:text-slate-900 disabled:opacity-60"
                         >
                             {row.isActive === false ? (
