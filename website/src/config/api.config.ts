@@ -131,10 +131,46 @@ export const resolveMediaUrl = (value?: string | null): string => {
     // Local picker results and inline data are already displayable.
     if (raw.startsWith('data:') || raw.startsWith('blob:')) return raw;
 
-    // Anything the backend stores lands under /uploads — profile photos, event
-    // banners, CMS media. Those and only those belong to the API origin.
+    /*
+     * ======================================================================
+     * RE-ANCHOR A STALE HOST, NOT A WORKING ONE
+     * ======================================================================
+     *
+     * This re-anchored EVERY value carrying `/uploads/`, absolute ones
+     * included. That repairs the rows it was written for — a URL built on
+     * `http://localhost:5000` or `http://10.0.2.2:5000` by whichever machine
+     * did the uploading is useless to every other client.
+     *
+     * But it also rewrote URLs that were perfectly good. An event banner
+     * stored as `https://<the real backend>/uploads/…` was re-pointed at
+     * whatever API this build talks to — so running the site locally against
+     * the SHARED database asked `localhost:5000` for a file that only exists
+     * on the deployed server, got a 404, and drew an empty frame. Reported as
+     * "why are the images not showing".
+     *
+     * So the repair is narrowed to the hosts that actually need repairing:
+     * loopback, the Android emulator's alias, and private LAN addresses. A
+     * public hostname is left exactly as it was stored, because it works.
+     */
     const uploadIndex = raw.indexOf('/uploads/');
-    if (uploadIndex !== -1) return `${API_ORIGIN}${raw.slice(uploadIndex)}`;
+    if (uploadIndex !== -1) {
+        const isAbsolute = /^https?:\/\//i.test(raw);
+        if (!isAbsolute) return `${API_ORIGIN}${raw.slice(uploadIndex)}`;
+
+        let host = '';
+        try { host = new URL(raw).hostname; } catch { host = ''; }
+
+        const unreachableElsewhere = !host
+            || host === 'localhost'
+            || host === '127.0.0.1'
+            || host === '0.0.0.0'
+            || host === '10.0.2.2'
+            || /^10\./.test(host)
+            || /^192\.168\./.test(host)
+            || /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+
+        return unreachableElsewhere ? `${API_ORIGIN}${raw.slice(uploadIndex)}` : raw;
+    }
 
     // A genuine remote asset (S3, Cloudinary, an avatar service) is left alone.
     if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;

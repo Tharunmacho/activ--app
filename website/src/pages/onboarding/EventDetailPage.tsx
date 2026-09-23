@@ -90,6 +90,38 @@ const formatTime = (iso?: string | null): string => {
         .toUpperCase();
 };
 
+/**
+ * An Indian mobile as a reader dials it: "+91 82201 12188".
+ *
+ * Only a ten-digit mobile, or one already carrying 91, is reformatted. A
+ * trunk zero is dropped — "09940175051" is eleven digits beginning with a
+ * 0, which is how it is dialled inside India and is wrong with a country
+ * code in front of it. Anything else is returned untouched, because a
+ * landline or a foreign number is not this shape and guessing would mangle
+ * it.
+ */
+const formatPhone = (value?: string | null): string => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+
+    const digits = raw.replace(/\D/g, '');
+    const national = digits.length === 12 && digits.startsWith('91')
+        ? digits.slice(2)
+        : digits.length === 11 && digits.startsWith('0')
+            ? digits.slice(1)
+            : digits;
+
+    /*
+     * AN INDIAN MOBILE STARTS 6, 7, 8 OR 9, and that check is what keeps a
+     * landline out. "044 2851 1234" is eleven digits beginning with a trunk
+     * zero, so the rule above strips it to ten — and without this it would be
+     * printed as "+91 44285 11234", a mobile number that does not exist, in
+     * place of a switchboard somebody is meant to ring.
+     */
+    if (national.length !== 10 || !/^[6-9]/.test(national)) return raw;
+    return `+91 ${national.slice(0, 5)} ${national.slice(5)}`;
+};
+
 /** The facts list joins multi-line values with this. */
 const NEWLINE = String.fromCharCode(10);
 
@@ -314,7 +346,10 @@ export default function EventDetailPage() {
             value: days
                 .map((d, i) => {
                     const hours = span(d.startTime, d.endTime);
-                    return hours ? `Day ${i + 1}  ${hours}` : '';
+                    /* "Day 1 : 10:30 AM – 05:00 PM". Two spaces read as a
+                       ragged gap once the day numbers reach double figures;
+                       a colon is what makes it a label and its value. */
+                    return hours ? `Day ${i + 1} : ${hours}` : '';
                 })
                 .filter(Boolean)
                 .join(NEWLINE),
@@ -346,10 +381,39 @@ export default function EventDetailPage() {
                 ? `${event.venue || event.location}\n${event.venueAddress}`
                 : (event.venue || event.location),
         } : null,
-        event.contactName || event.contactPhone || event.contactEmail ? {
+        /*
+         * ======================================================================
+         * THREE ROWS, NOT ONE BLOCK — a number needs to say it is a number
+         * ======================================================================
+         *
+         * This was one "Contact" row with the name, the number and the address
+         * stacked inside it as plain lines. A reader met a bare string of
+         * digits and a bare email with nothing naming either, which is exactly
+         * what was reported: "before the number I should get the field as
+         * phone, and before the email address the field as email".
+         *
+         * Split into their own rows, each keeps the label and the icon the
+         * facts list already gives every other fact — so PHONE and EMAIL read
+         * the same way DATES and VENUE do, with no new furniture invented for
+         * them. They are also `href`ed now: a number on a phone is something to
+         * tap, and printing it as dead text makes the reader copy it by hand.
+         */
+        event.contactName ? {
             icon: <User size={16} />,
             label: 'Contact',
-            value: [event.contactName, event.contactPhone, event.contactEmail].filter(Boolean).join('\n'),
+            value: event.contactName,
+        } : null,
+        event.contactPhone ? {
+            icon: <Phone size={16} />,
+            label: 'Phone',
+            value: formatPhone(event.contactPhone),
+            href: `tel:${String(event.contactPhone).replace(/[^\d+]/g, '')}`,
+        } : null,
+        event.contactEmail ? {
+            icon: <Mail size={16} />,
+            label: 'Email',
+            value: event.contactEmail,
+            href: `mailto:${event.contactEmail}`,
         } : null,
         /*
          * The static capacity, ONLY until the live meter arrives.
@@ -372,12 +436,31 @@ export default function EventDetailPage() {
          * drawn once it has passed: the button says so by then, and a date that
          * has gone reads as an invitation.
          */
+        /*
+         * "REGISTRATION CLOSES", not "Book by".
+         *
+         * Every other row in this list is a LABEL and its value — DATES, TIMES,
+         * VENUE, PHONE. "Book by" is an instruction, so beside them it read as
+         * the start of a sentence the date finished, and a visitor scanning
+         * the column had to stop and re-read it.
+         *
+         * It also says the right thing for an event that is not charging. The
+         * label is what the date IS — the last day the list is open — rather
+         * than an order to the reader, and it matches the wording of the
+         * deadline field in the CMS.
+         */
         (deadline && !bookingClosed) ? {
             icon: <Clock size={16} />,
-            label: 'Book by',
+            label: event.registrationFee && Number(event.registrationFee) > 0
+                ? 'Book before'
+                : 'Register before',
             value: deadline,
         } : null,
-    ].filter(Boolean) as { icon: React.ReactNode; label: string; value: string }[];
+    ].filter(Boolean) as {
+        icon: React.ReactNode; label: string; value: string;
+        /** Set where the value is something to tap — a number, an address. */
+        href?: string;
+    }[];
 
     const countdown = countdownLabel(event.startAt);
     /*
@@ -433,8 +516,31 @@ export default function EventDetailPage() {
                                       * every width and matches the card the
                                       * visitor clicked to get here.
                                       */}
-                                    <div className="w-full aspect-[16/9] max-h-[30rem]">
-                                        <CmsMediaFrame media={event.media} priority width={1100} />
+                                    {/*
+                                      * TALLER, and the whole poster is visible.
+                                      *
+                                      * 30rem cropped a 16:9 banner on any screen
+                                      * wider than about 1330px — the frame kept
+                                      * the ratio, the height cap overrode it, and
+                                      * the sides were cut. 38rem lets a 1600px
+                                      * banner show at its full width on a laptop.
+                                      *
+                                      * `contain` on a tinted ground, so an image
+                                      * that is NOT 16:9 is shown whole rather
+                                      * than cropped through its middle. A poster
+                                      * with the date along the bottom loses the
+                                      * date under `cover`, and that was the
+                                      * complaint: the image has to fit the frame,
+                                      * not the frame the image. An editor who
+                                      * wants edge-to-edge still sets Fit to
+                                      * "cover" on the banner and gets it.
+                                      */}
+                                    <div className="w-full aspect-[16/9] max-h-[38rem] bg-slate-50">
+                                        <CmsMediaFrame
+                                            media={{ ...event.media, fit: event.media.fit || 'contain' }}
+                                            priority
+                                            width={1600}
+                                        />
                                     </div>
                                 </div>
                             </Reveal>
@@ -655,7 +761,12 @@ export default function EventDetailPage() {
                                           * content when there is one, and still
                                           * gives two or three a row.
                                           */}
-                                        <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(15rem,max-content))]">
+                                        {/* 18rem, not 15rem: the portrait grew to 5.5rem and
+                                            a designation runs to three lines beside it, so the
+                                            old track squeezed "Minister for Social Justice
+                                            Department, Government of Tamilnadu" into a column
+                                            of single words. */}
+                                        <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(18rem,max-content))]">
                                             {speakers.map((person, i) => (
                                                 <div
                                                     key={person.id || i}
@@ -665,11 +776,43 @@ export default function EventDetailPage() {
                                                     className="flex items-start gap-4 rounded-xl border border-slate-200
                                                                bg-slate-50 p-4"
                                                 >
-                                                    <div className="w-14 h-14 rounded-full overflow-hidden bg-white border
-                                                                    border-slate-200 shrink-0 flex items-center justify-center">
+                                                    {/*
+                                                      * A PORTRAIT BIG ENOUGH TO BE A FACE.
+                                                      *
+                                                      * 3.5rem is a thumbnail — at that size a
+                                                      * minister is a smudge, and the card read
+                                                      * as a list item rather than as somebody
+                                                      * worth turning up for. 5.5rem is the
+                                                      * smallest a head reads at across a
+                                                      * two-column row.
+                                                      *
+                                                      * `fit: 'cover'` and `position: 'top'`,
+                                                      * explicitly. A portrait is taller than it
+                                                      * is wide, so fitting the WHOLE image into
+                                                      * a circle would pad the sides and leave a
+                                                      * small head in a large ring. Cover fills
+                                                      * the circle; anchoring to the top is what
+                                                      * keeps the face in it, because a centred
+                                                      * crop of a standing photograph is a chest.
+                                                      *
+                                                      * `width` is twice the rendered size, so a
+                                                      * retina screen gets a sharp portrait.
+                                                      */}
+                                                    <div className="w-[5.5rem] h-[5.5rem] rounded-full overflow-hidden bg-white
+                                                                    border border-slate-200 shrink-0 flex items-center
+                                                                    justify-center">
                                                         {person.photoUrl
-                                                            ? <CmsMediaFrame media={{ url: person.photoUrl }} width={80} />
-                                                            : <User size={20} className="text-slate-400" />}
+                                                            ? (
+                                                                <CmsMediaFrame
+                                                                    media={{
+                                                                        url: person.photoUrl,
+                                                                        fit: 'cover',
+                                                                        position: 'top',
+                                                                    }}
+                                                                    width={176}
+                                                                />
+                                                            )
+                                                            : <User size={30} className="text-slate-400" />}
                                                     </div>
                                                     <div className="min-w-0">
                                                         <p className="text-[1.25rem] font-bold text-slate-900">{person.name}</p>
@@ -729,23 +872,28 @@ export default function EventDetailPage() {
                                               * other fact prints as before.
                                               */}
                                             <p className={`${BIZ_DETAIL_VALUE} mt-1 break-words whitespace-pre-line`}>
-                                                {fact.label === 'Contact'
-                                                    ? fact.value.split(NEWLINE).map((line, n) => {
-                                                        const isPhone = /^[+\d][\d\s()-]{6,}$/.test(line.trim());
-                                                        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(line.trim());
-                                                        return (
-                                                            <span key={n} className="block">
-                                                                {isPhone || isEmail ? (
-                                                                    <a
-                                                                        href={`${isPhone ? 'tel:' : 'mailto:'}${line.trim()}`}
-                                                                        className="hover:text-brand-700 transition-colors"
-                                                                    >
-                                                                        {line}
-                                                                    </a>
-                                                                ) : line}
-                                                            </span>
-                                                        );
-                                                    })
+                                                {/*
+                                                  * THE ROW SAYS WHETHER IT IS A LINK.
+                                                  *
+                                                  * This matched each line of the
+                                                  * Contact block against a regex to
+                                                  * guess "is that a phone number".
+                                                  * Phone and Email are rows of their
+                                                  * own now, each carrying its own
+                                                  * `href`, so the guess is gone —
+                                                  * along with the case it got wrong:
+                                                  * a venue name with digits in it
+                                                  * came out as a telephone link.
+                                                  */}
+                                                {fact.href
+                                                    ? (
+                                                        <a
+                                                            href={fact.href}
+                                                            className="hover:text-brand-700 transition-colors"
+                                                        >
+                                                            {fact.value}
+                                                        </a>
+                                                    )
                                                     : fact.value}
                                             </p>
                                         </div>

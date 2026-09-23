@@ -228,17 +228,28 @@ function SpeakerPhoto({ url, onChange }: { url: string; onChange: (url: string) 
     };
 
     return (
-        <div className="shrink-0 w-20">
+        /*
+         * 7rem, not 5rem — the editor has to be able to SEE the portrait.
+         *
+         * At 80px a face is a smudge, so there was no way to tell from this
+         * screen whether the right photograph had been attached, whether it
+         * was the right way up, or whether the crop had taken the head off.
+         * The public card draws it at 5.5rem, and the control that sets it
+         * should not be smaller than the thing it sets.
+         */
+        <div className="shrink-0 w-28">
             <label className="block cursor-pointer">
-                <span className="w-20 h-20 rounded-full overflow-hidden border border-slate-200
+                <span className="w-28 h-28 rounded-full overflow-hidden border border-slate-200
                                  dark:border-[#2a2a2a] bg-slate-50 dark:bg-[#141414] flex items-center
                                  justify-center text-neutral-400 hover:border-blue-300 transition-colors">
                     {busy ? <Loader2 className="w-5 h-5 animate-spin" />
                         : url ? (
+                            /* `object-top`, like the public card: a portrait
+                               centred in a circle crops to a chest. */
                             <img
                                 src={resolveMediaUrl(url)}
                                 alt=""
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover object-top"
                             />
                         ) : <User className="w-6 h-6" />}
                 </span>

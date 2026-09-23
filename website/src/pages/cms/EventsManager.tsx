@@ -214,6 +214,25 @@ const toTimeInput = (iso: string | null) => {
  * 8pm. Building the instant here — where the editor's timezone IS the intended
  * one — removes the guess.
  */
+/**
+ * "10 Oct 2026, 09:00 AM" — the WHEN column of the events table.
+ *
+ * 12-hour with the meridiem, like every time on the public site, and no
+ * seconds: an event is scheduled to the minute and the ":00" on the end was
+ * being read as something broken.
+ */
+const listWhen = (iso: string): string => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '—';
+    /* Only the meridiem is upper-cased. Upper-casing the whole string gave
+       "10 OCT 2026", which shouts in a table cell whose neighbours are
+       sentence case. */
+    return d.toLocaleString('en-GB', {
+        day: 'numeric', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: true,
+    }).replace(/\b(am|pm)\b/i, (m) => m.toUpperCase());
+};
+
 const toInstant = (date: string, time: string): string => {
     if (!date) return '';
     const [h, m] = (time || '00:00').split(':').map(Number);
@@ -1531,13 +1550,27 @@ export default function EventsManager({
                         </div>
 
                         <div className="sm:col-span-2">
-                            {/* 16/9 — the shape of the banner on an event card. */}
+                            {/*
+                              * 16/9 — the shape of the banner on an event card.
+                              *
+                              * THE SIZE IS PRINTED, because an editor cannot
+                              * guess it and a poster that is the wrong shape is
+                              * either cropped or padded on the live page. The
+                              * numbers are the real ones: the event page draws
+                              * this frame at up to 1600px wide, so 1600 x 900
+                              * is one pixel per pixel on a laptop and still
+                              * sharp on a retina screen at the width the card
+                              * uses.
+                              */}
                             <MediaPicker
                                 label="Banner"
                                 aspect="16 / 9"
+                                hint={'Best at 1600 × 900 pixels (16:9, landscape) — that is the shape '
+                                    + 'and size the event page and the event cards draw. Up to about 2MB. '
+                                    + 'A picture of a different shape is not rejected: it is shown whole, '
+                                    + 'with the frame padded either side, unless you set Fit to "Fill frame".'}
                                 value={form.media}
                                 onChange={(media) => setForm({ ...form, media })}
-
                             />
                         </div>
 
@@ -2027,7 +2060,19 @@ export default function EventsManager({
                                             </span>
                                         </td>
                                         <td className="py-4 pr-4 text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
-                                            {e.startAt ? new Date(e.startAt).toLocaleString() : '—'}
+                                            {/*
+                                              * NO SECONDS.
+                                              *
+                                              * `toLocaleString()` with no options prints
+                                              * them — "10/10/2026, 9:00:00 AM" — and an
+                                              * event does not start at a second. The
+                                              * trailing ":00" read as a fault in the
+                                              * table. Spelt out instead: "10 Oct 2026,
+                                              * 09:00 AM", which is the wording the public
+                                              * page uses, so the same event does not look
+                                              * like two different things in two places.
+                                              */}
+                                            {e.startAt ? listWhen(e.startAt) : '—'}
                                         </td>
                                         <td className="py-4 pr-4 text-neutral-500 dark:text-neutral-400">
                                             {/*

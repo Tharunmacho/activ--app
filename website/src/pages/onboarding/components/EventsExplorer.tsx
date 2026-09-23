@@ -746,13 +746,46 @@ export function EventsExplorer({ events, settings }: Props) {
                                     className="h-full"
                                 >
                                     <Tilt3D className="h-full" intensity={8} lift={1.02} glare={false} perspective={850}>
+                                        {/*
+                                          * THE WHOLE CARD OPENS THE EVENT.
+                                          *
+                                          * Only the small "View Details" line was a
+                                          * link, so a visitor who clicked the
+                                          * photograph, the title or the price — which
+                                          * is most of them — got nothing. The gallery
+                                          * tiles have always opened from anywhere on
+                                          * the tile, and an events card that looks the
+                                          * same and behaves differently is the kind of
+                                          * difference nobody learns, they just decide
+                                          * the site is broken.
+                                          *
+                                          * A `relative` article with a stretched
+                                          * overlay link rather than wrapping the card
+                                          * in an `<a>`: wrapping would put the whole
+                                          * card's text into the link's accessible
+                                          * name, and a screen reader would read the
+                                          * date, price, venue and blurb as one
+                                          * enormous link label. The overlay carries
+                                          * its own short name and the card keeps its
+                                          * semantics.
+                                          */}
                                         <article
-                                            className="group flex h-full flex-col overflow-hidden rounded-2xl
+                                            className="group relative flex h-full flex-col overflow-hidden rounded-2xl
                                                        border border-brand-100/80 bg-white
                                                        shadow-[0_10px_36px_-16px_rgb(28_46_104/0.22)]
                                                        transition-shadow duration-500
-                                                       hover:shadow-[0_28px_60px_-20px_rgb(28_46_104/0.42)]"
+                                                       hover:shadow-[0_28px_60px_-20px_rgb(28_46_104/0.42)]
+                                                       focus-within:ring-2 focus-within:ring-brand-500
+                                                       focus-within:ring-offset-2"
                                         >
+                                            <Link
+                                                to={`/events/${event?.id || ''}`}
+                                                aria-label={`More about ${event?.title || 'this event'}`}
+                                                /* `z-10` sits under nothing else on the card, and
+                                                   `focus:outline-none` because the ring is drawn on
+                                                   the article via `focus-within`. */
+                                                className="absolute inset-0 z-10 focus:outline-none"
+                                            />
                                             {/* No image is a valid event; a broken frame is not. */}
                                             {event?.media?.url && (
                                                 <div className="relative h-44 w-full overflow-hidden">
@@ -881,13 +914,34 @@ export function EventsExplorer({ events, settings }: Props) {
                                                       nothing behind it.
                                                     */}
                                                     {event?.registrationEnabled && (
-                                                        <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1
-                                                                      text-[1.0625rem]">
-                                                            <span className="font-extrabold text-brand-800">
+                                                        <p className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+                                                            {/*
+                                                              * THE PRICE IS THE BIGGEST THING ON THE CARD
+                                                              * AFTER THE TITLE.
+                                                              *
+                                                              * It was set at 1.0625rem — the size of the
+                                                              * venue and the date beneath it — so the one
+                                                              * figure a visitor is deciding on read as
+                                                              * another line of small print. A price is not
+                                                              * a detail; it is most of the decision.
+                                                              *
+                                                              * "Free" is drawn in green rather than in the
+                                                              * brand navy, because it is not a number and
+                                                              * reading it as one costs a second.
+                                                              */}
+                                                            <span className={`text-[1.625rem] font-black leading-none ${
+                                                                Number(event?.registrationFee) > 0
+                                                                    ? 'text-brand-800'
+                                                                    : 'text-emerald-600'}`}>
                                                                 {Number(event?.registrationFee) > 0
                                                                     ? `₹${Number(event.registrationFee).toLocaleString('en-IN')}`
                                                                     : 'Free'}
                                                             </span>
+                                                            {Number(event?.registrationFee) > 0 && (
+                                                                <span className="text-[1.0625rem] font-semibold text-gray-400">
+                                                                    per seat
+                                                                </span>
+                                                            )}
                                                             {event?.hasMemberRate
                                                                 && Number(event?.memberPrice) < Number(event?.registrationFee) && (
                                                                 <span className="rounded-full bg-emerald-50 px-2.5 py-0.5
@@ -987,12 +1041,21 @@ export function EventsExplorer({ events, settings }: Props) {
                                                     {/* Its own page. This pointed back at the
                                                         list the card is already on, so "View
                                                         Details" showed no details. */}
-                                                    <Link
-                                                        to={`/events/${event?.id || ''}`}
-                                                        aria-label={`More about ${event?.title || 'this event'}`}
+                                                    {/*
+                                                      * NOT A LINK ANY MORE — the whole card is
+                                                      * one (see the overlay above). A second
+                                                      * link to the same place inside the first
+                                                      * is invalid markup and gives a keyboard
+                                                      * user two stops that do the same thing.
+                                                      * It stays as the visible affordance,
+                                                      * because a card with nothing saying it
+                                                      * can be opened does not look openable.
+                                                      */}
+                                                    <span
+                                                        aria-hidden="true"
                                                         className={`${MICRO_LABEL} mt-1 inline-flex items-center gap-1.5
                                                                     py-3.5 text-brand-600 transition-colors
-                                                                    hover:text-brand-800`}
+                                                                    group-hover:text-brand-800`}
                                                     >
                                                         View Details
                                                         <ArrowRight
@@ -1000,7 +1063,7 @@ export function EventsExplorer({ events, settings }: Props) {
                                                             className="transition-transform duration-300
                                                                        group-hover:translate-x-1"
                                                         />
-                                                    </Link>
+                                                    </span>
                                                 </div>
                                             </div>
                                         </article>
