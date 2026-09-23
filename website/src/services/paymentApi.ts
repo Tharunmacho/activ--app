@@ -178,6 +178,27 @@ export const startHostedMembershipPayment = async (
     );
 
 /**
+ * The same thing for SEATS AT AN EVENT.
+ *
+ * The booking already exists and already carries its own total, so the only
+ * thing sent is its reference — the server reads `totalAmount` off the
+ * booking, exactly as it reads a membership price off the plan. A price has
+ * never been sendable from a client on this flow and still is not.
+ *
+ * The webhook settles it: `processPaymentWebhook` sees `orderType:
+ * 'event_booking'` on the order and calls `eventBookingService.completePayment`
+ * with the booking reference. Nothing here confirms a seat.
+ */
+export const startHostedBookingPayment = async (bookingRef: string) =>
+    unwrap<HostedPaymentStart>(
+        await api.post(ENDPOINTS.PAYMENT.CREATE_REQUEST, {
+            orderType: 'event_booking',
+            bookingRef,
+        }),
+        {} as HostedPaymentStart,
+    );
+
+/**
  * The whole purchase, for a caller that just wants it done.
  *
  * Order, authorise, complete. This is the MOCK path — it is only reached when

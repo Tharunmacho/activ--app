@@ -585,6 +585,21 @@ export default function EventBookingPage({ chrome = 'public' }: {
                 })),
             });
 
+            /*
+             * `null` MEANS WE ARE LEAVING THIS PAGE.
+             *
+             * With a hosted gateway `bookAndPay` redirects the browser to
+             * Instamojo and there is no booking to show — the seats are
+             * confirmed by the webhook, and the visitor comes back to
+             * `/payment-success`. Falling through to the confirmation step
+             * here would flash "booking confirmed" for the instant before the
+             * redirect lands, which is a promise nobody has kept yet.
+             *
+             * `paying` is deliberately left ON in that case (see `finally`),
+             * so the button cannot be pressed twice while the page unloads.
+             */
+            if (!result) return;
+
             setBooking(result);
             setStep('done');
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -596,7 +611,6 @@ export default function EventBookingPage({ chrome = 'public' }: {
              * re-types eight participants.
              */
             setPayError(errorMessage(error, 'The booking could not be completed'));
-        } finally {
             setPaying(false);
         }
     };
