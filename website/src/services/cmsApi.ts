@@ -599,6 +599,8 @@ export interface CmsEvent {
     /** `paid` restricts the event to members with an active membership. */
     audience?: 'all' | 'paid';
     agenda?: CmsAgendaItem[];
+    /** The per-day programme — see `CmsEventDay`. Empty for a one-day event. */
+    days?: CmsEventDay[];
     speakers?: CmsSpeaker[];
     /**
      * HOW the event is attended: in a room, or on a link.
@@ -637,6 +639,28 @@ export interface CmsAgendaItem {
     description: string;
     speaker: string;
     location: string;
+}
+
+/**
+ * ONE DAY OF A MULTI-DAY EVENT — its own hours and its own sessions.
+ *
+ * A three-day conclave does not run the same hours three times: day one opens
+ * late after registration, day three closes at lunch. The event carried one
+ * start/end pair and one flat agenda, so the page could print a single span
+ * for all three days and a list of sessions with nothing saying which day
+ * each fell on.
+ *
+ * Empty on a single-day event and on everything written before this existed —
+ * readers fall back to the event's own `startAt`/`endAt` and flat `agenda`.
+ */
+export interface CmsEventDay {
+    id?: string;
+    /** ISO date, the day itself. */
+    date: string;
+    /** "HH:MM" on a 24-hour clock, as the whole site stores times. */
+    startTime: string;
+    endTime: string;
+    agenda: CmsAgendaItem[];
 }
 
 export interface CmsSpeaker {

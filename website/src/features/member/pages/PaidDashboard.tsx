@@ -130,7 +130,10 @@ const eventDay = (iso: string | null) => {
     return {
         day: d.toLocaleDateString('en-GB', { day: '2-digit' }),
         month: d.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase(),
-        time: d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+        /* 12-hour, like every other time on the site — see `formatTime` on
+           the event detail page for why a 24-hour clock read as wrong. */
+        time: d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true })
+            .toUpperCase(),
     };
 };
 

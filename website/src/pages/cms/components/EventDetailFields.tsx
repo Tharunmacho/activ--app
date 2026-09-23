@@ -5,6 +5,7 @@ import { Plus, Trash2, Users, Clock, ChevronDown, ChevronUp, Loader2, User, MapP
 // event still carries `registrationFields`, and dropping it from the shape
 // would silently discard the questions those events already ask.
 import { type RegistrationField } from './RegistrationFormBuilder';
+import TimeField from './TimeField';
 import { CmsField, CmsInput, CmsTextarea, CmsSection, CmsChoice } from './CmsUI';
 import { listEventRegistrations, type EventRegistration } from '@/services/memberHubApi';
 import { errorMessage } from '@/services/activApi';
@@ -271,11 +272,22 @@ export default function EventDetailFields({
     value,
     onChange,
     eventId,
+    multiDay = false,
 }: {
     value: EventDetail;
     onChange: (detail: EventDetail) => void;
     /** Present only when editing — there are no registrations for a draft row. */
     eventId?: string | null;
+    /**
+     * Does this event run over more than one day?
+     *
+     * Decided from the dates, which live on the form ABOVE this component, so
+     * it has to be told. When it is true the flat agenda below is not drawn:
+     * the programme is edited day by day up there instead, and TWO programme
+     * editors on one form is a form where half the sessions end up in the
+     * list nobody reads. Reported exactly that way.
+     */
+    multiDay?: boolean;
 }) {
     /*
      * OPEN BY DEFAULT.
@@ -342,7 +354,47 @@ export default function EventDetailFields({
                       * the control is gone.
                       */}
 
-                    {/* ---------------------------------------------- agenda */}
+                    {/* ---------------------------------------------- agenda
+
+                        ONE PROGRAMME EDITOR, NOT TWO.
+
+                        A multi-day event is written day by day, in
+                        `EventDaysEditor` above — each day with its own hours
+                        and its own sessions. This flat list has no day on it,
+                        so a session typed here on a three-day conclave cannot
+                        say which day it belongs to, and the page has nowhere
+                        to print it. Leaving both on screen meant the editor
+                        could fill in either and only one of them reached the
+                        reader.
+
+                        It stays for a SINGLE-day event, where there is exactly
+                        one day and a day column would be furniture describing
+                        nothing.
+                    */}
+                    {multiDay ? (
+                        <CmsSection title="Agenda">
+                            <div className="rounded-xl border border-blue-200 bg-blue-50 p-4
+                                            dark:border-blue-900 dark:bg-blue-950/30">
+                                <p className="text-[1.1875rem] font-semibold text-blue-900 dark:text-blue-200">
+                                    This event runs over more than one day.
+                                </p>
+                                <p className="mt-1 text-[1.0625rem] text-blue-800 dark:text-blue-300">
+                                    Its programme is written day by day under the dates above —
+                                    each day has its own hours and its own sessions, and that is
+                                    what the event page prints.
+                                    {value.agenda.length > 0 && (
+                                        <>
+                                            {' '}The {value.agenda.length} session
+                                            {value.agenda.length === 1 ? '' : 's'} listed here before
+                                            the event became multi-day {value.agenda.length === 1 ? 'is' : 'are'}
+                                            {' '}kept on the record and will show again if you make it
+                                            a one-day event.
+                                        </>
+                                    )}
+                                </p>
+                            </div>
+                        </CmsSection>
+                    ) : (
                     <CmsSection
                         title="Agenda"
 
@@ -372,19 +424,21 @@ export default function EventDetailFields({
                                         <div className="flex items-start gap-2">
                                             <Clock className="w-4 h-4 text-neutral-400 mt-2.5 shrink-0" />
 
-                                            <div className="grid gap-3 sm:grid-cols-4 flex-1 min-w-0">
+                                            <div className="grid gap-3 sm:grid-cols-2 flex-1 min-w-0">
+                                                {/* AM/PM, like every other time in the
+                                                    CMS — see `TimeField`. */}
                                                 <CmsField label="Starts">
-                                                    <CmsInput
-                                                        type="time"
+                                                    <TimeField
+                                                        label="Session start"
                                                         value={row.startTime}
-                                                        onChange={(e) => updateAgenda(index, { startTime: e.target.value })}
+                                                        onChange={(startTime) => updateAgenda(index, { startTime })}
                                                     />
                                                 </CmsField>
                                                 <CmsField label="Ends">
-                                                    <CmsInput
-                                                        type="time"
+                                                    <TimeField
+                                                        label="Session end"
                                                         value={row.endTime}
-                                                        onChange={(e) => updateAgenda(index, { endTime: e.target.value })}
+                                                        onChange={(endTime) => updateAgenda(index, { endTime })}
                                                     />
                                                 </CmsField>
                                                 <div className="sm:col-span-2">
@@ -437,6 +491,7 @@ export default function EventDetailFields({
                             </div>
                         )}
                     </CmsSection>
+                    )}
 
                     {/* -------------------------------------------- speakers */}
                     {/*

@@ -7,7 +7,7 @@ import {
     getCmsEvents, createCmsEvent, updateCmsEvent, deleteCmsEvent, invalidateCmsCache,
     getEventsSettings, updateEventsSettings,
     errorMessage, EMPTY_MEDIA,
-    type CmsEvent, type EventsSettings, type CmsMedia,
+    type CmsEvent, type EventsSettings, type CmsMedia, type CmsEventDay,
 } from '@/services/cmsApi';
 import {
     CmsCard,
@@ -32,6 +32,8 @@ import {
     CmsCheck,
 } from './components/CmsUI';
 import MediaPicker from './components/MediaPicker';
+import TimeField from './components/TimeField';
+import EventDaysEditor from './components/EventDaysEditor';
 import RegionTargetPicker from './components/RegionTargetPicker';
 import { StatList, IconPicker, RepeatableList , ExtraFieldsEditor } from './components/CmsEditors';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
@@ -93,6 +95,9 @@ const BLANK = {
      */
     endDate: '',
     endTime: '',
+    /* The per-day programme. Empty for a one-day event — the editor for it is
+       not even drawn until the Last day makes the event longer than a day. */
+    days: [] as CmsEventDay[],
     location: '',
     category: '',
     /*
@@ -489,6 +494,15 @@ export default function EventsManager({
                single-day event as a two-day one. */
             endDate: toDateInput(e.endAt) === toDateInput(e.startAt) ? '' : toDateInput(e.endAt),
             endTime: toTimeInput(e.endAt),
+            /* Loaded as well as saved: a draft that omits a field shows an
+               empty editor for data that is on the record, and the next save
+               writes the blank back over it. */
+            days: (e.days || []).map((d) => ({
+                date: String(d.date || '').slice(0, 10),
+                startTime: d.startTime || '',
+                endTime: d.endTime || '',
+                agenda: d.agenda || [],
+            })),
             location: e.location || '',
             category: e.category || '',
             /*
@@ -627,6 +641,14 @@ export default function EventsManager({
                 endAt: (form.endDate || form.endTime)
                     ? toInstant(form.endDate || form.date, form.endTime || '23:59')
                     : '',
+                /*
+                 * JSON-encoded for the reason the agenda and the targets are:
+                 * this payload becomes `FormData` whenever there is a banner,
+                 * and `FormData.append` stringifies an array of objects to
+                 * "[object Object]" — losing every day with no error anywhere.
+                 * The server's `parseArray` reads it back on both transports.
+                 */
+                days: JSON.stringify(form.days || []),
                 location: form.location,
                 category: form.category,
                 /*
@@ -1207,26 +1229,32 @@ export default function EventsManager({
                                 onChange={(e) => setForm({ ...form, date: e.target.value })} />
                         </CmsField>
 
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3">
                             {/*
-                              * `lang="en-US"` — AM/PM, not a 24-hour clock.
+                              * `TimeField`, NOT a native time input.
                               *
-                              * A native time input renders in the BROWSER's
-                              * locale, and on an en-GB browser that is 24-hour:
-                              * "10:00" gives no way to tell a morning session
-                              * from an evening one, which is the one thing the
-                              * field exists to say. The attribute pins the
-                              * control's display to a 12-hour clock; the VALUE
-                              * is unaffected — it is always "HH:MM" on the wire,
-                              * so nothing downstream has to know.
+                              * `<input type="time">` renders in the BROWSER's
+                              * locale and nothing in the page overrides that —
+                              * `lang="en-US"` was tried here and an en-GB
+                              * browser still showed a 24-hour clock, so
+                              * "10:00" gave no way to tell a morning session
+                              * from an evening one. The replacement always
+                              * shows AM/PM and stores the same "HH:MM" string,
+                              * so nothing downstream changes.
                               */}
                             <CmsField label="Starts">
-                                <CmsInput type="time" lang="en-US" value={form.time}
-                                    onChange={(e) => setForm({ ...form, time: e.target.value })} />
+                                <TimeField
+                                    label="Start time"
+                                    value={form.time}
+                                    onChange={(time) => setForm({ ...form, time })}
+                                />
                             </CmsField>
                             <CmsField label="Ends">
-                                <CmsInput type="time" lang="en-US" value={form.endTime}
-                                    onChange={(e) => setForm({ ...form, endTime: e.target.value })} />
+                                <TimeField
+                                    label="End time"
+                                    value={form.endTime}
+                                    onChange={(endTime) => setForm({ ...form, endTime })}
+                                />
                             </CmsField>
                         </div>
 
@@ -1241,6 +1269,21 @@ export default function EventsManager({
                                 onChange={(e) => setForm({ ...form, endDate: e.target.value })}
                             />
                         </CmsField>
+
+                        {/*
+                          * THE PER-DAY PROGRAMME, and it draws itself only when
+                          * the event actually runs over more than one day — see
+                          * `EventDaysEditor`. A one-day event keeps the single
+                          * Starts/Ends pair above and gains no furniture.
+                          */}
+                        <div className="sm:col-span-2">
+                            <EventDaysEditor
+                                startDate={form.date}
+                                endDate={form.endDate}
+                                days={form.days}
+                                onChange={(days) => setForm({ ...form, days })}
+                            />
+                        </div>
 
 
                         {/*
@@ -1626,6 +1669,16 @@ export default function EventsManager({
                             value={form.detail}
                             onChange={(detail) => setForm({ ...form, detail })}
                             eventId={editing}
+                            /*
+                             * Decided from the DATES, which live on this form
+                             * rather than inside that component. A multi-day
+                             * event hides the flat agenda there, because its
+                             * programme is written day by day above — two
+                             * programme editors on one screen is how half the
+                             * sessions end up in the list the page never
+                             * prints.
+                             */
+                            multiDay={!!form.endDate && form.endDate !== form.date}
                         />
 
                         <CmsField label="Visibility">

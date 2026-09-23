@@ -71,11 +71,23 @@ const formatDay = (iso?: string | null): string => {
 };
 
 /** "10:30" — empty when the event carries no time of day. */
+/**
+ * A time a reader can act on — "09:00 AM", not "09:00".
+ *
+ * `en-GB` with no `hour12` is a 24-hour clock, so a conference running
+ * 9am to 5pm printed as "09:00 – 05:00": the end reads as earlier than the
+ * start, and the one thing the row exists to say — morning or evening — is
+ * the thing it does not say. Reported exactly that way.
+ *
+ * `hour12: true` rather than switching locale, so the date formatting either
+ * side of it is untouched.
+ */
 const formatTime = (iso?: string | null): string => {
     if (!iso) return '';
     const date = new Date(iso);
     if (Number.isNaN(date.getTime())) return '';
-    return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true })
+        .toUpperCase();
 };
 
 /** The facts list joins multi-line values with this. */
@@ -191,6 +203,53 @@ export default function EventDetailPage() {
     const isOnline = event.mode === 'online';
 
     const agenda = (event.agenda || []).filter(row => row && (row.title || row.startTime));
+
+    /*
+     * ==================================================================
+     * THE PROGRAMME, DAY BY DAY — but only when there IS more than one
+     * ==================================================================
+     *
+     * `days` is empty on a single-day event and on everything written before
+     * the field existed, and in that case nothing below changes: the flat
+     * `agenda` is drawn exactly as it always was, with no day headings. A
+     * "Day 1" over the only day of a one-day event is furniture describing
+     * nothing, and the association asked for it not to appear.
+     *
+     * A day is kept when it has hours of its own OR sessions of its own. A day
+     * with neither is a row the editor never filled in — printing an empty
+     * "Day 2" would read as a day with nothing happening on it rather than as
+     * a day nobody has written up yet.
+     */
+    const days = (event.days || []).filter(d => d && d.date
+        && (d.startTime || d.endTime || (d.agenda || []).some(r => r && (r.title || r.startTime))));
+    const perDay = days.length > 1;
+
+    /** "Sat, 10 Oct 2026" — the wording the facts list uses for a date. */
+    const dayHeading = (iso: string) => {
+        const d = new Date(`${String(iso).slice(0, 10)}T00:00:00`);
+        if (Number.isNaN(d.getTime())) return '';
+        return d.toLocaleDateString('en-GB', {
+            weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+        });
+    };
+
+    /** "09:30" -> "09:30 AM". The stored value is a 24-hour string. */
+    const clock = (hhmm?: string) => {
+        const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '').trim());
+        if (!m) return '';
+        const h = Number(m[1]);
+        const meridiem = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 === 0 ? 12 : h % 12;
+        return `${String(h12).padStart(2, '0')}:${m[2]} ${meridiem}`;
+    };
+
+    /** "09:30 AM – 05:00 PM", or just the one that was given. */
+    const span = (from?: string, to?: string) => {
+        const a = clock(from);
+        const b = clock(to);
+        if (a && b) return `${a} – ${b}`;
+        return a || b || '';
+    };
     const speakers = (event.speakers || []).filter(person => person && person.name);
     const day = formatDay(event.startAt);
     /*
@@ -237,7 +296,29 @@ export default function EventDetailPage() {
                tells somebody booking travel they need one night. */
             value: runsOverDays ? `${day} – ${lastDay}` : day,
         } : null,
-        startTime ? {
+        /*
+         * ONE ROW PER DAY when the days differ, one row when they do not.
+         *
+         * A three-day conclave printed a single "09:00 – 05:00" here, which is
+         * the hours of nothing in particular — day one opens late and day three
+         * closes at lunch. Worse, it was a 24-hour clock, so the end read as
+         * earlier than the start. The facts list joins multi-line values on
+         * `NEWLINE`, so each day gets its own line under the one heading.
+         */
+        /* Only when at least one day HAS hours — `.filter(Boolean)` below drops
+           a null entry but keeps an object whose value is an empty string,
+           which would draw a "Times" heading with nothing under it. */
+        (perDay && days.some(d => span(d.startTime, d.endTime))) ? {
+            icon: <Clock size={16} />,
+            label: 'Times',
+            value: days
+                .map((d, i) => {
+                    const hours = span(d.startTime, d.endTime);
+                    return hours ? `Day ${i + 1}  ${hours}` : '';
+                })
+                .filter(Boolean)
+                .join(NEWLINE),
+        } : startTime ? {
             icon: <Clock size={16} />,
             label: 'Time',
             // An end time is optional — many events are announced without one.
@@ -452,20 +533,93 @@ export default function EventDetailPage() {
                                   */}
                                 <EventActions event={event} className="mb-8" />
 
-                                {/* ---- agenda ---- */}
-                                {agenda.length > 0 && (
+                                {/* ---- programme ----
+
+                                    DAY BY DAY when the event runs over more than
+                                    one, and exactly as it always was when it does
+                                    not. See `days` above: a single-day event gets
+                                    no "Day 1" heading, because a day label over
+                                    the only day of an event says nothing.
+                                */}
+                                {perDay ? (
+                                    <div className="mt-8 pt-8 border-t border-slate-100">
+                                        <h2 className={`${BIZ_CARD_TITLE} mb-5`}>Programme</h2>
+                                        <div className="space-y-8">
+                                            {days.map((day, d) => {
+                                                const rows = (day.agenda || [])
+                                                    .filter(r => r && (r.title || r.startTime));
+                                                const hours = span(day.startTime, day.endTime);
+                                                return (
+                                                    <section key={day.id || day.date || d}>
+                                                        {/* Which day it is, the date, and its hours. */}
+                                                        <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                                                            <span className="inline-flex items-center rounded-lg bg-brand-50
+                                                                             px-2.5 py-1 text-[1.0625rem] font-bold
+                                                                             uppercase tracking-wide text-brand-700">
+                                                                Day {d + 1}
+                                                            </span>
+                                                            <span className="text-[1.25rem] font-bold text-slate-900">
+                                                                {dayHeading(day.date)}
+                                                            </span>
+                                                            {hours && (
+                                                                <span className="text-[1.125rem] font-semibold text-slate-500">
+                                                                    {hours}
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        {rows.length > 0 ? (
+                                                            <ol className="border-l-2 border-slate-200 pl-5 space-y-6">
+                                                                {rows.map((row, i) => (
+                                                                    <li key={row.id || i} className="relative">
+                                                                        <span className="absolute -left-[1.6875rem] top-1.5 w-3 h-3 rounded-full
+                                                                                         bg-brand-600 ring-4 ring-white" />
+                                                    {(row.startTime || row.endTime) && (
+                                                                            <p className={`${BIZ_DETAIL_LABEL} mb-1`}>
+                                                                                {span(row.startTime, row.endTime)}
+                                                                            </p>
+                                                                        )}
+                                                                        <p className="text-[1.25rem] font-bold text-slate-900">{row.title}</p>
+                                                                        {row.description && (
+                                                                            <p className="text-[1.25rem] text-slate-500 mt-1 whitespace-pre-line">
+                                                                                {row.description}
+                                                                            </p>
+                                                                        )}
+                                                                        {(row.speaker || row.location) && (
+                                                                            <p className={`${BIZ_DETAIL_LABEL} mt-1.5`}>
+                                                                                {[row.speaker, row.location].filter(Boolean).join(' · ')}
+                                                                            </p>
+                                                                        )}
+                                                                    </li>
+                                                                ))}
+                                                            </ol>
+                                                        ) : (
+                                                            /* Hours but no sessions is a real state: the day
+                                                               is settled and the programme is not written
+                                                               yet. Say so, rather than leave a heading with
+                                                               nothing under it. */
+                                                            <p className="pl-5 text-[1.1875rem] text-slate-400">
+                                                                The programme for this day is still being confirmed.
+                                                            </p>
+                                                        )}
+                                                    </section>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ) : agenda.length > 0 && (
                                     <div className="mt-8 pt-8 border-t border-slate-100">
                                         <h2 className={`${BIZ_CARD_TITLE} mb-5`}>Programme</h2>
                                         <ol className="border-l-2 border-slate-200 pl-5 space-y-6">
                                             {agenda.map((row, i) => (
                                                 <li key={row.id || i} className="relative">
-                                                    {/* The dot sits on the rule, so the times read as a timeline
-                                                        rather than as a table with a stray border. */}
+                                                    {/* The dot sits on the rule, so the times read as a
+                                                        timeline rather than as a table with a stray border. */}
                                                     <span className="absolute -left-[1.6875rem] top-1.5 w-3 h-3 rounded-full
                                                                      bg-brand-600 ring-4 ring-white" />
                                                     {(row.startTime || row.endTime) && (
                                                         <p className={`${BIZ_DETAIL_LABEL} mb-1`}>
-                                                            {row.startTime}{row.endTime ? ` – ${row.endTime}` : ''}
+                                                            {span(row.startTime, row.endTime)}
                                                         </p>
                                                     )}
                                                     <p className="text-[1.25rem] font-bold text-slate-900">{row.title}</p>
