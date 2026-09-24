@@ -74,7 +74,7 @@ export function EventsHero({ settings }: Props) {
             </div>
 
             <div className={`${SCREEN_CONTAINER} relative z-10 pt-16 pb-20 md:pt-20 md:pb-24`}>
-                <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
+                <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-14">
 
                     {/* ------------------------------------------------ copy */}
                     <Reveal variant="left" className="min-w-0">

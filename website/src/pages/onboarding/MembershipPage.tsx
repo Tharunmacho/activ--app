@@ -585,7 +585,7 @@ export default function MembershipPage() {
                     </div>
 
                     <div className={`${SCREEN_CONTAINER} relative z-10 pt-16 pb-16 md:pt-20 md:pb-20`}>
-                        <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-[1.1fr_0.9fr]">
+                        <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
 
                             {/* ---------------------------------------- copy */}
                             <Reveal variant="left" className="min-w-0">

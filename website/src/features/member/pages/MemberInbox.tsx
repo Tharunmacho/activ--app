@@ -363,7 +363,7 @@ export default function MemberInbox() {
               */}
             {/* 26rem, not 22: a name and “Ariyalur, Ariyalur, Tamil Nadu” did
                 not fit on one line, so every row wrapped. */}
-            <div className="grid gap-5 lg:grid-cols-[26rem_1fr] items-start">
+            <div className="grid gap-5 lg:grid-cols-[26rem_minmax(0,1fr)] items-start">
                 <div className={`${CARD} ${PANE} ${openId ? 'hidden lg:flex' : 'flex'}
                                  flex-col overflow-hidden`}>
                     <div className="shrink-0 px-5 py-4 border-b border-slate-200 bg-slate-50">

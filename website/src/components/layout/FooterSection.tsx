@@ -238,7 +238,7 @@ export function FooterSection() {
             */}
             <div className={`${SCREEN_CONTAINER} relative z-10 pt-16 pb-8`}>
 
-                <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1fr_auto_1fr] lg:gap-10 lg:items-start">
+                <div className="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-10 lg:items-start">
 
                     {/* ------------------------------------------- contact */}
                     {hasContact ? (

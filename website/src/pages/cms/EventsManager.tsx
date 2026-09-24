@@ -4,7 +4,7 @@ import { ArrowLeft,
     Lock, Globe, Building2, MapPin, Shield, Video, Home, Eye, EyeOff, Images, Search,
 } from 'lucide-react';
 import {
-    getCmsEvents, createCmsEvent, updateCmsEvent, deleteCmsEvent, invalidateCmsCache,
+    getCmsEventsForEditor, createCmsEvent, updateCmsEvent, deleteCmsEvent, invalidateCmsCache,
     getEventsSettings, updateEventsSettings,
     errorMessage, EMPTY_MEDIA,
     type CmsEvent, type EventsSettings, type CmsMedia, type CmsEventDay,
@@ -33,7 +33,7 @@ import {
 } from './components/CmsUI';
 import MediaPicker from './components/MediaPicker';
 import TimeField from './components/TimeField';
-import EventDaysEditor from './components/EventDaysEditor';
+import EventDaysEditor, { addDays, dayDelta, shiftDays, daysInRange } from './components/EventDaysEditor';
 import RegionTargetPicker from './components/RegionTargetPicker';
 import { StatList, IconPicker, RepeatableList , ExtraFieldsEditor } from './components/CmsEditors';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
@@ -401,7 +401,7 @@ export default function EventsManager({
         try {
             // Together: the list and the copy around it are independent, and
             // waiting for one before asking for the other doubles the delay.
-            const [list, config] = await Promise.all([getCmsEvents(), getEventsSettings()]);
+            const [list, config] = await Promise.all([getCmsEventsForEditor(), getEventsSettings()]);
             setEvents(list);
             setSettingsClean(config);
             return list;
@@ -667,7 +667,7 @@ export default function EventsManager({
                  * "[object Object]" — losing every day with no error anywhere.
                  * The server's `parseArray` reads it back on both transports.
                  */
-                days: JSON.stringify(form.days || []),
+                days: JSON.stringify(daysInRange(form.days || [], form.date, form.endDate)),
                 location: form.location,
                 category: form.category,
                 /*
@@ -1244,8 +1244,29 @@ export default function EventsManager({
                         </div>
 
                         <CmsField label="Date">
+                            {/* MOVING THE START MOVES THE EVENT: the last day
+                                and every day's hours and sessions go with it
+                                (see `shiftDays`), the way a calendar moves a
+                                multi-day booking. Moving only the first day
+                                left the programme filed under dates the event
+                                no longer ran on. */}
                             <CmsInput type="date" value={form.date}
-                                onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                                onChange={(e) => {
+                                    const next = e.target.value;
+                                    const delta = dayDelta(form.date, next);
+                                    if (!next || !Number.isFinite(delta) || delta === 0) {
+                                        setForm({ ...form, date: next });
+                                        return;
+                                    }
+                                    setForm({
+                                        ...form,
+                                        date: next,
+                                        endDate: form.endDate
+                                            ? addDays(form.endDate, delta) || form.endDate
+                                            : form.endDate,
+                                        days: shiftDays(form.days || [], delta),
+                                    });
+                                }} />
                         </CmsField>
 
                         <div className="grid grid-cols-1 gap-3">
@@ -1995,6 +2016,19 @@ export default function EventsManager({
                                                                  rounded-full bg-emerald-100 dark:bg-emerald-950
                                                                  text-emerald-700 dark:text-emerald-400">
                                                     <Globe className="w-2.5 h-2.5" /> Onboarding
+                                                </span>
+                                            ) : null}
+                                            {/* The other answer, said out loud. Without
+                                                it a members-only row looked like every
+                                                other row, and the first sign it was not
+                                                public was a visitor's "Not found". */}
+                                            {channel === 'members' && !isOnPublicSite(e) ? (
+                                                <span className="inline-flex items-center gap-1 text-[1.0625rem]
+                                                                 font-bold uppercase tracking-wide px-1.5 py-0.5
+                                                                 rounded-full bg-slate-100 dark:bg-[#1a1a1a]
+                                                                 text-slate-600 dark:text-neutral-400"
+                                                    title="Members only — not on the public site. Tick “Also post it in the onboarding events section” to publish it there.">
+                                                    <Lock className="w-2.5 h-2.5" /> Members only
                                                 </span>
                                             ) : null}
                                             {/* WHOSE EVENT THIS IS. On the CMS

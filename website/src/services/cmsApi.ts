@@ -15,7 +15,7 @@
  * in the CMS removes it from the site. Copy baked into the markup as a fallback
  * would make deletion appear to do nothing.
  */
-import api, { unwrap, errorMessage } from './api';
+import api, { unwrap, errorMessage, registerCacheClearer } from './api';
 import { resolveMediaUrl } from '@/config/api.config';
 
 // ============================================================ types
@@ -935,6 +935,19 @@ export const invalidateCmsCache = (key?: string) => {
     else cache.clear();
 };
 
+/*
+ * DROPPED ON EVERY SESSION CHANGE, like the request cache it sits beside.
+ *
+ * Left out, a list fetched before signing in was still served after it: the
+ * super admin logged out and back in and their Events screen showed the
+ * public copy from before, missing every event the public cannot see — which
+ * read as the event they had just created having been deleted.
+ */
+registerCacheClearer(() => {
+    cache.clear();
+    inFlight.clear();
+});
+
 // ============================================================ public reads
 
 const getSiteSettingsUncached = async (): Promise<SiteSettings> => {
@@ -1174,21 +1187,43 @@ const getContactInfoUncached = async (): Promise<ContactInfo> => {
 /** Cached; see `cached()` above. */
 export const getContactInfo = () => cached('contact-info', getContactInfoUncached);
 
+const resolveEvents = (data: CmsEvent[] | null): CmsEvent[] =>
+    (data || []).map((e) => ({
+        ...e,
+        imageUrl: resolveMediaUrl(e.imageUrl),
+        media: withResolvedUrl(e.media),
+    }));
+
+/*
+ * `scope=public` — WHAT A VISITOR SEES, even when an admin is signed in.
+ *
+ * Without it the server answered a signed-in super admin with the editor's
+ * list, so the home page showed them drafts and members-only events, and the
+ * one cached copy was then whichever list happened to be fetched first.
+ */
 const getCmsEventsUncached = async (): Promise<CmsEvent[]> => {
     try {
-        const data = unwrap<CmsEvent[]>(await api.get('/cms/events'), []);
-        return (data || []).map((e) => ({
-            ...e,
-            imageUrl: resolveMediaUrl(e.imageUrl),
-            media: withResolvedUrl(e.media),
-        }));
+        return resolveEvents(unwrap<CmsEvent[]>(
+            await api.get('/cms/events', { params: { scope: 'public' } }), [],
+        ));
     } catch {
         return [];
     }
 };
 
-/** Cached; see `cached()` above. */
+/** The public list. Cached; see `cached()` above. */
 export const getCmsEvents = () => cached('events', getCmsEventsUncached);
+
+/**
+ * EVERY event, for the editor screens: drafts, members-only, targeted.
+ *
+ * NOT cached, and it THROWS. The editor has just written something and must
+ * see the server's answer, and a failed load has to say so — the public
+ * reader's swallow-to-`[]` here would present a network blip as "you have no
+ * events", which is exactly how a real event reads as deleted.
+ */
+export const getCmsEventsForEditor = async (): Promise<CmsEvent[]> =>
+    resolveEvents(unwrap<CmsEvent[]>(await api.get('/cms/events'), []));
 
 /**
  * One event, for its own page.

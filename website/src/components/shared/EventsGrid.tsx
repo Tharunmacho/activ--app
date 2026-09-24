@@ -195,13 +195,26 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                                list reads as having failed to load. */
                             <Reveal key={event.id} delay={Math.min(i, 4) * 90} className="h-full">
                                 <Tilt3D className="h-full" intensity={7} lift={1.02} glare={false}>
-                                    <div
-                                        className="bg-white rounded-[2rem] flex flex-col h-full overflow-hidden
+                                    {/* THE WHOLE CARD opens the event. Only the small
+                                        arrow in its corner used to, so a visitor
+                                        clicking the banner or the title — which is
+                                        what people click — got nothing. A stretched
+                                        overlay link, as on the /events cards (see
+                                        `EventsExplorer`), so the link's accessible
+                                        name stays short. */}
+                                    <article
+                                        className="group/card relative bg-white rounded-[2rem] flex flex-col h-full overflow-hidden
+                                                   focus-within:ring-4 focus-within:ring-brand-300
                                                    border border-brand-100/70
                                                    shadow-[0_10px_40px_-14px_rgb(28_46_104/0.18)]
                                                    transition-shadow duration-500
                                                    hover:shadow-[0_30px_64px_-20px_rgb(28_46_104/0.38)]"
                                     >
+                                <Link
+                                    to={`/events/${event.id}`}
+                                    aria-label={`More about ${event.title || 'this event'}`}
+                                    className="absolute inset-0 z-10 focus:outline-none"
+                                />
                                 {/* No image is a valid event; a broken frame is not. */}
                                 {event.media?.url && (
                                     <div className="w-full h-56 overflow-hidden">
@@ -238,7 +251,7 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                                                     text-brand-800 ${
                                         event.description ? 'mb-3' : 'mb-8 flex-grow'
                                     }`}>
-                                        {event.title}
+                                        {event.title || 'Untitled event'}
                                     </h3>
 
                                     {/* Was captured in the CMS and rendered nowhere, which made it
@@ -264,18 +277,17 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                                             </div>
                                         </div>
 
-                                        {/* Its own page, not the list it is already on. */}
-                                        <Link
-                                            to={`/events/${event.id}`}
-                                            aria-label={`More about ${event.title}`}
-                                            className="w-11 h-11 rounded-full bg-gray-50 hover:bg-brand-800 hover:text-white
-                                                       flex items-center justify-center transition-colors shrink-0 group"
+                                        {/* A cue, not a second link — the card is the link. */}
+                                        <span
+                                            aria-hidden="true"
+                                            className="w-11 h-11 rounded-full bg-gray-50 group-hover/card:bg-brand-800
+                                                       flex items-center justify-center transition-colors shrink-0"
                                         >
-                                            <ArrowRight size={18} className="text-gray-400 group-hover:text-white transition-colors" />
-                                        </Link>
+                                            <ArrowRight size={18} className="text-gray-400 group-hover/card:text-white transition-colors" />
+                                        </span>
                                     </div>
                                     </div>
-                                </div>
+                                </article>
                                 </Tilt3D>
                             </Reveal>
                         ))}

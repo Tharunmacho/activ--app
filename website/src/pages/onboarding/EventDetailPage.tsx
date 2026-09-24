@@ -556,16 +556,16 @@ export default function EventDetailPage() {
                           * edge without any of them being outlined more heavily.
                           */}
                         <div className={`${SHEET} mt-10`}>
-                        <div className="grid gap-4 sm:gap-5 lg:gap-6 lg:grid-cols-[1.6fr_1fr] items-start">
+                        <div className="grid gap-4 sm:gap-5 lg:gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] items-start">
 
-                            <div className={`${BIZ_CARD} p-6 sm:p-8`}>
+                            <div className={`${BIZ_CARD} p-6 sm:p-8 min-w-0`}>
                                 {event.category && (
                                     <span className={`${BIZ_BADGE} bg-brand-50 text-brand-700 border border-brand-100 mb-5`}>
                                         {event.category}
                                     </span>
                                 )}
 
-                                <h1 className={`${SECTION_HEADING} text-brand-800 mb-5`}>
+                                <h1 className={`${SECTION_HEADING} text-brand-800 mb-5 break-words [overflow-wrap:anywhere] hyphens-auto`}>
                                     {/* Never an empty heading - the same fallback
                                         the cards use, because nothing on the
                                         event form is required. */}
@@ -833,7 +833,7 @@ export default function EventDetailPage() {
                             </div>
 
                             {/* ---- the side card ---- */}
-                            <aside className={`${BIZ_CARD} p-6 sm:p-7 lg:sticky lg:top-28`}>
+                            <aside className={`${BIZ_CARD} p-6 sm:p-7 lg:sticky lg:top-28 min-w-0`}>
                                 {/*
                                   * ONE ROW SHAPE, REPEATED.
                                   *
@@ -916,13 +916,13 @@ export default function EventDetailPage() {
                                   */}
                                 {capped && (
                                     <div className={`${BIZ_WELL} mt-5`}>
-                                        <div className="flex items-baseline justify-between gap-3">
+                                        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                                             <p className={BIZ_DETAIL_LABEL}>Availability</p>
-                                            <p className={`text-[1.1875rem] font-bold ${
+                                            <p className={`text-[1.1875rem] font-bold whitespace-nowrap ${
                                                 soldOut ? 'text-rose-600'
                                                     : fillingFast ? 'text-amber-700' : 'text-slate-900'
                                             }`}>
-                                                {soldOut ? 'Fully booked' : `${seatsLeft} of ${capacity} left`}
+                                                {soldOut ? 'Fully booked' : `${Number(seatsLeft || 0).toLocaleString('en-IN')} of ${Number(capacity || 0).toLocaleString('en-IN')} left`}
                                             </p>
                                         </div>
                                         <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-slate-200">
@@ -935,7 +935,7 @@ export default function EventDetailPage() {
                                             />
                                         </div>
                                         <p className="mt-2 text-[1.1875rem] font-semibold text-slate-500">
-                                            {capacity - Number(seatsLeft)} booked so far
+                                            {Math.max(0, Number(capacity || 0) - Number(seatsLeft || 0)).toLocaleString('en-IN')} booked so far
                                         </p>
                                     </div>
                                 )}

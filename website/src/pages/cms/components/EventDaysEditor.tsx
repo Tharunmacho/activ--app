@@ -27,7 +27,7 @@ import type { CmsEventDay, CmsAgendaItem } from '@/services/cmsApi';
  */
 
 /** Every date from `from` to `to` inclusive, as `yyyy-mm-dd`. */
-const datesBetween = (from: string, to: string): string[] => {
+export const datesBetween = (from: string, to: string): string[] => {
     if (!from) return [];
     const start = new Date(`${from}T00:00:00`);
     const end = new Date(`${(to || from)}T00:00:00`);
@@ -52,6 +52,50 @@ const datesBetween = (from: string, to: string): string[] => {
 };
 
 /** "Sat, 10 Oct 2026" — the same wording the public page prints. */
+/** "2026-09-24" moved by `delta` whole days, in local time. */
+export const addDays = (iso: string, delta: number): string => {
+    const d = new Date(`${String(iso || '').slice(0, 10)}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return '';
+    d.setDate(d.getDate() + delta);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+/** Whole calendar days from `from` to `to`, or NaN if either is not a date. */
+export const dayDelta = (from: string, to: string): number => {
+    const a = new Date(`${String(from || '').slice(0, 10)}T00:00:00`);
+    const b = new Date(`${String(to || '').slice(0, 10)}T00:00:00`);
+    if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return NaN;
+    return Math.round((b.getTime() - a.getTime()) / 86_400_000);
+};
+
+/**
+ * MOVING THE EVENT MOVES ITS DAYS.
+ *
+ * Days are stored against their calendar date, so changing the start date
+ * from the 24th to the 25th left every day's hours and sessions filed under
+ * dates the event no longer covered: the editor showed blank days, and the
+ * save still sent the old ones, so the event page kept printing the old
+ * dates and times. "Day 1" is day one of the event wherever it lands.
+ */
+export const shiftDays = (days: CmsEventDay[], delta: number): CmsEventDay[] => {
+    if (!delta || !Number.isFinite(delta)) return days || [];
+    return (days || []).map((d) => ({ ...d, date: addDays(String(d?.date || ''), delta) }));
+};
+
+/**
+ * ONLY THE DAYS THE EVENT ACTUALLY COVERS — what a save sends.
+ *
+ * A day outside the range is one the editor can no longer see and cannot
+ * edit or delete; saving it would put a programme on the event page for a
+ * date the event does not run on. A single-day event has no per-day rows.
+ */
+export const daysInRange = (days: CmsEventDay[], startDate: string, endDate: string): CmsEventDay[] => {
+    const dates = datesBetween(startDate, endDate);
+    if (dates.length < 2) return [];
+    const wanted = new Set(dates);
+    return (days || []).filter((d) => wanted.has(String(d?.date || '').slice(0, 10)));
+};
+
 const dayLabel = (iso: string) => {
     const d = new Date(`${iso}T00:00:00`);
     if (Number.isNaN(d.getTime())) return iso;
