@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Mail, MailOpen, Archive, Trash2, Check, Undo2, Loader2 } from 'lucide-react';
 import {
     listContactMessages, setMessageStatus, deleteContactMessage,
-    errorMessage, type ContactMessage,
+    errorMessage, type ContactMessage, messageSourceLabel,
 } from '@/services/cmsApi';
 import { CmsCard, CmsButton, CmsLoading, CmsError, CmsEmpty } from './components/CmsUI';
 
@@ -153,7 +153,7 @@ export default function MessagesInbox() {
                     <button
                         key={f.key}
                         onClick={() => setFilter(f.key)}
-                        className={`px-3 py-1.5 rounded-lg text-[1.1875rem] transition-colors ${
+                        className={`px-3 py-2 sm:py-1.5 rounded-lg text-[1.1875rem] transition-colors ${
                             filter === f.key ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-[#161616] text-slate-700 dark:text-neutral-300 hover:bg-slate-200 dark:hover:bg-[#242424]'
                         }`}
                     >
@@ -169,9 +169,9 @@ export default function MessagesInbox() {
                 {loading ? (
                     <CmsLoading label="Loading messages…" />
                 ) : messages.length === 0 ? (
-                    <CmsEmpty title="No messages" hint="Submissions from the public contact form appear here." />
+                    <CmsEmpty title="No messages" hint="Messages from the public contact form and from Help & Support in the member dashboard appear here." />
                 ) : (
-                    <div className="divide-y divide-slate-800">
+                    <div className="divide-y divide-slate-200 dark:divide-[#1f1f1f]">
                         {messages.map((m) => (
                             <div key={m._id} className="py-3">
                                 <button
@@ -183,11 +183,16 @@ export default function MessagesInbox() {
                                         : <MailOpen className="w-4 h-4 text-neutral-500 shrink-0 mt-1" />}
 
                                     <div className="min-w-0 flex-1">
-                                        <div className="flex items-baseline gap-2">
-                                            <p className={`truncate ${m.status === 'new' ? 'font-semibold text-slate-900 dark:text-neutral-100' : 'text-slate-700 dark:text-neutral-300'}`}>
+                                        <div className="flex flex-wrap items-baseline gap-x-2 min-w-0">
+                                            <p className={`truncate max-w-full ${m.status === 'new' ? 'font-semibold text-slate-900 dark:text-neutral-100' : 'text-slate-700 dark:text-neutral-300'}`}>
                                                 {m.name}
                                             </p>
-                                            <span className="text-[1.0625rem] text-neutral-500 truncate">{m.email}</span>
+                                            <span className="text-[1.0625rem] text-neutral-500 truncate max-w-full">{m.email}</span>
+                                            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[0.875rem] font-semibold ${m.source === 'member_dashboard'
+                                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                                                : 'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-neutral-300'}`}>
+                                                {messageSourceLabel(m)}
+                                            </span>
                                         </div>
                                         <p className="text-[1.1875rem] text-neutral-500 dark:text-neutral-400 truncate">
                                             {m.subject || m.message}
@@ -223,14 +228,14 @@ export default function MessagesInbox() {
                                   * to be kept, and an archive you cannot clear out is
                                   * the reason people stop archiving.
                                   */}
-                                <div className="ml-7 mt-1.5 flex flex-wrap items-center gap-2">
+                                <div className="ml-7 mt-2 sm:mt-1.5 flex flex-wrap items-center gap-2">
                                     {m.status !== 'archived' && (
                                         <button
                                             type="button"
                                             disabled={marking === m._id}
                                             onClick={() => markAs(m, m.status === 'new' ? 'read' : 'new')}
                                             className="inline-flex items-center gap-1.5 rounded-lg border
-                                                       border-slate-300 px-2.5 py-1 text-[1.0625rem]
+                                                       border-slate-300 px-2.5 py-2 sm:py-1 text-[1.0625rem]
                                                        font-semibold text-slate-600 transition-colors
                                                        hover:border-blue-600 hover:text-blue-700
                                                        disabled:opacity-50 dark:border-[#2a2a2a]
@@ -248,7 +253,7 @@ export default function MessagesInbox() {
                                             disabled={removing === m._id}
                                             onClick={() => archive(m)}
                                             className="inline-flex items-center gap-1.5 rounded-lg border
-                                                       border-slate-300 px-2.5 py-1 text-[1.0625rem]
+                                                       border-slate-300 px-2.5 py-2 sm:py-1 text-[1.0625rem]
                                                        font-semibold text-slate-600 transition-colors
                                                        hover:border-blue-600 hover:text-blue-700
                                                        disabled:opacity-50 dark:border-[#2a2a2a]
@@ -263,7 +268,7 @@ export default function MessagesInbox() {
                                         disabled={removing === m._id}
                                         onClick={() => remove(m)}
                                         aria-label={`Delete the message from ${m.name}`}
-                                        className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1
+                                        className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 sm:py-1
                                                    text-[1.0625rem] font-semibold text-red-600 transition-colors
                                                    hover:bg-red-50 disabled:opacity-40 dark:hover:bg-red-950/40"
                                     >
@@ -274,14 +279,17 @@ export default function MessagesInbox() {
                                 </div>
 
                                 {open === m._id && (
-                                    <div className="mt-3 ml-7 bg-slate-50 dark:bg-black border border-slate-200 dark:border-[#1f1f1f] rounded-lg p-4">
+                                    <div className="mt-3 sm:ml-7 bg-slate-50 dark:bg-black border border-slate-200 dark:border-[#1f1f1f] rounded-lg p-3 sm:p-4">
                                         <dl className="grid gap-2 sm:grid-cols-2 text-[1.1875rem] mb-3">
+                                            <div className="sm:col-span-2"><dt className="text-neutral-500 inline">Sent from: </dt>
+                                                <dd className="text-slate-700 dark:text-neutral-300 inline">{messageSourceLabel(m)}
+                                                    {m.applicationRef ? ` · Application ${m.applicationRef}` : ''}</dd></div>
                                             <div><dt className="text-neutral-500 inline">Email: </dt>
-                                                <dd className="text-slate-700 dark:text-neutral-300 inline">{m.email}</dd></div>
+                                                <dd className="text-slate-700 dark:text-neutral-300 inline break-all">{m.email}</dd></div>
                                             {m.phone && <div><dt className="text-neutral-500 inline">Phone: </dt>
                                                 <dd className="text-slate-700 dark:text-neutral-300 inline">{m.phone}</dd></div>}
                                             {m.subject && <div className="sm:col-span-2"><dt className="text-neutral-500 inline">Subject: </dt>
-                                                <dd className="text-slate-700 dark:text-neutral-300 inline">{m.subject}</dd></div>}
+                                                <dd className="text-slate-700 dark:text-neutral-300 inline break-words">{m.subject}</dd></div>}
                                         </dl>
 
                                         {/* Plain text, deliberately. This is untrusted input. */}

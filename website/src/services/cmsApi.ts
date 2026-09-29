@@ -199,9 +199,21 @@ export interface SiteSettings {
 
 // ---------------------------------------------------------------- home
 
+/** Which side of the banner a slide's words sit on. */
+export type BannerAlign = 'left' | 'right';
+
 export interface HeroSlide {
     media: CmsMedia;
     caption: string;
+    /**
+     * This slide's OWN heading, highlighted words and subheading. Blank falls
+     * back to the banner's shared headline, so older slides look as they did.
+     */
+    headline: string;
+    headlineHighlight: string;
+    subheadline: string;
+    /** Left or right — moved off whichever side the photograph's subject is on. */
+    align: BannerAlign;
 }
 
 export interface HomeCarousel {
@@ -419,6 +431,8 @@ export interface GalleryDetailCopy {
 
 export interface GalleryItem {
     _id: string;
+    /** The readable public address (`/gallery/<slug>`); see lib/eventPath. */
+    slug?: string;
     media: CmsMedia;
     title: string;
     caption: string;
@@ -453,11 +467,58 @@ export interface GalleryItem {
     pinned?: boolean;
     /** Rides in the landing page banner. Undefined on rows predating the field. */
     showOnHome?: boolean;
+    /**
+     * What the home banner says over THIS image, and on which side. Blank
+     * falls back to the banner's shared headline.
+     */
+    bannerHeadline?: string;
+    bannerHighlight?: string;
+    bannerSubheadline?: string;
+    bannerAlign?: BannerAlign;
     sortOrder: number;
     visible: boolean;
 }
 
 // ---------------------------------------------------------------- contact
+
+/** The association's own profiles. Blank = not shown. The server normalises every one to a URL. */
+export interface SocialLinks {
+    facebook: string; instagram: string; x: string; linkedin: string;
+    youtube: string; whatsapp: string; telegram: string; threads: string;
+}
+
+export const SOCIAL_PLATFORMS = ['facebook', 'instagram', 'x', 'linkedin', 'youtube', 'whatsapp', 'telegram', 'threads'] as const;
+export type SocialPlatform = typeof SOCIAL_PLATFORMS[number];
+
+/**
+ * One office on the Contact page. `mapInput` is whatever the editor pasted —
+ * a Google Maps share link, the "Embed a map" code, or an address; the server
+ * derives `mapEmbedUrl` (safe to frame), `mapLink` and `directionsUrl` from it.
+ */
+export interface ContactOffice {
+    id: string;
+    state: string;
+    label: string;
+    isHeadOffice: boolean;
+    addressLines: string[];
+    phone: string;
+    alternatePhone: string;
+    email: string;
+    whatsapp: string;
+    workingHours: string[];
+    mapInput: string;
+    mapEmbedUrl?: string;
+    mapLink?: string;
+    directionsUrl?: string;
+    mapQuery?: string;
+    order: number;
+    isActive: boolean;
+}
+
+export const EMPTY_OFFICE: ContactOffice = {
+    id: '', state: '', label: '', isHeadOffice: false, addressLines: [], phone: '', alternatePhone: '',
+    email: '', whatsapp: '', workingHours: [], mapInput: '', order: 0, isActive: true,
+};
 
 export interface ContactInfo {
     badgeIcon: string;
@@ -483,8 +544,12 @@ export interface ContactInfo {
     alternatePhone: string;
     email: string;
     workingHours: string[];
+    /** The head office's map, always a frameable Google URL (see ContactOffice). */
     mapEmbedUrl: string;
-    social: { facebook: string; instagram: string; linkedin: string; youtube: string };
+    mapLink?: string;
+    /** State-wise offices, head office first. Built from the fields above when none are stored. */
+    offices: ContactOffice[];
+    social: SocialLinks;
     banner: { enabled: boolean; icon: string; title: string; subtitle: string; ctaLabel: string; ctaHref: string };
     /**
      * The regions band as the Contact page draws it: its own wording, and
@@ -500,6 +565,8 @@ export interface ContactInfo {
 
 export interface CmsEvent {
     id: string;
+    /** The readable public address (`/events/<slug>`); see lib/eventPath. */
+    slug?: string;
     title: string;
     description: string;
     startAt: string | null;
@@ -534,6 +601,25 @@ export interface CmsEvent {
      * somebody turned it off, so a new event needs no second step.
      */
     showOnHome?: boolean;
+    /** The QR card on the event page (components/shared/EventQr). On unless turned off. */
+    showQrOnPage?: boolean;
+    /** Documents for the event (agenda PDF …), and a YouTube / video link. */
+    attachments?: EventAttachment[];
+    videoUrl?: string;
+    /**
+     * In the home page BANNER (the slideshow at the top), with its own words —
+     * the gallery item's banner fields, on an event. On unless switched off,
+     * like a gallery item's `showOnHome` — posting an event puts it there.
+     * A different surface from `showOnHome`, which is the events strip.
+     */
+    showInBanner?: boolean;
+    /** What the event is about, and its language — see the event model. */
+    topic?: string;
+    language?: string;
+    bannerHeadline?: string;
+    bannerHighlight?: string;
+    bannerSubheadline?: string;
+    bannerAlign?: BannerAlign;
     /**
      * Which site the event was authored for — `public` is the CMS's onboarding
      * programme, `members` the association's own. Optional for the same reason.
@@ -680,8 +766,16 @@ export interface ContactMessage {
     subject: string;
     message: string;
     status: 'new' | 'read' | 'archived';
+    /** 'member_dashboard' when a signed-in member sent it from Help & Support. */
+    source?: 'website' | 'member_dashboard';
+    memberId?: string;
+    applicationRef?: string;
     createdAt: string;
 }
+
+/** "Member dashboard" / "Website contact form" — where a message was written. */
+export const messageSourceLabel = (m: { source?: string }) =>
+    m?.source === 'member_dashboard' ? 'Member dashboard' : 'Website contact form';
 
 /**
  * Every icon an editor may pick, grouped so the picker is navigable.
@@ -825,8 +919,9 @@ export const EMPTY_CONTACT: ContactInfo = {
         icon: 'users', title: '', subtitle: '',
         addressLabel: '', phoneLabel: '', emailLabel: '', hoursLabel: '',
     },
-    addressLines: [], phone: '', alternatePhone: '', email: '', workingHours: [], mapEmbedUrl: '',
-    social: { facebook: '', instagram: '', linkedin: '', youtube: '' },
+    addressLines: [], phone: '', alternatePhone: '', email: '', workingHours: [], mapEmbedUrl: '', mapLink: '',
+    offices: [],
+    social: { facebook: '', instagram: '', x: '', linkedin: '', youtube: '', whatsapp: '', telegram: '', threads: '' },
     banner: { enabled: true, icon: 'users', title: '', subtitle: '', ctaLabel: '', ctaHref: '' },
     regionsBand: { enabled: true, eyebrow: '', heading: '', subtitle: '' },
     extraFields: [],
@@ -874,6 +969,84 @@ const CACHE_TTL_MS = 5_000;
 const cache = new Map<string, { at: number; value: any }>();
 const inFlight = new Map<string, Promise<any>>();
 
+/*
+ * ============================================================================
+ * THE LAST COPY, KEPT IN THE BROWSER — FOR THE FIRST FRAME ONLY
+ * ============================================================================
+ *
+ * The landing page cannot draw its banner or its header until the API answers,
+ * and on a phone that answer took seconds (the events list alone measured 2–8s),
+ * so a returning visitor stared at a grey skeleton before every visit.
+ *
+ * These four documents are written to `localStorage` after each successful
+ * read, and `peekCmsCache` hands the last copy to a component SYNCHRONOUSLY for
+ * its initial state. It is a first frame, not an answer: the component still
+ * asks the network on mount and replaces the copy with what comes back — so the
+ * rule above (content is never kept stale) still holds; a stale copy is on
+ * screen for as long as the request takes, and not a moment longer.
+ */
+const PERSIST = new Set(['site', 'home', 'gallery:home', 'events']);
+const PERSIST_PREFIX = 'activ-cms:';
+
+const persist = (key: string, value: unknown) => {
+    if (!PERSIST.has(key)) return;
+    try { localStorage.setItem(PERSIST_PREFIX + key, JSON.stringify(value)); } catch { /* full or blocked */ }
+};
+
+const forget = (key?: string) => {
+    try {
+        if (key) localStorage.removeItem(PERSIST_PREFIX + key);
+        else PERSIST.forEach((k) => localStorage.removeItem(PERSIST_PREFIX + k));
+    } catch { /* blocked */ }
+};
+
+/** The freshest copy we hold without asking the network — memory, then the browser. */
+export const peekCmsCache = <T>(key: string): T | null => {
+    const hit = cache.get(key);
+    if (hit) return hit.value as T;
+    if (!PERSIST.has(key)) return null;
+    try {
+        const raw = localStorage.getItem(PERSIST_PREFIX + key);
+        return raw ? (JSON.parse(raw) as T) : null;
+    } catch {
+        return null;
+    }
+};
+
+/*
+ * REQUESTS STARTED BY `index.html` BEFORE THIS BUNDLE ARRIVED.
+ *
+ * The page's first four reads used to begin only after ~1 MB of JavaScript had
+ * downloaded and run. A few lines in `index.html` now start them while the
+ * bundle is still in flight, and each reader below takes its answer from there
+ * — once — instead of asking again.
+ */
+type Prefetched = Record<string, Promise<unknown> | undefined>;
+const takePrefetch = (path: string): Promise<{ data: any }> | null => {
+    try {
+        const store = (window as unknown as { __ACTIV_PREFETCH__?: Prefetched }).__ACTIV_PREFETCH__;
+        const pending = store && store[path];
+        if (!pending) return null;
+        delete store[path];
+        // A failed early read is simply not used — the reader asks as normal.
+        return pending.then((body) => {
+            if (!body) throw new Error('prefetch empty');
+            return { data: body };
+        });
+    } catch {
+        return null;
+    }
+};
+
+/** The early answer when there is one, the normal request when not. */
+const getOrPrefetched = async (path: string, request: () => Promise<{ data: any }>) => {
+    const early = takePrefetch(path);
+    if (early) {
+        try { return await early; } catch { /* fall through to a normal read */ }
+    }
+    return request();
+};
+
 /** Fetch, store, and clear the in-flight marker whichever way it ends. */
 const refresh = <T>(key: string, load: () => Promise<T>): Promise<T> => {
     const pending = inFlight.get(key);
@@ -883,6 +1056,7 @@ const refresh = <T>(key: string, load: () => Promise<T>): Promise<T> => {
         try {
             const value = await load();
             cache.set(key, { at: Date.now(), value });
+            persist(key, value);
             return value;
         } finally {
             inFlight.delete(key);
@@ -908,14 +1082,32 @@ const refresh = <T>(key: string, load: () => Promise<T>): Promise<T> => {
  * header's region menu and the page's own document were re-fetched from nothing
  * on each navigation, including a return to a page the reader had just left.
  */
+/*
+ * ONLY THE CHROME IS SERVED STALE.
+ *
+ * Serving a stale copy while refreshing behind it is right for the header,
+ * footer and menus: they remount on every navigation, rarely change, and a
+ * re-fetch from nothing made them flash. It is WRONG for content. A section
+ * reads once, on mount, so a stale copy is the copy it keeps — the refresh
+ * lands in the cache and nothing re-reads it. That is how an event switched
+ * OFF in the CMS stayed in the home banner: the page was handed the list from
+ * before the switch and never asked again.
+ *
+ * So content waits for the network once its five seconds are up, and the
+ * header, footer and menus keep the no-flash behaviour.
+ */
+const SERVE_STALE = new Set(['site', 'legal:links', 'regions:map', 'schemes:states']);
+
 export const cached = async <T>(key: string, load: () => Promise<T>): Promise<T> => {
     const hit = cache.get(key);
 
     if (hit) {
         if (Date.now() - hit.at < CACHE_TTL_MS) return hit.value as T;
-        // Stale: hand back what we have and bring it up to date behind the render.
-        refresh(key, load).catch(() => { /* keep serving the stale copy */ });
-        return hit.value as T;
+        if (SERVE_STALE.has(key)) {
+            // Stale chrome: hand back what we have and bring it up to date behind the render.
+            refresh(key, load).catch(() => { /* keep serving the stale copy */ });
+            return hit.value as T;
+        }
     }
 
     return refresh(key, load);
@@ -933,7 +1125,32 @@ export const cached = async <T>(key: string, load: () => Promise<T>): Promise<T>
 export const invalidateCmsCache = (key?: string) => {
     if (key) cache.delete(key);
     else cache.clear();
+    forget(key);
+    // Every other open tab of the site drops its copy too — see below.
+    try { cmsChannel?.postMessage({ key: key || '' }); } catch { /* channel closed */ }
 };
+
+/*
+ * ACROSS TABS. The CMS and the public site are usually open side by side, and
+ * each tab has its own memory: a save in the CMS tab cleared the CMS tab's
+ * cache and left the public tab holding the old copy. A BroadcastChannel tells
+ * every tab of this origin to drop it as well. Absent in very old browsers,
+ * where the five-second TTL is the fallback.
+ */
+const cmsChannel: BroadcastChannel | null = (() => {
+    try {
+        if (typeof BroadcastChannel === 'undefined') return null;
+        const channel = new BroadcastChannel('activ-cms-cache');
+        channel.onmessage = (e: MessageEvent) => {
+            const key = String((e?.data && e.data.key) || '');
+            if (key) cache.delete(key);
+            else cache.clear();
+        };
+        return channel;
+    } catch {
+        return null;
+    }
+})();
 
 /*
  * DROPPED ON EVERY SESSION CHANGE, like the request cache it sits beside.
@@ -952,7 +1169,7 @@ registerCacheClearer(() => {
 
 const getSiteSettingsUncached = async (): Promise<SiteSettings> => {
     try {
-        const data = unwrap<any>(await api.get('/cms/site'), EMPTY_SITE);
+        const data = unwrap<any>(await getOrPrefetched('/cms/site', () => api.get('/cms/site')), EMPTY_SITE);
         return {
             brand: {
                 ...EMPTY_SITE.brand,
@@ -979,7 +1196,7 @@ export const getSiteSettings = () => cached('site', getSiteSettingsUncached);
 
 const getHomeUncached = async (): Promise<HomeContent> => {
     try {
-        const data = unwrap<any>(await api.get('/cms/home'), EMPTY_HOME);
+        const data = unwrap<any>(await getOrPrefetched('/cms/home', () => api.get('/cms/home')), EMPTY_HOME);
         const carousel = data.carousel || {};
         const about = data.about || {};
 
@@ -990,6 +1207,10 @@ const getHomeUncached = async (): Promise<HomeContent> => {
                 slides: (carousel.slides || []).map((slide: any) => ({
                     media: withResolvedUrl(slide.media),
                     caption: slide.caption || '',
+                    headline: slide.headline || '',
+                    headlineHighlight: slide.headlineHighlight || '',
+                    subheadline: slide.subheadline || '',
+                    align: slide.align === 'right' ? 'right' : 'left',
                 })),
                 galleryPosters: {
                     ...EMPTY_HOME.carousel.galleryPosters,
@@ -1132,7 +1353,8 @@ const getHomeGalleryUncached = async (): Promise<GalleryItem[]> => {
          * reason for the cap and the projection is the answer to it.
          */
         const data = unwrap<GalleryItem[]>(
-            await api.get('/cms/gallery', { params: { home: 'true' } }),
+            await getOrPrefetched('/cms/gallery?home=true',
+                () => api.get('/cms/gallery', { params: { home: 'true' } })),
             [],
         );
         return (data || []).map(resolveItemMedia);
@@ -1160,11 +1382,15 @@ export const getHomeGallery = () => cached('gallery:home', getHomeGalleryUncache
  * poster has nothing to render, and telling the visitor the link is dead is
  * better than an empty page that looks broken.
  */
-export const getGalleryItem = async (id: string): Promise<GalleryItem> => {
-    const data = unwrap<GalleryItem | null>(await api.get(`/cms/gallery/${id}`), null);
-    if (!data || !data._id) throw new Error('Gallery item not found');
-    return resolveItemMedia(data);
-};
+export const getGalleryItem = (id: string): Promise<GalleryItem> =>
+    // Cached like the lists: the album page and each of its photograph pages
+    // read the same album, and paging through twenty photographs used to fetch
+    // it twenty times. A failure is not cached (see `cached`), so it still throws.
+    cached(`gallery:item:${id}`, async () => {
+        const data = unwrap<GalleryItem | null>(await api.get(`/cms/gallery/${id}`), null);
+        if (!data || !data._id) throw new Error('Gallery item not found');
+        return resolveItemMedia(data);
+    });
 
 const getContactInfoUncached = async (): Promise<ContactInfo> => {
     try {
@@ -1176,6 +1402,7 @@ const getContactInfoUncached = async (): Promise<ContactInfo> => {
             formCard: { ...EMPTY_CONTACT.formCard, ...(data.formCard || {}) },
             infoCard: { ...EMPTY_CONTACT.infoCard, ...(data.infoCard || {}) },
             social: { ...EMPTY_CONTACT.social, ...(data.social || {}) },
+            offices: Array.isArray(data.offices) ? data.offices.map((o: any) => ({ ...EMPTY_OFFICE, ...(o || {}) })) : [],
             banner: { ...EMPTY_CONTACT.banner, ...(data.banner || {}) },
             regionsBand: { ...EMPTY_CONTACT.regionsBand, ...(data.regionsBand || {}) },
         };
@@ -1204,7 +1431,8 @@ const resolveEvents = (data: CmsEvent[] | null): CmsEvent[] =>
 const getCmsEventsUncached = async (): Promise<CmsEvent[]> => {
     try {
         return resolveEvents(unwrap<CmsEvent[]>(
-            await api.get('/cms/events', { params: { scope: 'public' } }), [],
+            await getOrPrefetched('/cms/events?scope=public',
+                () => api.get('/cms/events', { params: { scope: 'public' } })), [],
         ));
     } catch {
         return [];
@@ -1246,6 +1474,8 @@ export const getCmsEvent = async (id: string): Promise<CmsEvent> => {
  */
 export const sendContactMessage = async (payload: {
     name: string; email: string; phone?: string; subject?: string; message: string;
+    /** Sent from Help & Support; the server stamps the source from the token. */
+    applicationRef?: string;
 }): Promise<{ id: string; receivedAt: string }> => {
     const res = await api.post('/cms/contact-messages', payload);
     return unwrap(res, { id: '', receivedAt: '' });
@@ -1302,6 +1532,13 @@ export const updateGallerySettings = async (payload: Partial<GallerySettings>) =
     return saved;
 };
 
+/** What a pasted map resolves to — the CMS editor's live preview (same rules as the save). */
+export const previewContactMap = async (input: string, address = '') =>
+    unwrap<{ embedUrl: string; mapLink: string; directionsUrl: string; query: string }>(
+        await api.post('/cms/contact/map-preview', { input, address }),
+        { embedUrl: '', mapLink: '', directionsUrl: '', query: '' },
+    );
+
 export const updateContactInfo = async (payload: Partial<ContactInfo>) => {
     const saved = unwrap<ContactInfo>(await api.put('/cms/contact-info', payload), EMPTY_CONTACT);
     // The editor reloads the public page to check the change; a stale
@@ -1316,6 +1553,22 @@ export const updateContactInfo = async (payload: Partial<ContactInfo>) => {
  * Separate from saving content so the editor can preview the real file before
  * committing — otherwise a wrong image is only discovered once it is live.
  */
+/** One event document, as stored; the url is site-relative (/uploads/...). */
+export interface EventAttachment {
+    name: string;
+    url: string;
+    type?: string;
+    size?: number;
+}
+
+/** Upload an event document (PDF, Word, Excel, slides, image, ZIP — up to 20 MB). */
+export const uploadEventAttachment = async (file: File): Promise<EventAttachment> => {
+    const form = new FormData();
+    form.append('file', file);
+    const data = unwrap<any>(await api.post('/cms/attachments', form), { url: '', name: file.name });
+    return { url: data.url || '', name: data.name || file.name, type: data.type || file.type, size: Number(data.size) || file.size };
+};
+
 export const uploadMedia = async (file: File): Promise<{ url: string; type: 'image' | 'video' }> => {
     const form = new FormData();
     form.append('file', file);
@@ -1332,6 +1585,8 @@ export const uploadMedia = async (file: File): Promise<{ url: string; type: 'ima
  * edited poster showing its old title on the home page.
  */
 const invalidateGallery = () => {
+    // Every cached album page too — an edit must show on its own page at once.
+    [...cache.keys()].filter((k) => k.startsWith('gallery:item:')).forEach((k) => cache.delete(k));
     invalidateCmsCache('gallery');
     invalidateCmsCache('gallery:all');
     invalidateCmsCache('gallery:home');

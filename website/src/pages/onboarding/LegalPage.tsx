@@ -165,7 +165,7 @@ export default function LegalPage() {
                     type="button"
                     onClick={() => setAttempt((n) => n + 1)}
                     className="inline-flex items-center gap-2 bg-brand-800 hover:bg-brand-700 text-white
-                               px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase
+                               px-6 sm:px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase
                                tracking-[0.1em] transition-colors"
                 >
                     <Loader2 size={15} /> Try again
@@ -182,7 +182,7 @@ export default function LegalPage() {
                 <Link
                     to="/"
                     className="inline-flex items-center gap-2 bg-brand-800 hover:bg-brand-700 text-white
-                               px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase
+                               px-6 sm:px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase
                                tracking-[0.1em] transition-colors"
                 >
                     <ArrowLeft size={15} /> Back to home
@@ -199,13 +199,13 @@ export default function LegalPage() {
         <>
             {/* ---- the title band ---- */}
             <div className="bg-brand-900 text-white">
-                <div className={`${SCREEN_CONTAINER} py-14 md:py-20`}>
+                <div className={`${SCREEN_CONTAINER} py-10 sm:py-14 md:py-20`}>
                     <Reveal>
                         <span className={`${EYEBROW} inline-block rounded-full bg-white/10 px-3.5 py-1.5
                                           text-white/80 mb-5`}>
                             Legal
                         </span>
-                        <h1 className={`${SECTION_HEADING} mb-4`}>{doc.title || 'Policy'}</h1>
+                        <h1 className={`${SECTION_HEADING} mb-4 break-words`}>{doc.title || 'Policy'}</h1>
                         {doc.lede && (
                             <p className={`${SECTION_LEDE} text-white/70 ${BAND_MEASURE}`}>{doc.lede}</p>
                         )}
@@ -223,7 +223,7 @@ export default function LegalPage() {
                 </div>
             </div>
 
-            <div className={`${SCREEN_CONTAINER} py-12 md:py-16`}>
+            <div className={`${SCREEN_CONTAINER} py-6 sm:py-12 md:py-16`}>
                 {/*
                   Capped and centred inside the page's full-width column. The
                   document keeps its reading measure, so on a 1920px display
@@ -242,10 +242,10 @@ export default function LegalPage() {
                         of the way across and left a band of tinted page between
                         it and the policy rail — which read as a layout fault
                         rather than as a reading measure. */}
-                    <article className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-9 lg:p-12
+                    <article className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-9 lg:p-12
                                         shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
                         {doc.sections.map((section, i) => (
-                            <section key={`${section.heading || 'intro'}-${i}`} className="mb-9 last:mb-0">
+                            <section key={`${section.heading || 'intro'}-${i}`} className="mb-7 sm:mb-9 last:mb-0">
                                 {section.heading && (
                                     <h2 className={`${PROSE_HEADING} text-brand-800 mb-3 scroll-mt-28`}>
                                         {section.heading}
@@ -326,13 +326,13 @@ export default function LegalPage() {
                             />
                         </div>
 
-                        <div className="mt-12 rounded-2xl border border-brand-100 bg-brand-50/40 p-6">
+                        <div className="mt-8 sm:mt-12 rounded-2xl border border-brand-100 bg-brand-50/40 p-4 sm:p-6">
                             <p className={`${MICRO_LABEL} text-gray-400 mb-1.5`}>Questions</p>
                             <p className={`${PROSE_BODY} text-gray-600`}>
                                 If you need more information about this policy, write to{' '}
                                 <a
                                     href="mailto:info@activ.org.in"
-                                    className="font-bold text-brand-700 hover:text-brand-600 transition-colors"
+                                    className="font-bold text-brand-700 hover:text-brand-600 transition-colors break-all"
                                 >
                                     info@activ.org.in
                                 </a>
@@ -343,9 +343,9 @@ export default function LegalPage() {
 
                     {/* ---- the other policies, from the same CMS list ---- */}
                     {links.length > 1 && (
-                        <aside className="mt-12 lg:mt-0">
+                        <aside className="mt-8 sm:mt-12 lg:mt-0">
                             <div className="lg:sticky lg:top-28 rounded-[1.25rem] border border-brand-100/70
-                                            bg-[#fafbfc] p-5">
+                                            bg-[#fafbfc] p-4 sm:p-5">
                                 <p className={`${MICRO_LABEL} text-gray-400 mb-3`}>Policies</p>
                                 <nav className="flex flex-col">
                                     {links.map((link) => {

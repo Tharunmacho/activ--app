@@ -16,6 +16,8 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 
 interface MemberItem {
   id: string;
+  /** The assigned Member ID (ACTIV-2026-001); empty until they have paid. */
+  membershipNumber?: string;
   fullName: string;
   email: string;
   phone?: string;
@@ -98,6 +100,7 @@ const BrowseMembersScreen: React.FC<Props> = ({
 
           return {
             id: a?.id || a?.applicationId || a?._id || '',
+            membershipNumber: String(a?.membershipNumber || ''),
             fullName: a?.fullName || '',
             email: a?.email || '',
             phone: a?.phone || '',
@@ -204,9 +207,16 @@ const BrowseMembersScreen: React.FC<Props> = ({
         </View>
 
         <View style={styles.infoList}>
-          {!!(item?.id || '').slice(-6) && (
+          {/* The real Member ID once they are a paid member; until then the
+              application's short reference, labelled as such. */}
+          {!!(item?.membershipNumber || '') ? (
             <View style={styles.infoHalfRow}>
-              <Text style={styles.metaLabelText}>ID: </Text>
+              <Text style={styles.metaLabelText}>Member ID: </Text>
+              <Text style={styles.metaValText}>{item?.membershipNumber || ''}</Text>
+            </View>
+          ) : !!(item?.id || '').slice(-6) && (
+            <View style={styles.infoHalfRow}>
+              <Text style={styles.metaLabelText}>Ref: </Text>
               <Text style={styles.metaValText}>
                 {(item?.id || '').slice(-6).toUpperCase()}
               </Text>

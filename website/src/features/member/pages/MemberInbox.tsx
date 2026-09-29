@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
     Inbox, Send, ArrowLeft, Loader2, AlertCircle, ImagePlus, Smile, X,
+    MessagesSquare, Search, Lock, PackageSearch, FileText, Handshake,
 } from 'lucide-react';
 import { resolveMediaUrl } from '@/config/api.config';
 
@@ -63,7 +64,6 @@ const EMOJI = [
     '📦', '🚚', '🏭', '🛍️', '💰', '📈', '📄', '📎',
     '📞', '📲', '📅', '⏰', '📍', '🤝', '🤝', '📧',
 ];
-import { EmptyState } from '@/features/member/components/MemberUI';
 import { errorMessage } from '@/services/activApi';
 import {
     listConversations, listMessages, sendMessage, uploadMessageImage, markConversationRead,
@@ -121,7 +121,49 @@ const initialsOf = (name: string) =>
  * So anything that looks like plumbing is replaced. The plumbing is still
  * logged to the console, where whoever is actually debugging it will look.
  */
-const PLUMBING = /route .* not found|network error|request failed|<!doctype|404|500|502|503|504|ECONNREFUSED|timeout of/i;
+/**
+ * THE ONE HEADER BAR BOTH PANES WEAR.
+ *
+ * The list had a grey bar and the empty thread had none, so the two panes'
+ * "nothing here" blocks centred at different heights — the list's sat a bar
+ * lower than the thread's beside it. Same bar, same height, same centre.
+ */
+const PANE_HEAD = 'shrink-0 min-h-[4.5rem] px-4 sm:px-5 py-3 border-b border-slate-200 bg-slate-50 '
+    + 'flex items-center gap-3';
+
+/** The openers again, as the empty thread's preview of what a first message is for. */
+const OPENER_ICONS = [PackageSearch, FileText, Handshake];
+
+/** A pane with nothing in it yet — said warmly, with the way forward on it. */
+function PaneWelcome({ title, detail, children }: { title: string; detail: string; children?: React.ReactNode }) {
+    return (
+        /* TOP-ALIGNED, one fixed offset in both panes: centred, the two blocks
+           are different heights and their icons land at different levels. */
+        <div className="flex-1 overflow-y-auto flex justify-center px-5 pt-[clamp(2.5rem,9vh,6rem)] pb-8">
+            <div className="w-full max-w-[44rem] text-center">
+                <span className="relative mx-auto flex h-20 w-20 items-center justify-center">
+                    <span className="absolute inset-0 rounded-[1.75rem] bg-gradient-to-br from-blue-100 to-sky-50 rotate-6" />
+                    <span className="relative flex h-16 w-16 items-center justify-center rounded-2xl
+                                     bg-gradient-to-br from-[#0b1f4d] to-blue-600 text-white shadow-lg shadow-blue-900/20">
+                        <MessagesSquare className="h-7 w-7" />
+                    </span>
+                </span>
+                <p className="mt-5 text-[1.375rem] sm:text-[1.5rem] font-extrabold tracking-tight text-slate-900">
+                    {title}
+                </p>
+                <p className="mx-auto mt-1.5 max-w-[26rem] text-[1.0625rem] sm:text-[1.125rem] leading-relaxed text-slate-500">
+                    {detail}
+                </p>
+                {children}
+            </div>
+        </div>
+    );
+}
+
+const FIND_MEMBER = 'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#0b1f4d] to-blue-600 '
+    + 'px-5 h-11 text-[1.0625rem] font-bold text-white shadow-sm transition hover:brightness-110';
+
+const PLUMBING =/route .* not found|network error|request failed|<!doctype|404|500|502|503|504|ECONNREFUSED|timeout of/i;
 
 const memberFacing = (err: unknown, fallback: string): string => {
     const raw = errorMessage(err, fallback);
@@ -363,23 +405,40 @@ export default function MemberInbox() {
               */}
             {/* 26rem, not 22: a name and “Ariyalur, Ariyalur, Tamil Nadu” did
                 not fit on one line, so every row wrapped. */}
-            <div className="grid gap-5 lg:grid-cols-[26rem_minmax(0,1fr)] items-start">
+            <div className="grid gap-4 sm:gap-5 lg:grid-cols-[26rem_minmax(0,1fr)] items-start">
                 <div className={`${CARD} ${PANE} ${openId ? 'hidden lg:flex' : 'flex'}
                                  flex-col overflow-hidden`}>
-                    <div className="shrink-0 px-5 py-4 border-b border-slate-200 bg-slate-50">
-                        <p className="text-[1.0625rem] font-extrabold uppercase tracking-[0.12em] text-slate-500">
-                            Conversations
-                        </p>
+                    <div className={PANE_HEAD}>
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                            <Inbox className="h-5 w-5" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                            <span className="block text-[1.1875rem] font-extrabold text-slate-900">Conversations</span>
+                            <span className="block text-[0.9375rem] font-medium text-slate-500">
+                                {conversations.length === 0
+                                    ? 'None yet'
+                                    : `${conversations.length} ${conversations.length === 1 ? 'thread' : 'threads'}`}
+                            </span>
+                        </span>
+                        <Link
+                            to="/member/directory"
+                            title="Find a member to message"
+                            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white
+                                       px-3 text-[0.9375rem] font-bold text-blue-700 transition hover:border-blue-400 hover:bg-blue-50"
+                        >
+                            <Search className="h-4 w-4" /> Find
+                        </Link>
                     </div>
 
                     {conversations.length === 0 ? (
-                        <div className="flex-1 flex items-center justify-center">
-                            <EmptyState
-                                icon={<Inbox className="w-6 h-6" />}
-                                title="No conversations yet"
-                                detail="Open a member from the directory and choose Message to start one."
-                            />
-                        </div>
+                        <PaneWelcome
+                            title="No conversations yet"
+                            detail="Open a member's profile in the directory and choose Message to start one."
+                        >
+                            <Link to="/member/directory" className={`${FIND_MEMBER} mt-5`}>
+                                <Search className="h-4 w-4" /> Browse the directory
+                            </Link>
+                        </PaneWelcome>
                     ) : (
                         <ul className="flex-1 divide-y divide-slate-100 overflow-y-auto">
                             {conversations.map((c) => (
@@ -429,21 +488,56 @@ export default function MemberInbox() {
                 <div className={`${CARD} ${PANE} ${openId ? 'flex' : 'hidden lg:flex'}
                                  flex-col overflow-hidden`}>
                     {!openId ? (
-                        <div className="flex-1 flex items-center justify-center">
-                            <EmptyState
-                                icon={<Inbox className="w-6 h-6" />}
-                                title="No conversation open"
-                                detail="Choose a conversation on the left, or start one from a member's directory profile."
-                            />
-                        </div>
+                        <>
+                            <div className={PANE_HEAD}>
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                                    <Lock className="h-5 w-5" />
+                                </span>
+                                <span className="min-w-0">
+                                    <span className="block text-[1.1875rem] font-extrabold text-slate-900">Private messages</span>
+                                    <span className="block truncate text-[0.9375rem] font-medium text-slate-500">
+                                        Between you and one fellow member — nobody else reads them
+                                    </span>
+                                </span>
+                            </div>
+                            <PaneWelcome
+                                title={conversations.length ? 'Pick a conversation' : 'Talk business with a member'}
+                                detail={conversations.length
+                                    ? 'Choose one on the left to read it and reply.'
+                                    : 'Find a member in the directory, open their profile and choose Message. A first message usually starts with one of these:'}
+                            >
+                                <ul className="mt-6 grid gap-2.5 text-left sm:grid-cols-3">
+                                    {OPENERS.map((opener, i) => {
+                                        const Icon = OPENER_ICONS[i] || MessagesSquare;
+                                        return (
+                                            <li key={opener.label} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5">
+                                                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-blue-600 shadow-sm">
+                                                    <Icon className="h-[1.125rem] w-[1.125rem]" />
+                                                </span>
+                                                <span className="mt-2.5 block min-h-[2.75em] text-[1.0625rem] font-bold leading-snug text-slate-900">
+                                                    {opener.label}
+                                                </span>
+                                                <span className="mt-1 block text-[0.9375rem] leading-snug text-slate-500">
+                                                    {opener.hint}
+                                                </span>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                                {conversations.length ? null : (
+                                    <Link to="/member/directory" className={`${FIND_MEMBER} mt-6`}>
+                                        <Search className="h-4 w-4" /> Find a member
+                                    </Link>
+                                )}
+                            </PaneWelcome>
+                        </>
                     ) : (
                         <>
-                            <div className="shrink-0 px-4 sm:px-5 py-3.5 border-b border-slate-200
-                                            bg-slate-50 flex items-center gap-3">
+                            <div className={PANE_HEAD}>
                                 <button
                                     type="button"
                                     onClick={() => openThread('')}
-                                    className="lg:hidden w-9 h-9 rounded-lg border border-slate-200 bg-white
+                                    className="lg:hidden shrink-0 w-10 h-10 rounded-lg border border-slate-200 bg-white
                                                flex items-center justify-center text-slate-600"
                                     aria-label="Back to conversations"
                                 >
@@ -698,7 +792,7 @@ export default function MemberInbox() {
                                   for, and each goes in at the cursor.
                                 */}
                                 {emojiOpen ? (
-                                    <div className="absolute bottom-full left-3 z-20 mb-2 w-72 rounded-2xl
+                                    <div className="absolute bottom-full left-3 z-20 mb-2 w-72 max-w-[calc(100vw-3rem)] rounded-2xl
                                                     border border-slate-200 bg-white p-3 shadow-xl">
                                         <div className="grid grid-cols-8 gap-1">
                                             {EMOJI.map((mark, i) => (

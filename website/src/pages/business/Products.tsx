@@ -13,7 +13,6 @@ import { apiFetch } from "@/services/activApi";
 import { resolveMediaUrl } from "@/config/api.config";
 import { useActiveCompanyStore } from "@/contexts/ActiveCompanyContext";
 
-import { CARD_TITLE } from '@/components/layout/appTypography';
 const Products = () => {
     const navigate = useNavigate();
     const [products, setProducts] = useState<any[]>([]);
@@ -125,15 +124,16 @@ const Products = () => {
             width="wide"
             actions={
                 <Button
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-blue-600 hover:bg-blue-700 px-3 sm:px-4"
                     onClick={() => navigate("/business/add-product")}
+                    aria-label="Add Product"
                 >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Product
+                    <Plus className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Add Product</span>
                 </Button>
             }
         >
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
                 {/*
                     Active catalog banner and toolbar in one row.
 
@@ -142,14 +142,14 @@ const Products = () => {
                     visibly misaligned — the banner ran full-bleed while the
                     products were centred and narrower.
                 */}
-                <Card className="flex flex-col lg:flex-row lg:items-center gap-4">
+                <Card className="flex flex-col lg:flex-row lg:items-center gap-3 sm:gap-4">
                     {activeCompany && (
                         <div className="flex items-center gap-3 min-w-0 lg:w-72 shrink-0">
                             {activeCompany.logo ? (
                                 <img
                                     src={resolveMediaUrl(activeCompany.logo)}
                                     alt={activeCompany.businessName}
-                                    className="w-10 h-10 rounded-lg object-cover shrink-0"
+                                    className="w-10 h-10 rounded-lg object-contain bg-white border border-slate-200 shrink-0"
                                 />
                             ) : (
                                 <span className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
@@ -167,7 +167,7 @@ const Products = () => {
                         </div>
                     )}
 
-                    <div className="flex-1 relative">
+                    <div className="flex-1 min-w-0 relative">
                         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <Input
                             placeholder="Search products by name or description…"
@@ -187,7 +187,7 @@ const Products = () => {
                             type="button"
                             onClick={() => setViewMode("grid")}
                             aria-label="Grid view"
-                            className={`p-2 rounded transition-colors ${viewMode === "grid"
+                            className={`w-10 h-10 sm:w-auto sm:h-auto p-2 flex items-center justify-center rounded transition-colors ${viewMode === "grid"
                                 ? "bg-blue-50 text-blue-600"
                                 : "text-slate-500 hover:bg-slate-100"}`}
                         >
@@ -197,7 +197,7 @@ const Products = () => {
                             type="button"
                             onClick={() => setViewMode("list")}
                             aria-label="List view"
-                            className={`p-2 rounded transition-colors ${viewMode === "list"
+                            className={`w-10 h-10 sm:w-auto sm:h-auto p-2 flex items-center justify-center rounded transition-colors ${viewMode === "list"
                                 ? "bg-blue-50 text-blue-600"
                                 : "text-slate-500 hover:bg-slate-100"}`}
                         >
@@ -232,13 +232,13 @@ const Products = () => {
                         />
                     </Card>
                 ) : viewMode === "grid" ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
+                    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-5">
                         {filteredProducts.map((product) => (
                             <div
                                 key={product._id}
                                 className="group bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 transition-colors overflow-hidden flex flex-col"
                             >
-                                <div className="h-44 relative overflow-hidden bg-slate-100 shrink-0">
+                                <div className="h-32 sm:h-44 relative overflow-hidden bg-slate-100 shrink-0">
                                     {/*
                                         `imageUrl`, not `productImage`. The Product schema
                                         (backend/src/models/Product.js) has no such field, so
@@ -256,19 +256,19 @@ const Products = () => {
                                         />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center">
-                                            <Package className="h-14 w-14 text-slate-300" strokeWidth={1.5} />
+                                            <Package className="h-10 w-10 sm:h-14 sm:w-14 text-slate-300" strokeWidth={1.5} />
                                         </div>
                                     )}
-                                    <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-white/95 shadow-sm text-[1.1875rem] font-semibold text-blue-600">
+                                    <span className="absolute top-2 right-2 sm:top-3 sm:right-3 max-w-[calc(100%-1rem)] truncate px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-white/95 shadow-sm text-[1rem] sm:text-[1.1875rem] font-semibold text-blue-600">
                                         ₹{Number(product.price || 0).toLocaleString('en-IN')}
                                     </span>
                                 </div>
 
-                                <div className="p-5 flex flex-col flex-1">
-                                    <h3 className={`${CARD_TITLE} text-slate-900 line-clamp-1 mb-1.5`}>
+                                <div className="p-3 sm:p-5 flex flex-col flex-1 min-w-0">
+                                    <h3 className="text-[1.25rem] sm:text-[2.1875rem] font-bold tracking-tight leading-snug text-slate-900 line-clamp-1 break-all mb-1 sm:mb-1.5">
                                         {product.name}
                                     </h3>
-                                    <p className="text-[1.25rem] text-slate-500 mb-4 line-clamp-2 flex-1">
+                                    <p className="text-[1.0625rem] sm:text-[1.25rem] text-slate-500 mb-3 sm:mb-4 line-clamp-2 flex-1 break-words">
                                         {product.description || 'No description'}
                                     </p>
 
@@ -300,20 +300,22 @@ const Products = () => {
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="flex-1 border-slate-200 text-slate-700 hover:bg-slate-50"
+                                            className="flex-1 min-w-0 h-10 sm:h-9 px-2 sm:px-3 border-slate-200 text-slate-700 hover:bg-slate-50"
                                             onClick={() => navigate(`/business/edit-product/${product._id}`)}
+                                            aria-label="Edit"
                                         >
-                                            <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                                            Edit
+                                            <Pencil className="h-3.5 w-3.5 sm:mr-1.5" />
+                                            <span className="hidden sm:inline">Edit</span>
                                         </Button>
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
+                                            className="flex-1 min-w-0 h-10 sm:h-9 px-2 sm:px-3 border-red-200 text-red-600 hover:bg-red-50"
                                             onClick={() => handleDelete(product._id)}
+                                            aria-label="Delete"
                                         >
-                                            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                                            Delete
+                                            <Trash2 className="h-3.5 w-3.5 sm:mr-1.5" />
+                                            <span className="hidden sm:inline">Delete</span>
                                         </Button>
                                     </div>
                                 </div>

@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
+import RenewalBanner from '@/features/member/components/RenewalBanner';
+import { RENEW_PATH, readRenewal, renewalDate } from '@/features/member/useRenewal';
 import {
-    ArrowRight, BadgeCheck, Briefcase, CalendarDays, CalendarPlus, ChevronRight, Clock, CreditCard, FileText, FolderOpen, History, MapPin, Megaphone, Package, ReceiptText, ShieldCheck, Sparkles, Sun, User, UserCircle, UserCog, Users, Zap,
+    ArrowRight, BadgeCheck, Briefcase, CalendarDays, CalendarPlus, ChevronRight, Clock, CreditCard, Crown, FileText, FolderOpen, History, MapPin, Megaphone, Package, ReceiptText, ShieldCheck, Sparkles, Sun, User, UserCircle, UserCog, Users, Zap,
 } from 'lucide-react';
 import MemberPageShell from '@/pages/member/MemberPageShell';
 import {
@@ -18,6 +21,8 @@ import { resolveMediaUrl } from '@/config/api.config';
 import { formatApplicationRef } from '@/lib/applicationRef';
 import { BIZ_DETAIL_LABEL } from '@/components/layout/surface';
 import cardBackdrop from '@/assets/membership-card-bg.svg';
+import { PlatinumBadge, isPlatinumProfile } from '@/components/shared/Platinum';
+import { MemberAvatar } from '@/features/member/memberPhoto';
 import greetingBubbles from '@/assets/greeting-bubbles.svg';
 
 import { CARD_TITLE, PAGE_TITLE } from '@/components/layout/appTypography';
@@ -81,7 +86,7 @@ import {
  * these every week.
  */
 const QUICK_ACTIONS = [
-    { label: 'Register for Event', icon: CalendarPlus, to: '/member/events', tint: 'bg-rose-50/70', ink: 'text-rose-600' },
+    { label: 'Register for Event', detail: 'Book your seat', icon: CalendarPlus, to: '/member/events', tint: 'bg-rose-50/70', ink: 'text-rose-600' },
     /*
      * `/member/profile-view`, NOT `/member/profile`.
      *
@@ -92,15 +97,15 @@ const QUICK_ACTIONS = [
      * has not finished applying, and the profile view links into it per
      * section for exactly that.
      */
-    { label: 'Update Profile', icon: UserCog, to: '/member/profile-view', tint: 'bg-emerald-50/70', ink: 'text-emerald-600' },
-    { label: 'Explore Directory', icon: Users, to: '/member/directory', tint: 'bg-violet-50/70', ink: 'text-violet-600' },
+    { label: 'Update Profile', detail: 'Keep details current', icon: UserCog, to: '/member/profile-view', tint: 'bg-emerald-50/70', ink: 'text-emerald-600' },
+    { label: 'Explore Directory', detail: 'Find fellow members', icon: Users, to: '/member/directory', tint: 'bg-violet-50/70', ink: 'text-violet-600' },
     /*
      * `/business/products` — the member's OWN catalogue, which is what a tile
      * called View Products means. It pointed at `/business/discover`, the
      * network-wide search, so pressing "View Products" opened somebody
      * else's. Discover has its own place in the business rail.
      */
-    { label: 'View Products', icon: Package, to: '/business/products', tint: 'bg-amber-50/70', ink: 'text-amber-600' },
+    { label: 'View Products', detail: 'Your catalogue', icon: Package, to: '/business/products', tint: 'bg-amber-50/70', ink: 'text-amber-600' },
 ] as const;
 
 /*
@@ -196,6 +201,8 @@ export default function PaidDashboard() {
 
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState<any>(null);
+    // From the profile this screen already loads — the server's renewal answer.
+    const renewal = useMemo(() => readRenewal(profile), [profile]);
     const [application, setApplication] = useState<any>(null);
     const [hasBusinessRecord, setHasBusinessRecord] = useState(false);
     /* Printed on the membership card. The dashboard already fetches this
@@ -368,7 +375,10 @@ export default function PaidDashboard() {
      * A LIFETIME membership has no expiry and must not be given an invented
      * one; `lifetime` below makes the card print the word instead.
      */
-    const lifetime = membershipType.toLowerCase() === 'lifetime';
+    /* Platinum is the lifetime tier the Super Admin grants — always lifetime. */
+    const platinum = isPlatinumProfile(profile);
+    const lifetime = platinum || membershipType.toLowerCase() === 'lifetime';
+    const planTitle = platinum ? 'Platinum Lifetime Membership' : (planLabel(plan) || 'Member');
     const expiresAt = useMemo(() => {
         if (lifetime) return '';
         if (profile?.membershipExpiresAt) return profile.membershipExpiresAt;
@@ -388,17 +398,6 @@ export default function PaidDashboard() {
         })
         : '';
 
-    /**
-     * `profilePhoto` is what this backend returns; `profileImage` is a name no
-     * endpoint has ever sent, and reading it is what left every avatar blank on
-     * the profile screen. Both are accepted, and the URL is re-anchored to the
-     * API origin — a stored `/uploads/...` path resolves against this site,
-     * which serves no uploads.
-     */
-    const photoUrl = useMemo(
-        () => resolveMediaUrl(profile?.profilePhoto || profile?.profileImage) || '',
-        [profile],
-    );
 
     // ---------------------------------------------------------------- derived
 
@@ -446,49 +445,12 @@ export default function PaidDashboard() {
             tint: 'bg-violet-50 text-violet-600', issued: true,
         },
         {
-            label: 'Membership Plan', detail: planLabel(plan) || 'Your plan',
+            label: 'Membership Plan', detail: platinum ? 'Platinum Lifetime' : (planLabel(plan) || 'Your plan'),
             to: '/member/plan', icon: BadgeCheck,
             tint: 'bg-amber-50 text-amber-600', issued: false,
         },
     ];
 
-    /*
-     * THE PHOTO IS READ, NEVER WRITTEN, ON THIS SCREEN.
-     *
-     * It is changed on the profile screen, which posts it and then fires
-     * `profilePhotoUpdated` — the same event the sidebar listens for. This
-     * picks it up too, so a member who changes their photo two screens away
-     * comes back to the dashboard and finds it already there, without a
-     * reload and without a second upload control to maintain.
-     */
-    const [livePhoto, setLivePhoto] = useState('');
-
-    useEffect(() => {
-        const read = () => {
-            try { setLivePhoto(localStorage.getItem('userProfilePhoto') || ''); } catch { /* unavailable */ }
-        };
-        read();
-        window.addEventListener('profilePhotoUpdated', read);
-        return () => window.removeEventListener('profilePhotoUpdated', read);
-    }, []);
-
-    /** The record's photo, unless a newer one was just saved on the profile. */
-    const candidate = livePhoto || photoUrl;
-
-    /*
-     * A PHOTO THAT DOES NOT LOAD IS NOT A PHOTO.
-     *
-     * `userProfilePhoto` in localStorage outlives the file it points at: the
-     * upload is replaced, the member signs in on another device, the path
-     * changes — and the avatar then rendered the browser's broken-image
-     * glyph, which is what was reported. `onError` drops the src and the
-     * initials take over, which is what the card shows for a member who has
-     * no photo at all. Reset on change, or a good URL after a bad one would
-     * stay hidden.
-     */
-    const [photoBroken, setPhotoBroken] = useState(false);
-    useEffect(() => { setPhotoBroken(false); }, [candidate]);
-    const avatarSrc = photoBroken ? '' : candidate;
 
     const greeting = greetingFor(new Date().getHours());
     const today = todayParts();
@@ -509,7 +471,10 @@ export default function PaidDashboard() {
 
     return (
         <MemberPageShell title="Dashboard" subtitle="Your membership at a glance" width="wide">
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
+
+                {/* The last 30 days of the year: renewal is open, and said first. */}
+                <RenewalBanner renewal={renewal} />
 
                 {/* ============================= greeting · membership card
                     TWO CARDS, NOT ONE BAND.
@@ -636,50 +601,41 @@ export default function PaidDashboard() {
                       them. The padding insets the right column and leaves the
                       decoration visible behind it.
                     */}
-                    <div className="relative grid items-center justify-between gap-6 p-6 sm:p-8
+                    <div className="relative grid items-center justify-between gap-5 sm:gap-6 p-4 sm:p-8
                                     lg:grid-cols-[minmax(0,auto)_minmax(0,26rem)] lg:pr-24">
 
                         {/* ------------------------------------ the greeting */}
                         <div>
-                            <div className="mb-6 inline-flex items-center gap-2.5 rounded-full bg-white/15 px-4 py-2.5
+                            <div className="mb-4 sm:mb-6 inline-flex max-w-full flex-wrap items-center gap-x-2.5 gap-y-1 rounded-full bg-white/15 px-4 py-2 sm:py-2.5
                                             ring-1 ring-white/25 backdrop-blur-sm">
                                 <Sun className="h-5 w-5 text-amber-300" />
                                 {/* Up a step throughout this block: it was all set
                                     smaller than the white card beside it, on a band
                                     four times its height. */}
-                                <span className="text-[1.5625rem] font-extrabold text-white">{today.date}</span>
-                                <span className="text-[1.25rem] font-semibold text-white/70">· {today.day}</span>
+                                <span className="whitespace-nowrap text-[1.2rem] sm:text-[1.5625rem] font-extrabold text-white">{today.date}</span>
+                                <span className="whitespace-nowrap text-[1.05rem] sm:text-[1.25rem] font-semibold text-white/70">· {today.day}</span>
                             </div>
 
-                            <div className="flex items-start gap-5">
-                                {/* STATIC. The photo is changed on the profile
-                                    screen and arrives here through the record.
-                                    `onError` drops to the initials: a stored
-                                    path outlives the file it points at. */}
-                                <span className="flex h-[5.5rem] w-[5.5rem] shrink-0 items-center justify-center
-                                                 overflow-hidden rounded-full bg-white/15 text-[2.125rem]
-                                                 font-extrabold text-white shadow-lg ring-4 ring-white/30">
-                                    {avatarSrc
-                                        ? (
-                                            <img
-                                                src={avatarSrc}
-                                                alt=""
-                                                className="h-full w-full object-cover"
-                                                onError={() => setPhotoBroken(true)}
-                                            />
-                                        )
-                                        : initials}
-                                </span>
+                            <div className="flex flex-col items-start gap-4 sm:flex-row sm:gap-5">
+                                {/* THE MEMBER'S PHOTO, from the one shared store
+                                    (`memberPhoto.tsx`) — resolved on the API host,
+                                    initials if it fails. Tap it to see it full size
+                                    and change it. */}
+                                <MemberAvatar
+                                    name={name}
+                                    className="h-16 w-16 sm:h-[5.5rem] sm:w-[5.5rem] rounded-full bg-white/15 shadow-lg ring-4 ring-white/30"
+                                    initialsClassName="text-[1.625rem] sm:text-[2.125rem] font-extrabold text-white"
+                                />
 
                                 <div className="min-w-0">
-                                    <p className="text-[1.5625rem] font-bold text-white/70">{greeting},</p>
+                                    <p className="text-[1.2rem] sm:text-[1.5625rem] font-bold text-white/70">{greeting},</p>
                                     <h2 className={`${PAGE_TITLE} mt-1 text-white`}>
                                         {name} <span aria-hidden="true">👋</span>
                                     </h2>
-                                    <p className="mt-3 text-[1.5625rem] font-semibold leading-relaxed text-white/85">
+                                    <p className="mt-3 text-[1.15rem] sm:text-[1.5625rem] font-semibold leading-relaxed text-white/85">
                                         Your journey with ACTIV is making a difference.
                                     </p>
-                                    <p className="text-[1.5625rem] font-semibold leading-relaxed text-white/85">
+                                    <p className="text-[1.15rem] sm:text-[1.5625rem] font-semibold leading-relaxed text-white/85">
                                         Together we build a stronger community.
                                     </p>
                                 </div>
@@ -695,31 +651,33 @@ export default function PaidDashboard() {
                               deliberately, and these pills are what the eye takes
                               in without stopping.
                             */}
-                            <div className="mt-6 flex flex-wrap items-center gap-2.5">
-                                {plan && (
-                                    <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2.5
-                                                     text-[1.375rem] font-bold text-white ring-1 ring-white/25
+                            <div className="mt-4 sm:mt-6 flex flex-wrap items-center gap-2 sm:gap-2.5">
+                                {platinum ? (
+                                    <PlatinumBadge size="lg" label="Platinum Lifetime Member" />
+                                ) : plan && (
+                                    <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 sm:px-4 py-2 sm:py-2.5
+                                                     text-base sm:text-[1.375rem] font-bold text-white ring-1 ring-white/25
                                                      backdrop-blur-sm">
                                         <BadgeCheck className="h-4 w-4" /> {planLabel(plan) || 'Member'}
                                     </span>
                                 )}
                                 {applicationRef && (
-                                    <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2.5
-                                                     text-[1.375rem] font-bold text-white ring-1 ring-white/25
+                                    <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 sm:px-4 py-2 sm:py-2.5
+                                                     text-base sm:text-[1.375rem] font-bold text-white ring-1 ring-white/25
                                                      backdrop-blur-sm">
                                         <FileText className="h-4 w-4" /> {applicationRef}
                                     </span>
                                 )}
                                 {memberSinceLabel && (
-                                    <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2.5
-                                                     text-[1.375rem] font-bold text-white ring-1 ring-white/25
+                                    <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 sm:px-4 py-2 sm:py-2.5
+                                                     text-base sm:text-[1.375rem] font-bold text-white ring-1 ring-white/25
                                                      backdrop-blur-sm">
                                         <CalendarDays className="h-4 w-4" /> Member since {memberSinceLabel}
                                     </span>
                                 )}
                                 {(abroad ? (place || country) : (district || state)) && (
-                                    <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2.5
-                                                     text-[1.375rem] font-bold text-white ring-1 ring-white/25
+                                    <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 sm:px-4 py-2 sm:py-2.5
+                                                     text-base sm:text-[1.375rem] font-bold text-white ring-1 ring-white/25
                                                      backdrop-blur-sm">
                                         <MapPin className="h-4 w-4" />
                                         {(abroad ? [place, country] : [district, state])
@@ -737,7 +695,7 @@ export default function PaidDashboard() {
                         {/* 26rem and 20px of padding, down from 30rem and 24.
                             Eight facts and a button in a half-metre-wide card
                             read as a page of its own beside the greeting. */}
-                        <div className="relative overflow-hidden rounded-[1.25rem] bg-white p-5
+                        <div className="relative overflow-hidden rounded-[1.25rem] bg-white p-4 sm:p-5
                                         shadow-[0_18px_40px_-18px_rgba(0,0,0,0.45)]">
                             <img
                                 src={cardBackdrop}
@@ -746,18 +704,19 @@ export default function PaidDashboard() {
                                 className="pointer-events-none absolute inset-0 h-full w-full object-cover"
                             />
 
-                            <div className="relative flex items-start justify-between gap-3">
-                                <div className="flex items-center gap-4">
-                                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl
-                                                     bg-gradient-to-br from-blue-600 to-sky-400 text-white shadow-md">
-                                        <User className="h-6 w-6" strokeWidth={2.4} />
+                            <div className="relative flex flex-wrap items-start justify-between gap-3">
+                                <div className="flex !min-w-[12rem] flex-1 items-center gap-3 sm:gap-4">
+                                    <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white shadow-md ${platinum
+                                        ? 'bg-gradient-to-br from-[#1e293b] to-[#64748b] text-[#f8e7b0] ring-1 ring-[#d4b35f]/60'
+                                        : 'bg-gradient-to-br from-blue-600 to-sky-400'}`}>
+                                        {platinum ? <Crown className="h-6 w-6" strokeWidth={2.2} /> : <User className="h-6 w-6" strokeWidth={2.4} />}
                                     </span>
                                     <div className="min-w-0">
                                         <p className="text-[1.375rem] font-extrabold tracking-tight text-slate-900">
-                                            {planLabel(plan) || 'Member'}
+                                            {planTitle}
                                         </p>
                                         <p className="text-[1.25rem] font-semibold text-blue-600">
-                                            {membershipType ? `${membershipType} membership` : 'Membership'}
+                                            {platinum ? 'Lifetime · never renews' : membershipType ? `${membershipType} membership` : 'Membership'}
                                         </p>
                                     </div>
                                 </div>
@@ -770,30 +729,30 @@ export default function PaidDashboard() {
                                 </span>
                             </div>
 
-                            <div className="relative mt-3 grid grid-cols-3 divide-x divide-slate-200 border-t
+                            <div className="relative mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-0 sm:divide-x divide-slate-200 border-t
                                             border-slate-200 pt-4">
                                 <CardFact label="Member ID" value={memberId} />
-                                <CardFact label="Member since" value={cardDate(memberSince)} className="px-3" />
+                                <CardFact label="Member since" value={cardDate(memberSince)} className="sm:px-3" />
                                 <CardFact
                                     label={lifetime ? 'Validity' : 'Valid until'}
                                     value={lifetime ? 'Lifetime' : cardDate(expiresAt)}
-                                    className="pl-3"
+                                    className="sm:pl-3"
                                 />
                             </div>
 
                             {abroad ? (
                                 /* Outside India: the place and the country, not three empty region cells. */
-                                <div className="relative mt-3 grid grid-cols-2 divide-x divide-slate-200 border-t
+                                <div className="relative mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-0 sm:divide-x divide-slate-200 border-t
                                                 border-slate-200 pt-4">
                                     <CardFact icon={MapPin} label="Place" value={place} />
-                                    <CardFact icon={MapPin} label="Country" value={country} className="pl-3" />
+                                    <CardFact icon={MapPin} label="Country" value={country} className="sm:pl-3" />
                                 </div>
                             ) : (
-                                <div className="relative mt-3 grid grid-cols-3 divide-x divide-slate-200 border-t
+                                <div className="relative mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-0 sm:divide-x divide-slate-200 border-t
                                                 border-slate-200 pt-4">
                                     <CardFact icon={MapPin} label="State" value={state} />
-                                    <CardFact icon={MapPin} label="District" value={district} className="px-3" />
-                                    <CardFact icon={MapPin} label="Block" value={block} className="pl-3" />
+                                    <CardFact icon={MapPin} label="District" value={district} className="sm:px-3" />
+                                    <CardFact icon={MapPin} label="Block" value={block} className="sm:pl-3" />
                                 </div>
                             )}
 
@@ -813,7 +772,7 @@ export default function PaidDashboard() {
                                 <div className="relative mt-4 grid grid-cols-2 divide-x divide-slate-200
                                                 border-t border-slate-200 pt-4">
                                     <CardFact icon={Briefcase} label="Business type" value={businessType} />
-                                    <CardFact label="Application ID" value={applicationRef} className="pl-3" />
+                                    <CardFact label="Application ID" value={applicationRef} className="sm:pl-3" />
                                 </div>
                             )}
 
@@ -834,7 +793,7 @@ export default function PaidDashboard() {
                 {/* 1.6 / 1, not 1.05 / 1. Five tiles in half a 1280px
                     content column are 100px each, which wraps "Register for
                     Event" onto three lines and clips the third. */}
-                <div className="grid items-stretch gap-6 xl:grid-cols-2">
+                <div className="grid items-stretch gap-4 sm:gap-6 2xl:grid-cols-2">
 
                     <SectionCard
                         title="Quick Actions"
@@ -859,19 +818,23 @@ export default function PaidDashboard() {
                           filled theirs, which is exactly the misalignment that
                           was reported. The count is the number of actions.
                         */}
-                        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                            {QUICK_ACTIONS.map(({ label, icon: Icon, to, tint, ink }) => (
+                        {/* 2 × 2, FILLING THE CARD — the same grid as My Documents
+                            beside it. Four abreast left a short row floating in
+                            the middle of a tall card (the body centres its
+                            content), so the two cards never lined up. */}
+                        <div className="grid flex-1 auto-rows-fr grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-2">
+                            {QUICK_ACTIONS.map(({ label, detail, icon: Icon, to, tint, ink }) => (
                                 <button
                                     key={label}
                                     type="button"
                                     onClick={() => navigate(to)}
-                                    className={`group flex h-full flex-col justify-between gap-6 rounded-2xl border
-                                                border-slate-200 p-5 text-left transition-all
+                                    className={`group flex h-full min-w-0 flex-col gap-3 rounded-2xl border
+                                                border-slate-200 p-3.5 sm:p-4 text-left transition-all
                                                 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md ${tint}`}
                                 >
-                                    <span className={`flex h-12 w-12 items-center justify-center rounded-xl
+                                    <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl
                                                       bg-white ${ink} shadow-sm`}>
-                                        <Icon className="h-6 w-6" />
+                                        <Icon className="h-5 w-5" />
                                     </span>
                                     {/* Label left, the arrow in its own circle
                                         bottom-right — the design's tile. Inline
@@ -888,11 +851,14 @@ export default function PaidDashboard() {
                                       four tiles that had slipped. `em`, so it
                                       follows the type size.
                                     */}
-                                    <span className="block">
-                                        <span className="block min-h-[2.8em] text-[1.25rem] font-bold
-                                                         leading-snug text-slate-900">
-                                            {label}
-                                        </span>
+                                    <span className="block text-[1.125rem] sm:text-[1.25rem] font-bold leading-snug text-slate-900
+                                                     break-normal [overflow-wrap:normal] [hyphens:manual]">
+                                        {label}
+                                    </span>
+                                    <span className="-mt-1.5 block text-[0.9375rem] sm:text-[1rem] font-medium text-slate-500">
+                                        {detail}
+                                    </span>
+                                    <span className="mt-auto block">
                                         <span className="mt-3 flex justify-end">
                                             <span className={`flex h-8 w-8 items-center justify-center rounded-full
                                                               bg-white ${ink} shadow-sm transition-transform
@@ -917,26 +883,29 @@ export default function PaidDashboard() {
                             above the name, the badge under it and the arrow
                             in the corner, as the design draws them. Two
                             abreast until there is room for four. */}
-                        <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
+                        {/* Always two abreast: this card is HALF the page wide, and four
+                            tiles in it split "Membership" into "Membershi / p". */}
+                        <div className="grid flex-1 auto-rows-fr grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-2">
                             {DOCUMENTS.map((doc) => (
                                 <button
                                     key={doc.to}
                                     type="button"
                                     onClick={() => navigate(doc.to)}
                                     className="group flex h-full flex-col gap-3 rounded-2xl border border-slate-200
-                                               bg-white p-4 text-left transition-all hover:-translate-y-0.5
-                                               hover:border-blue-300 hover:shadow-md"
+                                               bg-white p-3.5 sm:p-4 text-left transition-all hover:-translate-y-0.5
+                                               hover:border-blue-300 hover:shadow-md min-w-0"
                                 >
                                     <span className={`flex h-11 w-11 shrink-0 items-center justify-center
                                                       rounded-xl ${doc.tint}`}>
                                         <doc.icon className="h-5 w-5" />
                                     </span>
 
-                                    <span className="block text-[1.25rem] font-bold leading-snug text-slate-900">
+                                    <span className="block text-[1.125rem] sm:text-[1.25rem] font-bold leading-snug text-slate-900
+                                                     break-normal [overflow-wrap:normal] [hyphens:manual]">
                                         {doc.label}
                                     </span>
 
-                                    <span className="mt-auto block">
+                                    <span className="block">
                                         {doc.issued ? (
                                             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50
                                                              px-2.5 py-1 text-[1.0625rem] font-bold text-emerald-700">
@@ -961,6 +930,7 @@ export default function PaidDashboard() {
                     </SectionCard>
                 </div>
 
+
                 {/* ================= events · updates · activity */}
                 {/*
                   EVENTS GETS A ROW OF ITS OWN.
@@ -973,7 +943,7 @@ export default function PaidDashboard() {
                   that ARE happy in a narrow column — a list of notices and a
                   list of timestamps — share the row beneath it.
                 */}
-                <div className="grid items-stretch gap-6">
+                <div className="grid items-stretch gap-4 sm:gap-6">
 
                     {/* ---------------------------------------- events ---- */}
                     <SectionCard
@@ -1001,14 +971,14 @@ export default function PaidDashboard() {
                                     return (
                                         <div
                                             key={event.id}
-                                            className="flex items-stretch gap-4 rounded-2xl border border-slate-200
+                                            className="flex flex-wrap sm:flex-nowrap items-stretch gap-3 sm:gap-4 rounded-2xl border border-slate-200
                                                        bg-white p-3 transition-all hover:border-blue-300
                                                        hover:shadow-md"
                                         >
                                             {/* the date block */}
-                                            <span className="flex w-16 shrink-0 flex-col items-center justify-center
-                                                             rounded-xl bg-blue-50 px-2 py-3 text-center">
-                                                <span className="text-[1.75rem] font-extrabold leading-none text-blue-700">
+                                            <span className="flex w-14 sm:w-16 shrink-0 flex-col items-center justify-center
+                                                             rounded-xl bg-blue-50 px-2 py-2.5 sm:py-3 text-center">
+                                                <span className="text-[1.5rem] sm:text-[1.75rem] font-extrabold leading-none text-blue-700">
                                                     {when.day}
                                                 </span>
                                                 <span className="mt-1 text-[1.0625rem] font-extrabold uppercase
@@ -1056,7 +1026,7 @@ export default function PaidDashboard() {
                                                     their time and venue rows a line
                                                     apart, and three rows down the
                                                     card nothing lines up. */}
-                                                <span className="line-clamp-2 text-[1.5625rem]
+                                                <span className="line-clamp-2 break-words text-[1.25rem] sm:text-[1.5625rem]
                                                                  font-extrabold leading-snug tracking-tight
                                                                  text-slate-900">
                                                     {event.title || 'Untitled event'}
@@ -1078,11 +1048,11 @@ export default function PaidDashboard() {
                                                 )}
                                             </span>
 
-                                            <span className="flex shrink-0 items-center self-center">
+                                            <span className="flex w-full sm:w-auto shrink-0 items-center self-center">
                                                 <button
                                                     type="button"
                                                     onClick={() => navigate(`/member/events/${event.id}`)}
-                                                    className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5
+                                                    className={`inline-flex w-full sm:w-auto justify-center items-center gap-1.5 rounded-xl px-4 py-2.5
                                                                 text-[1.25rem] font-bold transition-colors ${registered
                                                             ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                                                             : 'bg-blue-600 text-white hover:bg-blue-700'}`}
@@ -1101,7 +1071,7 @@ export default function PaidDashboard() {
                 </div>
 
                 {/* ------------------------- updates · activity, side by side */}
-                <div className="grid items-stretch gap-6 lg:grid-cols-2">
+                <div className="grid items-stretch gap-4 sm:gap-6 lg:grid-cols-2">
 
                     {/* --------------------------------------- updates ---- */}
                     <SectionCard
@@ -1243,14 +1213,14 @@ export default function PaidDashboard() {
                 <section className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white
                                     shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
                     <div className="flex flex-col gap-5 bg-gradient-to-r from-blue-50 via-white to-blue-50
-                                    p-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:p-7">
+                                    p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:p-7">
                         <div className="flex items-center gap-4">
                             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl
                                              bg-blue-600 text-white">
                                 <Sparkles className="h-6 w-6" />
                             </span>
-                            <div>
-                                <p className="text-[1.5625rem] font-extrabold tracking-tight text-slate-900">
+                            <div className="min-w-0">
+                                <p className="text-[1.25rem] sm:text-[1.5625rem] font-extrabold tracking-tight text-slate-900">
                                     More opportunities await
                                 </p>
                                 <p className="text-[1.25rem] font-semibold text-slate-500">
@@ -1259,11 +1229,12 @@ export default function PaidDashboard() {
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-x-10 gap-y-4">
+                        <div className="flex flex-wrap items-center gap-x-6 sm:gap-x-10 gap-y-4">
                             <div>
                                 <p className={BIZ_DETAIL_LABEL}>Your membership plan</p>
-                                <p className="mt-1 flex items-center gap-2 text-[1.25rem] font-bold text-slate-900">
-                                    {planLabel(plan) || 'Member'}
+                                <p className="mt-1 flex flex-wrap items-center gap-2 text-[1.25rem] font-bold text-slate-900">
+                                    {planTitle}
+                                    {platinum ? <PlatinumBadge size="sm" /> : null}
                                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50
                                                      px-2.5 py-0.5 text-[1.0625rem] font-bold text-emerald-700">
                                         <BadgeCheck className="h-4 w-4" /> {statusLabel}
@@ -1277,13 +1248,27 @@ export default function PaidDashboard() {
                                     <p className="mt-1 text-[1.25rem] font-bold text-slate-900">
                                         {lifetime ? 'No renewal needed' : validUntilLabel}
                                     </p>
+                                    {!lifetime && renewal?.canRenew ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => navigate(RENEW_PATH)}
+                                            className="mt-2 inline-flex items-center gap-2 rounded-xl border-2 border-blue-600 bg-white px-4 py-2
+                                                       text-[1.0625rem] font-bold text-blue-700 transition-colors hover:bg-blue-50"
+                                        >
+                                            <RefreshCw className="h-4 w-4" /> Renew now
+                                        </button>
+                                    ) : !lifetime && renewal?.opensAt ? (
+                                        <p className="mt-1 text-[0.9375rem] font-medium text-slate-500">
+                                            Renewal opens on {renewalDate(renewal.opensAt)}
+                                        </p>
+                                    ) : null}
                                 </div>
                             )}
 
                             <button
                                 type="button"
                                 onClick={() => navigate('/member/plan')}
-                                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5
+                                className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5
                                            text-[1.25rem] font-bold text-white transition-colors
                                            hover:bg-blue-700"
                             >
@@ -1317,10 +1302,10 @@ function CardFact({ icon: Icon, label, value, className = '' }: {
                 frame the panel lost 24px, and "MEMBER SINCE" was wrapping to
                 two lines in its column while its neighbours stayed on one —
                 which pushed that one value down a line. */}
-            <p className="flex items-center gap-1.5 whitespace-nowrap text-[1.0625rem] font-extrabold
-                          uppercase tracking-[0.1em] text-slate-400">
-                {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
-                {label}
+            <p className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-[1rem] font-extrabold
+                          uppercase tracking-[0.06em] text-slate-400">
+                {Icon ? <Icon className="h-3.5 w-3.5 shrink-0" /> : null}
+                <span className="truncate" title={label}>{label}</span>
             </p>
             <p className="mt-1 truncate text-[1.25rem] font-bold text-slate-900" title={value || '—'}>
                 {value || '—'}

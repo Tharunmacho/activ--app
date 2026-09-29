@@ -1,3 +1,4 @@
+import { publicUrl, shareLink } from '@/lib/share';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
@@ -64,9 +65,9 @@ const TIER_LABEL: Record<string, string> = { national: 'Central', state: 'State'
  */
 function Block({ id, title, children }: { id?: string; title: string; children: React.ReactNode }) {
     return (
-        <section id={id} className="scroll-mt-28 border-t border-gray-100 pt-8 first:border-t-0 first:pt-0">
+        <section id={id} className="scroll-mt-28 border-t border-gray-100 pt-6 sm:pt-8 first:border-t-0 first:pt-0">
             {String(title || '').trim() && (
-                <h2 className="mb-4 text-[1.5rem] font-black tracking-tight text-brand-900">{title}</h2>
+                <h2 className="mb-4 text-[1.3125rem] sm:text-[1.5rem] font-black tracking-tight text-brand-900">{title}</h2>
             )}
             {children}
         </section>
@@ -100,13 +101,8 @@ export default function SchemeDetailPage() {
         return () => { cancelled = true; };
     }, [slug]);
 
-    const share = () => {
-        const url = window.location.href;
-        try {
-            if (navigator.share) { navigator.share({ title: scheme?.title, url }); return; }
-            navigator.clipboard?.writeText(url);
-        } catch { /* nothing to do: the URL is in the address bar */ }
-    };
+    // One share behaviour site-wide — see lib/share.
+    const share = () => shareLink({ title: scheme?.title, url: publicUrl(window.location.pathname) });
 
     const apply = externalHref(scheme?.applyUrl);
     const docUrl = externalHref(scheme?.documentUrl);
@@ -164,7 +160,7 @@ export default function SchemeDetailPage() {
 
             <main className="flex-grow">
                 {/* ------------------------------------------ back + breadcrumb */}
-                <div className={`${SCHEME_COLUMN} flex flex-wrap items-center gap-x-5 gap-y-3 pt-8`}>
+                <div className={`${SCHEME_COLUMN} flex flex-wrap items-center gap-x-5 gap-y-3 pt-5 sm:pt-8`}>
                     <button
                         type="button"
                         onClick={goBack}
@@ -174,7 +170,7 @@ export default function SchemeDetailPage() {
                     >
                         <ArrowLeft size={16} /> Back
                     </button>
-                    <nav aria-label="Breadcrumb" className={`${META_TEXT} text-gray-500`}>
+                    <nav aria-label="Breadcrumb" className={`${META_TEXT} min-w-0 break-words text-gray-500`}>
                         <Link to={parent.to} className="font-semibold text-brand-700 hover:text-brand-900">{parent.label}</Link>
                         {scheme?.title && <span className="mx-2 text-gray-300">/</span>}
                         {scheme?.title && <span className="font-semibold text-gray-700">{scheme.title}</span>}
@@ -193,7 +189,7 @@ export default function SchemeDetailPage() {
 
                 {state === 'missing' && (
                     <div className={`${SCHEME_COLUMN} py-20 text-center`}>
-                        <h1 className="text-[2.1875rem] font-black tracking-tight text-brand-900">That scheme is not here</h1>
+                        <h1 className="text-[1.75rem] sm:text-[2.1875rem] font-black tracking-tight text-brand-900">That scheme is not here</h1>
                         <p className={`mt-3 ${CARD_BODY} text-gray-500`}>
                             It may have been withdrawn, or the link may be out of date.
                         </p>
@@ -211,7 +207,7 @@ export default function SchemeDetailPage() {
                           * so the card's top edge meets the headline's. DOM order —
                           * title, card, content — is also the phone order.
                           */}
-                        <article className={`${SCHEME_COLUMN} grid gap-x-10 gap-y-8 pb-16 pt-6 lg:grid-cols-12`}>
+                        <article className={`${SCHEME_COLUMN} grid gap-x-10 gap-y-6 sm:gap-y-8 pb-12 sm:pb-16 pt-5 sm:pt-6 lg:grid-cols-12`}>
                             {/* -------------------------------------------- header */}
                             <Reveal as="header" className="max-w-[62rem] lg:col-span-8">
                                 <div className="flex flex-wrap items-center gap-2">
@@ -242,12 +238,12 @@ export default function SchemeDetailPage() {
                                     )}
                                 </div>
 
-                                <h1 className="mt-4 text-[2rem] sm:text-[2.5rem] font-black leading-[1.12] tracking-tight text-brand-900">
+                                <h1 className="mt-4 text-[1.75rem] sm:text-[2.5rem] break-words font-black leading-[1.12] tracking-tight text-brand-900">
                                     {scheme.title || 'Untitled scheme'}
                                 </h1>
 
                                 {scheme.summary && (
-                                    <p className="mt-5 border-l-4 border-brand-200 pl-5 text-[1.1875rem] sm:text-[1.25rem]
+                                    <p className="mt-5 border-l-4 border-brand-200 pl-4 sm:pl-5 text-[1.1875rem] sm:text-[1.25rem]
                                                   font-semibold leading-relaxed text-gray-700">
                                         {scheme.summary}
                                     </p>
@@ -269,7 +265,7 @@ export default function SchemeDetailPage() {
                                   * edge, in line with the footer above it, rather
                                   * than floating in the middle of its column.
                                   */}
-                                <div className="ml-auto max-w-[27rem] rounded-2xl border border-gray-200 bg-white p-6
+                                <div className="ml-auto max-w-[27rem] rounded-2xl border border-gray-200 bg-white p-4 sm:p-6
                                                 shadow-[0_18px_40px_-28px_rgba(28,46,104,0.45)] lg:sticky lg:top-28">
                                     <p className="mb-4 text-[0.9375rem] font-bold uppercase tracking-[0.14em] text-brand-500">
                                         Scheme at a glance
@@ -337,11 +333,11 @@ export default function SchemeDetailPage() {
                               * narrowing the page, which is the trade `SCREEN_CONTAINER`
                               * asks every prose caller to make.
                               */}
-                            <div className="max-w-[62rem] space-y-8 lg:col-span-8">
+                            <div className="max-w-[62rem] min-w-0 space-y-6 sm:space-y-8 lg:col-span-8">
                                 {scheme.image?.url && (
                                     <div className="overflow-hidden rounded-2xl bg-brand-900/5">
                                         <img src={sizedMediaUrl(scheme.image.url, 1200)} alt={scheme.image.alt || scheme.title}
-                                             className="aspect-[16/9] w-full object-cover" />
+                                             className="h-auto max-h-[75vh] w-full object-contain sm:aspect-[16/9] sm:h-auto sm:max-h-none sm:object-cover" />
                                     </div>
                                 )}
 
@@ -367,7 +363,7 @@ export default function SchemeDetailPage() {
 
                                 {String(scheme.eligibility || '').trim() && (
                                     <Block title="Who can apply">
-                                        <p className="flex gap-3 rounded-xl bg-brand-50/60 px-5 py-4 text-[1.125rem] leading-relaxed text-gray-700">
+                                        <p className="flex gap-3 rounded-xl bg-brand-50/60 px-4 py-3 sm:px-5 sm:py-4 text-[1.125rem] leading-relaxed text-gray-700">
                                             <Users size={20} className="mt-0.5 shrink-0 text-brand-600" />
                                             <span className="whitespace-pre-line">{scheme.eligibility}</span>
                                         </p>
@@ -378,7 +374,7 @@ export default function SchemeDetailPage() {
                                     <Block title="How to apply">
                                         <ol className="space-y-3">
                                             {steps.map((step, i) => (
-                                                <li key={i} className="flex gap-4">
+                                                <li key={i} className="flex gap-3 sm:gap-4">
                                                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-800
                                                                      text-[1rem] font-bold text-white">
                                                         {i + 1}
@@ -456,16 +452,16 @@ export default function SchemeDetailPage() {
 
                         {/* ------------------------------------------ related */}
                         {related.length > 0 && (
-                            <section className="border-t border-gray-100 bg-gray-50/60 py-14">
+                            <section className="border-t border-gray-100 bg-gray-50/60 py-10 sm:py-14">
                                 <div className={SCHEME_COLUMN}>
                                     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-                                        <h2 className="text-[1.75rem] font-black tracking-tight text-brand-900">More schemes like this</h2>
+                                        <h2 className="text-[1.5rem] sm:text-[1.75rem] font-black tracking-tight text-brand-900">More schemes like this</h2>
                                         <Link to={parent.to}
                                               className="inline-flex items-center gap-1.5 text-[1.0625rem] font-bold text-brand-700 hover:text-brand-900">
                                             All {parent.label.toLowerCase()} <ArrowRight size={15} />
                                         </Link>
                                     </div>
-                                    <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                                    <div className="grid gap-4 sm:gap-5 sm:grid-cols-2 xl:grid-cols-3">
                                         {related.map((r) => <SchemeCard key={r.id} scheme={r} showWhere={r.tier === 'district'} />)}
                                     </div>
                                 </div>

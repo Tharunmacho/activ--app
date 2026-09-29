@@ -105,27 +105,36 @@ export function EventsHero({ settings }: Props) {
                         </div>
 
                         {stats.length > 0 && (
-                            <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+                            /* One row of small tiles on a phone, not a 2x2 of
+                               large ones that filled the first screen. */
+                            /* On a phone: a 2x2 of SHORT tiles — icon beside the
+                               figure, not above it — so each is ~3.5rem tall. Four
+                               across broke "PARTICIPANTS" mid-word. */
+                            <div className="mt-8 sm:mt-10 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
                                 {stats.map((stat, i) => (
                                     <div
                                         key={i}
-                                        className="rounded-2xl bg-white/[0.07] px-4 py-4 ring-1 ring-white/15
+                                        className="min-w-0 flex items-center gap-2.5 sm:block
+                                                   rounded-xl sm:rounded-2xl bg-white/[0.07] px-3 py-2.5 sm:px-4 sm:py-4
+                                                   ring-1 ring-white/15
                                                    transition-colors duration-300
                                                    hover:bg-white/[0.12]"
                                     >
                                         <CmsIcon
                                             name={stat.icon}
                                             size={20}
-                                            className="text-brand-300 mb-2.5"
+                                            className="shrink-0 text-brand-300 sm:mb-2.5"
                                             fallback="calendar-days"
                                         />
-                                        <p className="text-[1.5625rem] font-black tracking-tight tabular-nums">
+                                        <div className="min-w-0">
+                                        <p className="text-[1.3rem] sm:text-[1.5625rem] leading-tight font-black tracking-tight tabular-nums">
                                             <CountUp value={stat.value} />
                                         </p>
-                                        <p className="mt-0.5 text-[1.0625rem] sm:text-[0.8125rem] font-bold uppercase
-                                                      tracking-[0.08em] text-white/55">
+                                        <p className="sm:mt-0.5 text-[0.72rem] sm:text-[0.8125rem] font-bold uppercase leading-snug
+                                                      tracking-[0.06em] sm:tracking-[0.08em] text-white/55">
                                             {stat.label}
                                         </p>
+                                        </div>
                                     </div>
                                 ))}
                             </div>

@@ -136,14 +136,14 @@ export function CmsExtraFields({
         <div className={`${className}${centred ? ' text-center' : ''}`}>
             {/* The editor's own sections, each under the heading they gave it. */}
             {sections.map((field, i) => (
-                <section key={`s-${field.label}-${i}`} className={i === 0 ? '' : 'mt-10'}>
+                <section key={`s-${field.label}-${i}`} className={i === 0 ? '' : 'mt-8 sm:mt-10'}>
                     {field.label && (
                         /* `1.25em`, not a fixed rem: a heading inside a band of
                            large copy should be larger than that copy, and inside
                            a small card it should be smaller. One rule, every
                            band. */
                         <h2
-                            className={`mb-3 font-black tracking-tight ${headingClass}`}
+                            className={`mb-3 font-black tracking-tight break-words ${headingClass}`}
                             style={{ fontSize: '1.25em' }}
                         >
                             {field.label}
@@ -153,7 +153,7 @@ export function CmsExtraFields({
                         {String(field.value).split(/\n{2,}/).map((para, j) => (
                             /* No size and no leading: the paragraph reads at
                                whatever the section reads at. */
-                            <p key={j} className={`${bodyClass} whitespace-pre-line`}>
+                            <p key={j} className={`${bodyClass} whitespace-pre-line break-words`}>
                                 {para.trim()}
                             </p>
                         ))}
@@ -163,8 +163,8 @@ export function CmsExtraFields({
 
             {facts.length > 0 && (
                 <dl
-                    className={`${sections.length ? 'mt-10 ' : ''}${variant === 'grid'
-                        ? 'grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5'
+                    className={`${sections.length ? 'mt-8 sm:mt-10 ' : ''}${variant === 'grid'
+                        ? 'grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 sm:gap-y-5'
                         : 'space-y-4'}`}
                 >
                     {facts.map((field, i) => (

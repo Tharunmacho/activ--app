@@ -103,7 +103,7 @@ export function UploadField({ url, onChange, label, hint, aspect = 'aspect-[16/9
                     )}
                 </div>
 
-                <div className="flex flex-col gap-2">
+                <div className="flex min-w-0 flex-1 basis-[14rem] flex-col items-start gap-2">
                     <button
                         type="button"
                         onClick={() => fileRef.current?.click()}
@@ -149,7 +149,7 @@ export function UploadField({ url, onChange, label, hint, aspect = 'aspect-[16/9
                     {url && (
                         <code
                             title={url}
-                            className="block max-w-md truncate rounded bg-slate-100 dark:bg-[#141414]
+                            className="block max-w-full sm:max-w-md truncate rounded bg-slate-100 dark:bg-[#141414]
                                        px-2 py-1 text-[1.0625rem] font-mono text-slate-500
                                        dark:text-neutral-400 select-all"
                         >

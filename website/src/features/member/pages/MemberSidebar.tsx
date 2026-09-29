@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 
 import { Badge } from '@/components/ui/badge';
 import { useProfile } from '@/contexts/ProfileContext';
+import { MemberAvatar } from '@/features/member/memberPhoto';
 import { apiFetch, getPaymentStatus, getMyApplication } from "@/services/activApi";
 import {
     NO_ACCESS,
@@ -682,6 +683,19 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
             */}
             <div className={`pt-3 pb-8 bg-white border-t border-slate-200 flex-shrink-0 ${collapsed ? 'px-2' : 'px-3'}`}>
               <div className="relative">
+                {/*
+                  THE AVATAR IS ITS OWN BUTTON: tapping it opens the photo full
+                  size (and "Change photo"). It used to render the stored
+                  `/uploads/…` path raw, which the browser fetched from the
+                  WEBSITE's host — a 404 and a broken-image icon. `MemberAvatar`
+                  resolves the URL and falls back to initials.
+                  Beside the link, not inside it: a button inside a link is
+                  invalid markup.
+                */}
+                <MemberAvatar
+                    name={userName || 'Member'}
+                    className={`!absolute top-1/2 -translate-y-1/2 z-10 h-11 w-11 rounded-xl ${collapsed ? 'left-1/2 -translate-x-1/2' : 'left-3.5'}`}
+                />
                 <Link
                     to="/member/profile-view"
                     onClick={onClose}
@@ -691,19 +705,8 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
                     className={`flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 transition-colors
                                hover:border-slate-300 hover:bg-slate-100 ${collapsed ? 'p-2 justify-center' : 'p-3.5 pr-14'}`}
                 >
-                    {profilePhoto ? (
-                        <img
-                            src={profilePhoto}
-                            alt=""
-                            className="w-11 h-11 rounded-xl object-cover shrink-0"
-                        />
-                    ) : (
-                        <span className="w-11 h-11 rounded-xl shrink-0 bg-blue-600 text-white
-                                         flex items-center justify-center text-[1.1875rem] font-bold">
-                            {(userName || 'M').split(' ').filter(Boolean).slice(0, 2)
-                                .map(n => n[0]).join('').toUpperCase()}
-                        </span>
-                    )}
+                    {/* Space held for the avatar button laid over this card. */}
+                    <span aria-hidden="true" className="w-11 h-11 shrink-0" />
                     {!collapsed && (
                     <span className="min-w-0 flex-1">
                         <span className="block text-[1.1875rem] font-semibold text-slate-900 truncate">

@@ -1,7 +1,11 @@
+import { publicUrl, shareLink } from '@/lib/share';
+import { setShareMeta } from '@/lib/shareMeta';
+import { resolveMediaUrl, sizedMediaUrl } from '@/config/api.config';
+import { galleryPath } from '@/lib/eventPath';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
-    ArrowLeft, ArrowRight, Calendar, MapPin, Check,
+    ArrowLeft, ArrowRight, Calendar, MapPin, Check, Share2,
 } from 'lucide-react';
 import {
     getGalleryItem, getGallery, getGallerySettings,
@@ -95,6 +99,31 @@ export default function GalleryDetailPage() {
         return () => { cancelled = true; };
     }, [id, reloadKey]);
 
+    /*
+     * ONE ADDRESS PER ITEM: opened by its old id link, the address bar becomes
+     * the readable one (`/gallery/<slug>`) without a reload — only when the
+     * loaded item IS the one the id named, so moving between items can never
+     * write the previous item's address over the new one.
+     */
+    useEffect(() => {
+        if (!item?.slug || !id || id !== item._id) return;
+        try {
+            window.history.replaceState(window.history.state, '', `${galleryPath(item)}${window.location.search}`);
+        } catch { /* the id address still works */ }
+    }, [item, id]);
+
+    // The link-preview tags for this item (server.mjs sends the same to crawlers).
+    useEffect(() => {
+        if (!item) return undefined;
+        return setShareMeta({
+            title: item.title || 'ACTIV gallery',
+            description: item.caption || '',
+            image: resolveMediaUrl(item.media?.url || ''),
+            url: publicUrl(galleryPath(item)),
+            type: 'article',
+        });
+    }, [item]);
+
     const copy = settings?.detail;
     const backLabel = copy?.backLabel || 'Back to Gallery';
 
@@ -132,7 +161,7 @@ export default function GalleryDetailPage() {
                             type="button"
                             onClick={() => setReloadKey((n) => n + 1)}
                             className="inline-flex items-center gap-2 bg-brand-800 hover:bg-brand-700 text-white
-                                       px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase
+                                       px-6 sm:px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase
                                        tracking-[0.1em] transition-colors"
                         >
                             Try again
@@ -140,7 +169,7 @@ export default function GalleryDetailPage() {
                         <Link
                             to="/gallery"
                             className="inline-flex items-center gap-2 border border-brand-200 text-brand-700
-                                       px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase
+                                       px-6 sm:px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase
                                        tracking-[0.1em] transition-colors hover:bg-brand-50"
                         >
                             <ArrowLeft size={15} /> {backLabel}
@@ -164,7 +193,7 @@ export default function GalleryDetailPage() {
                     <Link
                         to="/gallery"
                         className="inline-flex items-center gap-2 bg-brand-800 hover:bg-brand-700 text-white
-                                   px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase tracking-[0.1em]
+                                   px-6 sm:px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase tracking-[0.1em]
                                    transition-colors"
                     >
                         <ArrowLeft size={15} /> {backLabel}
@@ -238,19 +267,36 @@ export default function GalleryDetailPage() {
             <HeaderSection />
 
             <main className="flex-grow">
-                <section className="w-full pt-10 pb-16 md:pt-14 md:pb-24 relative overflow-hidden">
+                <section className="w-full pt-6 pb-12 sm:pt-10 sm:pb-16 md:pt-14 md:pb-24 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-96 h-96 bg-brand-50/60 rounded-full blur-3xl transform-gpu
                                     -z-10 translate-x-1/3 -translate-y-1/3 transform-gpu pointer-events-none" />
 
                     <div className={`${SCREEN_CONTAINER} relative z-10`}>
 
-                        <Link
-                            to="/gallery"
-                            className="inline-flex items-center gap-2 text-gray-500 hover:text-brand-700
-                                       font-bold text-[1rem] uppercase tracking-[0.1em] transition-colors mb-8"
-                        >
-                            <ArrowLeft size={15} /> {backLabel}
-                        </Link>
+                        {/* Back on the left, Share on the right — the two things
+                            a visitor does on arriving from a shared link. */}
+                        <div className="mb-6 sm:mb-8 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+                            <Link
+                                to="/gallery"
+                                className="inline-flex items-center gap-2 text-gray-500 hover:text-brand-700
+                                           font-bold text-[1rem] uppercase tracking-[0.1em] transition-colors"
+                            >
+                                <ArrowLeft size={15} /> {backLabel}
+                            </Link>
+                            <button
+                                type="button"
+                                onClick={() => shareLink({
+                                    title: item.title || 'ACTIV gallery',
+                                    text: item.title || undefined,
+                                    url: publicUrl(galleryPath(item)),
+                                })}
+                                className="inline-flex h-10 items-center gap-2 rounded-full border border-brand-200 bg-white
+                                           px-4 text-[0.95rem] font-bold text-brand-800 shadow-sm transition
+                                           hover:border-brand-500 hover:bg-brand-50 active:scale-95"
+                            >
+                                <Share2 size={16} /> Share
+                            </button>
+                        </div>
 
                         {/*
                           * ---- the poster ----
@@ -285,11 +331,26 @@ export default function GalleryDetailPage() {
                                   * an overlay for this one and a page for the rest.
                                   */}
                                 <Link
-                                    to={`/gallery/${item._id}/photo/0`}
+                                    to={`${galleryPath(item)}/photo/0`}
                                     aria-label="Open this photograph"
-                                    className="group relative block w-full h-[22rem] sm:h-[28rem] lg:h-[34rem]"
+                                    className="group relative block w-full overflow-hidden h-[22rem] sm:h-[28rem] lg:h-[34rem]"
                                 >
-                                    <CmsMediaFrame media={item.media} priority width={1100} />
+                                    {/* The whole poster at every width, over a blurred copy of
+                                        itself, so the frame never crops people out. */}
+                                    {item.media?.url && item.media?.type !== 'video' && (
+                                        <img
+                                            src={sizedMediaUrl(item.media.url, 320)}
+                                            alt=""
+                                            aria-hidden="true"
+                                            className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl"
+                                        />
+                                    )}
+                                    <CmsMediaFrame
+                                        media={item.media}
+                                        priority
+                                        width={1100}
+                                        className="relative !object-contain !bg-transparent"
+                                    />
                                 </Link>
                             </div>
                         </Reveal>
@@ -298,7 +359,7 @@ export default function GalleryDetailPage() {
                         {/* `minmax(0, …)`: a bare `1.6fr` cannot shrink below
                             its own min-content — see the note on the same grid in
                             `GalleryPhotoPage`, where it collapsed the side card. */}
-                        <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] items-start">
+                        <div className="mt-6 sm:mt-10 grid gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] items-start">
 
                             <div>
                                 {item.category && (
@@ -354,7 +415,7 @@ export default function GalleryDetailPage() {
 
                             {/* ---- the side card ---- */}
                             {(facts.length > 0 || (copy?.ctaLabel && copy?.ctaHref)) && (
-                                <aside className="rounded-[1.5rem] border border-brand-100/70 bg-[#fafbfc] p-6 sm:p-8
+                                <aside className="rounded-[1.5rem] border border-brand-100/70 bg-[#fafbfc] p-4 sm:p-8
                                                   shadow-[0_10px_36px_-18px_rgb(28_46_104/0.25)] lg:sticky lg:top-28">
                                     {facts.map((fact, i) => (
                                         /* Keyed by position: two of the editor's
@@ -420,7 +481,7 @@ export default function GalleryDetailPage() {
                           * same kind of thing, differing only in who named it.
                           */}
                         {sections.map((field, i) => (
-                            <section key={`${field.label}-${i}`} className="mt-12 border-t border-gray-100 pt-10">
+                            <section key={`${field.label}-${i}`} className="mt-8 sm:mt-12 border-t border-gray-100 pt-6 sm:pt-10">
                                 {field.label && (
                                     <h2 className="mb-4 text-[1.5rem] font-black tracking-tight text-brand-900">
                                         {field.label}
@@ -473,11 +534,11 @@ export default function GalleryDetailPage() {
                           * showing one of these; pressing one leaves for its page.
                           */}
                         {photos.length > 0 && (
-                            <div className="mt-16">
+                            <div className="mt-10 sm:mt-16">
                                 {copy?.photosHeading && (
                                     <h2 className="text-[1.5625rem] font-black text-brand-800 mb-6">{copy.photosHeading}</h2>
                                 )}
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6">
                                     {photos.map((photo, i) => (
                                         <Reveal key={i} delay={Math.min(i % 3, 2) * 80}>
                                             {/*
@@ -502,14 +563,14 @@ export default function GalleryDetailPage() {
                                               * picture there.
                                               */}
                                             <Link
-                                                to={`/gallery/${item._id}/photo/${i + coverOffset}`}
+                                                to={`${galleryPath(item)}/photo/${i + coverOffset}`}
                                                 className="group block w-full text-left"
                                                 aria-label={photo.title || photo.caption
                                                     ? `Open: ${photo.title || photo.caption}`
                                                     : `Open photograph ${i + 1}`}
                                             >
                                                 <div className="rounded-2xl overflow-hidden bg-gray-50 border border-brand-100/70
-                                                                h-44 sm:h-56 shadow-[0_10px_30px_-16px_rgb(28_46_104/0.3)]
+                                                                h-36 sm:h-56 shadow-[0_10px_30px_-16px_rgb(28_46_104/0.3)]
                                                                 transition group-hover:shadow-[0_18px_40px_-16px_rgb(28_46_104/0.45)]">
                                                     <CmsMediaFrame media={photo} width={420} />
                                                 </div>
@@ -534,29 +595,29 @@ export default function GalleryDetailPage() {
                             column is then a title and nothing else, and the full
                             spacing leaves a band of empty page under it. */}
                         {moreFromGallery.length > 0 && (
-                            <div className={`${description || highlights.length || photos.length ? 'mt-20 pt-12' : 'mt-10 pt-10'}
+                            <div className={`${description || highlights.length || photos.length ? 'mt-12 pt-8 sm:mt-20 sm:pt-12' : 'mt-8 pt-6 sm:mt-10 sm:pt-10'}
                                              border-t border-gray-100`}>
                                 {copy?.relatedHeading && (
                                     <h2 className="text-[1.5625rem] font-black text-brand-800 mb-6">{copy.relatedHeading}</h2>
                                 )}
-                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
                                     {moreFromGallery.map(other => (
                                         <Link
                                             key={other._id}
-                                            to={`/gallery/${other._id}`}
+                                            to={galleryPath(other)}
                                             className="group block rounded-2xl overflow-hidden bg-white border border-brand-100/70
                                                        shadow-[0_10px_30px_-16px_rgb(28_46_104/0.25)]
                                                        hover:shadow-[0_22px_48px_-20px_rgb(28_46_104/0.4)]
                                                        transition-shadow duration-500"
                                         >
-                                            <div className="w-full h-40 overflow-hidden bg-gray-50">
+                                            <div className="w-full h-32 sm:h-40 overflow-hidden bg-gray-50">
                                                 <CmsMediaFrame
                                                     media={other.media}
                                                     width={340}
                                                     className="group-hover:scale-105 transition-transform duration-700 transform-gpu"
                                                 />
                                             </div>
-                                            <div className="p-4">
+                                            <div className="p-3 sm:p-4">
                                                 <p className="text-[1rem] font-extrabold text-brand-800 line-clamp-2
                                                               group-hover:text-brand-600 transition-colors">
                                                     {other.title || 'Untitled'}

@@ -81,7 +81,7 @@ export default function EventCard({
                     ) : (
                         <div className="flex h-full w-full flex-col items-center justify-center
                                         bg-gradient-to-br from-blue-50 via-slate-50 to-slate-100">
-                            <p className="text-[3.25rem] font-extrabold leading-none tabular-nums text-blue-600/80">
+                            <p className="text-[2.5rem] sm:text-[3.25rem] font-extrabold leading-none tabular-nums text-blue-600/80">
                                 {tile.day}
                             </p>
                             <p className="mt-1 text-[1.25rem] font-bold uppercase tracking-[0.2em] text-blue-700/60">
@@ -117,10 +117,10 @@ export default function EventCard({
                 </div>
             ) : null}
 
-            <div className="flex flex-1 gap-4 p-4 lg:p-5">
+            <div className="flex flex-1 gap-3 sm:gap-4 p-4 lg:p-5">
                 {/* The date, as a calendar leaf. Kept even on the poster variant:
                     a poster rarely repeats the date in a form the eye can scan. */}
-                <div className="shrink-0 w-16 rounded-xl bg-blue-50 text-blue-700 text-center py-2.5">
+                <div className="shrink-0 w-14 sm:w-16 rounded-xl bg-blue-50 text-blue-700 text-center py-2.5">
                     <p className="text-[1.375rem] font-bold leading-none tabular-nums">{tile.day}</p>
                     <p className="text-[1.0625rem] font-bold tracking-wider mt-0.5">{tile.month}</p>
                 </div>

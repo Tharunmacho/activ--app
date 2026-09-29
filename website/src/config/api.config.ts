@@ -82,7 +82,13 @@ export type UserRole =
      * by different people. One account doing both means whoever writes the
      * marketing copy can also unstaff a region.
      */
-    | 'cms_admin';
+    | 'cms_admin'
+    /**
+     * Events only — the programme, its categories and its bookings. A separate
+     * account for the person who runs events, with the super admin's own event
+     * screens and nothing else of the platform.
+     */
+    | 'events_admin';
 
 /**
  * Where each role lands after signing in.
@@ -104,6 +110,7 @@ export const HOME_FOR_ROLE: Record<UserRole, string> = {
      */
     super_admin: '/super-admin/dashboard',
     cms_admin: '/cms',
+    events_admin: '/events-admin/dashboard',
 };
 
 /** The admin dashboard endpoint that belongs to each admin role. */
@@ -167,7 +174,17 @@ export const resolveMediaUrl = (value?: string | null): string => {
             || host === '10.0.2.2'
             || /^10\./.test(host)
             || /^192\.168\./.test(host)
-            || /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+            || /^172\.(1[6-9]|2\d|3[01])\./.test(host)
+            /*
+             * RETIRED DEPLOYMENTS. The backend used to run at a temporary
+             * `*.sslip.io` address and the site at `welocalhost.com`; both are
+             * gone, and every file uploaded there is served by the current API
+             * under the same `/uploads/` name. VITE_RETIRED_MEDIA_HOSTS adds more.
+             */
+            || /\.sslip\.io$/i.test(host)
+            || /(^|\.)welocalhost\.com$/i.test(host)
+            || String(import.meta.env.VITE_RETIRED_MEDIA_HOSTS || '').split(',')
+                .map((h) => h.trim().toLowerCase()).filter(Boolean).includes(host.toLowerCase());
 
         return unreachableElsewhere ? `${API_ORIGIN}${raw.slice(uploadIndex)}` : raw;
     }
@@ -201,6 +218,23 @@ const RESIZABLE_MEDIA_HOSTS = [
 ];
 
 /**
+ * An image on OUR OWN `/uploads` — which now DOES answer `?w=` with a resized
+ * WebP (backend `core/storage/imageVariants.js`). Before that existed, every
+ * banner and poster downloaded the full 200–350 KB original to be painted 390px
+ * wide on a phone. Images only: a video or a PDF is left exactly as authored.
+ */
+export const isResizableUpload = (url: URL): boolean => {
+    try {
+        const api = new URL(API_ORIGIN, typeof window === 'undefined' ? 'http://localhost' : window.location.origin);
+        return url.host === api.host
+            && url.pathname.startsWith('/uploads/')
+            && /\.(jpe?g|png|webp)$/i.test(url.pathname);
+    } catch {
+        return false;
+    }
+};
+
+/**
  * The same address, at the size it is actually drawn.
  *
  * A seeded photograph is an original camera file — 7442px wide in one case —
@@ -222,8 +256,12 @@ export const sizedMediaUrl = (value?: string | null, width = 900): string => {
             resolved,
             typeof window === 'undefined' ? 'http://localhost' : window.location.origin,
         );
-        if (!RESIZABLE_MEDIA_HOSTS.includes(url.hostname)) return resolved;
         if (url.searchParams.has('w')) return resolved;
+        if (isResizableUpload(url)) {
+            url.searchParams.set('w', String(Math.round(width)));
+            return url.toString();
+        }
+        if (!RESIZABLE_MEDIA_HOSTS.includes(url.hostname)) return resolved;
         url.searchParams.set('w', String(Math.round(width)));
         /* 75 is the quality these services default to for a resized rendition
            and is indistinguishable at these sizes; the seeded URLs ask for 80. */
@@ -242,6 +280,20 @@ export const sizedMediaUrl = (value?: string | null, width = 900): string => {
 export const ENDPOINTS = {
     HEALTH: '/health',
 
+    /* Donations — public giving (no account) and the Super Admin's donor book. */
+    DONATIONS: {
+        CREATE: '/donations',
+        MOCK_COMPLETE: (orderId: string) => `/donations/mock-complete/${encodeURIComponent(orderId)}`,
+        RETURN: (orderId: string) => `/donations/return/${encodeURIComponent(orderId)}`,
+        RECEIPT: (token: string) => `/donations/receipt/${encodeURIComponent(token)}`,
+        STATEMENT: (token: string) => `/donations/statement/${encodeURIComponent(token)}`,
+        ADMIN_SUMMARY: '/admin/super/donations/summary',
+        ADMIN_DONORS: '/admin/super/donations/donors',
+        ADMIN_DONOR: (id: string) => `/admin/super/donations/donors/${encodeURIComponent(id)}`,
+        ADMIN_LIST: '/admin/super/donations',
+        ADMIN_RESEND: (id: string) => `/admin/super/donations/${encodeURIComponent(id)}/resend`,
+    },
+
     AUTH: {
         REGISTER: '/auth/register',
         LOGIN: '/auth/login',
@@ -252,6 +304,9 @@ export const ENDPOINTS = {
         FORGOT_PASSWORD: '/auth/forgot-password',
         RESET_PASSWORD: '/auth/reset-password',
         VERIFY_RESET_TOKEN: '/auth/reset-password/verify',
+        OAUTH_PROVIDERS: '/auth/oauth/providers',
+        OAUTH_START: (provider: string) => `/auth/oauth/${encodeURIComponent(provider)}/start`,
+        OAUTH_EXCHANGE: '/auth/oauth/exchange',
     },
 
     // Public — the registration screens call these before a token exists.
@@ -516,6 +571,8 @@ export const ENDPOINTS = {
         /** Start a hosted (Instamojo) payment. Returns the URL to send them to. */
         CREATE_REQUEST: '/payment/create-request',
         STATUS: (id: string) => `/payment/status/${id}`,
+        /** Public: where Instamojo sends the buyer back to. Confirms a paid booking. */
+        RETURN: (orderId: string) => `/payment/return/${encodeURIComponent(orderId)}`,
         RENEW: '/payment/renew',
         /** The plans and prices, as the server holds them. */
         PLANS: '/payment/plans',

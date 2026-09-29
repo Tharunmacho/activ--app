@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { login, getMyApplication, errorMessage, getPaymentStatus } from "@/services/activApi";
+import { login, errorMessage, getPaymentStatus, getSocialProviders, socialStartUrl, type SocialProvider } from "@/services/activApi";
 import { clearSession } from "@/services/api";
 import { Mail, Lock, ShieldCheck } from "lucide-react";
 import { FaGoogle, FaLinkedinIn, FaFacebookF } from "react-icons/fa";
@@ -88,14 +88,31 @@ export default function EnhancedLoginPage({ audience = 'member' }: { audience?: 
 
   const navigate = useNavigate();
 
+  const location = useLocation();
+
   /*
-   * Kept, and kept in the flow rather than tucked away: the association uses
-   * these three to sign in. Each still reports that the provider is not wired
-   * up yet — which is the honest answer until the OAuth apps exist — rather
-   * than failing silently on a click.
+   * GOOGLE / FACEBOOK / LINKEDIN. The server says which have keys; a click on
+   * one of those is a full-page navigation to the provider (the server runs
+   * the OAuth exchange and sends the member back to /auth/social). One that
+   * is not set up yet says so instead of failing silently.
    */
-  const handleSocialLogin = (provider: string) => {
-    toast.info(`${provider} sign-in is being set up — use your email for now.`);
+  const [providers, setProviders] = useState<SocialProvider[]>([]);
+  useEffect(() => {
+    if (forAdmins) return undefined;
+    let cancelled = false;
+    getSocialProviders()
+      .then((rows) => { if (!cancelled) setProviders(rows || []); })
+      .catch(() => { /* buttons stay, and explain themselves on click */ });
+    return () => { cancelled = true; };
+  }, [forAdmins]);
+
+  const handleSocialLogin = (key: string, name: string) => {
+    const enabled = (providers || []).some((p) => p?.key === key && p?.enabled);
+    if (!enabled) {
+      toast.info(`${name} sign-in is being set up — use your email for now.`);
+      return;
+    }
+    window.location.assign(socialStartUrl(key));
   };
 
 
@@ -165,6 +182,21 @@ export default function EnhancedLoginPage({ audience = 'member' }: { audience?: 
 
       toast.success(`Welcome ${result.user?.fullName || 'back'}!`);
 
+      /*
+       * Back to the page that sent them here (`RoleGate` passes it), but only
+       * when that page belongs to THIS kind of account — a member is never
+       * returned into an admin portal, nor an admin into a member page.
+       */
+      const from = typeof (location.state as { from?: unknown } | null)?.from === 'string'
+        ? String((location.state as { from: string }).from) : '';
+      const memberPath = /^\/(member|payment|business)(\/|$)/.test(from);
+      const adminPath = /^\/(block-admin|district-admin|state-admin|super-admin|events-admin|admin|cms)(\/|$)/.test(from)
+        && !from.startsWith('/admin/login');
+      if (from && (result.role === 'member' ? memberPath : adminPath)) {
+        navigate(from, { replace: true });
+        return;
+      }
+
       // Members who have already paid land on the paid dashboard. A failure to
       // read the application must not block the sign-in that already succeeded.
       if (result.role === 'member') {
@@ -231,6 +263,10 @@ export default function EnhancedLoginPage({ audience = 'member' }: { audience?: 
               id="login-email"
               name="email"
               type="email"
+              inputMode="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               placeholder={forAdmins ? "admin@activ.org.in" : "you@example.com"}
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
@@ -248,7 +284,7 @@ export default function EnhancedLoginPage({ audience = 'member' }: { audience?: 
               Password
             </label>
             <Link
-              to="/forgot-password"
+              to={forAdmins ? "/admin/forgot-password" : "/forgot-password"}
               className="text-[1.125rem] font-semibold text-blue-600 transition-colors hover:text-blue-800"
             >
               Forgot password?
@@ -313,14 +349,14 @@ export default function EnhancedLoginPage({ audience = 'member' }: { audience?: 
 
       <div className="flex justify-center gap-3">
         {([
-          ['Google', <FaGoogle key="g" className="h-[1.375rem] w-[1.375rem] text-[#ea4335]" />],
-          ['LinkedIn', <FaLinkedinIn key="l" className="h-[1.375rem] w-[1.375rem] text-[#0a66c2]" />],
-          ['Facebook', <FaFacebookF key="f" className="h-[1.375rem] w-[1.375rem] text-[#1877f2]" />],
-        ] as const).map(([name, icon]) => (
+          ['google', 'Google', <FaGoogle key="g" className="h-[1.375rem] w-[1.375rem] text-[#ea4335]" />],
+          ['linkedin', 'LinkedIn', <FaLinkedinIn key="l" className="h-[1.375rem] w-[1.375rem] text-[#0a66c2]" />],
+          ['facebook', 'Facebook', <FaFacebookF key="f" className="h-[1.375rem] w-[1.375rem] text-[#1877f2]" />],
+        ] as const).map(([key, name, icon]) => (
           <button
-            key={name}
+            key={key}
             type="button"
-            onClick={() => handleSocialLogin(name)}
+            onClick={() => handleSocialLogin(key, name)}
             aria-label={`Sign in with ${name}`}
             className="flex h-14 w-14 items-center justify-center rounded-xl border border-slate-200
                        bg-white transition-colors hover:border-slate-300 hover:bg-slate-50"

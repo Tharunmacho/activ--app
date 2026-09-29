@@ -96,7 +96,7 @@ function RowCard({ title, subtitle, status, onOpen, onRemove, badge }: {
     badge?: string;
 }) {
     return (
-        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3.5
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:p-3.5
                         transition-colors hover:border-slate-300 dark:border-[#2a2a2a]
                         dark:bg-[#0f0f0f]">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg
@@ -104,7 +104,7 @@ function RowCard({ title, subtitle, status, onOpen, onRemove, badge }: {
                 <Newspaper className="h-4 w-4" />
             </span>
 
-            <div className="min-w-0 flex-1">
+            <div className="!min-w-[9rem] flex-1">
                 <p className="truncate text-[1.25rem] font-bold text-slate-900 dark:text-white">
                     {title || 'Untitled'}
                 </p>
@@ -432,7 +432,7 @@ export default function NewsManager() {
                     </SaveNowProvider>
 
                     {/* Cancel only — the Save is in every card's footer. */}
-                    <div className="mt-8 flex gap-3">
+                    <div className="mt-6 sm:mt-8 flex flex-wrap gap-3">
                         <CmsButton variant="ghost" onClick={() => setArticle(null)}>Cancel</CmsButton>
                     </div>
                 </CmsCard>
@@ -457,7 +457,7 @@ export default function NewsManager() {
                             key={key}
                             type="button"
                             onClick={() => setTab(key)}
-                            className={`-mb-px border-b-2 px-5 py-3 text-[1.25rem] font-semibold
+                            className={`-mb-px border-b-2 px-3 sm:px-5 py-3 text-[1.25rem] font-semibold
                                         transition-colors ${tab === key
                                 ? 'border-blue-600 text-blue-700 dark:text-blue-400'
                                 : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-neutral-200'}`}
@@ -583,7 +583,7 @@ export default function NewsManager() {
                             note on `GalleryManager`. Every card above carries a
                             Save in its footer now, and this called the same
                             function they do. */}
-                        <div className="mt-8 flex items-center gap-3">
+                        <div className="mt-6 sm:mt-8 flex flex-wrap items-center gap-3">
                             <a
                                 href="/news"
                                 target="_blank"

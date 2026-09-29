@@ -1,18 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { EventQrFeature } from '@/components/shared/EventQr';
+import EventActions from '@/components/shared/EventActions';
+import { countdownLabel, eventPhase, type CalendarEventLike } from '@/lib/eventCalendar';
 import { toast } from 'sonner';
 import {
     MapPin, Clock, Users, Phone, Mail, CalendarDays, BadgeCheck, Lock,
-    ExternalLink, Bell, Loader2, User, ShieldCheck, Ticket, ChevronRight,
+    ExternalLink, Bell, Loader2, User, ShieldCheck, Ticket, ChevronRight, Timer,
 } from 'lucide-react';
 import MemberPageShell from '@/pages/member/MemberPageShell';
-import { EmptyState, RowsSkeleton, SectionCard } from '@/features/member/components/MemberUI';
+import { EmptyState, RowsSkeleton } from '@/features/member/components/MemberUI';
 import {
     formatWhen, formatDate, formatReminders, registrationGate, seatsLeft, isPast,
     type RegistrationGate,
 } from '@/features/member/components/eventFormat';
 import {
-    getMemberEvent, cancelEventRegistration, type MemberEvent,
+    getMemberEvent, cancelEventRegistration, registrationHref, type MemberEvent,
 } from '@/services/memberHubApi';
 import { errorMessage } from '@/services/activApi';
 import { resolveMediaUrl } from '@/config/api.config';
@@ -41,6 +44,8 @@ export default function MemberEventDetail() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [working, setWorking] = useState(false);
+    /* A portrait poster gets a height cap and a blurred fill; see the banner. */
+    const [bannerTall, setBannerTall] = useState(false);
 
 
     const load = useCallback(async () => {
@@ -73,6 +78,13 @@ export default function MemberEventDetail() {
      * capacity, so the seat goes to whoever pays first.
      */
     const awaitingPayment = !!registration && registration.payment?.status === 'pending';
+    /*
+     * A seat from the Book Now form (here, or on the public site with this
+     * member's email). It is paid for, and its ticket shown, on the booking
+     * page — the legacy /register screen and its cancel call know nothing of it.
+     */
+    const fromBooking = registration?.source === 'booking';
+    const ticketHref = event && registration ? registrationHref(event.id, registration) : '';
 
     /**
      * What THIS member will be charged — resolved by the server.
@@ -149,6 +161,12 @@ export default function MemberEventDetail() {
 
     const past = isPast(event);
     const reminders = formatReminders(event.reminderOffsetsHours || []);
+    const phase = eventPhase(event as CalendarEventLike);
+    const countdown = !past && phase === 'upcoming' ? countdownLabel(event.startAt) : null;
+    const fillingFast = left !== null && left > 0 && event.capacity > 0 && left <= Math.max(5, Math.round(event.capacity * 0.1));
+    const region = [event.block, event.district, event.state].filter(Boolean).join(', ');
+    const speakers = (event.speakers || []).filter((person) => person && person.name);
+    const qrEvent = event as unknown as { id?: string; slug?: string; title?: string; startAt?: string | null; showQrOnPage?: boolean };
 
     return (
         <MemberPageShell
@@ -168,255 +186,185 @@ export default function MemberEventDetail() {
                 </button>
             }
         >
-            <div className="space-y-5">
-                {/* ---------- the poster, whole ---------- */}
+            <div className="space-y-5 sm:space-y-6">
+                {/*
+                  * THE POSTER, WHOLE AND EDGE TO EDGE — the public event page's
+                  * banner. A landscape or square poster is drawn at the full
+                  * width of the column and its own height, so it fills the card
+                  * with no white bands either side. Only a PORTRAIT poster is
+                  * capped (85vh) so it cannot run several screens tall; its sides
+                  * are then the same poster blurred, never an empty plate.
+                  */}
                 {banner ? (
-                    <div className="rounded-2xl border border-slate-200 bg-slate-100 overflow-hidden shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+                    <div className={`relative w-full overflow-hidden rounded-[1.5rem] border border-slate-200
+                                     shadow-[0_1px_3px_rgba(16,24,40,0.10),0_12px_32px_-14px_rgba(16,24,40,0.25)] ${
+                        bannerTall ? 'bg-slate-900' : 'bg-slate-100'}`}>
+                        {bannerTall ? (
+                            <img
+                                src={banner}
+                                alt=""
+                                aria-hidden="true"
+                                className="absolute inset-0 h-full w-full scale-110 object-cover opacity-70 blur-2xl"
+                            />
+                        ) : null}
                         <img
                             src={banner}
                             alt={event.bannerAlt || event.title}
-                            className="w-full h-auto max-h-[40rem] object-contain mx-auto"
+                            onLoad={(e) => {
+                                const img = e.currentTarget;
+                                setBannerTall(img.naturalHeight > img.naturalWidth * 1.05);
+                            }}
+                            className={`relative block w-full h-auto ${bannerTall ? 'max-h-[85vh] object-contain' : ''}`}
                         />
                     </div>
                 ) : null}
 
-                <div className="grid gap-5 lg:grid-cols-12 items-start">
-                    {/* ---------- left: what it is ---------- */}
-                    <div className="lg:col-span-7 space-y-5">
-                        <SectionCard
-                            title="About this event"
-                            icon={<CalendarDays className="w-5 h-5" />}
-                        >
-                            <div className="flex flex-wrap gap-2 mb-4">
-                                {event.audience === 'paid' ? (
-                                    <span className="inline-flex items-center gap-1 text-[1.0625rem] font-bold
-                                                     uppercase tracking-wide text-blue-700 bg-blue-50
-                                                     px-2.5 py-1 rounded-full">
-                                        <Lock className="w-3 h-3" /> Members only
+                <div className="grid gap-5 sm:gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] items-start">
+                    {/* ---------------- the event ---------------- */}
+                    <article className={`${CARD} p-4 sm:p-8 min-w-0 lg:col-start-1 lg:row-start-1`}>
+                        <div className="flex flex-wrap items-center gap-2 mb-4">
+                            {event.category ? (
+                                <span className={`${CHIP} bg-blue-50 text-blue-700 border border-blue-100`}>
+                                    {event.category}
+                                </span>
+                            ) : null}
+                            {event.audience === 'paid' ? (
+                                <span className={`${CHIP} bg-blue-50 text-blue-700 border border-blue-100`}>
+                                    <Lock className="w-3.5 h-3.5" /> Members only
+                                </span>
+                            ) : null}
+                            {past ? (
+                                <span className={`${CHIP} bg-slate-100 text-slate-500`}>
+                                    <Timer className="w-3.5 h-3.5" /> This event has taken place
+                                </span>
+                            ) : phase === 'live' ? (
+                                <span className={`${CHIP} bg-emerald-50 text-emerald-700 border border-emerald-100`}>
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                                        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                                     </span>
-                                ) : null}
-                                {past ? (
-                                    <span className="text-[1.0625rem] font-bold uppercase tracking-wide
-                                                     text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
-                                        Past event
-                                    </span>
-                                ) : null}
-                            </div>
+                                    Happening now
+                                </span>
+                            ) : countdown ? (
+                                <span className={`${CHIP} bg-blue-50 text-blue-700 border border-blue-100`}>
+                                    <Timer className="w-3.5 h-3.5" /> {countdown}
+                                </span>
+                            ) : null}
+                            {left === 0 ? (
+                                <span className={`${CHIP} bg-rose-50 text-rose-700 border border-rose-100`}>
+                                    <Users className="w-3.5 h-3.5" /> Fully booked
+                                </span>
+                            ) : fillingFast ? (
+                                <span className={`${CHIP} bg-amber-50 text-amber-800 border border-amber-100`}>
+                                    <Users className="w-3.5 h-3.5" /> Only {left} seats left
+                                </span>
+                            ) : null}
+                        </div>
 
-                            {event.description ? (
-                                <p className="text-[1.1875rem] text-slate-700 leading-relaxed whitespace-pre-line">
-                                    {event.description}
-                                </p>
-                            ) : (
-                                <p className="text-[1.0625rem] text-slate-400">
-                                    No description was published for this event.
-                                </p>
-                            )}
-                        </SectionCard>
+                        <h2 className="font-display text-[1.75rem] sm:text-[2.375rem] font-extrabold leading-tight tracking-tight
+                                       text-[#1e3a8a] break-words [overflow-wrap:anywhere] mb-4">
+                            {event.title || 'Untitled event'}
+                        </h2>
 
-                        {/* ---------- agenda ---------- */}
-                        {event.agenda.length > 0 ? (
-                            <SectionCard
-                                title="Agenda"
-                                subtitle={`${event.agenda.length} sessions`}
-                                icon={<Clock className="w-5 h-5" />}
-                            >
-                                <ol className="relative">
-                                    {event.agenda.map((item, index) => (
-                                        <li key={item.id || index} className="flex gap-4 pb-5 last:pb-0">
-                                            {/* The time column is fixed width and
-                                                tabular so the rail of times reads
-                                                as a column rather than a ragged
-                                                edge. */}
-                                            <div className="w-[4.25rem] shrink-0 text-right">
-                                                <p className="text-[1.0625rem] font-bold text-slate-900 tabular-nums">
-                                                    {item.startTime || '—'}
+                        {event.description ? (
+                            <p className="text-[1.1875rem] sm:text-[1.3125rem] leading-relaxed font-medium text-slate-600
+                                          whitespace-pre-line mb-6">
+                                {event.description}
+                            </p>
+                        ) : (
+                            <p className="text-[1.0625rem] text-slate-400 mb-6">
+                                No description was published for this event.
+                            </p>
+                        )}
+
+                        {/* Diary, share, directions — the public page's own row. */}
+                        <EventActions event={event as unknown as CalendarEventLike} className="mb-2" />
+
+                        {/* ---------- programme ---------- */}
+                        {(event.agenda || []).length > 0 ? (
+                            <section className="mt-6 pt-6 sm:mt-8 sm:pt-8 border-t border-slate-100">
+                                <h3 className={`${CARD_TITLE} mb-5`}>Programme</h3>
+                                <ol className="border-l-2 border-slate-200 pl-5 space-y-6">
+                                    {(event.agenda || []).map((item, index) => (
+                                        <li key={item.id || index} className="relative">
+                                            {/* The dot sits on the rule, so the times read as a timeline. */}
+                                            <span className="absolute -left-[1.6875rem] top-1.5 w-3 h-3 rounded-full bg-blue-600 ring-4 ring-white" />
+                                            {item.startTime || item.endTime ? (
+                                                <p className={`${LABEL} mb-1`}>
+                                                    {[item.startTime, item.endTime].filter(Boolean).join(' – ')}
                                                 </p>
-                                                {item.endTime ? (
-                                                    <p className="text-[1.0625rem] text-slate-400 tabular-nums">
-                                                        {item.endTime}
-                                                    </p>
-                                                ) : null}
-                                            </div>
-
-                                            <div className="relative pl-5 min-w-0 flex-1
-                                                            border-l border-slate-200">
-                                                <span className="absolute -left-[5px] top-1.5 w-2.5 h-2.5
-                                                                 rounded-full bg-blue-600" />
-
-                                                <p className="text-[1.1875rem] font-semibold text-slate-900 leading-snug">
-                                                    {item.title || 'Session'}
+                                            ) : null}
+                                            <p className="text-[1.25rem] font-bold text-slate-900">{item.title || 'Session'}</p>
+                                            {item.description ? (
+                                                <p className="text-[1.1875rem] text-slate-500 mt-1 whitespace-pre-line">{item.description}</p>
+                                            ) : null}
+                                            {item.speaker || item.location ? (
+                                                <p className={`${LABEL} mt-1.5 normal-case tracking-normal`}>
+                                                    {[item.speaker, item.location].filter(Boolean).join(' · ')}
                                                 </p>
-
-                                                {item.speaker ? (
-                                                    <p className="text-[1.0625rem] text-blue-700 mt-0.5 font-medium">
-                                                        {item.speaker}
-                                                    </p>
-                                                ) : null}
-
-                                                {item.location ? (
-                                                    <p className="text-[1.0625rem] text-slate-500 mt-0.5
-                                                                  inline-flex items-center gap-1">
-                                                        <MapPin className="w-3 h-3" /> {item.location}
-                                                    </p>
-                                                ) : null}
-
-                                                {item.description ? (
-                                                    <p className="text-[1.0625rem] text-slate-600 mt-1 leading-relaxed">
-                                                        {item.description}
-                                                    </p>
-                                                ) : null}
-                                            </div>
+                                            ) : null}
                                         </li>
                                     ))}
                                 </ol>
-                            </SectionCard>
+                            </section>
                         ) : null}
 
                         {/* ---------- speakers ---------- */}
-                        {event.speakers.length > 0 ? (
-                            <SectionCard
-                                title="Speakers"
-                                icon={<User className="w-5 h-5" />}
-                            >
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    {event.speakers.map((speaker, index) => {
-                                        const photo = resolveMediaUrl(speaker.photoUrl);
-
-                                        return (
-                                            <div key={speaker.id || index} className="flex gap-3 min-w-0">
-                                                {photo ? (
-                                                    <img
-                                                        src={photo}
-                                                        alt=""
-                                                        loading="lazy"
-                                                        className="w-14 h-14 rounded-full object-cover shrink-0
-                                                                   ring-2 ring-blue-100"
-                                                    />
-                                                ) : (
-                                                    <span className="w-14 h-14 rounded-full bg-blue-600 text-white
-                                                                     shrink-0 flex items-center justify-center
-                                                                     text-[1.1875rem] font-bold">
-                                                        {(speaker.name || '?')
-                                                            .split(' ').filter(Boolean).slice(0, 2)
-                                                            .map((part) => part[0]).join('').toUpperCase()}
-                                                    </span>
-                                                )}
-
-                                                <div className="min-w-0">
-                                                    <p className="text-[1.1875rem] font-semibold text-slate-900 truncate">
-                                                        {speaker.name}
-                                                    </p>
-                                                    {speaker.role ? (
-                                                        <p className="text-[1.0625rem] text-slate-600 truncate">
-                                                            {speaker.role}
-                                                        </p>
-                                                    ) : null}
-                                                    {speaker.organization ? (
-                                                        <p className="text-[1.0625rem] text-slate-400 truncate">
-                                                            {speaker.organization}
-                                                        </p>
-                                                    ) : null}
-                                                    {speaker.bio ? (
-                                                        <p className="text-[1.0625rem] text-slate-600 mt-1 leading-relaxed">
-                                                            {speaker.bio}
-                                                        </p>
-                                                    ) : null}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                        {speakers.length > 0 ? (
+                            <section className="mt-6 pt-6 sm:mt-8 sm:pt-8 border-t border-slate-100">
+                                <h3 className={`${CARD_TITLE} mb-5`}>Speakers</h3>
+                                <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2">
+                                    {speakers.map((speaker, index) => (
+                                        <SpeakerCard key={speaker.id || index} speaker={speaker} />
+                                    ))}
                                 </div>
-                            </SectionCard>
+                            </section>
                         ) : null}
-                    </div>
+                    </article>
 
-                    {/* ---------- right: when, where, and a seat ---------- */}
-                    <div className="lg:col-span-5 space-y-5">
-                        <SectionCard title="When and where" icon={<MapPin className="w-5 h-5" />}>
-                            <dl className="space-y-3.5">
-                                <div>
-                                    <dt className="text-[1.0625rem] font-semibold uppercase tracking-wide text-slate-400">
-                                        Date and time
-                                    </dt>
-                                    <dd className="text-[1.1875rem] text-slate-900 font-medium mt-0.5">
-                                        {formatWhen(event)}
-                                    </dd>
-                                </div>
-
+                    {/* ---------------- when, where, and a seat ---------------- */}
+                    <aside className="min-w-0 space-y-5 sm:space-y-6 lg:col-start-2 lg:row-start-1 lg:sticky lg:top-6">
+                        <div className={`${CARD} p-4 sm:p-7`}>
+                            <ul className="divide-y divide-slate-100">
+                                <Fact icon={<CalendarDays className="w-4 h-4" />} label="Date and time" value={formatWhen(event)} />
                                 {event.venue || event.venueAddress ? (
-                                    <div>
-                                        <dt className="text-[1.0625rem] font-semibold uppercase tracking-wide text-slate-400">
-                                            Venue
-                                        </dt>
-                                        <dd className="text-[1.1875rem] text-slate-900 font-medium mt-0.5">
-                                            {event.venue}
-                                            {event.venueAddress ? (
-                                                <span className="block text-[1.0625rem] text-slate-600 font-normal mt-0.5">
-                                                    {event.venueAddress}
-                                                </span>
-                                            ) : null}
-                                        </dd>
-
-                                        {event.venueMapUrl ? (
-                                            <a
-                                                href={event.venueMapUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="mt-1.5 inline-flex items-center gap-1 text-[1.0625rem]
-                                                           font-semibold text-blue-600 hover:underline"
-                                            >
-                                                Open in maps <ExternalLink className="w-3.5 h-3.5" />
-                                            </a>
-                                        ) : null}
-                                    </div>
+                                    <Fact
+                                        icon={<MapPin className="w-4 h-4" />}
+                                        label="Venue"
+                                        value={event.venue}
+                                        extra={(
+                                            <>
+                                                {event.venueAddress ? (
+                                                    <span className="block text-[1.0625rem] text-slate-500 font-medium mt-0.5">{event.venueAddress}</span>
+                                                ) : null}
+                                                {event.venueMapUrl ? (
+                                                    <a href={event.venueMapUrl} target="_blank" rel="noopener noreferrer"
+                                                        className="mt-1.5 inline-flex items-center gap-1 text-[1.0625rem] font-semibold text-blue-600 hover:underline">
+                                                        Open in maps <ExternalLink className="w-3.5 h-3.5" />
+                                                    </a>
+                                                ) : null}
+                                            </>
+                                        )}
+                                    />
                                 ) : null}
-
-                                {[event.block, event.district, event.state].filter(Boolean).length > 0 ? (
-                                    <div>
-                                        <dt className="text-[1.0625rem] font-semibold uppercase tracking-wide text-slate-400">
-                                            Region
-                                        </dt>
-                                        <dd className="text-[1.1875rem] text-slate-700 mt-0.5">
-                                            {[event.block, event.district, event.state].filter(Boolean).join(', ')}
-                                        </dd>
-                                    </div>
+                                {region ? <Fact icon={<MapPin className="w-4 h-4" />} label="Region" value={region} /> : null}
+                                {event.contactName ? <Fact icon={<User className="w-4 h-4" />} label="Contact" value={event.contactName} /> : null}
+                                {event.contactPhone ? (
+                                    <Fact icon={<Phone className="w-4 h-4" />} label="Phone" value={event.contactPhone} href={`tel:${event.contactPhone}`} />
                                 ) : null}
-
-                                {event.contactName || event.contactPhone || event.contactEmail ? (
-                                    <div>
-                                        <dt className="text-[1.0625rem] font-semibold uppercase tracking-wide text-slate-400">
-                                            Contact
-                                        </dt>
-                                        <dd className="text-[1.1875rem] text-slate-700 mt-0.5 space-y-1">
-                                            {event.contactName ? <p>{event.contactName}</p> : null}
-                                            {event.contactPhone ? (
-                                                <a
-                                                    href={`tel:${event.contactPhone}`}
-                                                    className="flex items-center gap-1.5 text-blue-600 hover:underline"
-                                                >
-                                                    <Phone className="w-3.5 h-3.5" /> {event.contactPhone}
-                                                </a>
-                                            ) : null}
-                                            {event.contactEmail ? (
-                                                <a
-                                                    href={`mailto:${event.contactEmail}`}
-                                                    className="flex items-center gap-1.5 text-blue-600 hover:underline"
-                                                >
-                                                    <Mail className="w-3.5 h-3.5" /> {event.contactEmail}
-                                                </a>
-                                            ) : null}
-                                        </dd>
-                                    </div>
+                                {event.contactEmail ? (
+                                    <Fact icon={<Mail className="w-4 h-4" />} label="Email" value={event.contactEmail} href={`mailto:${event.contactEmail}`} />
                                 ) : null}
-                            </dl>
-                        </SectionCard>
+                            </ul>
+                        </div>
 
-                        {/* ---------- registration ---------- */}
-                        <SectionCard
-                            title={registration ? 'Your seat' : 'Registration'}
-                            icon={<Users className="w-5 h-5" />}
-                        >
+                        <div className={`${CARD} p-4 sm:p-7`}>
+                            <h3 className={`${CARD_TITLE} mb-4 flex items-center gap-2.5`}>
+                                <span className="grid h-9 w-9 place-items-center rounded-xl bg-blue-50 text-blue-700">
+                                    {registration ? <BadgeCheck className="w-5 h-5" /> : <Ticket className="w-5 h-5" />}
+                                </span>
+                                {registration ? 'Your seat' : 'Registration'}
+                            </h3>
                             {awaitingPayment ? (
                                 /*
                                  * CHECKOUT.
@@ -433,7 +381,7 @@ export default function MemberEventDetail() {
                                                       text-blue-200">
                                             Amount due
                                         </p>
-                                        <p className="text-[2.5625rem] font-extrabold mt-1 tabular-nums">
+                                        <p className="text-[2rem] sm:text-[2.5625rem] font-extrabold mt-1 tabular-nums">
                                             ₹{registration.payment.amount.toLocaleString('en-IN')}
                                         </p>
                                         <p className="text-[1.0625rem] text-blue-100 mt-2 leading-snug">
@@ -462,7 +410,7 @@ export default function MemberEventDetail() {
                                       */}
                                     <button
                                         type="button"
-                                        onClick={() => navigate(`/member/events/${event.id}/register`)}
+                                        onClick={() => navigate(fromBooking ? ticketHref : `/member/events/${event.id}/register`)}
                                         className="w-full h-12 rounded-xl bg-emerald-600 text-white text-[1.1875rem]
                                                    font-bold hover:bg-emerald-700
                                                    transition-colors inline-flex items-center justify-center gap-2
@@ -473,7 +421,7 @@ export default function MemberEventDetail() {
                                         <ChevronRight className="w-4 h-4" />
                                     </button>
 
-                                    {!past ? (
+                                    {!past && !fromBooking ? (
                                         <button
                                             type="button"
                                             onClick={cancel}
@@ -506,7 +454,26 @@ export default function MemberEventDetail() {
                                                 ? 'You will move into a seat automatically if one is given up.'
                                                 : `Registered on ${formatDate(registration.registeredAt)}.`}
                                         </p>
+                                        {fromBooking ? (
+                                            <p className="text-[1.0625rem] text-slate-700 mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                                                {registration.bookingRef ? <span>Booking <strong>{registration.bookingRef}</strong></span> : null}
+                                                {Number(registration.seats || 0) > 0 ? (
+                                                    <span>{registration.seats} {Number(registration.seats) === 1 ? 'seat' : 'seats'}</span>
+                                                ) : null}
+                                            </p>
+                                        ) : null}
                                     </div>
+
+                                    {fromBooking ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => navigate(ticketHref)}
+                                            className="w-full h-11 rounded-xl bg-blue-600 text-white text-[1.1875rem] font-bold
+                                                       hover:bg-blue-700 transition-colors inline-flex items-center justify-center gap-2"
+                                        >
+                                            View your ticket <ChevronRight className="w-4 h-4" />
+                                        </button>
+                                    ) : null}
 
                                     {/*
                                       The receipt, for a seat that was paid for.
@@ -549,7 +516,7 @@ export default function MemberEventDetail() {
                                         </div>
                                     ) : null}
 
-                                    {!past ? (
+                                    {!past && !fromBooking ? (
                                         <button
                                             type="button"
                                             onClick={cancel}
@@ -627,9 +594,12 @@ export default function MemberEventDetail() {
                             ) : (
                                 <div className="space-y-3">
                                     {event.registrationNote ? (
-                                        <p className="text-[1.0625rem] text-slate-600 leading-relaxed">
-                                            {event.registrationNote}
-                                        </p>
+                                        <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+                                            <p className="text-[0.875rem] font-extrabold uppercase tracking-widest text-amber-700">Please note</p>
+                                            <p className="mt-1 text-[1.0625rem] font-semibold text-amber-900 whitespace-pre-line">
+                                                {event.registrationNote}
+                                            </p>
+                                        </div>
                                     ) : null}
 
                                     {/*
@@ -645,7 +615,7 @@ export default function MemberEventDetail() {
                                                 <Ticket className="w-4 h-4" />
                                             </span>
                                             <span className="min-w-0 flex-1">
-                                                <span className="block text-[1.5625rem] font-extrabold text-slate-900
+                                                <span className="block text-[1.3125rem] sm:text-[1.5625rem] font-extrabold text-slate-900
                                                                  tabular-nums leading-none">
                                                     ₹{fee.toLocaleString('en-IN')}
                                                 </span>
@@ -764,17 +734,91 @@ export default function MemberEventDetail() {
                                 </div>
                             )}
 
+
                             {reminders ? (
                                 <p className="mt-4 pt-3 border-t border-slate-100 text-[1.0625rem] text-slate-500
                                               inline-flex items-center gap-1.5">
                                     <Bell className="w-3.5 h-3.5" /> {reminders}
                                 </p>
                             ) : null}
-                        </SectionCard>
-                    </div>
+                        </div>
+                    </aside>
+
                 </div>
+
+                {/* The event's QR — the public page's feature card, full width so the
+                    code is big enough to scan across a room. */}
+                {qrEvent.showQrOnPage !== false ? <EventQrFeature event={qrEvent} /> : null}
             </div>
         </MemberPageShell>
+    );
+}
+
+/** White card on the member area's tint — the public page's BIZ_CARD, in the member palette. */
+const CARD = 'rounded-2xl border border-slate-200 bg-white shadow-[0_1px_3px_rgba(16,24,40,0.08),0_8px_24px_-12px_rgba(16,24,40,0.18)]';
+const CARD_TITLE = 'font-display text-[1.375rem] sm:text-[1.625rem] font-bold tracking-tight text-slate-900';
+const CHIP = 'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[1rem] font-bold';
+const LABEL = 'text-[0.9375rem] font-extrabold uppercase tracking-wider text-slate-400';
+
+/** One fact in the side card: an icon tile, a label, the value — one rhythm for every row. */
+function Fact({ icon, label, value, href, extra }: {
+    icon: React.ReactNode; label: string; value?: string; href?: string; extra?: React.ReactNode;
+}) {
+    return (
+        <li className="flex items-start gap-3.5 py-3.5 first:pt-0 last:pb-0">
+            <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-700">{icon}</span>
+            <div className="min-w-0 flex-1">
+                <p className={LABEL}>{label}</p>
+                {value ? (
+                    <p className="mt-1 text-[1.1875rem] font-semibold text-slate-900 break-words [overflow-wrap:anywhere]">
+                        {href ? <a href={href} className="text-blue-700 hover:underline">{value}</a> : value}
+                    </p>
+                ) : null}
+                {extra}
+            </div>
+        </li>
+    );
+}
+
+/**
+ * A speaker, as a card with a portrait big enough to be a face.
+ *
+ * The list drew 3.5rem circles with every line truncated, so a minister was a
+ * smudge and "Minister for Social Justice Department" was cut to "Minister for
+ * Soc…". 5.5rem, cropped from the TOP (a centred crop of a standing photograph
+ * is a chest), and the role and organisation wrap instead of vanishing.
+ */
+function SpeakerCard({ speaker }: { speaker: MemberEvent['speakers'][number] }) {
+    const [broken, setBroken] = useState(false);
+    const photo = resolveMediaUrl(speaker.photoUrl);
+    const initials = (speaker.name || '?').split(' ').filter(Boolean).slice(0, 2)
+        .map((part) => part.charAt(0)).join('').toUpperCase();
+
+    return (
+        <div className="flex items-start gap-3.5 sm:gap-4 rounded-xl border border-slate-200 bg-slate-50 p-3.5 sm:p-4 min-w-0">
+            <div className="h-16 w-16 sm:h-[5.5rem] sm:w-[5.5rem] shrink-0 overflow-hidden rounded-full bg-white ring-2 ring-blue-100">
+                {photo && !broken ? (
+                    <img
+                        src={photo}
+                        alt=""
+                        loading="lazy"
+                        onError={() => setBroken(true)}
+                        className="h-full w-full object-cover object-top"
+                    />
+                ) : (
+                    <span className="grid h-full w-full place-items-center bg-gradient-to-br from-[#1e3a8a] to-[#2563eb]
+                                     text-[1.25rem] sm:text-[1.5rem] font-bold text-white">
+                        {initials}
+                    </span>
+                )}
+            </div>
+            <div className="min-w-0">
+                <p className="text-[1.25rem] font-bold text-slate-900 break-words">{speaker.name}</p>
+                {speaker.role ? <p className="text-[1.0625rem] font-semibold text-slate-600 mt-0.5 break-words">{speaker.role}</p> : null}
+                {speaker.organization ? <p className="text-[1.0625rem] text-slate-500 break-words">{speaker.organization}</p> : null}
+                {speaker.bio ? <p className="text-[1.0625rem] text-slate-600 mt-2 leading-relaxed">{speaker.bio}</p> : null}
+            </div>
+        </div>
     );
 }
 

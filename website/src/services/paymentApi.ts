@@ -225,6 +225,40 @@ export const payForMembership = async (
     return order;
 };
 
+/** What the return page learns about an order — public, works for a guest. */
+export interface PaymentReturnResult {
+    orderId: string;
+    orderType: 'membership' | 'event_booking' | string;
+    status: 'created' | 'paid' | 'failed' | string;
+    amount?: number;
+    bookingRef: string;
+    eventId: string;
+    /** The event's readable address, for the booking link (lib/eventPath). */
+    eventSlug?: string;
+}
+
+/**
+ * Ask the server about the order the buyer is returning from.
+ *
+ * Public on purpose: a GUEST who paid for event seats has no token, and the
+ * signed-in `getPaymentOrder` answered them 401 — which the axios interceptor
+ * turns into a trip to the login screen. For an event booking the server also
+ * verifies the payment with Instamojo and confirms the booking.
+ */
+export const resolvePaymentReturn = async (
+    orderId: string,
+    gateway: { paymentId?: string; paymentStatus?: string } = {},
+) =>
+    unwrap<PaymentReturnResult>(
+        await api.get(ENDPOINTS.PAYMENT.RETURN(orderId), {
+            params: {
+                ...(gateway.paymentId ? { payment_id: gateway.paymentId } : {}),
+                ...(gateway.paymentStatus ? { payment_status: gateway.paymentStatus } : {}),
+            },
+        }),
+        {} as PaymentReturnResult,
+    );
+
 /** Poll a payment request created through the Instamojo path. */
 export const checkPaymentRequestStatus = async (paymentRequestId: string) =>
     unwrap<any>(await api.get(ENDPOINTS.PAYMENT.STATUS(paymentRequestId)), {});

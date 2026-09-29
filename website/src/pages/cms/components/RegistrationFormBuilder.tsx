@@ -106,7 +106,7 @@ export default function RegistrationFormBuilder({
                     <div
                         key={index}
                         className="rounded-xl border border-slate-200 dark:border-[#2a2a2a]
-                                   bg-slate-50 dark:bg-[#0d0d0d] p-3.5"
+                                   bg-slate-50 dark:bg-[#0d0d0d] p-3 sm:p-3.5"
                     >
                         {/* ---------------------------------- row header ---- */}
                         <div className="flex items-center gap-2 mb-3">
@@ -121,7 +121,7 @@ export default function RegistrationFormBuilder({
                                     onClick={() => move(index, -1)}
                                     disabled={index === 0}
                                     aria-label="Move up"
-                                    className="w-7 h-7 rounded-md flex items-center justify-center
+                                    className="w-9 h-9 sm:w-7 sm:h-7 rounded-md flex items-center justify-center
                                                text-slate-400 hover:text-slate-700 hover:bg-white
                                                dark:hover:bg-black disabled:opacity-30
                                                disabled:hover:bg-transparent transition-colors"
@@ -133,7 +133,7 @@ export default function RegistrationFormBuilder({
                                     onClick={() => move(index, 1)}
                                     disabled={index === list.length - 1}
                                     aria-label="Move down"
-                                    className="w-7 h-7 rounded-md flex items-center justify-center
+                                    className="w-9 h-9 sm:w-7 sm:h-7 rounded-md flex items-center justify-center
                                                text-slate-400 hover:text-slate-700 hover:bg-white
                                                dark:hover:bg-black disabled:opacity-30
                                                disabled:hover:bg-transparent transition-colors"
@@ -144,7 +144,7 @@ export default function RegistrationFormBuilder({
                                     type="button"
                                     onClick={() => remove(index)}
                                     aria-label="Remove question"
-                                    className="w-7 h-7 rounded-md flex items-center justify-center
+                                    className="w-9 h-9 sm:w-7 sm:h-7 rounded-md flex items-center justify-center
                                                text-slate-400 hover:text-red-600 hover:bg-white
                                                dark:hover:bg-black transition-colors"
                                 >

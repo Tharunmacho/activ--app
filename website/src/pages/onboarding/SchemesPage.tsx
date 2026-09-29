@@ -109,7 +109,7 @@ export default function SchemesPage({ view }: { view: View }) {
 
                 <Crumbs trail={[{ label: 'Schemes' }, { label: title }]} />
 
-                <section className={`${SCHEME_COLUMN} space-y-14 py-8 md:py-10`}>
+                <section className={`${SCHEME_COLUMN} space-y-10 sm:space-y-14 py-6 sm:py-8 md:py-10`}>
                     {loading ? (
                         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                             {[1, 2, 3].map((i) => <div key={i} className="h-72 animate-pulse rounded-2xl bg-gray-100" />)}
@@ -136,7 +136,7 @@ export default function SchemesPage({ view }: { view: View }) {
                             {byDistrict.length > 0 && (
                                 <div>
                                     <SectionTitle title="District schemes" note="Run by a district, for members in that district." />
-                                    <div className="space-y-10">
+                                    <div className="space-y-8 sm:space-y-10">
                                         {byDistrict.map((g) => (
                                             <div key={g.name}>
                                                 <h3 className="mb-4 text-[1.0625rem] font-bold uppercase tracking-[0.16em] text-brand-500">
@@ -161,7 +161,7 @@ export default function SchemesPage({ view }: { view: View }) {
 function SectionTitle({ title, note }: { title: string; note: string }) {
     return (
         <div className="mb-6">
-            <h2 className="text-[1.75rem] font-black tracking-tight text-brand-900">{title}</h2>
+            <h2 className="text-[1.5rem] sm:text-[1.75rem] font-black tracking-tight text-brand-900 break-words">{title}</h2>
             <p className={`mt-1 ${META_TEXT} text-gray-500`}>{note}</p>
         </div>
     );

@@ -350,12 +350,81 @@ export function AdminTable<T>({
                         </div>
                     )}
 
-                    {toolbar && <div className="flex flex-wrap gap-2 shrink-0">{toolbar}</div>}
+                    {toolbar && <div className="flex flex-wrap gap-2 shrink-0 min-w-0">{toolbar}</div>}
                 </div>
             )}
 
+            {/* ------------------------------------------------ phone: cards */}
+            {/*
+              * ON A PHONE EVERY ROW IS A CARD. The table is deliberately wider
+              * than a desktop pane and scrolls sideways there; at 390px that
+              * meant reading one column at a time with the name scrolled away.
+              * Each column's header becomes the label beside its value, the
+              * pinned action column becomes a full-width button at the foot,
+              * and `hideOnMobile` columns stay hidden. From `sm` the table.
+              */}
+            <div className="sm:hidden">
+                {loading && (
+                    <div className="px-4 py-10 text-center">
+                        <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
+                        <p className="mt-4 text-[1.05rem] font-semibold text-slate-500">Loading…</p>
+                    </div>
+                )}
+                {!loading && !visible.length && (
+                    <div className="px-4 py-10 text-center">
+                        <Inbox className="w-10 h-10 text-slate-300 mx-auto" />
+                        <div className="mt-3 text-[1.05rem] font-semibold text-slate-500 leading-relaxed">
+                            {filtering ? (emptyFiltered || `Nothing matches “${query.trim()}”.`) : empty}
+                        </div>
+                    </div>
+                )}
+                {!loading && visible.length > 0 && (
+                    <ul className="divide-y divide-slate-100">
+                        {visible.map((row, index) => {
+                            const n = (current - 1) * (perPage || 0) + index;
+                            const shown = columns.filter((c) => !c.hideOnMobile && c.sticky !== 'right');
+                            const actions = columns.filter((c) => c.sticky === 'right');
+                            return (
+                                <li
+                                    key={rowKey(row, index)}
+                                    onClick={onRowClick ? () => onRowClick(row) : undefined}
+                                    className={`px-4 py-4 transition-colors ${index % 2 === 1 ? 'bg-slate-50/60' : 'bg-white'}
+                                                ${onRowClick ? 'cursor-pointer active:bg-blue-50' : ''}`}
+                                >
+                                    <dl className="grid grid-cols-[minmax(0,6.5rem)_minmax(0,1fr)] gap-x-3 gap-y-2">
+                                        {shown.map((column) => (
+                                            column.header ? (
+                                                <div key={column.key} className="contents">
+                                                    <dt className="pt-0.5 text-[0.8rem] font-bold uppercase tracking-wide text-slate-400">
+                                                        {column.header}
+                                                    </dt>
+                                                    <dd className="min-w-0 text-[1rem] text-slate-800 [overflow-wrap:anywhere]">
+                                                        {column.render(row, n)}
+                                                    </dd>
+                                                </div>
+                                            ) : (
+                                                <dd key={column.key} className="col-span-2 min-w-0 text-[1rem] text-slate-800">
+                                                    {column.render(row, n)}
+                                                </dd>
+                                            )
+                                        ))}
+                                    </dl>
+                                    {actions.length > 0 && (
+                                        <div className="mt-3 flex flex-wrap gap-2 [&>*]:flex-1" onClick={(e) => e.stopPropagation()}>
+                                            {actions.map((column) => (
+                                                <div key={column.key} className="flex [&>*]:w-full">{column.render(row, n)}</div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </li>
+                            );
+                        })}
+                    </ul>
+                )}
+            </div>
+
             {/* -------------------------------------------------------- table */}
-            <div className="overflow-x-auto">
+            <div className="hidden sm:block overflow-x-auto">
                 <table
                     className="w-full text-left border-collapse"
                     style={minWidth ? { minWidth } : undefined}
@@ -459,8 +528,8 @@ export function AdminTable<T>({
             {/* -------------------------------------------------------- pager */}
             {showPager && !loading && (
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3
-                                px-5 py-4 border-t border-slate-100 bg-slate-50/60">
-                    <p className="text-[1.25rem] text-slate-500">
+                                px-4 sm:px-5 py-3 sm:py-4 border-t border-slate-100 bg-slate-50/60">
+                    <p className="text-[1.0625rem] sm:text-[1.25rem] text-slate-500">
                         Showing <span className="font-semibold text-slate-800">{from}</span> to{' '}
                         <span className="font-semibold text-slate-800">{to}</span> of{' '}
                         <span className="font-semibold text-slate-800">{total}</span>{' '}
@@ -468,9 +537,9 @@ export function AdminTable<T>({
                     </p>
 
                     {pages > 1 && (
-                        <div className="flex items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-1">
                             <PagerButton onClick={() => goTo(current - 1)} disabled={current <= 1}>
-                                ← Previous
+                                ←<span className="hidden sm:inline"> Previous</span>
                             </PagerButton>
 
                             {pageNumbers(current, pages).map((n, i) =>
@@ -482,7 +551,7 @@ export function AdminTable<T>({
                                         type="button"
                                         onClick={() => goTo(n as number)}
                                         aria-current={n === current ? 'page' : undefined}
-                                        className={`h-11 min-w-11 px-3.5 rounded-xl text-[1.25rem] font-semibold
+                                        className={`h-10 min-w-10 px-2.5 sm:h-11 sm:min-w-11 sm:px-3.5 rounded-xl text-[1.1875rem] sm:text-[1.25rem] font-semibold
                                                     transition-colors ${n === current
                                                 ? 'bg-blue-600 text-white shadow-sm'
                                                 : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
@@ -492,7 +561,7 @@ export function AdminTable<T>({
                                 ))}
 
                             <PagerButton onClick={() => goTo(current + 1)} disabled={current >= pages}>
-                                Next →
+                                <span className="hidden sm:inline">Next </span>→
                             </PagerButton>
                         </div>
                     )}
@@ -510,7 +579,7 @@ function PagerButton({ children, onClick, disabled }: {
             type="button"
             onClick={onClick}
             disabled={disabled}
-            className="h-11 px-4 rounded-xl border border-slate-200 bg-white text-[1.25rem] font-semibold
+            className="h-10 sm:h-11 px-3 sm:px-4 rounded-xl border border-slate-200 bg-white text-[1.1875rem] sm:text-[1.25rem] font-semibold
                        text-slate-600 transition-colors hover:bg-slate-50
                        disabled:opacity-40 disabled:hover:bg-white"
         >

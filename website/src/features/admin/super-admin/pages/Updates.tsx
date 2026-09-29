@@ -1,3 +1,4 @@
+import { useCardTable } from '@/lib/useCardTable';
 import { useCallback, useEffect, useState } from 'react';
 import { Menu, Plus, Pencil, Trash2, X, Pin, Globe, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import AdminSidebar from './AdminSidebar';
@@ -79,6 +80,7 @@ const toDateInput = (value?: string | null): string => {
 };
 
 export default function SuperAdminUpdates() {
+    const cardTableRef = useCardTable();
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const [rows, setRows] = useState<Announcement[]>([]);
@@ -283,7 +285,7 @@ export default function SuperAdminUpdates() {
                     {showForm ? (
                         <form
                             onSubmit={submit}
-                            className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-5 lg:p-6 space-y-6"
+                            className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-4 sm:p-5 lg:p-6 space-y-5 sm:space-y-6"
                         >
                             <div className="flex items-start justify-between gap-3">
                                 <h2 className={`${CARD_TITLE} text-slate-900`}>
@@ -293,13 +295,13 @@ export default function SuperAdminUpdates() {
                                     type="button"
                                     onClick={() => setShowForm(false)}
                                     aria-label="Close"
-                                    className="text-slate-400 hover:text-slate-700"
+                                    className="shrink-0 -mr-2 -mt-1.5 grid h-10 w-10 place-items-center rounded-lg text-slate-400 hover:text-slate-700"
                                 >
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
 
-                            <div className="grid gap-5 sm:grid-cols-2">
+                            <div className="grid gap-4 sm:gap-5 sm:grid-cols-2">
                                 <div className="sm:col-span-2">
                                     <Field label="Headline">
                                         <input
@@ -500,7 +502,7 @@ export default function SuperAdminUpdates() {
                                     <span className="text-[1.25rem] text-slate-700">Pin to the top of every feed</span>
                                 </label>
 
-                                <div className="ml-auto flex gap-2">
+                                <div className="w-full sm:w-auto sm:ml-auto flex gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
                                     <button
                                         type="button"
                                         onClick={() => setShowForm(false)}
@@ -514,7 +516,7 @@ export default function SuperAdminUpdates() {
                                         disabled={saving}
                                         className="px-5 h-11 rounded-xl bg-blue-600 text-white text-[1.25rem] font-bold
                                                    hover:bg-blue-700 disabled:opacity-60 inline-flex
-                                                   items-center gap-2"
+                                                   items-center justify-center gap-2"
                                     >
                                         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                                         {editing ? 'Save update' : 'Create update'}
@@ -525,7 +527,7 @@ export default function SuperAdminUpdates() {
                     ) : null}
 
                     {/* ---------------------------------------------- listing */}
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-5">
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-4 sm:p-5">
                         <h2 className={`${CARD_TITLE} text-slate-900 mb-4`}>
                             Updates ({rows.length})
                         </h2>
@@ -538,7 +540,7 @@ export default function SuperAdminUpdates() {
                                 member's dashboard.
                             </p>
                         ) : (
-                            <div className="overflow-x-auto">
+                            <div ref={cardTableRef} className="overflow-x-auto card-table">
                                 <table className="w-full text-[1.25rem]">
                                     <thead>
                                         <tr className="text-left text-slate-500 border-b border-slate-200">
@@ -552,7 +554,7 @@ export default function SuperAdminUpdates() {
                                         {rows.map((row) => (
                                             <tr key={row.id} className="border-b border-slate-100">
                                                 <td className="py-3 pr-4">
-                                                    <span className="font-medium text-slate-800">{row.title}</span>
+                                                    <span className="font-medium text-slate-800 break-words">{row.title}</span>
                                                     {row.pinned ? (
                                                         <span className="ml-2 inline-flex items-center gap-1
                                                                          text-[1.0625rem] font-bold uppercase
@@ -592,7 +594,7 @@ export default function SuperAdminUpdates() {
                                                         onClick={() => togglePublished(row)}
                                                         aria-label={row.status === 'published' ? 'Withdraw' : 'Publish'}
                                                         title={row.status === 'published' ? 'Withdraw' : 'Publish'}
-                                                        className="p-1.5 rounded text-slate-500 hover:bg-slate-100"
+                                                        className="p-2.5 sm:p-1.5 rounded text-slate-500 hover:bg-slate-100"
                                                     >
                                                         {row.status === 'published'
                                                             ? <EyeOff className="w-4 h-4" />
@@ -602,7 +604,7 @@ export default function SuperAdminUpdates() {
                                                     <button
                                                         onClick={() => openEdit(row)}
                                                         aria-label="Edit"
-                                                        className="p-1.5 rounded text-slate-500 hover:bg-slate-100"
+                                                        className="p-2.5 sm:p-1.5 rounded text-slate-500 hover:bg-slate-100"
                                                     >
                                                         <Pencil className="w-4 h-4" />
                                                     </button>

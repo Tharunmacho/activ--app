@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaHome, FaCheckCircle, FaUsers, FaCog, FaSignOutAlt, FaTimes, FaUserShield, FaCalendarAlt, FaBullhorn, FaBell, FaTicketAlt, FaTags, FaListUl, FaChevronDown } from 'react-icons/fa';
+import { FaHome, FaCheckCircle, FaUsers, FaCog, FaSignOutAlt, FaTimes, FaUserShield, FaCalendarAlt, FaBullhorn, FaBell, FaTicketAlt, FaTags, FaListUl, FaChevronDown, FaImages, FaNewspaper, FaLandmark, FaHandHoldingHeart } from 'react-icons/fa';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { apiFetch, logout } from '@/services/activApi';
@@ -96,6 +96,10 @@ export default function AdminSidebar({
         tags: <FaTags />,
         list: <FaListUl />,
         cog: <FaCog />,
+        image: <FaImages />,
+        newspaper: <FaNewspaper />,
+        landmark: <FaLandmark />,
+        heart: <FaHandHoldingHeart />,
     } as const;
 
     const nav = config.nav;
@@ -393,7 +397,7 @@ export default function AdminSidebar({
      * inside need, so nothing lost the context `relative` was there to provide.
      */
     const shell =
-        'bg-gradient-to-b from-blue-600 via-purple-600 to-indigo-700 shadow-lg overflow-hidden';
+        'bg-gradient-to-b from-[#172554] via-[#1e3a8a] to-[#2563eb] shadow-lg overflow-hidden';
 
     return (
         <>

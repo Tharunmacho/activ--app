@@ -1,10 +1,12 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/shared/components/ui/toaster";
 import { Toaster as Sonner } from "@/shared/components/ui/sonner";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ScrollToTop from "@/components/layout/ScrollToTop";
+import RoleGate from "@/components/layout/RoleGate";
+import FloatingLaunchers from "@/components/layout/FloatingLaunchers";
 import { CartProvider } from "@/contexts/CartContext";
 import { ProfileProvider } from "@/contexts/ProfileContext";
 import { ActiveCompanyProvider } from "@/contexts/ActiveCompanyContext";
@@ -18,19 +20,61 @@ import { ActiveCompanyProvider } from "@/contexts/ActiveCompanyContext";
  * Splitting at the route boundary means someone reading the About or Contact
  * page fetches those two pages and nothing else.
  *
- * The five public routes and the login stay eager on purpose: they are the
- * entry points, and a Suspense fallback flashing on the first paint of the
- * landing page is worse than the few kilobytes it would save.
+ * ONLY THE LANDING PAGE IS IN THE ENTRY BUNDLE NOW. The other public pages,
+ * the login and a dozen member and business screens were eager too, which made
+ * the one file every first visit waits on 1.15 MB — seconds on a phone before
+ * the banner could draw. They are lazy, and `PreloadPublicPages` below fetches
+ * the public ones as soon as the landing page is up and the browser is idle, so
+ * a visitor moving from Home to About still gets it instantly, without having
+ * paid for it before the first paint.
  */
 import Hero from "./pages/onboarding/Hero";
-import AboutPage from "./pages/onboarding/AboutPage";
-import EventsPage from "./pages/onboarding/EventsPage";
-import GalleryPage from "./pages/onboarding/GalleryPage";
-import RegionPage from "./pages/onboarding/RegionPage";
-import StatePage from "./pages/onboarding/StatePage";
+
+/**
+ * Warm the public pages' chunks once the landing page is on screen. Idle-time,
+ * low priority, and it only downloads code — nothing renders.
+ */
+const PRELOAD_PUBLIC = [
+  () => import("./pages/onboarding/AboutPage"),
+  () => import("./pages/onboarding/EventsPage"),
+  () => import("./pages/onboarding/GalleryPage"),
+  () => import("./pages/onboarding/ContactPage"),
+  () => import("./pages/onboarding/MembershipPage"),
+  () => import("./pages/onboarding/NewsPage"),
+  () => import("./pages/onboarding/SchemesPage"),
+  () => import("./pages/onboarding/EventDetailPage"),
+  () => import("./pages/onboarding/GalleryDetailPage"),
+  () => import("./pages/onboarding/RegionPage"),
+  () => import("./pages/onboarding/StatePage"),
+  () => import("./shared/components/EnhancedLoginPage"),
+  () => import("./pages/member/Register"),
+];
+const PreloadPublicPages = () => {
+  useEffect(() => {
+    let cancelled = false;
+    const run = () => {
+      // One after another, so the preload never competes with itself.
+      PRELOAD_PUBLIC.reduce<Promise<unknown>>(
+        (chain, load) => chain.then(() => (cancelled ? null : load().catch(() => null))),
+        Promise.resolve(),
+      );
+    };
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+    const start = () => (w.requestIdleCallback ? w.requestIdleCallback(run, { timeout: 5000 }) : window.setTimeout(run, 2000));
+    if (document.readyState === 'complete') start();
+    else window.addEventListener('load', start, { once: true });
+    return () => { cancelled = true; };
+  }, []);
+  return null;
+};
+const AboutPage = lazy(() => import("./pages/onboarding/AboutPage"));
+const EventsPage = lazy(() => import("./pages/onboarding/EventsPage"));
+const GalleryPage = lazy(() => import("./pages/onboarding/GalleryPage"));
+const RegionPage = lazy(() => import("./pages/onboarding/RegionPage"));
+const StatePage = lazy(() => import("./pages/onboarding/StatePage"));
 /* "View All" — one list in full, on its own screen. Replaces the old feed page,
    which 404'd on the two types that are not feeds (About and Leadership). */
-import StateDetailPage from "./pages/onboarding/StateDetailPage";
+const StateDetailPage = lazy(() => import("./pages/onboarding/StateDetailPage"));
 /* One item's own page. Lazy: it is reached by a click from the landing page or
    the gallery, never as a first paint, so it does not belong in the entry
    bundle the landing page waits on. */
@@ -49,7 +93,12 @@ const SchemeDetailPage = lazy(() => import("./pages/onboarding/SchemeDetailPage"
 /* One event's own page. Lazy for the same reason: reached by a click, never
    as a first paint. */
 const EventDetailPage = lazy(() => import("./pages/onboarding/EventDetailPage"));
-import ContactPage from "./pages/onboarding/ContactPage";
+const ContactPage = lazy(() => import("./pages/onboarding/ContactPage"));
+/* Public giving — donors have no account, so none of these sit inside a gate. */
+const DonatePage = lazy(() => import("./pages/donate/DonatePage"));
+const DonateThankYou = lazy(() => import("./pages/donate/DonateThankYou"));
+const DonationReceiptPage = lazy(() => import("./pages/donate/DonationDocumentPage").then((m) => ({ default: m.DonationReceiptPage })));
+const DonationStatementPage = lazy(() => import("./pages/donate/DonationDocumentPage").then((m) => ({ default: m.DonationStatementPage })));
 /*
  * The membership prospectus. Lazy, like the other leaf pages: it is reached
  * from a nav link, never as a first paint, and it carries the whole of the
@@ -65,25 +114,26 @@ const MembershipPage = lazy(() => import("./pages/onboarding/MembershipPage"));
 const LegalPage = lazy(() => import("./pages/onboarding/LegalPage"));
 /* The public Book Now flow. Lazy for the same reason the detail page is. */
 const EventBookingPage = lazy(() => import("./pages/onboarding/EventBookingPage"));
-import EnhancedLoginPage from "./shared/components/EnhancedLoginPage";
+const EnhancedLoginPage = lazy(() => import("./shared/components/EnhancedLoginPage"));
 
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/auth/ResetPassword"));
+const SocialSignIn = lazy(() => import("./pages/auth/SocialSignIn"));
 
 // Member Feature Imports
-import MemberRegister from "./pages/member/Register";
+const MemberRegister = lazy(() => import("./pages/member/Register"));
 
-import MemberProfile from "./pages/member/Profile";
-import ProfileView from "./features/member/pages/ProfileView";
+const MemberProfile = lazy(() => import("./pages/member/Profile"));
+const ProfileView = lazy(() => import("./features/member/pages/ProfileView"));
 const PersonalForm = lazy(() => import("./pages/member/PersonalForm"));
 const BusinessForm = lazy(() => import("./pages/member/BusinessForm"));
 const DeclarationForm = lazy(() => import("./pages/member/DeclarationForm"));
 const ApplicationSubmitted = lazy(() => import("./pages/member/ApplicationSubmitted"));
-import ApplicationStatus from "./pages/member/ApplicationStatus";
+const ApplicationStatus = lazy(() => import("./pages/member/ApplicationStatus"));
 const PaymentPage = lazy(() => import("./pages/member/Payment"));
 const PaymentSuccess = lazy(() => import("./pages/member/PaymentSuccess"));
-import UnpaidDashboard from "./features/member/pages/UnpaidDashboard";
+const UnpaidDashboard = lazy(() => import("./features/member/pages/UnpaidDashboard"));
 /*
  * The paid member area's four screens.
  *
@@ -111,7 +161,8 @@ const DonationCertificatePage = lazy(
   () => import("./features/member/pages/DonationCertificatePage"));
 /* What "View plan details" opens — see the note at the head of the file. */
 const MembershipPlanDetails = lazy(() => import("./features/member/pages/MembershipPlanDetails"));
-import MemberSettings from "./pages/member/Settings";
+// Account settings — photo, password, contact, sign out. The application itself is edited in My Profile.
+const MemberSettings = lazy(() => import("./features/member/pages/AccountSettings"));
 
 // Payment Feature Imports
 const PaymentRegistration = lazy(() => import("./pages/payment/PaymentRegistration"));
@@ -121,18 +172,18 @@ const PaymentGateway = lazy(() => import("./pages/payment/PaymentGateway"));
 /* Where Instamojo returns the member to — `redirect_url` on every payment
    request the server creates is `${FRONTEND_URL}/payment-success`. */
 const PaymentReturn = lazy(() => import("./pages/payment/PaymentReturn"));
-import PaymentMemberDashboard from "./features/member/pages/PaidDashboard";
+const PaymentMemberDashboard = lazy(() => import("./features/member/pages/PaidDashboard"));
 const MembershipPlans = lazy(() => import("./pages/payment/MembershipPlans"));
 
 // Business Feature Imports
-import BusinessProfile from "./pages/business/BusinessProfile";
-import BusinessDashboard from "./pages/business/Dashboard";
-import Products from "./pages/business/Products";
+const BusinessProfile = lazy(() => import("./pages/business/BusinessProfile"));
+const BusinessDashboard = lazy(() => import("./pages/business/Dashboard"));
+const Products = lazy(() => import("./pages/business/Products"));
 const AddProduct = lazy(() => import("./pages/business/AddProduct"));
 const EditProduct = lazy(() => import("./pages/business/EditProduct"));
-import Discover from "./pages/business/Discover";
-import Analytics from "./pages/business/Analytics";
-import BusinessSettings from "./pages/business/Settings";
+const Discover = lazy(() => import("./pages/business/Discover"));
+const Analytics = lazy(() => import("./pages/business/Analytics"));
+const BusinessSettings = lazy(() => import("./pages/business/Settings"));
 const MyCompanies = lazy(() => import("./pages/business/MyCompanies"));
 const AddEditCompany = lazy(() => import("./pages/business/AddEditCompany"));
 const CompanyDetails = lazy(() => import("./pages/business/CompanyDetails"));
@@ -169,6 +220,8 @@ const SuperSettings = lazy(() => import("./features/admin/super-admin/pages/Sett
 const SuperManageAdmins = lazy(() => import("./features/admin/super-admin/pages/ManageAdmins"));
 const SuperEvents = lazy(() => import("./features/admin/super-admin/pages/Events"));
 const SuperMembership = lazy(() => import("./features/admin/super-admin/pages/Membership"));
+const SuperDonations = lazy(() => import("./features/admin/super-admin/pages/Donations"));
+const SuperDonorDetail = lazy(() => import("./features/admin/super-admin/pages/DonorDetail"));
 /* Who is coming to which event, and who has paid. The organiser end of the
    public Book Now flow. */
 const SuperBookings = lazy(() => import("./features/admin/super-admin/pages/Bookings"));
@@ -180,6 +233,13 @@ const SuperBookingEvents = lazy(() => import("./features/admin/super-admin/pages
 const SuperEventCategories = lazy(() => import("./features/admin/super-admin/pages/EventCategories"));
 const SuperUpdates = lazy(() => import("./features/admin/super-admin/pages/Updates"));
 const SuperNotifications = lazy(() => import("./features/admin/super-admin/pages/Notifications"));
+/* The Events Admin portal: its own dashboard, and the super admin's own event
+   screens (All events, Categories, Bookings) mounted under /events-admin. */
+const EventsAdminDashboard = lazy(() => import("./features/admin/events-admin/pages/Dashboard"));
+const EventsAdminSettings = lazy(() => import("./features/admin/events-admin/pages/Settings"));
+const EventsAdminGallery = lazy(() => import("./features/admin/events-admin/pages/Gallery"));
+const EventsAdminNews = lazy(() => import("./features/admin/events-admin/pages/News"));
+const EventsAdminSchemes = lazy(() => import("./features/admin/events-admin/pages/Schemes"));
 
 // CMS (public-site content management, super admin only)
 const CmsLayout = lazy(() => import("./pages/cms/CmsLayout"));
@@ -239,6 +299,8 @@ const App = () => (
                 the offset it had, so pressing a link from the foot of one page
                 lands on the footer of the next — see the component. */}
             <ScrollToTop />
+            <PreloadPublicPages />
+            <FloatingLaunchers />
             <Suspense fallback={<RouteFallback />}>
               <Routes>
               <Route path="/" element={<Hero />} />
@@ -304,6 +366,10 @@ const App = () => (
               */}
               <Route path="/gallery/:id/photo/:n" element={<GalleryPhotoPage />} />
               <Route path="/contact" element={<ContactPage />} />
+              <Route path="/donate" element={<DonatePage />} />
+              <Route path="/donate/thank-you" element={<DonateThankYou />} />
+              <Route path="/donate/receipt/:token" element={<DonationReceiptPage />} />
+              <Route path="/donate/statement/:token" element={<DonationStatementPage />} />
 
               {/*
                 The four legal documents, at the literal paths the footer links
@@ -327,10 +393,24 @@ const App = () => (
                   neither route existed, so it fell through to the 404 page. */}
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              {/* The admin screens reach ONLY admin accounts the Super Admin
+                  created; the member ones only member accounts (`portal`). */}
+              <Route path="/admin/forgot-password" element={<ForgotPassword audience="admin" />} />
+              <Route path="/admin/reset-password" element={<ResetPassword audience="admin" />} />
+              {/* Google / Facebook / LinkedIn send the member back here. */}
+              <Route path="/auth/social" element={<SocialSignIn />} />
               <Route path="/register" element={<MemberRegister />} />
 
-              {/* Member Routes */}
+              {/* Member Routes
 
+                  EVERYTHING FROM HERE TO THE BUSINESS ROUTES IS A MEMBER'S. The
+                  gate sends a guest to /login and tells a signed-in ADMIN which
+                  account they are in, instead of drawing a member dashboard under
+                  the admin's name. A new member page goes INSIDE a gate. */}
+              <Route element={<RoleGate area="member" />}>
+
+              {/* A link that used to be printed on the payment page; the dashboard lives at /payment/member-dashboard. */}
+              <Route path="/member/dashboard" element={<Navigate to="/payment/member-dashboard" replace />} />
               <Route path="/member/unpaid-dashboard" element={<UnpaidDashboard />} />
 
               {/* The paid member area (MEM-001, EVT-001/2, DIR-001). */}
@@ -407,6 +487,7 @@ const App = () => (
               {/* PaymentGateway existed but was never routed, so nothing could
                   reach it — and it is the step that records the payment. */}
               <Route path="/payment/gateway" element={<PaymentGateway />} />
+              </Route>
               {/*
                 * TOP LEVEL, not under /member, and not negotiable: this exact
                 * path is what the server sends to Instamojo as `redirect_url`,
@@ -415,6 +496,8 @@ const App = () => (
                 * a 404 with money gone.
                 */}
               <Route path="/payment-success" element={<PaymentReturn />} />
+              {/* Outside the gate, above: guests pay for event bookings too. */}
+              <Route element={<RoleGate area="member" />}>
               <Route path="/payment/member-dashboard" element={<PaymentMemberDashboard />} />
               <Route path="/payment/membership-plans" element={<MembershipPlans />} />
 
@@ -444,7 +527,14 @@ const App = () => (
               */}
               <Route path="/business/company/:id" element={<CompanyPublicView />} />
               <Route path="/business/companies/:id" element={<CompanyDetails />} />
+              </Route>
 
+              {/* EVERY ADMIN PORTAL, to the legacy routes below: a guest goes to
+                  /admin/login and a member to their own dashboard. The server
+                  still decides what each admin role may do. */}
+              {/* ONE GATE PER PORTAL: a wrong-tier admin is sent to their own
+                  portal (super_admin may open any). See RoleGate `roles`. */}
+              <Route element={<RoleGate area="admin" roles={['block_admin']} />}>
               {/* Block Admin Routes */}
               <Route path="/block-admin/dashboard" element={<BlockDashboard />} />
               <Route path="/block-admin/approvals" element={<BlockApprovals />} />
@@ -452,6 +542,9 @@ const App = () => (
               <Route path="/block-admin/members" element={<BlockMembers />} />
               <Route path="/block-admin/settings" element={<BlockSettings />} />
 
+              </Route>
+
+              <Route element={<RoleGate area="admin" roles={['district_admin']} />}>
               {/* District Admin Routes */}
               <Route path="/district-admin/dashboard" element={<DistrictDashboard />} />
               <Route path="/district-admin/approvals" element={<DistrictApprovals />} />
@@ -462,6 +555,9 @@ const App = () => (
                   admin Hub, narrowed by the server to this patch. */}
               <Route path="/district-admin/hub" element={<DistrictHub />} />
 
+              </Route>
+
+              <Route element={<RoleGate area="admin" roles={['state_admin']} />}>
               {/* State Admin Routes */}
               <Route path="/state-admin/dashboard" element={<StateDashboard />} />
               <Route path="/state-admin/approvals" element={<StateApprovals />} />
@@ -471,6 +567,9 @@ const App = () => (
               {/* The districts and blocks of this state, with their queues. */}
               <Route path="/state-admin/hub" element={<StateHub />} />
 
+              </Route>
+
+              <Route element={<RoleGate area="admin" roles={['super_admin']} />}>
               {/* Super Admin Routes */}
               <Route path="/super-admin/dashboard" element={<SuperHub />} />
               <Route path="/super-admin/approvals" element={<SuperApprovals />} />
@@ -496,12 +595,41 @@ const App = () => (
               <Route path="/super-admin/bookings" element={<SuperBookingEvents />} />
               <Route path="/super-admin/bookings/:eventId" element={<SuperBookings />} />
               <Route path="/super-admin/membership" element={<SuperMembership />} />
+              <Route path="/super-admin/donations" element={<SuperDonations />} />
+              <Route path="/super-admin/donations/:id" element={<SuperDonorDetail />} />
               {/* Association Updates (MEM-001) — authored here, delivered to the
                   dashboard of every member whose region matches. */}
               <Route path="/super-admin/updates" element={<SuperUpdates />} />
               {/* Delivery oversight for the email and WhatsApp channels. */}
               <Route path="/super-admin/notifications" element={<SuperNotifications />} />
 
+              </Route>
+
+              <Route element={<RoleGate area="admin" roles={['events_admin']} />}>
+              {/* Events Admin — a separate account whose whole portal is the
+                  programme. Same components as the super admin's Events
+                  section, so the editor, the categories and the bookings are
+                  one implementation; `adminBasePath` keeps every link inside
+                  /events-admin. The server refuses this role everywhere else. */}
+              <Route path="/events-admin" element={<Navigate to="/events-admin/dashboard" replace />} />
+              <Route path="/events-admin/dashboard" element={<EventsAdminDashboard />} />
+              <Route path="/events-admin/events" element={<SuperEvents />} />
+              <Route path="/events-admin/events/categories" element={<SuperEventCategories />} />
+              {/* No bookings in this portal — the super admin's alone. An old
+                  link lands on the dashboard rather than a 403 screen. */}
+              <Route path="/events-admin/bookings" element={<Navigate to="/events-admin/dashboard" replace />} />
+              <Route path="/events-admin/bookings/:eventId" element={<Navigate to="/events-admin/dashboard" replace />} />
+              {/* The CMS's own Gallery, News and Schemes editors, in this
+                  portal's shell — one write path per collection. */}
+              <Route path="/events-admin/gallery" element={<EventsAdminGallery />} />
+              <Route path="/events-admin/news" element={<EventsAdminNews />} />
+              <Route path="/events-admin/schemes" element={<EventsAdminSchemes />} />
+              <Route path="/events-admin/settings" element={<EventsAdminSettings />} />
+
+              </Route>
+
+              {/* The legacy /admin/* paths render the BLOCK screens. */}
+              <Route element={<RoleGate area="admin" roles={['block_admin']} />}>
               {/* Legacy Admin Routes - Redirect to Block Admin */}
               <Route path="/admin/dashboard" element={<BlockDashboard />} />
               <Route path="/admin/block/dashboard" element={<BlockDashboard />} />
@@ -509,6 +637,7 @@ const App = () => (
               <Route path="/admin/approvals" element={<BlockApprovals />} />
               <Route path="/admin/members" element={<BlockMembers />} />
               <Route path="/admin/settings" element={<BlockSettings />} />
+              </Route>
 
               
 

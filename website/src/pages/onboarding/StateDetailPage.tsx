@@ -158,8 +158,8 @@ export default function StateDetailPage({ scope }: { scope: 'state' | 'region' }
             <Shell>
                 <div className={`${SCREEN_CONTAINER} py-10 animate-pulse`}>
                     <div className="h-5 w-48 bg-slate-200 rounded mb-6" />
-                    <div className="h-10 w-72 bg-slate-200 rounded mb-10" />
-                    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="h-10 w-full max-w-[18rem] bg-slate-200 rounded mb-10" />
+                    <div className="grid gap-3 sm:gap-5 md:grid-cols-2 xl:grid-cols-3">
                         {[0, 1, 2, 3, 4, 5].map((i) => (
                             <div key={i} className="h-56 bg-slate-200 rounded-2xl" />
                         ))}
@@ -172,7 +172,7 @@ export default function StateDetailPage({ scope }: { scope: 'state' | 'region' }
     if (failed || !page) {
         return (
             <Shell>
-                <div className={`${SCREEN_CONTAINER} py-24 text-center`}>
+                <div className={`${SCREEN_CONTAINER} py-16 sm:py-24 text-center`}>
                     <h1 className={`${SECTION_HEADING} text-brand-800 mb-4`}>Not published yet</h1>
                     <p className="text-[1.25rem] sm:text-[1.0625rem] font-semibold text-gray-500 mb-8">
                         This page has not been published.
@@ -228,14 +228,14 @@ export default function StateDetailPage({ scope }: { scope: 'state' | 'region' }
                       */}
                     <div className={`${DASH_CARD} overflow-hidden`}>
                         <div className="grid lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-                            <div className="order-2 lg:order-1 p-6 sm:p-8">
+                            <div className="order-2 lg:order-1 min-w-0 p-4 sm:p-8">
                                 <p className="text-[1.0625rem] sm:text-[1.25rem] leading-relaxed font-semibold
-                                              text-gray-700 whitespace-pre-line">
+                                              text-gray-700 whitespace-pre-line break-words">
                                     {full}
                                 </p>
 
                                 {page.hero.facts.length > 0 && (
-                                    <dl className="mt-7 grid gap-3.5 sm:grid-cols-2">
+                                    <dl className="mt-5 sm:mt-7 grid gap-2.5 sm:gap-3.5 sm:grid-cols-2">
                                         {page.hero.facts.map((fact, i) => (
                                             <div
                                                 key={i}
@@ -257,7 +257,7 @@ export default function StateDetailPage({ scope }: { scope: 'state' | 'region' }
                                 )}
 
                                 {page.hero.features.length > 0 && (
-                                    <div className="mt-4 grid gap-3.5 sm:grid-cols-2">
+                                    <div className="mt-4 grid gap-2.5 sm:gap-3.5 sm:grid-cols-2">
                                         {page.hero.features.map((feature, i) => (
                                             <div
                                                 key={i}
@@ -280,23 +280,33 @@ export default function StateDetailPage({ scope }: { scope: 'state' | 'region' }
                             </div>
 
                             {page.hero.backgroundUrl && (
-                                <div className="order-1 lg:order-2 p-6 sm:p-8 lg:pl-0">
+                                <div className="order-1 lg:order-2 p-4 pb-0 sm:p-8 lg:pl-0">
                                     {/* 4/3 on a phone, the height of the text
                                         column on a desktop — so the card has no
                                         band of empty white under the picture. */}
                                     <div className="relative h-full overflow-hidden rounded-xl aspect-[4/3]
                                                     lg:aspect-auto lg:min-h-[22rem] bg-brand-900">
+                                        {/* Below `lg` the frame is a fixed 4/3 and the upload can
+                                            be any shape: the photograph is contained over a blurred
+                                            copy of itself, so nobody in it is cropped off. */}
+                                        <img
+                                            src={sizedMediaUrl(page.hero.backgroundUrl, 1200)}
+                                            alt=""
+                                            aria-hidden="true"
+                                            className="absolute inset-0 h-full w-full scale-110 object-cover
+                                                       blur-xl opacity-70 lg:hidden"
+                                        />
                                         <img
                                             src={sizedMediaUrl(page.hero.backgroundUrl, 1200)}
                                             alt={parentName}
-                                            className="h-full w-full object-cover"
+                                            className="relative h-full w-full object-contain lg:object-cover"
                                         />
                                         {page.hero.tagline && (
                                             <>
                                                 <div className="absolute inset-x-0 bottom-0 h-2/5
                                                                 bg-gradient-to-t from-brand-900/85
                                                                 to-transparent" />
-                                                <p className="absolute inset-x-0 bottom-0 p-5 text-[1.0625rem]
+                                                <p className="absolute inset-x-0 bottom-0 p-4 sm:p-5 text-[1.0625rem]
                                                               sm:text-[1.25rem] font-bold text-white leading-snug">
                                                     {page.hero.tagline}
                                                 </p>
@@ -329,7 +339,7 @@ export default function StateDetailPage({ scope }: { scope: 'state' | 'region' }
                       * other list a state card opens.
                       */}
                     {photos.length ? (
-                        <div className="grid gap-5 grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                        <div className="grid gap-3 sm:gap-5 grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                             {photos.map((photo, i) => (
                                 <button
                                     key={photo.id}
@@ -347,13 +357,13 @@ export default function StateDetailPage({ scope }: { scope: 'state' | 'region' }
                                                        duration-500 transform-gpu"
                                         />
                                     </div>
-                                    <div className="px-4 py-3.5">
-                                        <p className="text-[1.0625rem] font-extrabold text-brand-900
-                                                      line-clamp-2 leading-snug">
+                                    <div className="px-3 py-2.5 sm:px-4 sm:py-3.5">
+                                        <p className="text-[0.9375rem] sm:text-[1.0625rem] font-extrabold text-brand-900
+                                                      line-clamp-2 leading-snug break-words">
                                             {photo.title || 'Untitled'}
                                         </p>
                                         {(photo.location || photo.eventDate) && (
-                                            <p className="mt-1 flex items-center gap-1 text-[1.0625rem]
+                                            <p className="mt-1 flex min-w-0 items-center gap-1 text-[0.875rem] sm:text-[1.0625rem]
                                                           font-semibold text-gray-500">
                                                 <MapPin size={11} className="shrink-0 text-brand-400" />
                                                 <span className="truncate">
@@ -371,7 +381,7 @@ export default function StateDetailPage({ scope }: { scope: 'state' | 'region' }
                     )}
 
                     {photoTotal > GALLERY_PER && (
-                        <div className="mt-10 flex flex-wrap items-center justify-between gap-4">
+                        <div className="mt-8 sm:mt-10 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
                             <p className="text-[1.0625rem] font-semibold text-gray-500">
                                 Showing{' '}
                                 <span className="font-extrabold text-brand-800">
@@ -379,7 +389,7 @@ export default function StateDetailPage({ scope }: { scope: 'state' | 'region' }
                                 </span>
                                 {' '}of <span className="font-extrabold text-brand-800">{photoTotal}</span>
                             </p>
-                            <div className="flex items-center gap-3">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                                 <button
                                     type="button"
                                     disabled={offset <= 0}
@@ -422,15 +432,15 @@ export default function StateDetailPage({ scope }: { scope: 'state' | 'region' }
                     <Heading heading={`ACTIV ${parentName} Leadership`} />
 
                     {leaders.length ? (
-                        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                        <div className="grid gap-3 sm:gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                             {leaders.map((person, i) => (
                                 <article key={person.id || i} className={`${DASH_CARD} overflow-hidden`}>
-                                    <div className="w-full aspect-[4/3] max-h-56 bg-gray-100 overflow-hidden">
+                                    <div className="w-full aspect-[4/3] max-h-48 sm:max-h-56 bg-gray-100 overflow-hidden">
                                         <PersonPhoto url={person.photoUrl} name={person.name}
                                             width={640} fallbackSize={32} />
                                     </div>
 
-                                    <div className="p-5">
+                                    <div className="min-w-0 p-4 sm:p-5 break-words">
                                         {person.role && (
                                             <span className="inline-block rounded-full bg-brand-700 px-2.5 py-1
                                                              text-[1rem] font-bold uppercase tracking-wide
@@ -505,7 +515,7 @@ export default function StateDetailPage({ scope }: { scope: 'state' | 'region' }
                 <div className={`${SCREEN_CONTAINER} py-8 sm:py-10`}>
                     {crumbs}
                     <Heading heading={custom.title} />
-                    <div className={`${DASH_CARD} p-6 sm:p-8`}>
+                    <div className={`${DASH_CARD} p-4 sm:p-8 break-words`}>
                         {custom.intro && (
                             <p className="text-[1.25rem] sm:text-[1.0625rem] font-bold text-brand-800 mb-4">
                                 {custom.intro}
@@ -574,7 +584,7 @@ export default function StateDetailPage({ scope }: { scope: 'state' | 'region' }
                     one, so putting it inside the branch is a syntax error. */}
                 {shown.length ? (
                     <div
-                        className={`grid gap-5 items-stretch ${isTiles
+                        className={`grid gap-3 sm:gap-5 items-stretch ${isTiles
                             ? 'sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4'
                             : 'xl:grid-cols-2'}`}
                     >
@@ -588,12 +598,12 @@ export default function StateDetailPage({ scope }: { scope: 'state' | 'region' }
                 )}
 
                 {all.length > PER_PAGE && (
-                    <div className="mt-10 flex flex-wrap items-center justify-between gap-4">
+                    <div className="mt-8 sm:mt-10 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
                         <p className="text-[1.0625rem] font-semibold text-gray-500">
                             Showing <span className="font-extrabold text-brand-800">{from}–{to}</span>
                             {' '}of <span className="font-extrabold text-brand-800">{all.length}</span>
                         </p>
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                             <button
                                 type="button"
                                 disabled={offset <= 0}
@@ -622,16 +632,16 @@ export default function StateDetailPage({ scope }: { scope: 'state' | 'region' }
 /* ------------------------------------------------------------------ pieces */
 
 const BACK_BTN =
-    'inline-flex items-center gap-2 bg-brand-800 hover:bg-brand-700 text-white px-8 py-3.5 '
-    + 'rounded-full font-bold text-[1.0625rem] uppercase tracking-[0.1em] transition-colors';
+    'inline-flex items-center gap-2 bg-brand-800 hover:bg-brand-700 text-white px-6 sm:px-8 py-3.5 '
+    + 'rounded-full font-bold text-[0.9375rem] sm:text-[1.0625rem] uppercase tracking-[0.1em] transition-colors';
 
 const PAGE_BTN =
-    'inline-flex items-center gap-2 rounded-full bg-brand-800 px-5 py-2.5 text-[1.0625rem] font-bold '
+    'inline-flex items-center gap-2 rounded-full bg-brand-800 px-4 sm:px-5 py-2.5 text-[0.9375rem] sm:text-[1.0625rem] font-bold '
     + 'uppercase tracking-[0.1em] text-white transition-colors hover:bg-brand-700 '
     + 'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-brand-800';
 
 const PAGE_BTN_GHOST =
-    'inline-flex items-center gap-2 rounded-full border border-brand-200 px-5 py-2.5 text-[1.0625rem] '
+    'inline-flex items-center gap-2 rounded-full border border-brand-200 px-4 sm:px-5 py-2.5 text-[0.9375rem] sm:text-[1.0625rem] '
     + 'font-bold uppercase tracking-[0.1em] text-brand-700 transition-colors hover:bg-brand-50 '
     + 'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent';
 
@@ -656,7 +666,7 @@ function Shell({ children }: { children: React.ReactNode }) {
  */
 function Heading({ heading }: { heading: string }) {
     return (
-        <h1 className="mb-7 text-[1.5625rem] sm:text-[2.1875rem] font-black tracking-tight text-brand-800">
+        <h1 className="mb-5 sm:mb-7 break-words text-[1.5625rem] sm:text-[2.1875rem] font-black tracking-tight text-brand-800">
             {heading}
         </h1>
     );
@@ -664,7 +674,7 @@ function Heading({ heading }: { heading: string }) {
 
 function Empty() {
     return (
-        <div className={`${DASH_CARD} px-6 py-16 text-center`}>
+        <div className={`${DASH_CARD} px-4 py-10 sm:px-6 sm:py-16 text-center`}>
             <p className="text-[1.25rem] sm:text-[1.0625rem] font-extrabold text-brand-900">
                 Nothing has been published here yet
             </p>
@@ -698,13 +708,26 @@ function DetailCard({ row, hasMedia }: { row: RegionFeedItem; hasMedia: boolean 
                 <div className="relative w-full sm:w-52 lg:w-60 shrink-0 aspect-[4/3] sm:aspect-auto
                                 sm:min-h-[13rem] overflow-hidden bg-brand-50">
                     {row.imageUrl ? (
-                        <img
-                            src={sizedMediaUrl(row.imageUrl, 640)}
-                            alt=""
-                            aria-hidden="true"
-                            loading="lazy"
-                            className="h-full w-full object-cover"
-                        />
+                        <>
+                            {/* Stacked full width on a phone, where a crop would cut
+                                the subject: contained over a blurred copy there,
+                                the full-height column crop from `sm` up. */}
+                            <img
+                                src={sizedMediaUrl(row.imageUrl, 640)}
+                                alt=""
+                                aria-hidden="true"
+                                loading="lazy"
+                                className="absolute inset-0 h-full w-full scale-110 object-cover blur-xl
+                                           opacity-70 sm:hidden"
+                            />
+                            <img
+                                src={sizedMediaUrl(row.imageUrl, 640)}
+                                alt=""
+                                aria-hidden="true"
+                                loading="lazy"
+                                className="relative h-full w-full object-contain sm:object-cover"
+                            />
+                        </>
                     ) : (
                         /* Quiet, and clearly deliberate: a row in an
                            illustrated list that has no photograph yet. */
@@ -715,7 +738,7 @@ function DetailCard({ row, hasMedia }: { row: RegionFeedItem; hasMedia: boolean 
                 </div>
             )}
 
-            <div className="flex flex-1 min-w-0 flex-col p-5 sm:p-6">
+            <div className="flex flex-1 min-w-0 flex-col p-4 sm:p-6 break-words">
                 {(row.date || row.location) && (
                     <p className={MICRO_LABEL + ' text-brand-500 mb-1.5'}>
                         {[row.date, row.location].filter(Boolean).join(' \u00b7 ')}
@@ -795,7 +818,7 @@ function TileCard({ row, hasMedia }: { row: RegionFeedItem; hasMedia: boolean })
     return (
         <article className={`${DASH_CARD} overflow-hidden flex flex-col`}>
             {hasMedia && (
-                <div className="w-full aspect-[4/3] max-h-52 overflow-hidden bg-brand-50">
+                <div className="w-full aspect-[4/3] max-h-48 sm:max-h-52 overflow-hidden bg-brand-50">
                     {row.imageUrl ? (
                         <img
                             src={sizedMediaUrl(row.imageUrl, 640)}
@@ -812,7 +835,7 @@ function TileCard({ row, hasMedia }: { row: RegionFeedItem; hasMedia: boolean })
                 </div>
             )}
 
-            <div className="flex flex-1 flex-col p-4 sm:p-5">
+            <div className="flex flex-1 min-w-0 flex-col p-4 sm:p-5 break-words">
                 {(row.date || row.location) && (
                     <p className={MICRO_LABEL + ' text-brand-500 mb-1.5'}>
                         {[row.date, row.location].filter(Boolean).join(' \u00b7 ')}

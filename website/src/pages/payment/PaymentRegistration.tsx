@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, ArrowLeft, Shield, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { getUserApplication } from '@/services/applicationApi';
-import { resolvePlanEligibility } from '@/features/member/membershipPlans';
+import { resolvePlanEligibility, type MembershipPlan } from '@/features/member/membershipPlans';
 import { getPaymentStatus } from "@/services/activApi";
 
 export default function PaymentRegistration() {
@@ -13,6 +13,16 @@ export default function PaymentRegistration() {
   const [loading, setLoading] = useState(true);
   const [application, setApplication] = useState<any>(null);
   const [processing, setProcessing] = useState(false);
+  /**
+   * The plan this member is offered — the aspirant's or the student's, as the
+   * server resolves it. Every price and plan name on this page comes from
+   * here; nothing on it is typed in, because the Super Admin sets both.
+   */
+  const [plan, setPlan] = useState<MembershipPlan | null>(null);
+  const [kind, setKind] = useState<string>('');
+
+  const money = (value: number) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
+  const kindLabel = kind === 'student' ? 'Student' : kind === 'aspirant' ? 'Aspirant' : 'Business';
 
   useEffect(() => {
     loadApplication();
@@ -55,6 +65,10 @@ export default function PaymentRegistration() {
       }
 
       setApplication(app);
+
+      const eligibility = await resolvePlanEligibility();
+      setPlan(eligibility.selected);
+      setKind(eligibility.audience);
     } catch (error) {
       console.error('Error loading application:', error);
       toast.error('Failed to load application details');
@@ -85,6 +99,8 @@ export default function PaymentRegistration() {
        * gateway. Resolved live, it is the same figure the plans screen shows
        * and the same one the server charges.
        */
+      // Asked again at the moment of paying: the Super Admin may have edited
+      // the price while this page sat open.
       const eligibility = await resolvePlanEligibility();
       const plan = eligibility.selected;
 
@@ -125,59 +141,61 @@ export default function PaymentRegistration() {
     <div className="min-h-screen bg-white">
       {/* Header */}
       <div className="bg-white border-b border-slate-300 sticky top-0 z-50 shadow-md">
-        <div className="max-w-7xl mx-auto px-6 py-5 flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-5 flex items-center gap-3 sm:gap-4">
           <button
             onClick={() => navigate('/member/application-status')}
             className="p-2 hover:bg-slate-100 rounded-lg transition-all duration-200 hover:scale-105"
           >
             <ArrowLeft className="w-6 h-6 text-slate-700" />
           </button>
-          <h1 className="text-[1.5625rem] font-bold text-slate-900">Payment Registration</h1>
+          <h1 className="text-lg sm:text-[1.5625rem] font-bold text-slate-900 truncate min-w-0">Payment Registration</h1>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
         {/* Title Section */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-6 sm:mb-12">
           <div className="inline-block mb-4">
-            <span className="px-5 py-2 bg-blue-600 text-white text-[1.0625rem] font-semibold rounded-full shadow-md">
+            <span className="px-4 sm:px-5 py-1.5 sm:py-2 bg-blue-600 text-white text-sm sm:text-[1.0625rem] font-semibold rounded-full shadow-md">
               Complete Your Registration
             </span>
           </div>
-          <h1 className="text-[3.125rem] font-bold text-slate-900 mb-4">
-            Aspirant Membership
+          <h1 className="text-2xl sm:text-4xl md:text-[3.125rem] font-bold text-slate-900 mb-3 sm:mb-4">
+            {plan?.name || `${kindLabel} Membership`}
           </h1>
-          <p className="text-slate-600 text-[1.1875rem] max-w-2xl mx-auto leading-relaxed">
-            Join our community of aspiring professionals and unlock exclusive student benefits
+          <p className="text-slate-600 text-base sm:text-[1.1875rem] max-w-2xl mx-auto leading-relaxed">
+            {plan?.description || (kind === 'student'
+              ? 'The membership for students who are not yet in business.'
+              : 'The membership for applicants who have not yet registered a business.')}
           </p>
         </div>
 
         {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
           {/* Left Column - Plan Details & Info */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Aspirant Plan Card */}
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+            {/* The plan card — the resolved plan, whatever it is */}
             <Card className="border-2 border-blue-600 shadow-xl bg-blue-50">
               <div className="absolute top-0 left-0 right-0 h-2 bg-blue-600"></div>
-              <CardContent className="p-8">
-                <div className="flex items-start justify-between mb-6">
+              <CardContent className="p-4 sm:p-6 md:p-8">
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-3 mb-4 sm:mb-6">
                   <div>
-                    <h3 className="text-[1.5625rem] font-bold text-slate-900 mb-2">Aspirant Plan</h3>
-                    <p className="text-slate-600 text-[1.0625rem]">For students without company experience</p>
+                    <h3 className="text-xl sm:text-[1.5625rem] font-bold text-slate-900 mb-1 sm:mb-2">{plan?.name || 'Your plan'}</h3>
+                    <p className="text-slate-600 text-[1.0625rem]">{plan?.experience || `${kindLabel} membership`}</p>
                   </div>
-                  <div className="text-right">
-                    <div className="text-[3.125rem] font-bold text-blue-600">₹2,000</div>
+                  <div className="sm:text-right">
+                    <div className="text-3xl sm:text-[3.125rem] font-bold text-blue-600">{plan ? money(plan.price) : '—'}</div>
                     <div className="text-slate-600 mt-1 font-medium">per year</div>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  {[
-                    'Access to learning resources and webinars',
-                    'Student-only events and competitions',
-                    'Mentorship and career guidance',
-                    'Networking with professionals'
-                  ].map((feature, index) => (
+                  {!plan && (
+                    <p className="text-[1.0625rem] text-slate-600">
+                      We could not load the membership price. Please refresh the page to try again.
+                    </p>
+                  )}
+                  {(plan?.features || []).map((feature, index) => (
                     <div key={index} className="flex items-start gap-3">
                       <div className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center mt-0.5">
                         <CheckCircle className="w-4 h-4 text-white" />
@@ -191,19 +209,19 @@ export default function PaymentRegistration() {
 
             {/* Secure Payment Info */}
             <Card className="bg-green-50 border-2 border-green-300 shadow-md hover:shadow-lg transition-shadow duration-300">
-              <CardContent className="p-8">
-                <div className="flex items-start gap-5">
-                  <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-green-500 flex items-center justify-center shadow-md">
-                    <Lock className="w-7 h-7 text-white" />
+              <CardContent className="p-4 sm:p-6 md:p-8">
+                <div className="flex items-start gap-3 sm:gap-5">
+                  <div className="flex-shrink-0 w-10 h-10 sm:w-14 sm:h-14 rounded-xl bg-green-500 flex items-center justify-center shadow-md">
+                    <Lock className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="font-bold text-green-900 text-[1.25rem] mb-2">
                       🔒 Secure Payment Gateway
                     </p>
                     <p className="text-[1.0625rem] text-green-800 leading-relaxed mb-3">
                       Powered by Instamojo - Your payment information is encrypted with industry-standard SSL encryption. We never store your card details.
                     </p>
-                    <div className="flex items-center gap-3 text-[1.0625rem] text-green-700">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm sm:text-[1.0625rem] text-green-700">
                       <span className="px-3 py-1.5 bg-white border border-green-300 rounded-full font-medium">SSL Encrypted</span>
                       <span className="px-3 py-1.5 bg-white border border-green-300 rounded-full font-medium">PCI Compliant</span>
                     </div>
@@ -214,14 +232,14 @@ export default function PaymentRegistration() {
 
             {/* After Payment Info */}
             <Card className="bg-blue-50 border-2 border-blue-300 shadow-md hover:shadow-lg transition-shadow duration-300">
-              <CardContent className="p-8">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-blue-600 flex items-center justify-center shadow-md">
-                    <Shield className="w-7 h-7 text-white" />
+              <CardContent className="p-4 sm:p-6 md:p-8">
+                <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                  <div className="flex-shrink-0 w-10 h-10 sm:w-14 sm:h-14 rounded-xl bg-blue-600 flex items-center justify-center shadow-md">
+                    <Shield className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
                   </div>
                   <h3 className="font-bold text-slate-900 text-[1.25rem]">What Happens Next?</h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
                   {[
                     { icon: '⚡', text: 'Instant membership activation' },
                     { icon: '📜', text: 'Digital certificate download' },
@@ -245,38 +263,38 @@ export default function PaymentRegistration() {
           <div className="lg:col-span-1">
             <Card className="shadow-xl border-2 border-slate-300 sticky top-24 bg-white">
               {/* Header */}
-              <div className="bg-slate-100 p-6 border-b-2 border-slate-300">
-                <h2 className="text-[1.5625rem] font-bold text-slate-900 flex items-center gap-2">
+              <div className="bg-slate-100 p-4 sm:p-6 border-b-2 border-slate-300">
+                <h2 className="text-xl sm:text-[1.5625rem] font-bold text-slate-900 flex items-center gap-2">
                   <span>💳</span> Payment Summary
                 </h2>
               </div>
 
-              <CardContent className="p-8">
-                <div className="space-y-5 mb-8">
-                  <div className="flex justify-between items-center p-3 rounded-lg bg-slate-50 border border-slate-200">
+              <CardContent className="p-4 sm:p-6 md:p-8">
+                <div className="space-y-4 sm:space-y-5 mb-6 sm:mb-8">
+                  <div className="flex justify-between items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-200">
                     <span className="text-slate-600 text-[1.0625rem] font-medium">Member Type</span>
-                    <span className="font-bold text-slate-900">Aspirant (Student)</span>
+                    <span className="font-bold text-slate-900">{kindLabel}</span>
                   </div>
 
-                  <div className="flex justify-between items-center p-3 rounded-lg bg-blue-50 border-2 border-blue-400">
+                  <div className="flex justify-between items-center gap-3 p-3 rounded-lg bg-blue-50 border-2 border-blue-400">
                     <span className="text-blue-700 text-[1.0625rem] font-medium">Selected Plan</span>
-                    <span className="font-bold text-blue-900">Aspirant Plan</span>
+                    <span className="font-bold text-blue-900 text-right min-w-0 break-words">{plan?.name || '—'}</span>
                   </div>
 
                   <div className="border-t-2 border-slate-300 pt-5 mt-5">
                     <div className="flex justify-between items-center mb-3 text-[1.0625rem]">
                       <span className="text-slate-600">Subtotal</span>
-                      <span className="font-semibold text-slate-900">₹2,000</span>
+                      <span className="font-semibold text-slate-900">{plan ? money(plan.price) : '—'}</span>
                     </div>
                     <div className="flex justify-between items-center mb-5 text-[1.0625rem]">
                       <span className="text-slate-600">Tax & Fees</span>
                       <span className="font-semibold text-green-600">₹0 (Included)</span>
                     </div>
-                    <div className="flex justify-between items-center pt-5 border-t-2 border-slate-300 bg-blue-50 -mx-8 px-8 py-5 rounded-b-lg">
+                    <div className="flex justify-between items-center pt-5 border-t-2 border-slate-300 bg-blue-50 -mx-4 px-4 sm:-mx-6 sm:px-6 md:-mx-8 md:px-8 py-4 sm:py-5 rounded-b-lg gap-3">
                       <span className="text-[1.1875rem] font-bold text-slate-900">Total Amount</span>
                       <div className="text-right">
-                        <span className="text-[2.5rem] font-bold text-blue-600 block">
-                          ₹2,000
+                        <span className="text-3xl sm:text-[2.5rem] font-bold text-blue-600 block">
+                          {plan ? money(plan.price) : '—'}
                         </span>
                         <span className="text-[1.0625rem] text-slate-600">One-time payment</span>
                       </div>
@@ -286,9 +304,9 @@ export default function PaymentRegistration() {
 
                 {/* Payment Button */}
                 <Button
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 text-[1.1875rem] font-bold shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 sm:py-5 text-base sm:text-[1.1875rem] font-bold shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105"
                   onClick={handlePayment}
-                  disabled={processing}
+                  disabled={processing || !plan}
                 >
                   {processing ? (
                     <div className="flex items-center justify-center gap-3">
@@ -297,14 +315,14 @@ export default function PaymentRegistration() {
                     </div>
                   ) : (
                     <span className="flex items-center justify-center gap-2">
-                      🚀 Proceed to Pay ₹2,000
+                      🚀 Proceed to Pay {plan ? money(plan.price) : ''}
                     </span>
                   )}
                 </Button>
 
                 {/* Trust Badges */}
                 <div className="mt-6 pt-6 border-t border-slate-200 text-center">
-                  <p className="text-[1.0625rem] text-slate-500 mb-2">Trusted by 1000+ students</p>
+                  <p className="text-[1.0625rem] text-slate-500 mb-2">Secure payment · receipt by email and WhatsApp</p>
                   <div className="flex items-center justify-center gap-2 text-[1.0625rem] text-slate-600">
                     <Shield className="w-4 h-4 text-green-600" />
                     <span>Money-back guarantee</span>

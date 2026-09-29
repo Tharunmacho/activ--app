@@ -6,6 +6,7 @@ import { getGalleryItem, type GalleryItem } from '@/services/cmsApi';
 import { HeaderSection } from '../../components/layout/HeaderSection';
 import { FooterSection } from '../../components/layout/FooterSection';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
+import { resolveMediaUrl, sizedMediaUrl } from '@/config/api.config';
 import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
 import { isNotFound } from '@/services/api';
 import { EYEBROW, MICRO_LABEL } from '@/components/layout/typography';
@@ -55,15 +56,24 @@ export default function GalleryPhotoPage() {
     const [failed, setFailed] = useState(false);
     const [reloadKey, setReloadKey] = useState(0);
 
+    /* A new photograph is a new page: the reader should meet it at the top,
+       not half way down the album row they pressed it from. */
+    useEffect(() => { window.scrollTo({ top: 0 }); }, [id, n]);
+
+    /*
+     * THE ALBUM IS READ ONCE PER ALBUM — NOT ONCE PER PHOTOGRAPH.
+     *
+     * This effect used to depend on the photograph number too, so every "next"
+     * blanked the page to a skeleton and fetched the same album again before
+     * showing a picture it already had. Moving within an album now changes only
+     * which photograph is on screen.
+     */
     useEffect(() => {
         let cancelled = false;
         setLoading(true);
         setMissing(false);
         setFailed(false);
         setItem(null);
-        /* A new photograph is a new page: the reader should meet it at the top,
-           not half way down the album row they pressed it from. */
-        window.scrollTo({ top: 0 });
 
         getGalleryItem(id)
             .then((row) => {
@@ -78,7 +88,7 @@ export default function GalleryPhotoPage() {
             .finally(() => { if (!cancelled) setLoading(false); });
 
         return () => { cancelled = true; };
-    }, [id, n, reloadKey]);
+    }, [id, reloadKey]);
 
     const shell = (children: React.ReactNode) => (
         <div className="flex flex-col min-h-screen font-sans dot-band">
@@ -102,7 +112,7 @@ export default function GalleryPhotoPage() {
     if (failed) {
         return shell(
             <>
-                <h1 className="text-[2.1875rem] font-black tracking-tight text-brand-900">
+                <h1 className="text-[1.75rem] sm:text-[2.1875rem] font-black tracking-tight text-brand-900">
                     This photograph could not be loaded
                 </h1>
                 <p className="mt-3 text-[1.1875rem] text-gray-500">
@@ -163,7 +173,7 @@ export default function GalleryPhotoPage() {
     if (missing || !item || !valid) {
         return shell(
             <>
-                <h1 className="text-[2.1875rem] font-black tracking-tight text-brand-900">
+                <h1 className="text-[1.75rem] sm:text-[2.1875rem] font-black tracking-tight text-brand-900">
                     That photograph is not here
                 </h1>
                 <p className="mt-3 text-[1.1875rem] text-gray-500">
@@ -180,6 +190,17 @@ export default function GalleryPhotoPage() {
     }
 
     const current = album[index];
+
+    /*
+     * THE NEIGHBOURS, FETCHED AHEAD. By the time the reader presses next or
+     * previous, both pictures (preview and sharp copy) are already in the
+     * browser's cache, so the switch is instant.
+     */
+    [album[index + 1], album[index - 1]].forEach((neighbour) => {
+        const url = neighbour?.media?.url;
+        if (!url || neighbour?.media?.type === 'video') return;
+        [640, 1280].forEach((w) => { const im = new Image(); im.src = sizedMediaUrl(url, w); });
+    });
 
     /*
      * WHERE EACH NAMED FIELD GOES — the editor's answer, not a guess.
@@ -216,7 +237,7 @@ export default function GalleryPhotoPage() {
             <HeaderSection />
 
             <main className="flex-grow">
-                <section className="w-full pt-10 pb-16 md:pt-14 md:pb-24 relative overflow-hidden">
+                <section className="w-full pt-6 pb-12 sm:pt-10 sm:pb-16 md:pt-14 md:pb-24 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-96 h-96 bg-brand-50/60 rounded-full blur-3xl
                                     -z-10 translate-x-1/3 -translate-y-1/3 transform-gpu pointer-events-none" />
 
@@ -224,7 +245,7 @@ export default function GalleryPhotoPage() {
                         <Link
                             to={`/gallery/${id}`}
                             className="inline-flex items-center gap-2 text-gray-500 hover:text-brand-700
-                                       font-bold text-[1rem] uppercase tracking-[0.1em] transition-colors mb-8"
+                                       font-bold text-[1rem] uppercase tracking-[0.1em] transition-colors mb-6 sm:mb-8 max-w-full"
                         >
                             <ArrowLeft size={15} /> Back to {item.title || 'the album'}
                         </Link>
@@ -233,8 +254,37 @@ export default function GalleryPhotoPage() {
                         <Reveal>
                             <div className="rounded-[1.75rem] overflow-hidden border border-brand-100/70 bg-gray-50
                                             shadow-[0_18px_60px_-24px_rgb(28_46_104/0.35)]">
-                                <div className="w-full h-[22rem] sm:h-[28rem] lg:h-[34rem]">
-                                    <CmsMediaFrame media={current.media} priority width={1400} />
+                                <div className="relative w-full overflow-hidden h-[22rem] sm:h-[28rem] lg:h-[34rem]">
+                                    {/* At every width: the whole photograph over a blurred copy of
+                                        itself, so the tall frame never crops people out. */}
+                                    {current.media?.url && (
+                                        <img
+                                            src={sizedMediaUrl(current.media.url, 320)}
+                                            alt=""
+                                            aria-hidden="true"
+                                            className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl"
+                                        />
+                                    )}
+                                    {/* A light preview (~40 KB) that is on screen almost
+                                        at once, so the frame is never empty while the sharp
+                                        copy arrives over it. */}
+                                    {current.media?.url && current.media?.type !== 'video' && (
+                                        <img
+                                            key={`p-${index}`}
+                                            src={sizedMediaUrl(current.media.url, 640)}
+                                            alt=""
+                                            aria-hidden="true"
+                                            className="absolute inset-0 h-full w-full object-contain"
+                                        />
+                                    )}
+                                    <CmsMediaFrame
+                                        key={index}
+                                        media={current.media}
+                                        priority
+                                        width={1280}
+                                        sizes="(min-width: 1024px) 70vw, 100vw"
+                                        className="relative !object-contain !bg-transparent"
+                                    />
                                 </div>
                             </div>
                         </Reveal>
@@ -255,7 +305,7 @@ export default function GalleryPhotoPage() {
                               * truncation to the `truncate` that is already on
                               * the captions.
                               */}
-                        <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] items-start">
+                        <div className="mt-6 sm:mt-10 grid gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] items-start">
                             <div>
                                 {/*
                                   * NO "Photograph 2 of 6".
@@ -290,7 +340,7 @@ export default function GalleryPhotoPage() {
                                   * in as the heading and the paragraph is then
                                   * omitted rather than printed twice.
                                   */}
-                                <h1 className="text-[2rem] sm:text-[2.5rem] font-black leading-[1.12] tracking-tight text-brand-900">
+                                <h1 className="text-[1.75rem] sm:text-[2.5rem] font-black leading-[1.12] tracking-tight text-brand-900 break-words">
                                     {current.title || current.caption || 'Untitled photograph'}
                                 </h1>
 
@@ -386,7 +436,7 @@ export default function GalleryPhotoPage() {
 
                             {/* ---- the side card: this photograph, then the event ---- */}
                             {(cardFields.length > 0 || facts.length > 0) && (
-                                <aside className="rounded-[1.5rem] border border-brand-100/70 bg-[#fafbfc] p-6 sm:p-8
+                                <aside className="rounded-[1.5rem] border border-brand-100/70 bg-[#fafbfc] p-4 sm:p-8
                                                   shadow-[0_10px_36px_-18px_rgb(28_46_104/0.25)] lg:sticky lg:top-28">
                                     {/*
                                       * THIS PHOTOGRAPH'S OWN FIELDS COME FIRST, and
@@ -451,11 +501,11 @@ export default function GalleryPhotoPage() {
 
                         {/* ---- the rest of the album ---- */}
                         {rest.length > 0 && (
-                            <div className="mt-16">
+                            <div className="mt-10 sm:mt-16">
                                 <h2 className="text-[1.5625rem] font-black text-brand-800 mb-6">
                                     More from this album
                                 </h2>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6">
                                     {rest.map(({ photo, i }) => (
                                         <Reveal key={i} delay={Math.min(i % 3, 2) * 80}>
                                             <Link
@@ -466,7 +516,7 @@ export default function GalleryPhotoPage() {
                                                     : `Open photograph ${i + 1}`}
                                             >
                                                 <div className="rounded-2xl overflow-hidden bg-gray-50 border border-brand-100/70
-                                                                h-44 sm:h-56 shadow-[0_10px_30px_-16px_rgb(28_46_104/0.3)]
+                                                                h-36 sm:h-56 shadow-[0_10px_30px_-16px_rgb(28_46_104/0.3)]
                                                                 transition group-hover:shadow-[0_18px_40px_-16px_rgb(28_46_104/0.45)]">
                                                     <CmsMediaFrame media={photo.media} width={420} />
                                                 </div>

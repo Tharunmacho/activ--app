@@ -1,17 +1,115 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Actv Portal - Member & Admin Management</title>
-    <meta name="description" content="Actv Member & Admin Portal - Comprehensive application management system with multi-tier administrative access" />
-    <meta name="author" content="Actv" />
-    <link rel="icon" type="image/png" href="/logo_ACTIVian-removebg-preview.png" />
-    <link rel="apple-touch-icon" href="/logo_ACTIVian-removebg-preview.png" />
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ACTIV|Chamber of Commerce for SCST Entrepreneurs|SCST organisation</title>
+<link rel="canonical" href="https://activ.org.in"/>
+<meta name="description" content=" Do you want to become an entrepreneur, or are you an entrepreneur with an existing business and struggling in SC/ST communities? Do you need to know about SCST schemes and opportunities around the world? ACTIV will help you towards Economic Liberty which is the ideology of Dr Baba Saheb Ambedkar"/>
 
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://activ.org.in">
+<meta property="og:title" content="ACTIV | SCST organisation for Entrepreneurship and Wealth creation ">
+<meta property="og:image" content="https://activ.org.in/public/activss.jpg" >
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="627">
+<meta property="og:description" content="ACTIV is an Indian Chamber of Commerce for Entrepreneurship Development & Wealth Creation at SC/ST Communities">
+<meta property="article:publisher" content="https://facebook.com/activind" >
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ACTIV|ADIDRAVIDAR CONFEDERATION OF TRADE & INDUSTRIAL VISION">
+<meta name="twitter:url" content="https://activ.org.in">
+<meta name="twitter:image" content="https://activ.org.in/img/activss.jpg">
+<meta name="twitter:description" content="ACTIV is an Indian Chamber of Commerce for Entrepreneurship Development & Wealth Creation at SC/ST Communities">
+
+<!-- pinterest -->
+<meta name="p:domain_verify" content="596ae860033bfde96d7a05e4ae4db8da"/>
+<meta name="facebook-domain-verification" content="zcobkokb1f9zjqltu5lmlpkkc894ru" />
+
+<!--
+  START THE LANDING PAGE'S DATA NOW, not after the bundle.
+
+  The banner and the header cannot draw until four API reads answer, and those
+  reads used to begin only once ~1 MB of JavaScript had downloaded and run —
+  seconds on a phone. These few lines open the connection to the API and start
+  the same four reads while the bundle is still arriving; `cmsApi.ts` takes each
+  answer from `window.__ACTIV_PREFETCH__` instead of asking again. Public,
+  unauthenticated reads only — the same answers any visitor gets.
+-->
+<script>
+  (function () {
+    try {
+      var base = '%VITE_API_URL%';
+      if (!/^https?:\/\//.test(base)) return;
+      base = base.replace(/\/+$/, '');
+      if (!/\/api\/v\d+$/.test(base)) base += '/api/v1';
+      var origin = base.replace(/\/api\/v\d+$/, '');
+      var link = document.createElement('link');
+      link.rel = 'preconnect'; link.href = origin; link.crossOrigin = 'anonymous';
+      document.head.appendChild(link);
+
+      var store = window.__ACTIV_PREFETCH__ = {};
+      var get = function (path) {
+        store[path] = fetch(base + path, { credentials: 'omit' })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .catch(function () { return null; });
+      };
+      get('/cms/site');
+      var p = location.pathname.replace(/\/+$/, '') || '/';
+      if (p === '/' || p === '/onboarding') {
+        get('/cms/home');
+        get('/cms/gallery?home=true');
+        get('/cms/events?scope=public');
+      }
+    } catch (e) { /* the app asks for itself */ }
+  })();
+</script>
+
+<!--
+  THIRD-PARTY SCRIPTS WAIT UNTIL THE PAGE IS UP.
+
+  Google Analytics (~200 KB) and the Meta Pixel (~190 KB) both downloaded in the same moment as the site's own code and fought it
+  for a phone's bandwidth — none of them is needed to draw a single pixel. They
+  now load once the page has finished loading and the browser is idle. Their
+  queues are created immediately, so anything the app reports before then is
+  kept and sent, and the page view is still counted.
+-->
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-KVR8RTT6G1');
+
+  !function(f){if(f.fbq)return;var n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];}(window);
+  fbq('init', '536417434121119');
+  fbq('track', 'PageView');
+
+  // Chat is the BotBee bot, opened by the BotBee widget script loaded here.
+  (function () {
+    var load = function (src) {
+      var s = document.createElement('script'); s.async = true; s.src = src;
+      document.head.appendChild(s);
+    };
+    var go = function () {
+      load('https://www.googletagmanager.com/gtag/js?id=G-KVR8RTT6G1');
+      load('https://connect.facebook.net/en_US/fbevents.js');
+    };
+    var later = function () {
+      if ('requestIdleCallback' in window) window.requestIdleCallback(go, { timeout: 4000 });
+      else setTimeout(go, 1500);
+    };
+    if (document.readyState === 'complete') later();
+    else window.addEventListener('load', later);
+  })();
+</script>
+<script defer src="https://app.botbee.io/script/webchat-link.js?code=1787443396160769"></script>
+<!-- The Meta Pixel's <noscript> fallback is at the top of <body>: an <img>
+     inside <noscript> in <head> is invalid HTML and Vite refuses to serve it. -->
     <!--
       One family, POPPINS, at the full weight range the design actually uses.
-
+    
       The weight list is not decorative. The public pages use `font-black` and
       `font-extrabold` throughout; when only 400-700 were served the browser
       synthesised 800 and 900 by smearing the 700 outlines, which is what made
@@ -86,9 +184,33 @@
       href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700&display=swap"
       rel="stylesheet"
     />
+    <style>
+      /* Hide BotBee default circular chat button, as it uses inline !important display block */
+      .xit-widget-bswc-button { 
+        opacity: 0 !important; 
+        visibility: hidden !important; 
+        pointer-events: none !important; 
+        transform: scale(0) !important; 
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <noscript><img height="1" width="1" style="display:none"
+      src="https://www.facebook.com/tr?id=536417434121119&ev=PageView&noscript=1"
+    /></noscript>
+    <!--
+      A BRANDED FIRST FRAME. Until the app's code has arrived and run, the page
+      was an empty gradient (reported on /cms as "nothing loads"). This is plain
+      HTML, painted with the document itself; React replaces it on its first
+      render.
+    -->
+    <div id="root">
+      <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;background:#ffffff;font-family:Poppins,Inter,system-ui,sans-serif">
+        <img src="/logo_ACTIVian-removebg-preview.png" alt="ACTIV" width="180" style="width:180px;height:auto" />
+        <div style="width:34px;height:34px;border:3px solid #dbe4fb;border-top-color:#1c2e68;border-radius:50%;animation:activspin .8s linear infinite"></div>
+        <style>@keyframes activspin{to{transform:rotate(360deg)}}</style>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -109,7 +109,7 @@ export default function MediaPicker({ value, onChange, label = 'Media', aspect =
                 <div
                     className="bg-slate-50 dark:bg-[#050505] border border-slate-200 dark:border-[#262626]
                                rounded-lg overflow-hidden flex items-center justify-center
-                               w-full sm:w-[13.75rem] shrink-0"
+                               w-full max-w-[15rem] sm:max-w-none sm:w-[13.75rem] shrink-0"
                     style={{ aspectRatio: aspect }}
                 >
                     {!media.url ? (
@@ -137,7 +137,7 @@ export default function MediaPicker({ value, onChange, label = 'Media', aspect =
                     )}
                 </div>
 
-                <div className="flex-1 min-w-[15rem] space-y-2">
+                <div className="flex-1 min-w-[min(15rem,100%)] space-y-2">
                     <div className="flex flex-wrap gap-2">
                         <button
                             type="button"
@@ -180,7 +180,7 @@ export default function MediaPicker({ value, onChange, label = 'Media', aspect =
                             </span>
                             <code
                                 title={media.url}
-                                className="mt-1 block max-w-lg truncate rounded bg-slate-100 dark:bg-[#141414]
+                                className="mt-1 block max-w-full sm:max-w-lg truncate rounded bg-slate-100 dark:bg-[#141414]
                                            px-2 py-1 text-[1.0625rem] font-mono text-slate-500
                                            dark:text-neutral-400 select-all"
                             >

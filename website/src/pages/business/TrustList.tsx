@@ -64,7 +64,8 @@ const TrustList = () => {
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            setCompanies(await getTrustList());
+            const rows = await getTrustList();
+            setCompanies(Array.isArray(rows) ? rows : []);
         } catch (error) {
             console.warn('Could not load the trust list:', error);
             toast.error(errorMessage(error, 'Could not load your trust list'));
@@ -128,8 +129,9 @@ const TrustList = () => {
             width="wide"
             actions={
                 <Button
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-blue-600 hover:bg-blue-700 px-3 sm:px-4"
                     onClick={() => navigate('/business/discover')}
+                    aria-label="Find more"
                 >
                     <Compass className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">Find more</span>
@@ -166,13 +168,13 @@ const TrustList = () => {
                       there to add and the button walks them INTO the gate
                       rather than through it.
                     */
-                    <Card className="p-8 sm:p-10">
+                    <Card className="!p-5 sm:!p-8 md:!p-10">
                         <div className="text-center">
-                            <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center
+                            <span className="mx-auto mb-3 sm:mb-4 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center
                                              rounded-2xl bg-blue-50">
-                                <ShieldCheck className="h-7 w-7 text-blue-600" />
+                                <ShieldCheck className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600" />
                             </span>
-                            <h2 className="text-[1.75rem] font-bold text-slate-900">
+                            <h2 className="text-[1.5rem] sm:text-[1.75rem] font-bold text-slate-900">
                                 Your trust list opens with membership
                             </h2>
                             <p className="mx-auto mt-2 max-w-xl text-[1.25rem] text-slate-600">
@@ -182,7 +184,7 @@ const TrustList = () => {
                             </p>
                         </div>
 
-                        <div className="mt-8 grid gap-4 border-t border-slate-200 pt-8 sm:grid-cols-3">
+                        <div className="mt-5 sm:mt-8 grid gap-4 border-t border-slate-200 pt-5 sm:pt-8 sm:grid-cols-3">
                             {[
                                 {
                                     icon: ShieldPlus,
@@ -213,9 +215,9 @@ const TrustList = () => {
                             ))}
                         </div>
 
-                        <div className="mt-8 text-center">
+                        <div className="mt-5 sm:mt-8 text-center">
                             <Button
-                                className="h-12 bg-blue-600 px-8 text-[1.25rem] font-bold hover:bg-blue-700"
+                                className="h-12 w-full sm:w-auto bg-blue-600 px-8 text-[1.25rem] font-bold hover:bg-blue-700"
                                 /* The unpaid dashboard, not the plans — the same
                                    destination Discover uses. The plans screen is a
                                    Pay button with no idea whether an admin has
@@ -234,20 +236,20 @@ const TrustList = () => {
                     </Card>
                 )
             ) : (
-                <div className="space-y-5">
+                <div className="space-y-4 sm:space-y-5">
                     <Card className="flex items-center gap-3">
                         <Search className="h-4 w-4 text-slate-400 shrink-0" />
                         <Input
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             placeholder="Filter your trust list by name, type, place or product…"
-                            className="border-0 shadow-none focus-visible:ring-0 px-0 h-11 !text-[1.25rem]"
+                            className="min-w-0 border-0 shadow-none focus-visible:ring-0 px-0 h-11 !text-[1.25rem]"
                         />
                         {query ? (
                             <button
                                 type="button"
                                 onClick={() => setQuery('')}
-                                className="text-slate-400 hover:text-slate-700 shrink-0"
+                                className="w-10 h-10 -mr-2 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 shrink-0"
                                 aria-label="Clear the filter"
                             >
                                 <X className="h-4 w-4" />
@@ -264,7 +266,7 @@ const TrustList = () => {
                             />
                         </Card>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 items-start">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 items-start">
                             {filtered.map((company) => {
                                 const location = [company.area, company.location].filter(Boolean).join(', ');
                                 const categories = company.productCategories || [];
@@ -274,18 +276,18 @@ const TrustList = () => {
                                         <button
                                             type="button"
                                             onClick={() => navigate(`/business/company/${company._id}`)}
-                                            className="flex items-start gap-4 text-left group"
+                                            className="flex items-start gap-3 sm:gap-4 text-left group min-w-0"
                                         >
-                                            <span className="w-14 h-14 rounded-xl bg-slate-100 flex items-center
+                                            <span className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-slate-100 flex items-center
                                                              justify-center overflow-hidden shrink-0">
                                                 {company.logo ? (
                                                     <img
                                                         src={resolveMediaUrl(company.logo)}
                                                         alt={company.businessName || 'Company'}
-                                                        className="w-full h-full object-cover"
+                                                        className="w-full h-full object-contain"
                                                     />
                                                 ) : (
-                                                    <Building2 className="h-7 w-7 text-slate-400" />
+                                                    <Building2 className="h-6 w-6 sm:h-7 sm:w-7 text-slate-400" />
                                                 )}
                                             </span>
                                             <span className="min-w-0 flex-1">
@@ -299,9 +301,9 @@ const TrustList = () => {
                                             </span>
                                         </button>
 
-                                        <dl className="mt-4 space-y-1.5 text-[1.25rem]">
+                                        <dl className="mt-3 sm:mt-4 space-y-1.5 text-[1.25rem] min-w-0">
                                             {location ? (
-                                                <div className="flex items-center gap-2 text-slate-600">
+                                                <div className="flex items-center gap-2 text-slate-600 min-w-0">
                                                     <MapPin className="h-4 w-4 text-slate-400 shrink-0" />
                                                     <span className="truncate">{location}</span>
                                                 </div>
@@ -315,7 +317,7 @@ const TrustList = () => {
                                                 </div>
                                             ) : null}
                                             {company.email ? (
-                                                <div className="flex items-center gap-2 text-slate-600">
+                                                <div className="flex items-center gap-2 text-slate-600 min-w-0">
                                                     <Mail className="h-4 w-4 text-slate-400 shrink-0" />
                                                     <a href={`mailto:${company.email}`} className="truncate hover:underline">
                                                         {company.email}
@@ -329,12 +331,12 @@ const TrustList = () => {
                                                 {categories.slice(0, 3).map((category, index) => (
                                                     <li
                                                         key={`${category?.code || 'custom'}-${index}`}
-                                                        className="inline-flex items-center gap-1 rounded-md border
+                                                        className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-md border
                                                                    border-slate-200 bg-slate-50 px-2 py-1
                                                                    text-[1rem] text-slate-600"
                                                     >
-                                                        <Package className="h-3 w-3" />
-                                                        {category?.description}
+                                                        <Package className="h-3 w-3 shrink-0" />
+                                                        <span className="truncate">{category?.description}</span>
                                                     </li>
                                                 ))}
                                                 {categories.length > 3 ? (
@@ -347,16 +349,16 @@ const TrustList = () => {
 
                                         {company.note ? (
                                             <p className="mt-4 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2
-                                                          text-[1.1875rem] text-amber-900">
+                                                          text-[1.1875rem] text-amber-900 break-words">
                                                 {company.note}
                                             </p>
                                         ) : null}
 
-                                        <div className="mt-5 pt-4 border-t border-slate-100 flex items-center gap-2">
+                                        <div className="mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-slate-100 flex items-center gap-2">
                                             <Button
                                                 size="sm"
                                                 variant="outline"
-                                                className="flex-1 border-slate-200 text-slate-700 hover:bg-slate-50"
+                                                className="flex-1 h-10 sm:h-9 border-slate-200 text-slate-700 hover:bg-slate-50"
                                                 onClick={() => navigate(`/business/company/${company._id}`)}
                                             >
                                                 View company
@@ -365,7 +367,7 @@ const TrustList = () => {
                                                 size="sm"
                                                 variant="outline"
                                                 disabled={removing === company._id}
-                                                className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                                                className="h-10 sm:h-9 border-blue-200 text-blue-700 hover:bg-blue-50"
                                                 onClick={() => remove(company)}
                                             >
                                                 <ShieldCheck className="h-4 w-4 mr-1.5" />

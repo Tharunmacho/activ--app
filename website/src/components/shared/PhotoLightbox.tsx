@@ -109,7 +109,7 @@ export function PhotoLightbox({ photos, index, onIndex, onClose, title }: {
             </div>
 
             {/* ---- the photograph ---- */}
-            <div className="relative flex min-h-0 flex-1 items-center justify-center px-4 sm:px-20">
+            <div className="relative flex min-h-0 flex-1 items-center justify-center px-2 sm:px-20">
                 {photo.type === 'video' ? (
                     <video key={photo.url} src={sizedMediaUrl(photo.url, 1600)} controls
                            className="max-h-full max-w-full rounded-lg" />
@@ -125,12 +125,12 @@ export function PhotoLightbox({ photos, index, onIndex, onClose, title }: {
                 {count > 1 && (
                     <>
                         <button type="button" onClick={() => go(-1)} aria-label="Previous photo"
-                                className="absolute left-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center
+                                className="absolute left-2 top-1/2 flex h-11 w-11 sm:h-12 sm:w-12 -translate-y-1/2 items-center justify-center
                                            rounded-full bg-white/10 transition-colors hover:bg-white/25 sm:left-5">
                             <ChevronLeft size={26} />
                         </button>
                         <button type="button" onClick={() => go(1)} aria-label="Next photo"
-                                className="absolute right-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center
+                                className="absolute right-2 top-1/2 flex h-11 w-11 sm:h-12 sm:w-12 -translate-y-1/2 items-center justify-center
                                            rounded-full bg-white/10 transition-colors hover:bg-white/25 sm:right-5">
                             <ChevronRight size={26} />
                         </button>
@@ -139,15 +139,15 @@ export function PhotoLightbox({ photos, index, onIndex, onClose, title }: {
             </div>
 
             {/* ---- its description ---- */}
-            <div className="mx-auto w-full max-w-3xl px-5 pt-4 text-center">
+            <div className="mx-auto w-full max-w-3xl px-4 pt-3 text-center max-h-[26vh] overflow-y-auto sm:px-5 sm:pt-4 sm:max-h-none">
                 {photo.caption ? (
-                    <p className="whitespace-pre-line text-[1.125rem] leading-relaxed text-white/90">{photo.caption}</p>
+                    <p className="whitespace-pre-line break-words text-[1rem] leading-relaxed text-white/90 sm:text-[1.125rem]">{photo.caption}</p>
                 ) : null}
             </div>
 
             {/* ---- the rest of the album ---- */}
             {count > 1 && (
-                <div ref={stripRef} className="flex gap-2 overflow-x-auto px-4 py-4 sm:justify-center sm:px-6">
+                <div ref={stripRef} className="flex gap-2 overflow-x-auto px-4 py-3 sm:justify-center sm:px-6 sm:py-4">
                     {photos.map((p, i) => (
                         <button
                             key={`${p.url}-${i}`}
@@ -156,7 +156,7 @@ export function PhotoLightbox({ photos, index, onIndex, onClose, title }: {
                             onClick={() => onIndex(i)}
                             aria-label={`Photo ${i + 1}`}
                             aria-current={i === index ? 'true' : undefined}
-                            className={`h-16 w-20 shrink-0 overflow-hidden rounded-md ring-2 transition ${i === index
+                            className={`h-12 w-16 sm:h-16 sm:w-20 shrink-0 overflow-hidden rounded-md ring-2 transition ${i === index
                                 ? 'ring-white opacity-100'
                                 : 'ring-transparent opacity-50 hover:opacity-90'}`}
                         >

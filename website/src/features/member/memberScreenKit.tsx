@@ -33,22 +33,22 @@ export const PALETTE = {
  * the fidelity CSS gives for free.
  */
 export const SuccessMark = ({ tone = PALETTE.success }: { tone?: string }) => (
-    <div className="relative h-[9.375rem] flex items-center justify-center mb-6">
+    <div className="relative h-28 sm:h-[9.375rem] flex items-center justify-center mb-4 sm:mb-6">
         <span
             aria-hidden
-            className="absolute w-24 h-24 rounded-full opacity-20 animate-ping"
+            className="absolute w-20 h-20 sm:w-24 sm:h-24 rounded-full opacity-20 animate-ping"
             style={{ backgroundColor: tone, animationDuration: '2.4s' }}
         />
         <span
             aria-hidden
-            className="absolute w-28 h-28 rounded-full opacity-10"
+            className="absolute w-24 h-24 sm:w-28 sm:h-28 rounded-full opacity-10"
             style={{ backgroundColor: tone }}
         />
         <span
-            className="relative w-[5.75rem] h-[5.75rem] rounded-full flex items-center justify-center shadow-xl"
+            className="relative w-[4.5rem] h-[4.5rem] sm:w-[5.75rem] sm:h-[5.75rem] rounded-full flex items-center justify-center shadow-xl"
             style={{ backgroundColor: tone, boxShadow: `0 10px 28px -6px ${tone}66` }}
         >
-            <Check className="w-11 h-11 text-white" strokeWidth={3} />
+            <Check className="w-9 h-9 sm:w-11 sm:h-11 text-white" strokeWidth={3} />
         </span>
     </div>
 );
@@ -61,7 +61,7 @@ export const ScreenTitle = ({ children }: { children: ReactNode }) => (
 );
 
 export const ScreenSubtitle = ({ children }: { children: ReactNode }) => (
-    <p className="text-[1.1875rem] text-center mt-2 mb-7 leading-relaxed max-w-md mx-auto"
+    <p className="text-[1.1875rem] text-center mt-2 mb-5 sm:mb-7 leading-relaxed max-w-md mx-auto"
        style={{ color: PALETTE.muted }}>
         {children}
     </p>
@@ -69,7 +69,7 @@ export const ScreenSubtitle = ({ children }: { children: ReactNode }) => (
 
 /** The white card every section on these screens sits in. */
 export const KitCard = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
-    <div className={`rounded-2xl bg-white border p-5 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] ${className}`}
+    <div className={`rounded-2xl bg-white border p-4 sm:p-5 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] ${className}`}
          style={{ borderColor: PALETTE.border }}>
         {children}
     </div>

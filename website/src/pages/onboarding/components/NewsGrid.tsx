@@ -163,7 +163,7 @@ function Meta({ article }: { article: NewsArticle }) {
 export function NewsGrid({ articles }: { articles: NewsArticle[] }) {
     if (!articles.length) {
         return (
-            <div className="rounded-2xl border border-dashed border-gray-300 px-6 py-16 text-center">
+            <div className="rounded-2xl border border-dashed border-gray-300 px-4 py-10 sm:px-6 sm:py-16 text-center">
                 <p className={`${CARD_TITLE} text-gray-400`}>No news yet</p>
                 <p className={`mt-2 ${CARD_BODY} text-gray-500`}>
                     Nothing has been posted for this filter. Try another region, or clear it.
@@ -181,21 +181,21 @@ export function NewsGrid({ articles }: { articles: NewsArticle[] }) {
     const [lead, ...rest] = articles;
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-5 sm:space-y-8">
             <Reveal>
                 <CardShell article={lead} className="lg:flex-row">
                     <div className="lg:w-[58%]">
                         <Picture article={lead} tall />
                     </div>
 
-                    <div className="flex flex-1 flex-col p-6 sm:p-8 lg:p-10">
+                    <div className="flex flex-1 flex-col p-4 sm:p-8 lg:p-10">
                         <span className="mb-3 inline-flex w-fit items-center rounded-full bg-brand-50
                                          px-3 py-1 text-[0.9375rem] font-bold uppercase
                                          tracking-[0.14em] text-brand-600">
                             Latest
                         </span>
 
-                        <h3 className="text-[1.75rem] sm:text-[2.125rem] font-black leading-[1.15]
+                        <h3 className="text-[1.5rem] sm:text-[2.125rem] font-black leading-[1.15]
                                        tracking-tight text-brand-900 transition-colors
                                        group-hover:text-brand-700">
                             {lead.title || 'Untitled article'}
@@ -213,14 +213,14 @@ export function NewsGrid({ articles }: { articles: NewsArticle[] }) {
             </Reveal>
 
             {rest.length > 0 && (
-                <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 xl:grid-cols-3">
                     {rest.map((article, i) => (
                         <Reveal key={article.id || i} delay={Math.min(i, 5) * 60}>
                             <CardShell article={article}>
                                 <Picture article={article} />
 
-                                <div className="flex flex-1 flex-col p-5 sm:p-6">
-                                    <h3 className="text-[1.3125rem] font-extrabold leading-snug
+                                <div className="flex flex-1 flex-col p-4 sm:p-6">
+                                    <h3 className="text-[1.1875rem] sm:text-[1.3125rem] font-extrabold leading-snug
                                                    tracking-tight text-brand-900 line-clamp-3
                                                    transition-colors group-hover:text-brand-700">
                                         {article.title || 'Untitled article'}

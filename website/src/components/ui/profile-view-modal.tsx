@@ -168,7 +168,7 @@ const Section = ({
   return (
     <section className="rounded-xl border border-slate-200 overflow-hidden bg-white
                         shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-      <header className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-5 py-3.5">
+      <header className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 sm:px-5 py-3 sm:py-3.5">
         <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tint}`}>
           <Icon className="w-[18px] h-[18px]" />
         </span>
@@ -181,7 +181,7 @@ const Section = ({
         {visible.map((r) => (
           <div
             key={r.label}
-            className="grid grid-cols-[minmax(0,11rem)_1fr] items-baseline gap-4 px-5 py-3"
+            className="grid grid-cols-1 gap-0.5 sm:grid-cols-[minmax(0,11rem)_1fr] items-baseline sm:gap-4 px-4 sm:px-5 py-2.5 sm:py-3"
           >
             <dt className="text-[1.1875rem] font-semibold text-slate-500">{r.label}</dt>
             <dd className="text-[1.25rem] font-semibold text-slate-900 break-words min-w-0">
@@ -210,12 +210,25 @@ export default function ProfileViewModal({ open, onClose, profile, loading, onRe
    * "Business Member" in the queue and "Aspirant" in this view, from the same
    * record.
    */
-  const isAspirant =
+  const isStudent =
     asBool(p.doingBusiness) === false &&
-    (p.registrationType === "aspirant" || p.memberType === "aspirant");
+    (p.registrationType === "student" || p.memberType === "student");
+  const isAspirant = isStudent || (
+    asBool(p.doingBusiness) === false &&
+    (p.registrationType === "aspirant" || p.memberType === "aspirant"));
+
+  /*
+   * Business-only answers (sister concerns, company names) are hidden for anyone
+   * who is NOT trading — looser than the badge rule above on purpose: a row that
+   * said "no business" but carries no aspirant/student marker still has no sister
+   * concerns to show, and a stray "0" there reads as an answer they never gave.
+   */
+  const notTrading = asBool(p.doingBusiness) === false
+    || ["aspirant", "student"].includes(String(p.registrationType || "").toLowerCase())
+    || ["aspirant", "student"].includes(String(p.memberType || "").toLowerCase());
 
   const displayName = p.fullName || p.name || "Applicant";
-  const roleLabel = isAspirant ? "Aspirant" : "Business Member";
+  const roleLabel = isStudent ? "Student" : isAspirant ? "Aspirant" : "Business Member";
   const stage = (p.stage || "").toLowerCase();
   const canAct = !!onReview && stage === "pending";
 
@@ -247,10 +260,10 @@ export default function ProfileViewModal({ open, onClose, profile, loading, onRe
         * the body simply takes what is left, and the cut always lands on the
         * footer's own border.
         */}
-      <DialogContent className="max-w-3xl max-h-[90vh] p-0 gap-0 flex flex-col overflow-hidden
+      <DialogContent className="w-[calc(100%-2rem)] max-w-3xl max-h-[90vh] p-0 gap-0 flex flex-col overflow-hidden
                                 rounded-2xl border-slate-200">
-        <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b border-slate-200 text-left">
-          <DialogTitle className="text-[1.625rem] font-extrabold tracking-tight text-slate-900">
+        <DialogHeader className="shrink-0 px-4 sm:px-6 pt-5 sm:pt-6 pb-4 pr-10 sm:pr-6 border-b border-slate-200 text-left">
+          <DialogTitle className="text-[1.375rem] sm:text-[1.625rem] font-extrabold tracking-tight text-slate-900">
             Application Details
           </DialogTitle>
           <DialogDescription className="text-[1.25rem] font-medium text-slate-500">
@@ -270,7 +283,7 @@ export default function ProfileViewModal({ open, onClose, profile, loading, onRe
         ) : (
           <>
             {/* Identity, matching mobile's hero: name, role pill, status. */}
-            <div className="shrink-0 px-6 py-4 flex flex-wrap items-center gap-3.5
+            <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center gap-3 sm:gap-3.5
                             border-b border-slate-200 bg-white">
               <span className="w-12 h-12 rounded-full bg-blue-600 text-white text-[1.25rem] font-bold
                                flex items-center justify-center shrink-0">
@@ -305,14 +318,14 @@ export default function ProfileViewModal({ open, onClose, profile, loading, onRe
               * long reason it ate the room the forms needed and could not be
               * scrolled away from.
               */}
-            <div className="flex-1 min-h-0 overflow-y-auto bg-slate-50 px-6 py-5">
+            <div className="flex-1 min-h-0 overflow-y-auto bg-slate-50 px-3 py-4 sm:px-6 sm:py-5">
               <div className="space-y-4">
                 {!!p.rejectionReason && (
                   <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3.5">
                     <p className="text-[0.9375rem] font-extrabold uppercase tracking-widest text-red-700">
                       Rejection reason
                     </p>
-                    <p className="mt-1.5 text-[1.25rem] font-semibold text-red-900">{p.rejectionReason}</p>
+                    <p className="mt-1.5 text-[1.25rem] font-semibold text-red-900 break-words">{p.rejectionReason}</p>
                   </div>
                 )}
                 <Section
@@ -405,7 +418,7 @@ export default function ProfileViewModal({ open, onClose, profile, loading, onRe
                   icon={ClipboardCheck}
                   tint="bg-amber-50 text-amber-700"
                   rows={[
-                    ...(isAspirant ? [] : [
+                    ...(isAspirant || notTrading ? [] : [
                       { label: "Sister Concerns", value: p.sisterConcerns },
                       { label: "Company Names", value: p.companyNames },
                     ]),
@@ -425,7 +438,7 @@ export default function ProfileViewModal({ open, onClose, profile, loading, onRe
 
             {/* Decisions, for the queue that can make them. */}
             {canAct && (
-              <div className="shrink-0 px-6 py-4 border-t border-slate-200 bg-white">
+              <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-200 bg-white">
                 {rejecting ? (
                   <div className="space-y-3">
                     <label className="text-[1.25rem] font-semibold text-slate-700">Reason for rejection</label>
@@ -435,7 +448,7 @@ export default function ProfileViewModal({ open, onClose, profile, loading, onRe
                       placeholder="Explain why this application is being rejected"
                       className="min-h-[5rem]"
                     />
-                    <div className="flex gap-2 justify-end">
+                    <div className="flex flex-wrap gap-2 justify-end [&>button]:flex-1 sm:[&>button]:flex-none">
                       <Button variant="outline" onClick={() => { setRejecting(false); setReason(""); }}>
                         Cancel
                       </Button>
@@ -449,7 +462,7 @@ export default function ProfileViewModal({ open, onClose, profile, loading, onRe
                     </div>
                   </div>
                 ) : (
-                  <div className="flex gap-3 justify-end">
+                  <div className="flex gap-2 sm:gap-3 justify-end [&>button]:flex-1 sm:[&>button]:flex-none">
                     <Button
                       variant="outline"
                       className="border-red-200 text-red-600 hover:bg-red-50"

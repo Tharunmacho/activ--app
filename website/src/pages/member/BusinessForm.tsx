@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { PlatinumNotice } from '@/components/shared/Platinum';
 import { useNavigate } from "react-router-dom";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -48,7 +49,16 @@ const toChoice = (value: unknown): string => {
 interface BusinessFormData {
   doingBusiness: string;
   businessCommencementYear: string;
+  /** Only when not doing business: 'aspirant' or 'student' — two plans, two prices. */
+  nonBusinessKind: string;
 }
+
+/** The stored answer as the second question's choice. */
+const toKind = (saved: any): string => {
+  if (String(saved?.registrationType || '').toLowerCase() === 'student') return 'student';
+  if (saved?.doingBusiness === false || saved?.doingBusiness === 'no') return 'aspirant';
+  return '';
+};
 
 /** A selectable pill, matching mobile's `pillButton`. */
 const Pill = ({
@@ -57,7 +67,7 @@ const Pill = ({
   <button
     type="button"
     onClick={onClick}
-    className={`px-5 py-2.5 rounded-xl text-[1.1875rem] font-semibold border transition-colors ${selected
+    className={`flex-1 sm:flex-none min-h-[2.75rem] px-4 sm:px-5 py-2.5 rounded-xl text-[1.1875rem] font-semibold border transition-colors ${selected
       ? "bg-blue-600 text-white border-blue-600"
       : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
       }`}
@@ -71,6 +81,7 @@ const BusinessInformationForm = () => {
   const [formData, setFormData] = useState<BusinessFormData>({
     doingBusiness: "",
     businessCommencementYear: "",
+    nonBusinessKind: "",
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -103,6 +114,7 @@ const BusinessInformationForm = () => {
               (saved as any).businessCommencementYear === null
               ? ""
               : String((saved as any).businessCommencementYear),
+          nonBusinessKind: toKind(saved),
         });
       }
     } catch (error) {
@@ -118,16 +130,23 @@ const BusinessInformationForm = () => {
       // behind would price them into a band for a business they just said they
       // do not have.
       if (field === "doingBusiness" && value === "no") next.businessCommencementYear = "";
+      if (field === "doingBusiness" && value === "yes") next.nonBusinessKind = "";
       return next;
     });
 
   const isAspirant = formData.doingBusiness === "no";
+  const kind = formData.nonBusinessKind;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.doingBusiness) {
       toast.error("Please select whether you are currently doing business");
+      return;
+    }
+
+    if (isAspirant && !kind) {
+      toast.error("Please choose whether you are an aspirant or a student");
       return;
     }
 
@@ -148,7 +167,9 @@ const BusinessInformationForm = () => {
        */
       const payload: Record<string, any> = {
         doingBusiness: !isAspirant,
-        registrationType: isAspirant ? 'aspirant' : 'business',
+        // Student and aspirant are both "not doing business", with different
+        // plans — the server prices a student by this answer.
+        registrationType: isAspirant ? (kind === 'student' ? 'student' : 'aspirant') : 'business',
       };
 
       // Sent only when there is one. An empty string here would overwrite a
@@ -188,6 +209,9 @@ const BusinessInformationForm = () => {
       submitLabel="Next"
       submitting={submitting}
       onSubmit={handleSubmit}
+      /* Platinum, for anyone joining as a business — at the foot of the screen,
+         below the step and its buttons, never inside the business card. */
+      after={formData.doingBusiness !== "no" ? <PlatinumNotice /> : null}
     >
       <FormCard
         icon={Briefcase}
@@ -195,7 +219,7 @@ const BusinessInformationForm = () => {
         subtitle="This decides how your application is reviewed"
       >
         <FormField label="Are you currently doing business?" required>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Pill
               label="Yes"
               selected={formData.doingBusiness === "yes"}
@@ -210,11 +234,35 @@ const BusinessInformationForm = () => {
         </FormField>
 
         {isAspirant && (
+          <FormField label="Which describes you?" required>
+            <div className="flex flex-wrap gap-2">
+              <Pill
+                label="Aspirant"
+                selected={kind === "aspirant"}
+                onClick={() => setField("nonBusinessKind", "aspirant")}
+              />
+              <Pill
+                label="Student"
+                selected={kind === "student"}
+                onClick={() => setField("nonBusinessKind", "student")}
+              />
+            </div>
+            <p className="mt-2 text-[1.0625rem] text-slate-500">
+              Aspirant — planning to start a business. Student — currently studying.
+            </p>
+          </FormField>
+        )}
+
+        {isAspirant && kind && (
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
             <p className="text-[1.1875rem] text-blue-900">
-              You are registering as an <strong>aspirant</strong>. There is nothing
-              further to fill in here — continue to the declaration to submit your
-              application.
+              {kind === "student" ? (
+                <>You are registering as a <strong>student</strong>. You will be offered the Student
+                membership. Continue to the declaration to submit your application.</>
+              ) : (
+                <>You are registering as an <strong>aspirant</strong>. You will be offered the Aspirant
+                membership. Continue to the declaration to submit your application.</>
+              )}
             </p>
           </div>
         )}
@@ -273,6 +321,7 @@ const BusinessInformationForm = () => {
           </p>
         </FormCard>
       )}
+
     </RegistrationFormShell>
   );
 };

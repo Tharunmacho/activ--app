@@ -14,7 +14,7 @@ import {
 } from '@/services/memberHubApi';
 import { resolveMediaUrl } from '@/config/api.config';
 
-import { CARD_TITLE } from '@/components/layout/appTypography';
+import { CARD_TITLE } from './BusinessUI';
 /**
  * Stock management (BUS-002).
  *
@@ -144,7 +144,7 @@ export default function Stock() {
             subtitle="What you have on hand, and what needs reordering"
             width="standard"
         >
-            <div className="space-y-5">
+            <div className="space-y-4 sm:space-y-5">
                 {/* ---------- at a glance ---------- */}
                 <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
                     <StatTile label="Lines" value={counts.total} icon={<Package className="w-4 h-4" />} />
@@ -192,7 +192,7 @@ export default function Stock() {
                                     key={key}
                                     type="button"
                                     onClick={() => setFilter(key)}
-                                    className={`flex-1 min-w-0 px-2 py-2 rounded-xl text-[0.9375rem] font-semibold
+                                    className={`flex-1 min-w-0 px-2 py-2 min-h-10 rounded-xl text-[0.9375rem] font-semibold
                                                 inline-flex items-center justify-center gap-1.5
                                                 transition-colors ${
                                         active
@@ -243,8 +243,8 @@ export default function Stock() {
 
                 {/* ---------- history ---------- */}
                 {movements.length > 0 ? (
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-                        <h2 className={`${CARD_TITLE} text-slate-900 flex items-center gap-2`}>
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+                        <h2 className={`${CARD_TITLE} text-slate-900 flex items-center gap-2 min-w-0`}>
                             <History className="w-4 h-4 text-slate-400" /> Recent adjustments
                         </h2>
                         <p className="text-[0.9375rem] text-slate-500 mt-0.5 mb-4">
@@ -254,7 +254,7 @@ export default function Stock() {
                         <ul className="divide-y divide-slate-100">
                             {movements.map((movement) => (
                                 <li key={movement.id} className="py-2.5 flex items-center gap-3 text-[1rem]">
-                                    <span className={`shrink-0 w-14 text-right font-bold tabular-nums ${
+                                    <span className={`shrink-0 w-12 sm:w-14 text-right font-bold tabular-nums ${
                                         movement.delta > 0 ? 'text-emerald-600' : 'text-red-600'
                                     }`}>
                                         {movement.delta > 0 ? '+' : ''}{movement.delta}
@@ -383,7 +383,7 @@ function StockCard({
             <button
                 type="button"
                 onClick={onToggle}
-                className="w-full flex items-center gap-3 p-4 text-left hover:bg-slate-50 transition-colors"
+                className="w-full flex items-center gap-3 p-3 sm:p-4 text-left hover:bg-slate-50 transition-colors"
             >
                 {image ? (
                     <img src={image} alt="" loading="lazy"
@@ -417,7 +417,7 @@ function StockCard({
             </button>
 
             {open ? (
-                <div className="border-t border-slate-100 p-4 space-y-4 bg-slate-50/60">
+                <div className="border-t border-slate-100 p-3 sm:p-4 space-y-4 bg-slate-50/60">
                     {/* ---- adjust ---- */}
                     <div>
                         <p className="text-[0.8125rem] font-semibold uppercase tracking-wide text-slate-500 mb-2">
@@ -440,7 +440,7 @@ function StockCard({
                             <select
                                 value={reason}
                                 onChange={(e) => setReason(e.target.value as StockReason)}
-                                className="flex-1 min-w-[9.375rem] h-11 px-3 rounded-xl border border-slate-200
+                                className="flex-1 min-w-[9.375rem] max-w-full h-11 px-3 rounded-xl border border-slate-200
                                            text-[1.1875rem] bg-white focus:outline-none focus:ring-2
                                            focus:ring-blue-500/30 focus:border-blue-400"
                             >
@@ -526,7 +526,7 @@ function StockCard({
                             type="button"
                             disabled={working}
                             onClick={togglePublished}
-                            className="inline-flex items-center gap-1.5 text-[1rem] font-semibold
+                            className="inline-flex min-h-10 items-center gap-1.5 text-left text-[1rem] font-semibold
                                        text-slate-600 hover:text-slate-900 disabled:opacity-60"
                         >
                             {row.isActive === false ? (

@@ -119,7 +119,7 @@ export function AboutBlock({
         && !quoteFields.length) return null;
 
     return (
-        <section className="w-full py-20 dot-band flex flex-col items-center relative overflow-hidden font-sans">
+        <section className="w-full py-12 sm:py-20 dot-band flex flex-col items-center relative overflow-hidden font-sans">
             {/* Decorative only — no content, so it is not authored.
                 `z-0`, not `-z-10`: a negative index puts this behind the
                 section's own background colour, which is opaque, so the pattern
@@ -131,7 +131,7 @@ export function AboutBlock({
 
             <div className={`${SCREEN_CONTAINER} relative z-10`}>
 
-                <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 items-center">
+                <div className="flex flex-col lg:flex-row gap-8 sm:gap-12 lg:gap-16 items-center">
 
                     {/* Copy — takes the full width when there is no media beside it. */}
                     {hasCopy && (
@@ -139,14 +139,14 @@ export function AboutBlock({
 
                             {showBadge && badgeText && (
                                 <div className="inline-flex items-center space-x-2 bg-brand-50 text-brand-600 px-4 py-1.5
-                                                rounded-full mb-6 border border-brand-100 shadow-sm">
+                                                rounded-full mb-4 sm:mb-6 border border-brand-100 shadow-sm">
                                     <CmsIcon name={badgeIcon} size={14} className="stroke-[3]" fallback="users" />
                                     <span className={EYEBROW}>{badgeText}</span>
                                 </div>
                             )}
 
                             {showHeading && (heading || headingHighlight) && (
-                                <h2 className={`${SECTION_HEADING} text-[#111827] mb-6`}>
+                                <h2 className={`${SECTION_HEADING} text-[#111827] mb-4 sm:mb-6 break-words`}>
                                     {heading}
                                     {heading && headingHighlight && <br />}
                                     {headingHighlight && <span className="text-brand-600">{headingHighlight}</span>}
@@ -221,15 +221,33 @@ export function AboutBlock({
                                 className="relative z-10"
                                 intensity={7} lift={1.02} glare={false} perspective={1100}
                             >
-                                <div className="relative w-full rounded-[2.5rem] overflow-hidden
-                                                shadow-[0_30px_70px_-20px_rgb(28_46_104/0.45)] bg-white p-2">
-                                    <div className="rounded-[2rem] overflow-hidden relative h-[31.25rem] w-full">
-                                        <CmsMediaFrame media={media} priority width={640} />
+                                <div className="relative w-full rounded-3xl sm:rounded-[2.5rem] overflow-hidden
+                                                shadow-[0_30px_70px_-20px_rgb(28_46_104/0.45)] bg-white p-1.5 sm:p-2">
+                                    {/* A phone gets a 4:3 frame and the WHOLE photograph,
+                                        contained over a blurred copy of itself (the
+                                        RegionUI hero pattern) — a 437px-tall crop of a
+                                        wide group photo cut the people at the edges off.
+                                        The same from `sm` up, in the tall frame: an uploaded photo is never cropped. */}
+                                    <div className="rounded-[1.25rem] sm:rounded-[2rem] overflow-hidden relative aspect-[4/3] sm:aspect-auto sm:h-[31.25rem] w-full">
+                                        <div aria-hidden="true" className="absolute inset-0 overflow-hidden">
+                                            <CmsMediaFrame
+                                                media={{ ...(media || {}), fit: 'cover', alt: '' }}
+                                                width={400}
+                                                className="scale-125 blur-2xl opacity-60"
+                                            />
+                                        </div>
+                                        <CmsMediaFrame
+                                            media={media}
+                                            priority
+                                            width={640}
+                                            className="relative !object-contain !object-center !bg-transparent"
+                                        />
 
                                         {logoOverlay?.url && (
                                             <div
-                                                className="absolute top-6 right-6 bg-white/95 backdrop-blur-md px-6 py-4
-                                                           rounded-xl shadow-[0_10px_30px_rgb(0,0,0,0.15)] max-w-[12.5rem]"
+                                                className="absolute top-3 right-3 sm:top-6 sm:right-6 bg-white/95 backdrop-blur-md
+                                                           px-3 py-2 sm:px-6 sm:py-4 rounded-xl
+                                                           shadow-[0_10px_30px_rgb(0,0,0,0.15)] max-w-[7.5rem] sm:max-w-[12.5rem]"
                                                 // Lifted off the card face so it parallaxes
                                                 // against the photograph as the frame tilts.
                                                 style={{ transform: 'translateZ(60px)' }}
@@ -237,7 +255,7 @@ export function AboutBlock({
                                                 <CmsMediaFrame
                                                     media={logoOverlay}
                                                     width={220}
-                                                    className="w-full h-auto max-h-16 object-contain"
+                                                    className="w-full h-auto max-h-10 sm:max-h-16 object-contain"
                                                 />
                                             </div>
                                         )}
@@ -278,9 +296,9 @@ export function AboutBlock({
                   * page that looks broken.
                   */}
                 {hasQuote && (
-                    <Reveal className="mt-16 sm:mt-20">
+                    <Reveal className="mt-12 sm:mt-20">
                         <figure className="relative mx-auto max-w-4xl rounded-[1.75rem] border
-                                           border-brand-100 bg-white/80 px-7 py-9 text-center
+                                           border-brand-100 bg-white/80 px-5 py-7 text-center
                                            shadow-[0_18px_50px_-30px_rgba(28,46,104,0.45)]
                                            sm:px-12 sm:py-12">
                             {/* The mark, behind the words rather than in the flow:
@@ -296,7 +314,7 @@ export function AboutBlock({
                             </span>
 
                             <blockquote
-                                className="relative text-[1.375rem] font-semibold leading-[1.6]
+                                className="relative text-[1.1875rem] font-semibold leading-[1.6] break-words
                                            text-brand-900 sm:text-[1.75rem] sm:leading-[1.55]
                                            [&_strong]:text-brand-600"
                                 dangerouslySetInnerHTML={{ __html: quote!.text || '' }}
@@ -305,8 +323,8 @@ export function AboutBlock({
                             {/* A bigger portrait needs more room above it and beside
                                 it, or the name sits hard against its edge. */}
                             {(quote!.author || quote!.role || quote!.photo?.url) && (
-                                <figcaption className="relative mt-9 flex items-center justify-center
-                                                       gap-5">
+                                <figcaption className="relative mt-7 sm:mt-9 flex items-center justify-center
+                                                       gap-4 sm:gap-5">
                                     {/*
                                       A PORTRAIT, not a favicon.
 
@@ -323,11 +341,11 @@ export function AboutBlock({
                                             src={sizedMediaUrl(quote!.photo!.url, 240)}
                                             alt={quote!.author || ''}
                                             loading="lazy"
-                                            className="h-20 w-20 shrink-0 rounded-full object-cover
+                                            className="h-16 w-16 shrink-0 rounded-full object-cover
                                                        ring-4 ring-brand-100 sm:h-24 sm:w-24"
                                         />
                                     )}
-                                    <span className="text-left">
+                                    <span className="min-w-0 text-left">
                                         {quote!.author && (
                                             <span className="block text-[1.1875rem] font-extrabold
                                                              text-brand-900">
@@ -373,25 +391,25 @@ export function AboutBlock({
                     <Reveal
                         variant="scale"
                         className="bg-white rounded-3xl shadow-[0_20px_50px_rgb(0,0,0,0.06)] border border-gray-50
-                                   py-8 px-6 md:px-12 w-full"
+                                   py-6 px-4 sm:py-8 sm:px-6 md:px-12 w-full"
                     >
                         <div
-                            className={`grid grid-cols-1 sm:grid-cols-2 gap-8 divide-y sm:divide-y-0
+                            className={`grid ${statsBar.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-x-4 gap-y-6 sm:gap-8
                                         sm:divide-x divide-gray-100 ${LG_COLUMNS[Math.min(statsBar.length, 6)]}`}
                         >
                             {statsBar.map((stat, i) => (
                                 <div
                                     key={i}
-                                    className="flex items-center space-x-5 justify-center pt-4 sm:pt-0"
+                                    className="min-w-0 flex flex-col sm:flex-row items-center gap-2 sm:gap-0 sm:space-x-5 justify-center text-center sm:text-left"
                                 >
-                                    <div className="w-14 h-14 rounded-full bg-brand-50 flex items-center justify-center shrink-0">
+                                    <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-brand-50 flex items-center justify-center shrink-0">
                                         <CmsIcon name={stat.icon} size={24} className="text-brand-600" fallback="users" />
                                     </div>
                                     <div>
-                                        <p className={`${STAT_FIGURE} text-brand-800`}>
+                                        <p className={`${STAT_FIGURE} text-brand-800 max-sm:!text-[1.75rem]`}>
                                             <CountUp value={stat.value} />
                                         </p>
-                                        <p className={`${STAT_LABEL} text-gray-500 mt-1`}>{stat.label}</p>
+                                        <p className={`${STAT_LABEL} text-gray-500 mt-1 break-words`}>{stat.label}</p>
                                     </div>
                                 </div>
                             ))}

@@ -84,12 +84,12 @@ export default function RegionFeedPage({ scope }: { scope: 'region' | 'state' })
             <HeaderSection />
 
             <main className="flex-grow">
-                <div className={`${SCREEN_CONTAINER} py-10 md:py-14`}>
+                <div className={`${SCREEN_CONTAINER} py-6 sm:py-10 md:py-14`}>
                     <Link
                         to={backTo}
                         className="inline-flex items-center gap-2 text-gray-500 hover:text-brand-700
                                    font-bold text-[1rem] uppercase tracking-[0.1em]
-                                   transition-colors mb-8"
+                                   transition-colors mb-5 sm:mb-8 min-h-[40px]"
                     >
                         <ArrowLeft size={15} /> Back
                     </Link>
@@ -97,7 +97,7 @@ export default function RegionFeedPage({ scope }: { scope: 'region' | 'state' })
                     {data?.title && (
                         <p className={`${MICRO_LABEL} text-gray-400 mb-2`}>{data.title}</p>
                     )}
-                    <h1 className={`${SECTION_HEADING} text-brand-800 mb-8`}>{heading}</h1>
+                    <h1 className={`${SECTION_HEADING} text-brand-800 mb-5 sm:mb-8 break-words`}>{heading}</h1>
 
                     {loading && (
                         <div className="animate-pulse space-y-3">
@@ -122,12 +122,12 @@ export default function RegionFeedPage({ scope }: { scope: 'region' | 'state' })
                             />
 
                             {total > PAGE_SIZE && (
-                                <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
+                                <div className="mt-6 sm:mt-8 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
                                     <p className="text-[1.125rem] font-semibold text-gray-500">
                                         Showing <span className="font-extrabold text-brand-800">{from}–{to}</span>
                                         {' '}of <span className="font-extrabold text-brand-800">{total}</span>
                                     </p>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                                         {/*
                                           * Disabled at the ends rather than
                                           * hidden: a control that vanishes moves
@@ -139,7 +139,7 @@ export default function RegionFeedPage({ scope }: { scope: 'region' | 'state' })
                                             disabled={offset <= 0}
                                             onClick={() => goTo(Math.max(0, offset - PAGE_SIZE))}
                                             className="inline-flex items-center gap-2 rounded-full border
-                                                       border-brand-200 px-5 py-2.5 text-[1rem] font-bold
+                                                       border-brand-200 px-4 sm:px-5 py-2.5 text-[1rem] font-bold
                                                        uppercase tracking-[0.1em] text-brand-700 transition-colors
                                                        hover:bg-brand-50 disabled:opacity-40
                                                        disabled:cursor-not-allowed disabled:hover:bg-transparent"
@@ -151,7 +151,7 @@ export default function RegionFeedPage({ scope }: { scope: 'region' | 'state' })
                                             disabled={to >= total}
                                             onClick={() => goTo(offset + PAGE_SIZE)}
                                             className="inline-flex items-center gap-2 rounded-full bg-brand-800
-                                                       px-5 py-2.5 text-[1rem] font-bold uppercase
+                                                       px-4 sm:px-5 py-2.5 text-[1rem] font-bold uppercase
                                                        tracking-[0.1em] text-white transition-colors
                                                        hover:bg-brand-700 disabled:opacity-40
                                                        disabled:cursor-not-allowed disabled:hover:bg-brand-800"

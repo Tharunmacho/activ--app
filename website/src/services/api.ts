@@ -301,9 +301,15 @@ api.interceptors.response.use(
             url.includes('/auth/login') ||
             url.includes('/auth/register') ||
             url.includes('/auth/forgot-password') ||
-            url.includes('/auth/reset-password');
+            url.includes('/auth/reset-password') ||
+            url.includes('/auth/oauth/');
 
-        if (status === 401 && !isAuthAttempt) {
+        // The public giving flow: a donor has no account, so a 401 there is a
+        // server answer to show on the page, never a reason to send them to a
+        // login screen they cannot use. (`/admin/super/donations` is not this.)
+        const isPublicDonation = /^\/?donations(\/|$|\?)/.test(url.replace(/^https?:\/\/[^/]+(\/api\/v\d+)?/, ''));
+
+        if (status === 401 && !isAuthAttempt && !isPublicDonation) {
             const signIn = loginPathFor();
             clearSession();
             if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {

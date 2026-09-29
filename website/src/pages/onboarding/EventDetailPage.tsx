@@ -1,3 +1,4 @@
+import { PosterFrame } from '@/components/shared/PosterFrame';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
@@ -22,6 +23,10 @@ import {
     BIZ_DETAIL_LABEL, BIZ_DETAIL_VALUE,
 } from '@/components/layout/surface';
 import { Reveal } from '@/components/shared/Reveal';
+import { eventPath } from '@/lib/eventPath';
+import { setShareMeta } from '@/lib/shareMeta';
+import { EventQrFeature } from '@/components/shared/EventQr';
+import { resolveMediaUrl } from '@/config/api.config';
 
 /**
  * One event, in full.
@@ -143,6 +148,40 @@ export default function EventDetailPage() {
     const [availability, setAvailability] = useState<BookableEvent | null>(null);
     const [loading, setLoading] = useState(true);
     const [missing, setMissing] = useState(false);
+    // Portrait poster? Decided from the loaded image; see the banner below.
+    const [bannerTall, setBannerTall] = useState(false);
+
+    /*
+     * ONE ADDRESS PER EVENT. Opened by its old id link, the address bar is
+     * swapped for the readable one (`/events/<slug>`) without a reload, so the
+     * link a visitor copies from here is the one worth sharing.
+     */
+    useEffect(() => {
+        /*
+         * ONLY when this page was opened by THIS event's old id. Moving from one
+         * event to another renders once with the new `id` and the previous
+         * `event` still in state; comparing slugs alone then wrote the previous
+         * event's address over the new one.
+         */
+        if (!event?.slug || !id || id !== event.id) return;
+        try {
+            window.history.replaceState(window.history.state, '', `${eventPath(event)}${window.location.search}`);
+        } catch {
+            /* the old address still works */
+        }
+    }, [event, id]);
+
+    // The share tags for this event; see lib/shareMeta and server.mjs.
+    useEffect(() => {
+        if (!event) return undefined;
+        return setShareMeta({
+            title: event.title || 'ACTIV event',
+            description: event.description || '',
+            image: event.imageUrl || '',
+            url: `${window.location.origin}${eventPath(event)}`,
+            type: 'article',
+        });
+    }, [event]);
 
     useEffect(() => {
         let cancelled = false;
@@ -150,6 +189,7 @@ export default function EventDetailPage() {
         setLoading(true);
         setMissing(false);
         setEvent(null);
+        setBannerTall(false);
         // Arriving from a card lower down the previous page would otherwise open
         // this one already scrolled past its own banner.
         window.scrollTo({ top: 0, behavior: 'auto' });
@@ -215,7 +255,7 @@ export default function EventDetailPage() {
                     <Link
                         to="/events"
                         className="inline-flex items-center gap-2 bg-brand-800 hover:bg-brand-700 text-white
-                                   px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase tracking-[0.1em]
+                                   px-6 sm:px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase tracking-[0.1em]
                                    transition-colors"
                     >
                         <ArrowLeft size={15} /> Back to Events
@@ -234,7 +274,7 @@ export default function EventDetailPage() {
      */
     const isOnline = event.mode === 'online';
 
-    const agenda = (event.agenda || []).filter(row => row && (row.title || row.startTime));
+    const flatAgenda = (event.agenda || []).filter(row => row && (row.title || row.startTime));
 
     /*
      * ==================================================================
@@ -254,7 +294,24 @@ export default function EventDetailPage() {
      */
     const days = (event.days || []).filter(d => d && d.date
         && (d.startTime || d.endTime || (d.agenda || []).some(r => r && (r.title || r.startTime))));
-    const perDay = days.length > 1;
+    /*
+     * DAY HEADINGS WHENEVER THE EVENT ITSELF SPANS SEVERAL DAYS — counted on
+     * the event's days, not on the ones with content.
+     *
+     * This read `days.length > 1` AFTER the empty days were filtered out, so a
+     * two-day event whose editor had filled in only Day 1 counted as one day,
+     * fell through to the flat `agenda` (empty on every event written with the
+     * day editor) and showed NO programme at all — the sessions were saved and
+     * simply never drawn.
+     */
+    const perDay = days.length > 0 && (event.days || []).filter(d => d && d.date).length > 1;
+
+    /* A one-day event written with the day editor keeps its sessions on that
+       day, not in the flat agenda — so they are the programme when the flat
+       list is empty. */
+    const agenda = flatAgenda.length
+        ? flatAgenda
+        : (days[0]?.agenda || []).filter(row => row && (row.title || row.startTime));
 
     /** "Sat, 10 Oct 2026" — the wording the facts list uses for a date. */
     const dayHeading = (iso: string) => {
@@ -481,7 +538,7 @@ export default function EventDetailPage() {
             <HeaderSection />
 
             <main className="flex-grow">
-                <section className="w-full pt-10 pb-16 md:pt-14 md:pb-24 relative overflow-hidden">
+                <section className="w-full pt-6 pb-12 sm:pt-10 sm:pb-16 md:pt-14 md:pb-24 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-96 h-96 bg-brand-50/60 rounded-full blur-3xl transform-gpu
                                     -z-10 translate-x-1/3 -translate-y-1/3 transform-gpu pointer-events-none" />
 
@@ -535,13 +592,57 @@ export default function EventDetailPage() {
                                       * wants edge-to-edge still sets Fit to
                                       * "cover" on the banner and gets it.
                                       */}
-                                    <div className="w-full aspect-[16/9] max-h-[38rem] bg-slate-50">
-                                        <CmsMediaFrame
-                                            media={{ ...event.media, fit: event.media.fit || 'contain' }}
-                                            priority
-                                            width={1600}
-                                        />
-                                    </div>
+                                    {/*
+                                      * THE POSTER'S OWN SHAPE. A fixed 16/9 box
+                                      * with a 38rem cap stopped being 16/9 on any
+                                      * screen wider than ~1080px, and the poster
+                                      * was cropped top and bottom — its logo and
+                                      * footer strip cut off. An image is now drawn
+                                      * full width at its own height, whole, and
+                                      * only a very tall poster is capped (85vh)
+                                      * and shown whole inside that. Video keeps
+                                      * the 16/9 frame it needs.
+                                      */}
+                                    {event.media.type === 'video' ? (
+                                        <div className="w-full aspect-[16/9] bg-slate-50">
+                                            <CmsMediaFrame
+                                                media={{ ...event.media, fit: event.media.fit || 'contain' }}
+                                                priority
+                                                width={1600}
+                                            />
+                                        </div>
+                                    ) : (
+                                        /*
+                                         * FILLS THE CARD. A landscape or square
+                                         * poster has no height cap: full width,
+                                         * its own height, edge to edge. A cap on
+                                         * it (85vh) shrank a 16:9 banner on a
+                                         * laptop and left white bands either side.
+                                         *
+                                         * Only a PORTRAIT poster is capped, so it
+                                         * cannot run several screens tall; its
+                                         * sides are then the same poster blurred,
+                                         * never an empty plate.
+                                         */
+                                        <div className={`relative w-full overflow-hidden ${bannerTall ? "bg-slate-900" : "bg-slate-100"}`}>
+                                            {bannerTall && (
+                                                <img
+                                                    src={resolveMediaUrl(event.media.url)}
+                                                    alt=""
+                                                    aria-hidden="true"
+                                                    className="absolute inset-0 h-full w-full scale-110 object-cover opacity-70 blur-2xl"
+                                                />
+                                            )}
+                                            <CmsMediaFrame
+                                                media={event.media}
+                                                natural
+                                                className={`relative ${bannerTall ? 'max-h-[85vh]' : ''}`}
+                                                onNaturalSize={(w, h) => setBannerTall(h > w * 1.05)}
+                                                priority
+                                                width={1600}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </Reveal>
                         )}
@@ -555,10 +656,11 @@ export default function EventDetailPage() {
                           * a layer. One tinted sheet, and the cards on it have an
                           * edge without any of them being outlined more heavily.
                           */}
-                        <div className={`${SHEET} mt-10`}>
+                        <div className={`${SHEET} mt-6 sm:mt-10`}>
                         <div className="grid gap-4 sm:gap-5 lg:gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] items-start">
 
-                            <div className={`${BIZ_CARD} p-6 sm:p-8 min-w-0`}>
+                            <div className="min-w-0 space-y-4 sm:space-y-5 lg:space-y-6">
+                            <div className={`${BIZ_CARD} p-4 sm:p-8 min-w-0`}>
                                 {event.category && (
                                     <span className={`${BIZ_BADGE} bg-brand-50 text-brand-700 border border-brand-100 mb-5`}>
                                         {event.category}
@@ -648,7 +750,7 @@ export default function EventDetailPage() {
                                     the only day of an event says nothing.
                                 */}
                                 {perDay ? (
-                                    <div className="mt-8 pt-8 border-t border-slate-100">
+                                    <div className="mt-6 pt-6 sm:mt-8 sm:pt-8 border-t border-slate-100">
                                         <h2 className={`${BIZ_CARD_TITLE} mb-5`}>Programme</h2>
                                         <div className="space-y-8">
                                             {days.map((day, d) => {
@@ -714,7 +816,7 @@ export default function EventDetailPage() {
                                         </div>
                                     </div>
                                 ) : agenda.length > 0 && (
-                                    <div className="mt-8 pt-8 border-t border-slate-100">
+                                    <div className="mt-6 pt-6 sm:mt-8 sm:pt-8 border-t border-slate-100">
                                         <h2 className={`${BIZ_CARD_TITLE} mb-5`}>Programme</h2>
                                         <ol className="border-l-2 border-slate-200 pl-5 space-y-6">
                                             {agenda.map((row, i) => (
@@ -747,7 +849,7 @@ export default function EventDetailPage() {
 
                                 {/* ---- speakers ---- */}
                                 {speakers.length > 0 && (
-                                    <div className="mt-8 pt-8 border-t border-slate-100">
+                                    <div className="mt-6 pt-6 sm:mt-8 sm:pt-8 border-t border-slate-100">
                                         <h2 className={`${BIZ_CARD_TITLE} mb-5`}>Speakers</h2>
                                         {/*
                                           * `auto-fit` rather than a fixed two
@@ -766,15 +868,15 @@ export default function EventDetailPage() {
                                             old track squeezed "Minister for Social Justice
                                             Department, Government of Tamilnadu" into a column
                                             of single words. */}
-                                        <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(18rem,max-content))]">
+                                        <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:[grid-template-columns:repeat(auto-fit,minmax(18rem,max-content))]">
                                             {speakers.map((person, i) => (
                                                 <div
                                                     key={person.id || i}
                                                     /* A tinted well inside the card, not a second
                                                        card: `slate-50` on white is the same step
                                                        down the sheet is from the page. */
-                                                    className="flex items-start gap-4 rounded-xl border border-slate-200
-                                                               bg-slate-50 p-4"
+                                                    className="flex items-start gap-3 sm:gap-4 rounded-xl border border-slate-200
+                                                               bg-slate-50 p-3.5 sm:p-4"
                                                 >
                                                     {/*
                                                       * A PORTRAIT BIG ENOUGH TO BE A FACE.
@@ -798,7 +900,7 @@ export default function EventDetailPage() {
                                                       * `width` is twice the rendered size, so a
                                                       * retina screen gets a sharp portrait.
                                                       */}
-                                                    <div className="w-[5.5rem] h-[5.5rem] rounded-full overflow-hidden bg-white
+                                                    <div className="w-16 h-16 sm:w-[5.5rem] sm:h-[5.5rem] rounded-full overflow-hidden bg-white
                                                                     border border-slate-200 shrink-0 flex items-center
                                                                     justify-center">
                                                         {person.photoUrl
@@ -832,8 +934,24 @@ export default function EventDetailPage() {
                                 )}
                             </div>
 
+                                {/*
+                                  * THE EVENT'S QR — a feature card of its own in
+                                  * the wide column, under the programme and the
+                                  * speakers, where there is room for a code a
+                                  * phone reads from across a room. Hidden when
+                                  * the editor turned it off.
+                                  */}
+                                {/* Desktop only here: on a phone the side card (with
+                                    Book Now) stacks BELOW this column, which put the
+                                    QR before the button. The phone copy is after the
+                                    side card, below. */}
+                                {event.showQrOnPage !== false && (
+                                    <div className="hidden lg:block"><EventQrFeature event={event} /></div>
+                                )}
+                            </div>
+
                             {/* ---- the side card ---- */}
-                            <aside className={`${BIZ_CARD} p-6 sm:p-7 lg:sticky lg:top-28 min-w-0`}>
+                            <aside className={`${BIZ_CARD} p-4 sm:p-7 lg:sticky lg:top-28 min-w-0`}>
                                 {/*
                                   * ONE ROW SHAPE, REPEATED.
                                   *
@@ -1090,7 +1208,13 @@ export default function EventDetailPage() {
                                   * links now, and the reader is not asked to
                                   * work out why the page is telling them twice.
                                   */}
+
                             </aside>
+
+                            {/* The QR on a phone: after Book Now, not before it. */}
+                            {event.showQrOnPage !== false && (
+                                <div className="lg:hidden min-w-0"><EventQrFeature event={event} /></div>
+                            )}
                         </div>
                         </div>
 
@@ -1107,11 +1231,11 @@ export default function EventDetailPage() {
                                 <h2 className={`${BIZ_CARD_TITLE} mb-5`}>
                                     {settings?.viewAllLabel ? 'More events' : 'More events'}
                                 </h2>
-                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
                                     {moreEvents.map(other => (
                                         <Link
                                             key={other.id}
-                                            to={`/events/${other.id}`}
+                                            to={eventPath(other)}
                                             className={`${BIZ_CARD} group block overflow-hidden
                                                         transition-all duration-300 hover:-translate-y-0.5
                                                         hover:border-slate-300
@@ -1127,25 +1251,25 @@ export default function EventDetailPage() {
                                               * on a row of four photographs reads
                                               * as an image that failed to load.
                                               */}
-                                            <div className="w-full h-40 overflow-hidden bg-slate-50
-                                                            flex items-center justify-center">
-                                                {other.media?.url ? (
-                                                    <CmsMediaFrame
-                                                        media={other.media}
-                                                        width={340}
-                                                        className="group-hover:scale-105 transition-transform duration-700 transform-gpu"
-                                                    />
-                                                ) : (
+                                            {other.media?.url ? (
+                                                <PosterFrame
+                                                    media={other.media}
+                                                    width={360}
+                                                    imageClassName="group-hover:scale-105 transition-transform duration-700 transform-gpu"
+                                                />
+                                            ) : (
+                                                <div className="w-full aspect-[16/9] overflow-hidden bg-slate-50
+                                                                flex items-center justify-center">
                                                     <Calendar size={28} className="text-slate-300" />
-                                                )}
-                                            </div>
-                                            <div className="p-4">
+                                                </div>
+                                            )}
+                                            <div className="p-3 sm:p-4">
                                                 {/* A FIXED TWO-LINE BOX, so the dates line up
                                                     across the row. `line-clamp-2` caps a long
                                                     title but does nothing for a short one, so a
                                                     one-line title pulled its date 24px up and the
                                                     four tiles read as four different cards. */}
-                                                <p className="min-h-[3rem] text-[1.25rem] font-bold text-slate-900 line-clamp-2
+                                                <p className="min-h-[3rem] text-[1.125rem] sm:text-[1.25rem] font-bold text-slate-900 line-clamp-2
                                                               group-hover:text-brand-700 transition-colors">
                                                     {/* Never an empty line — the same
                                                         fallback every other card uses. */}

@@ -331,7 +331,7 @@ export default function SchemesManager() {
                         card's footer now, labelled "Save scheme" — see
                         `label` on `SaveNowValue`. Leaving this one here put two
                         identical saves on the screen. */}
-                    <div className="mt-8 flex gap-3">
+                    <div className="mt-6 sm:mt-8 flex flex-wrap gap-3">
                         <CmsButton variant="ghost" onClick={() => setScheme(null)}>Cancel</CmsButton>
                     </div>
                 </CmsCard>
@@ -357,7 +357,7 @@ export default function SchemesManager() {
                                 key={key}
                                 type="button"
                                 onClick={() => setTab(key)}
-                                className={`-mb-px border-b-2 px-5 py-3 text-[1.25rem] font-semibold transition-colors ${tab === key
+                                className={`-mb-px border-b-2 px-3 sm:px-5 py-3 text-[1.25rem] font-semibold transition-colors ${tab === key
                                     ? 'border-blue-600 text-blue-700 dark:text-blue-400'
                                     : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-neutral-200'}`}
                             >
@@ -433,7 +433,7 @@ export default function SchemesManager() {
                             note on `GalleryManager`. Every card above carries a
                             Save in its footer now, and this called the same
                             function they do. */}
-                        <div className="mt-8 flex items-center gap-3">
+                        <div className="mt-6 sm:mt-8 flex flex-wrap items-center gap-3">
                             <a href="/schemes" target="_blank" rel="noopener noreferrer"
                                className="inline-flex items-center gap-1.5 text-[1.0625rem] font-semibold text-blue-700 dark:text-blue-400">
                                 View the schemes page <ExternalLink className="h-3.5 w-3.5" />
@@ -450,13 +450,13 @@ export default function SchemesManager() {
 /** One scheme in a list: what it is, where, whether it is live, and its two actions. */
 function SchemeRow({ row, onEdit, onRemove }: { row: SchemeRecord; onEdit: () => void; onRemove: () => void }) {
     return (
-        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3.5
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:p-3.5
                         transition-colors hover:border-slate-300 dark:border-[#2a2a2a] dark:bg-[#0f0f0f]">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50
                              text-[#2563EB] dark:bg-blue-950/40">
                 {row.tier === 'national' ? <Landmark className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
             </span>
-            <div className="min-w-0 flex-1">
+            <div className="!min-w-[9rem] flex-1">
                 <p className="truncate text-[1.25rem] font-bold text-slate-900 dark:text-white">{row.title || 'Untitled'}</p>
                 <p className="truncate text-[1.0625rem] text-slate-500 dark:text-neutral-400">
                     {[TIER_LABEL[row.tier], row.district, row.authority, row.deadline].filter(Boolean).join(' · ')}

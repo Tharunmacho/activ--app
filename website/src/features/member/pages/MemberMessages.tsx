@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useRenewal } from '@/features/member/useRenewal';
 import {
     MessageSquare, Users, CalendarDays, Megaphone, FileBadge, Handshake,
 } from 'lucide-react';
@@ -53,7 +54,8 @@ export default function MemberMessages() {
         [profileCompletion, application, isPaid],
     );
 
-    const cta = useMemo(() => membershipCta(access), [access]);
+    const renewal = useRenewal();
+    const cta = useMemo(() => membershipCta(access, renewal), [access, renewal]);
 
     /**
      * Nothing until the answer is in.

@@ -50,7 +50,7 @@ export function FormCard({
     children: ReactNode;
 }) {
     return (
-        <section className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-6">
+        <section className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-4 sm:p-6">
             <div className="flex items-start gap-3 mb-5">
                 <span className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
                     <Icon className="w-5 h-5 text-blue-600" />
@@ -96,12 +96,12 @@ export function FormField({
 
 /** Two columns from md up, so a phone number stops being a 700px input. */
 export function FormGrid({ children }: { children: ReactNode }) {
-    return <div className="grid grid-cols-1 md:grid-cols-2 gap-5">{children}</div>;
+    return <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">{children}</div>;
 }
 
 function Stepper({ current }: { current: StepIndex }) {
     return (
-        <div className="flex items-center justify-center mb-6">
+        <div className="flex items-center justify-center mb-4 sm:mb-6">
             {Array.from({ length: TOTAL_STEPS }, (_, i) => {
                 const step = i + 1;
                 const done = step < current;
@@ -140,6 +140,7 @@ export default function RegistrationFormShell({
     disabled = false,
     onSubmit,
     children,
+    after,
 }: {
     step: StepIndex;
     title: string;
@@ -150,6 +151,12 @@ export default function RegistrationFormShell({
     disabled?: boolean;
     onSubmit: (e: React.FormEvent) => void;
     children: ReactNode;
+    /**
+     * Below the step's buttons and OUTSIDE its <form> — for a section with a
+     * form of its own (the Platinum apply flow). A form inside a form is
+     * invalid markup, and its submit would submit the step.
+     */
+    after?: ReactNode;
 }) {
     const navigate = useNavigate();
     /*
@@ -164,33 +171,33 @@ export default function RegistrationFormShell({
     return (
         <div className="min-h-screen flex flex-col bg-white">
             <div className="flex-1 min-w-0 flex flex-col">
-                <header className="h-[5.5rem] shrink-0 bg-white border-b border-slate-200 flex items-center gap-3 px-6">
+                <header className="h-[5.5rem] shrink-0 bg-white border-b border-slate-200 flex items-center gap-2 sm:gap-3 px-4 sm:px-6 sticky top-0 z-30">
                     <button
                         type="button"
-                        className="shrink-0 w-9 h-9 rounded-lg border border-slate-200 flex items-center
+                        className="shrink-0 w-10 h-10 rounded-lg border border-slate-200 flex items-center
                                    justify-center text-slate-600 hover:bg-slate-50 transition-colors"
                         onClick={() => navigate('/member/unpaid-dashboard')}
                         aria-label="Back to dashboard"
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </button>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                         <h1 className={`${PAGE_TITLE} text-slate-900 truncate`}>{title}</h1>
                         <p className={`${PAGE_SUBTITLE} text-slate-500 mt-0.5 truncate hidden sm:block`}>{description}</p>
                     </div>
-                    <span className="ml-auto text-[1.1875rem] font-medium text-slate-500 shrink-0">
+                    <span className="ml-auto text-sm sm:text-[1.1875rem] font-medium text-slate-500 shrink-0">
                         Step {step} of {TOTAL_STEPS}
                     </span>
                 </header>
 
-                <main className="flex-1 overflow-y-auto p-6">
+                <main className="flex-1 overflow-y-auto p-4 sm:p-6">
                     {/* Centred at 108rem — the rail's 18rem plus the 90rem
                         column — so this shell fills the window to the same place
                         a shell WITH a rail does. See MemberPageShell.RAILLESS. */}
                     <div className="w-full max-w-[108rem] mx-auto">
                         <Stepper current={step} />
 
-                        <form onSubmit={onSubmit} className="space-y-6">
+                        <form onSubmit={onSubmit} className="space-y-4 sm:space-y-6">
                             {children}
 
                             {/*
@@ -203,7 +210,7 @@ export default function RegistrationFormShell({
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        className="border-slate-200 text-slate-700 hover:bg-slate-50"
+                                        className="h-11 flex-1 sm:flex-none border-slate-200 text-slate-700 hover:bg-slate-50"
                                         onClick={() => navigate(previousTo)}
                                         disabled={submitting}
                                     >
@@ -214,7 +221,7 @@ export default function RegistrationFormShell({
 
                                 <Button
                                     type="submit"
-                                    className="bg-blue-600 hover:bg-blue-700 min-w-[9rem]"
+                                    className="h-11 flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 sm:min-w-[9rem]"
                                     disabled={submitting || disabled}
                                 >
                                     {submitting ? (
@@ -231,6 +238,8 @@ export default function RegistrationFormShell({
                                 </Button>
                             </div>
                         </form>
+
+                        {after ? <div className="mt-8 sm:mt-10">{after}</div> : null}
                     </div>
                 </main>
             </div>

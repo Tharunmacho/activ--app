@@ -1,3 +1,4 @@
+import api from "@/services/api";
 import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
@@ -81,8 +82,26 @@ const MemberRegister = () => {
     handleSubmit: handleSubmitStep1,
     setValue: setValueStep1,
     watch: watchStep1,
+    setError: setErrorStep1,
+    clearErrors: clearErrorsStep1,
     formState: { errors: errorsStep1 },
   } = useForm<Step1Form>({ mode: 'onSubmit' });
+  /** Step 1's own "already registered" check is in flight. */
+  const [checkingStep1, setCheckingStep1] = useState(false);
+
+  /* Arriving from Google / Facebook / LinkedIn with no ACTIV account yet:
+     the provider's verified name and email are carried over (`/auth/social`). */
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search);
+      const email = (q.get('email') || '').trim();
+      const name = (q.get('name') || '').trim();
+      if (email) setValueStep1('email', email);
+      if (name) setValueStep1('firstName', name);
+    } catch {
+      /* no prefill */
+    }
+  }, [setValueStep1]);
 
   /** Most people use one number for both — see the note on the field. */
   const [sameWhatsapp, setSameWhatsapp] = useState(true);
@@ -211,7 +230,7 @@ const MemberRegister = () => {
     fetchBlocks();
   }, [selectedState, selectedDistrict, setValueStep2]);
 
-  const handleStep1Submit = (data: Step1Form) => {
+  const handleStep1Submit = async (data: Step1Form) => {
     if (data.confirmPassword && data.password !== data.confirmPassword) {
       toast.error('Passwords do not match');
       return;
@@ -256,6 +275,32 @@ const MemberRegister = () => {
      * has always been, and a foreign one keeps its '+<code>' — which is the
      * only thing that tells the server it is not Indian.
      */
+    /*
+     * ONE ACCOUNT PER EMAIL AND PER MOBILE. Asked here, before the region
+     * step, so the message lands under the box it is about. A failed check
+     * does not block: the server refuses a duplicate on the final submit too.
+     */
+    clearErrorsStep1(['email', 'mobile']);
+    setCheckingStep1(true);
+    try {
+      const res = await api.post('/auth/check-availability', { email: data.email, phoneNumber: phone.stored });
+      const taken = (res?.data?.data || res?.data || {}) as { email?: boolean; phoneNumber?: boolean };
+      let stop = false;
+      if (taken.email) {
+        setErrorStep1('email', { type: 'taken', message: 'This email is already registered. Please sign in instead.' });
+        stop = true;
+      }
+      if (taken.phoneNumber) {
+        setErrorStep1('mobile', { type: 'taken', message: 'This mobile number is already registered. Please sign in instead.' });
+        stop = true;
+      }
+      if (stop) return;
+    } catch {
+      /* unknown — the final submit is checked by the server anyway */
+    } finally {
+      setCheckingStep1(false);
+    }
+
     setPartialData({ ...data, mobile: phone.stored, whatsapp: whatsapp.stored });
     setStep(2);
   };
@@ -326,14 +371,20 @@ const MemberRegister = () => {
         localStorage.setItem('memberId', response.data.user.id);
 
         
-        // Navigate to unpaid dashboard
-        setTimeout(() => {
-          navigate('/member/unpaid-dashboard', { replace: true });
-        }, 500);
+        // Signed in on the spot — `register()` stored the session — so straight
+        // to the unpaid dashboard, no second sign-in.
+        navigate('/member/unpaid-dashboard', { replace: true });
       } else {
         // Show specific error messages
         if (response.message?.includes('already registered')) {
-          toast.error('This email is already registered. Please login or use a different email.');
+          const isPhone = /mobile/i.test(response.message || '');
+          setStep(1);
+          setTimeout(() => setErrorStep1(isPhone ? 'mobile' : 'email', {
+            type: 'taken',
+            message: isPhone
+              ? 'This mobile number is already registered. Please sign in instead.'
+              : 'This email is already registered. Please sign in instead.',
+          }), 0);
         } else {
           toast.error(response.message || 'Registration failed. Please try again.');
         }
@@ -377,7 +428,7 @@ const MemberRegister = () => {
       <div className="mb-5 flex items-start gap-2">
         <UserPlus className="mt-1 h-5 w-5 shrink-0 text-blue-600" />
         <div className="min-w-0">
-          <h2 className="text-[1.5625rem] font-bold tracking-tight text-slate-900">
+          <h2 className="text-xl sm:text-[1.5625rem] font-bold tracking-tight text-slate-900">
             {step === 1 ? 'Account credentials' : 'Profile details'}
           </h2>
           <p className="mt-1 text-[1.1875rem] text-slate-500">
@@ -389,7 +440,7 @@ const MemberRegister = () => {
       </div>
 
       <div
-        className="mb-7 h-2 w-full overflow-hidden rounded-full bg-blue-100"
+        className="mb-5 sm:mb-7 h-2 w-full overflow-hidden rounded-full bg-blue-100"
         role="progressbar"
         aria-valuenow={step}
         aria-valuemin={1}
@@ -444,6 +495,7 @@ const MemberRegister = () => {
                       country={phoneCountry}
                       onCountryChange={setPhoneCountry}
                     />
+                    {errorsStep1.mobile && <p className="text-[1.1875rem] font-medium text-red-600 mt-1.5">{errorsStep1.mobile.message}</p>}
                   </div>
 
                   {/*
@@ -548,8 +600,10 @@ const MemberRegister = () => {
                     />
                   </div>
 
-                  <Button type="submit" className={`w-full ${BUTTON} bg-blue-600 hover:bg-blue-700 text-white`}>
-                    Next <ArrowRight className="ml-2 h-5 w-5" />
+                  <Button type="submit" disabled={checkingStep1} className={`w-full ${BUTTON} bg-blue-600 hover:bg-blue-700 text-white`}>
+                    {checkingStep1
+                      ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Checking…</>
+                      : <>Next <ArrowRight className="ml-2 h-5 w-5" /></>}
                   </Button>
 
                   <p className="text-center text-[1.1875rem] text-slate-500">
@@ -669,7 +723,7 @@ const MemberRegister = () => {
                   )}
 
                   <div className="space-y-3">
-                    <div className="flex gap-3">
+                    <div className="flex gap-2 sm:gap-3">
                       <Button
                         type="button"
                         variant="outline"
@@ -683,16 +737,6 @@ const MemberRegister = () => {
                         Complete Registration
                       </Button>
                     </div>
-                    {!isAbroad && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className={`w-full ${BUTTON} font-semibold text-slate-500 hover:text-slate-900`}
-                        onClick={() => handleStep2Submit({ stateName: '', districtName: '', block: '', city: '' })}
-                      >
-                        Skip & Go to Dashboard
-                      </Button>
-                    )}
                   </div>
 
                   <p className="text-center text-[1.1875rem] text-slate-500">

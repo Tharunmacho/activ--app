@@ -398,7 +398,7 @@ export default function MemberTopBar({ className = '' }: { className?: string })
                 onClick={() => navigate('/member/messages')}
                 aria-label="Messages"
                 title="Messages"
-                className="w-[3.25rem] h-[3.25rem] rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm
+                className="w-11 h-11 sm:w-[3.25rem] sm:h-[3.25rem] rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm
                            hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50
                            flex items-center justify-center transition-colors shrink-0"
             >
@@ -416,7 +416,7 @@ export default function MemberTopBar({ className = '' }: { className?: string })
                     aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} new` : 'Notifications'}
                     aria-expanded={open}
                     title="Notifications"
-                    className={`w-[3.25rem] h-[3.25rem] rounded-xl border shadow-sm flex items-center justify-center
+                    className={`w-11 h-11 sm:w-[3.25rem] sm:h-[3.25rem] rounded-xl border shadow-sm flex items-center justify-center
                                 transition-colors shrink-0 relative ${
                         open
                             ? 'border-blue-400 bg-blue-50 text-blue-600'
@@ -476,7 +476,7 @@ export default function MemberTopBar({ className = '' }: { className?: string })
                             ) : null}
                         </div>
 
-                        <div className="max-h-[24rem] overflow-y-auto">
+                        <div className="max-h-[60vh] sm:max-h-[24rem] overflow-y-auto">
                             {loading ? (
                                 <div className="p-4 space-y-3" aria-hidden>
                                     {[0, 1, 2].map((i) => (

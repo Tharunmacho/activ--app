@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { EMPTY_MEDIA, type CmsMedia } from '@/services/cmsApi';
-import { resolveMediaUrl } from '@/config/api.config';
+import { resolveMediaUrl, isResizableUpload } from '@/config/api.config';
 
 /**
  * Render CMS media inside a fixed frame, honouring how the editor said it
@@ -96,7 +96,8 @@ const sizedSrc = (url: string, width: number): string => {
     const resolved = resolveMediaUrl(url);
     try {
         const u = new URL(resolved, window.location.origin);
-        if (!RESIZABLE_HOSTS.includes(u.hostname)) return resolved;
+        // Our own uploads resize too now — see `isResizableUpload`.
+        if (!RESIZABLE_HOSTS.includes(u.hostname) && !isResizableUpload(u)) return resolved;
         if (u.searchParams.has('w')) return resolved;
         u.searchParams.set('w', String(Math.round(width)));
         return u.toString();
@@ -109,8 +110,8 @@ const sizedSrc = (url: string, width: number): string => {
 /** Is this a host we can ask for a second density from? */
 const isResizable = (url: string): boolean => {
     try {
-        const u = new URL(url, window.location.origin);
-        return RESIZABLE_HOSTS.includes(u.hostname) && !u.searchParams.has('w');
+        const u = new URL(resolveMediaUrl(url), window.location.origin);
+        return (RESIZABLE_HOSTS.includes(u.hostname) || isResizableUpload(u)) && !u.searchParams.has('w');
     } catch {
         return false;
     }
@@ -149,11 +150,30 @@ interface Props {
      * degrades to a transparent one.
      */
     transparent?: boolean;
+    /**
+     * Draw an image at its OWN shape instead of filling a fixed box: full width,
+     * height from the file, never cropped. For a poster that must be read
+     * whole — an event banner carries its date and venue along its edges. The
+     * caller bounds it (e.g. `max-h-[85vh]`); past that it is letterboxed.
+     * Videos ignore it.
+     */
+    natural?: boolean;
+    /** Called with the image's intrinsic size once it loads (e.g. to tell portrait from landscape). */
+    onNaturalSize?: (width: number, height: number) => void;
+    /**
+     * How wide the frame is drawn, as an `<img sizes>` value (`"100vw"`,
+     * `"(min-width: 768px) 60vw, 100vw"`). Given, the browser picks from a
+     * ladder of widths for its own screen; `width` is then the largest needed.
+     */
+    sizes?: string;
 }
+
+/** The widths the backend renders (`imageVariants.LADDER`). */
+const WIDTH_LADDER = [320, 480, 640, 800, 1024, 1280, 1600, 1920];
 
 export function CmsMediaFrame({
     media, className = '', fallback = null, priority = false, width = 900,
-    transparent = false,
+    transparent = false, natural = false, onNaturalSize, sizes,
 }: Props) {
     const m = { ...EMPTY_MEDIA, ...(media || {}) };
 
@@ -162,13 +182,22 @@ export function CmsMediaFrame({
     const plate = transparent ? '' : 'bg-slate-100';
 
     const [failed, setFailed] = useState(false);
+    /*
+     * TWO CHANCES BEFORE GIVING UP.
+     *
+     * The first request is a resized rendition (`?w=` / srcset). When that
+     * one fails — a resize the server could not make, a CDN hiccup — the
+     * ORIGINAL file is usually still fine, and dropping straight to an empty
+     * plate showed a black banner slide over a photograph that existed.
+     */
+    const [plain, setPlain] = useState(false);
 
     /*
      * Reset when the source changes. Without this a frame that has failed once
      * — a carousel slide, say — keeps showing the plate after the editor points
      * it at a working URL, because `failed` is still true from the old src.
      */
-    useEffect(() => { setFailed(false); }, [m.url]);
+    useEffect(() => { setFailed(false); setPlain(false); }, [m.url]);
 
     if (!m.url) return <>{fallback}</>;
 
@@ -197,17 +226,44 @@ export function CmsMediaFrame({
     // Same box, same classes, no image — so a dead URL cannot change the layout
     // around it.
     if (failed) {
+        // A caller-supplied stand-in beats an empty box (a banner slide).
+        if (fallback) return <>{fallback}</>;
         return <div aria-hidden="true" className={`w-full h-full ${plate} ${className}`} />;
+    }
+
+    if (plain) {
+        return (
+            <img
+                src={resolveMediaUrl(m.url)}
+                alt={m.alt || ''}
+                loading={priority ? 'eager' : 'lazy'}
+                decoding="async"
+                onError={() => setFailed(true)}
+                onLoad={onNaturalSize
+                    ? (e) => onNaturalSize(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)
+                    : undefined}
+                className={natural ? `block w-full h-auto ${className}` : `w-full h-full ${plate} ${className}`}
+                style={natural ? { objectFit: 'contain', objectPosition: 'center' } : style}
+            />
+        );
     }
 
     return (
         <img
             src={sizedSrc(m.url, width)}
-            // Two densities where the host can serve them, so a retina display
-            // gets a sharp image and everyone else does not pay for one.
+            /*
+             * With `sizes`, a WIDTH ladder: the browser picks the rung for its
+             * own screen and pixel density, so a phone takes the 640 or 800 and
+             * a 4K monitor the 1920 — the banner used to send every phone the
+             * 1600. Without it, two densities of `width`, as before.
+             */
             srcSet={isResizable(m.url)
-                ? `${sizedSrc(m.url, width)} 1x, ${sizedSrc(m.url, width * 2)} 2x`
+                ? (sizes
+                    ? WIDTH_LADDER.filter((w) => w <= Math.max(width * 2, WIDTH_LADDER[0]))
+                        .map((w) => `${sizedSrc(m.url, w)} ${w}w`).join(', ')
+                    : `${sizedSrc(m.url, width)} 1x, ${sizedSrc(m.url, width * 2)} 2x`)
                 : undefined}
+            sizes={isResizable(m.url) && sizes ? sizes : undefined}
             alt={m.alt || ''}
             loading={priority ? 'eager' : 'lazy'}
             /*
@@ -219,9 +275,16 @@ export function CmsMediaFrame({
              */
             {...{ fetchpriority: priority ? 'high' : undefined }}
             decoding="async"
-            onError={() => setFailed(true)}
-            className={`w-full h-full ${plate} ${className}`}
-            style={style}
+            onError={() => {
+                // Retry the untouched file only when a resized one was asked for.
+                const sized = sizedSrc(m.url, width) !== resolveMediaUrl(m.url) || isResizable(m.url);
+                if (sized) setPlain(true); else setFailed(true);
+            }}
+            onLoad={onNaturalSize
+                ? (e) => onNaturalSize(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)
+                : undefined}
+            className={natural ? `block w-full h-auto ${className}` : `w-full h-full ${plate} ${className}`}
+            style={natural ? { objectFit: 'contain', objectPosition: 'center' } : style}
         />
     );
 }

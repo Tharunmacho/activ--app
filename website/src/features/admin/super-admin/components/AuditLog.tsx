@@ -106,7 +106,7 @@ export default function AuditLog() {
 
     return (
         <div className="bg-white rounded-xl border">
-            <header className="px-6 py-5 border-b">
+            <header className="px-4 sm:px-6 py-4 sm:py-5 border-b">
                 <h2 className={`${CARD_TITLE} text-slate-900`}>Audit log</h2>
                 <p className="text-[1.25rem] text-slate-500 mt-0.5">
                     {counts.all !== undefined
@@ -115,8 +115,8 @@ export default function AuditLog() {
                 </p>
             </header>
 
-            <div className="px-6 py-4 border-b flex flex-wrap items-center gap-3">
-                <div className="relative flex-1 min-w-[12.5rem]">
+            <div className="px-4 sm:px-6 py-4 border-b flex flex-wrap items-center gap-3">
+                <div className="relative flex-1 basis-full sm:basis-auto min-w-0 sm:min-w-[12.5rem]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                         value={query}
@@ -127,12 +127,12 @@ export default function AuditLog() {
                     />
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                     {categories.map(c => (
                         <button
                             key={c.key}
                             onClick={() => setCategory(c.key)}
-                            className={`px-3 py-2 rounded-lg text-[1.25rem] font-medium transition-colors ${
+                            className={`min-h-10 px-3 py-2 rounded-lg text-[1.25rem] font-medium transition-colors ${
                                 category === c.key
                                     ? 'bg-blue-600 text-white'
                                     : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -154,10 +154,10 @@ export default function AuditLog() {
                     </p>
                 ) : (
                     entries.map(e => (
-                        <div key={e.id} className="px-6 py-4">
-                            <div className="flex items-start justify-between gap-4">
+                        <div key={e.id} className="px-4 sm:px-6 py-3.5 sm:py-4">
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-4">
                                 <div className="min-w-0">
-                                    <p className="text-[1.25rem] text-slate-900">{e.summary || e.action}</p>
+                                    <p className="text-[1.25rem] text-slate-900 break-words">{e.summary || e.action}</p>
                                     <p className="text-[1.1875rem] text-slate-500 mt-1">
                                         {e.actorName || e.actorEmail}
                                         {e.actorRoleLabel && ` · ${e.actorRoleLabel}`}
@@ -165,7 +165,7 @@ export default function AuditLog() {
                                     </p>
                                 </div>
 
-                                <div className="text-right shrink-0">
+                                <div className="sm:text-right shrink-0 flex sm:block items-center gap-2">
                                     <p className="text-[1.1875rem] text-slate-400 whitespace-nowrap">{when(e.createdAt)}</p>
                                     {/* A super admin acting on a tier's behalf is worth
                                         marking: the decision was not the region's own. */}
@@ -183,7 +183,7 @@ export default function AuditLog() {
             </div>
 
             {(more || loading) && (
-                <div className="px-6 py-4 border-t">
+                <div className="px-4 sm:px-6 py-4 border-t">
                     <button
                         onClick={() => load(page + 1, false)}
                         disabled={loading}

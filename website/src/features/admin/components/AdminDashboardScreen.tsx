@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import ApplicantAvatar from '@/components/shared/ApplicantAvatar';
 import { formatApplicationRef } from '@/lib/applicationRef';
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -161,7 +162,7 @@ export default function AdminDashboardScreen({ tier }: { tier: AdminTier }) {
 
     return (
         <div className="min-h-screen flex bg-white">
-            <AdminSidebar tier={tier} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+            <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
             <div className="flex-1 min-w-0 flex flex-col">
                 {/*
@@ -184,18 +185,18 @@ export default function AdminDashboardScreen({ tier }: { tier: AdminTier }) {
 
                 <div className={`flex-1 overflow-y-auto ${ADMIN_PAGE}`}>
                         <div>
-                            <h2 className={`${CARD_TITLE} mb-4 text-slate-900`}>Overview Statistics</h2>
-                            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                            <h2 className={`${CARD_TITLE} mb-3 sm:mb-4 text-slate-900`}>Overview Statistics</h2>
+                            <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
                                 {TILES.map((t) => (
                                     <div
                                         key={t.label}
-                                        className={`bg-gradient-to-br ${t.tint} rounded-2xl p-6 border shadow-xl`}
+                                        className={`bg-gradient-to-br ${t.tint} rounded-2xl p-4 sm:p-6 border shadow-xl min-w-0`}
                                     >
                                         <div className="flex items-center gap-2 mb-2">
-                                            <t.icon className={`w-5 h-5 ${t.sub}`} />
-                                            <p className={`${t.sub} text-[1.25rem] font-medium`}>{t.label}</p>
+                                            <t.icon className={`w-5 h-5 shrink-0 ${t.sub}`} />
+                                            <p className={`${t.sub} text-[0.95rem] sm:text-[1.25rem] font-medium leading-tight`}>{t.label}</p>
                                         </div>
-                                        <p className="text-[2.5625rem] font-bold tracking-tight tabular-nums text-white tabular-nums">
+                                        <p className="text-[2rem] sm:text-[2.5625rem] font-bold tracking-tight tabular-nums text-white">
                                             {loading ? "…" : t.value}
                                         </p>
                                     </div>
@@ -204,9 +205,9 @@ export default function AdminDashboardScreen({ tier }: { tier: AdminTier }) {
                         </div>
 
                     {/* Recent activity */}
-                        <div className="space-y-6">
+                        <div className="space-y-4 sm:space-y-6">
                             <div className="flex items-center justify-between flex-wrap gap-3">
-                                <div>
+                                <div className="min-w-0">
                                     <h2 className={`${CARD_TITLE} text-slate-900`}>Recent Activity</h2>
                                     <p className="text-slate-500 text-[1.25rem]">Latest application submissions</p>
                                 </div>
@@ -217,7 +218,7 @@ export default function AdminDashboardScreen({ tier }: { tier: AdminTier }) {
                                 </Link>
                             </div>
 
-                            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+                            <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                                 <div className="hidden md:grid grid-cols-4 gap-4 px-5 py-4 text-[1.25rem] font-semibold text-slate-700 border-b border-slate-200 mb-4">
                                     <div>Name</div>
                                     <div>Status</div>
@@ -239,14 +240,11 @@ export default function AdminDashboardScreen({ tier }: { tier: AdminTier }) {
                                             return (
                                                 <div
                                                     key={app.id || app.applicationId}
-                                                    className="grid grid-cols-1 md:grid-cols-4 gap-5 items-center p-4 rounded-xl bg-white hover:bg-slate-50 transition-colors duration-200 border border-slate-200"
+                                                    className="grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-4 gap-x-3 gap-y-1.5 md:gap-5 items-center p-3 sm:p-4 rounded-xl bg-white hover:bg-slate-50 transition-colors duration-200 border border-slate-200"
                                                 >
                                                     <div className="flex items-center gap-3 min-w-0">
-                                                        <Avatar className="w-10 h-10 ring-2 ring-blue-200">
-                                                            <AvatarFallback className="bg-blue-600 text-white font-bold text-[1.25rem]">
-                                                                {initials}
-                                                            </AvatarFallback>
-                                                        </Avatar>
+                                                        <ApplicantAvatar name={displayName} photo={app.profilePhoto}
+                                                            className="w-10 h-10 ring-2 ring-blue-200" textClassName="text-[1.25rem]" />
                                                         <div className="min-w-0">
                                                             <p className="font-semibold text-slate-900 text-[1.25rem] truncate">{displayName}</p>
                                                             <p className="text-[1.1875rem] text-slate-500 truncate">
@@ -261,10 +259,10 @@ export default function AdminDashboardScreen({ tier }: { tier: AdminTier }) {
                                                             {app.statusLabel || stage}
                                                         </Badge>
                                                     </div>
-                                                    <div className="text-[1.25rem] text-slate-700 capitalize">
+                                                    <div className="text-[1.0625rem] md:text-[1.25rem] text-slate-500 md:text-slate-700 capitalize truncate">
                                                         {app.memberType || "—"}
                                                     </div>
-                                                    <div className="text-[1.25rem] text-slate-700">
+                                                    <div className="text-[1.0625rem] md:text-[1.25rem] text-slate-500 md:text-slate-700 text-right md:text-left whitespace-nowrap">
                                                         {app.submittedAt
                                                             ? new Date(app.submittedAt).toLocaleDateString("en-GB", {
                                                                 day: "2-digit", month: "short", year: "numeric",

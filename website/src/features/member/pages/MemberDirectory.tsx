@@ -542,7 +542,7 @@ function DirectoryRow({ member }: { member: DirectoryEntry }) {
                        bg-white shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]
                        transition-all hover:border-blue-400 hover:shadow-md"
         >
-            <div className="flex min-w-0 flex-1 flex-col p-5">
+            <div className="flex min-w-0 flex-1 flex-col p-4 sm:p-5">
 
                 {/* ---------------------------------------- who they are */}
                 <div className="flex min-w-0 items-center gap-3.5">

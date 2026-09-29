@@ -171,7 +171,7 @@ export default function LeaderMessagesInbox() {
     if (loading) return <CmsLoading label="Loading leader enquiries…" />;
 
     const chip = (active: boolean) =>
-        `rounded-full px-4 py-1.5 text-[1.0625rem] font-semibold transition-colors ${active
+        `rounded-full px-3.5 sm:px-4 py-2 sm:py-1.5 text-[1.0625rem] font-semibold transition-colors ${active
             ? 'bg-[#2563EB] text-white'
             : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-[#1a1a1a] dark:text-neutral-300'}`;
 
@@ -225,7 +225,7 @@ export default function LeaderMessagesInbox() {
                             value={place}
                             onChange={(e) => setPlace(e.target.value)}
                             placeholder="Filter by place or leader…"
-                            className="ml-auto w-full max-w-xs rounded-lg border border-slate-300 bg-white
+                            className="w-full sm:ml-auto sm:max-w-xs rounded-lg border border-slate-300 bg-white
                                        px-3 py-2 text-[1.0625rem] text-slate-900 outline-none
                                        dark:border-[#2a2a2a] dark:bg-black dark:text-neutral-100"
                         />
@@ -246,13 +246,13 @@ export default function LeaderMessagesInbox() {
                         {shown.map((m) => (
                             <article
                                 key={m._id}
-                                className="rounded-2xl border border-slate-200 bg-white p-5
+                                className="rounded-2xl border border-slate-200 bg-white p-3.5 sm:p-5
                                            dark:border-[#1f1f1f] dark:bg-[#0A0A0A]"
                             >
                                 {/* ---- who wrote, and to whom ---- */}
                                 <div className="flex flex-wrap items-start justify-between gap-3">
                                     <div className="min-w-0">
-                                        <p className="text-[1.375rem] font-extrabold text-slate-900 dark:text-white">
+                                        <p className="text-[1.25rem] sm:text-[1.375rem] font-extrabold break-words text-slate-900 dark:text-white">
                                             {m.sender.name || 'Someone'}
                                             <span className="mx-2 font-medium text-slate-400">wrote to</span>
                                             {m.leader.name || 'an office-bearer'}
@@ -270,7 +270,7 @@ export default function LeaderMessagesInbox() {
                                         </p>
                                     </div>
 
-                                    <div className="flex shrink-0 items-center gap-2">
+                                    <div className="flex shrink-0 flex-wrap items-center gap-2">
                                         <span className={`rounded-full px-3 py-1 text-[1.0625rem] font-bold
                                                           ${STATUS_STYLE[m.status]}`}>
                                             {m.status}
@@ -282,7 +282,7 @@ export default function LeaderMessagesInbox() {
                                 </div>
 
                                 {/* ---- what they want ---- */}
-                                <p className="mt-3 inline-flex items-center gap-2 rounded-lg bg-slate-100
+                                <p className="mt-3 inline-flex max-w-full items-center gap-2 rounded-lg bg-slate-100
                                               px-3 py-1.5 text-[1.0625rem] font-bold text-slate-700
                                               dark:bg-[#141414] dark:text-neutral-200">
                                     <MessageSquare size={14} className="shrink-0" />
@@ -354,12 +354,12 @@ export default function LeaderMessagesInbox() {
                                     {m.sender.email && (
                                         <a
                                             href={`mailto:${m.sender.email}`}
-                                            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100
+                                            className="inline-flex max-w-full items-center gap-1.5 rounded-lg bg-slate-100
                                                        px-3 py-1.5 text-[1.0625rem] font-bold text-slate-700
                                                        transition-colors hover:bg-slate-200
                                                        dark:bg-[#1a1a1a] dark:text-neutral-300"
                                         >
-                                            <Mail size={14} /> {m.sender.email}
+                                            <Mail size={14} className="shrink-0" /> <span className="min-w-0 break-all">{m.sender.email}</span>
                                         </a>
                                     )}
 
@@ -420,7 +420,7 @@ export default function LeaderMessagesInbox() {
                                             type="button"
                                             disabled={busy === m._id || m.status === next}
                                             onClick={() => patch(m, { status: next })}
-                                            className="rounded-lg border border-slate-300 px-3 py-1.5
+                                            className="rounded-lg border border-slate-300 px-3 py-2 sm:py-1.5
                                                        text-[1.0625rem] font-semibold text-slate-700
                                                        transition-colors hover:bg-slate-100 disabled:opacity-40
                                                        dark:border-[#2a2a2a] dark:text-neutral-300
@@ -437,7 +437,7 @@ export default function LeaderMessagesInbox() {
                                         type="button"
                                         onClick={() => remove(m)}
                                         disabled={busy === m._id}
-                                        className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5
+                                        className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-3 py-2 sm:py-1.5
                                                    text-[1.0625rem] font-semibold text-red-600 transition-colors
                                                    hover:bg-red-50 disabled:opacity-40 dark:hover:bg-red-950/40"
                                     >

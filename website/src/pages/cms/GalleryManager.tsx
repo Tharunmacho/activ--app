@@ -1,3 +1,4 @@
+import { galleryPath } from '@/lib/eventPath';
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft,
     Plus, Trash2, Eye, EyeOff, Star, Save, Check, Loader2,
@@ -33,6 +34,8 @@ import {
 import { RepeatableList, LineList, IconPicker , ExtraFieldsEditor } from './components/CmsEditors';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
 import MediaPicker from './components/MediaPicker';
+import BannerWordsFields from './components/BannerWordsFields';
+import { resolveMediaUrl } from '@/config/api.config';
 
 /**
  * The gallery page: the copy around the grid, and the images in it.
@@ -87,6 +90,11 @@ interface ItemDraft {
     pinned: boolean;
     /** Rides in the landing page banner. */
     showOnHome: boolean;
+    /** What the home banner says over this image, and on which side. */
+    bannerHeadline: string;
+    bannerHighlight: string;
+    bannerSubheadline: string;
+    bannerAlign: 'left' | 'right';
     visible?: boolean;
 }
 
@@ -108,6 +116,10 @@ const BLANK_ITEM: ItemDraft = {
     // an event on the landing page, and needing to remember a second switch is
     // how a poster ends up published and invisible.
     showOnHome: true,
+    bannerHeadline: '',
+    bannerHighlight: '',
+    bannerSubheadline: '',
+    bannerAlign: 'left',
 };
 
 /** How many rows the list opens on. “Show more” adds another page. */
@@ -124,6 +136,25 @@ const haystack = (item: GalleryItem) => [
     item.title, item.caption, item.category, item.sector,
     item.location, item.eventDate, item.description,
 ].filter(Boolean).join(' ').toLowerCase();
+
+/**
+ * Did the server keep this image's banner words?
+ *
+ * A backend running a build from before those fields existed answers 200 and
+ * silently drops them (Mongoose strict mode). Returns the sentence to show
+ * when something typed did not come back, or '' when it all did.
+ */
+const bannerWordsLost = (sent: ItemDraft, back: Partial<GalleryItem> | null) => {
+    if (!back) return '';
+    const lost = (!!sent.bannerHeadline && !back.bannerHeadline)
+        || (!!sent.bannerHighlight && !back.bannerHighlight)
+        || (!!sent.bannerSubheadline && !back.bannerSubheadline)
+        || (sent.bannerAlign === 'right' && back.bannerAlign !== 'right');
+    return lost
+        ? 'The server did not store the banner heading for this image. Your backend is running an older '
+            + 'build — restart it (npm run dev), then save again. Your text is still in the form.'
+        : '';
+};
 
 /** A stored item, read back into the draft shape the form works on. */
 const toDraft = (item: GalleryItem): ItemDraft => ({
@@ -162,6 +193,10 @@ const toDraft = (item: GalleryItem): ItemDraft => ({
     // Rows written before the field existed have no value, and they are the
     // ones already on the site — so absent reads as on, as it does server-side.
     showOnHome: item.showOnHome !== false,
+    bannerHeadline: item.bannerHeadline || '',
+    bannerHighlight: item.bannerHighlight || '',
+    bannerSubheadline: item.bannerSubheadline || '',
+    bannerAlign: item.bannerAlign === 'right' ? 'right' : 'left',
     visible: item.visible,
 });
 
@@ -190,6 +225,53 @@ function ItemFields({ value, onChange, categories }: {
                     value={value.media}
                     onChange={media => set({ media })}
                 />
+            </CmsSection>
+
+            {/*
+              * THE HOME PAGE BANNER — directly under the photo it is about.
+              *
+              * It used to sit at the foot of "Where it appears", near the bottom
+              * of a long form and only after a box was ticked, and an editor
+              * looking for "the heading over this picture" never found it — so
+              * every gallery slide kept printing the banner's shared sentence.
+              * The switch and the words are one decision, so they live together.
+              */}
+            <CmsSection
+                title="Home page banner — the words over this photo"
+                hint="Give this photo its own heading and subheading on the home page banner, and choose which side they sit on so the subject of the photo stays visible."
+            >
+                <CmsCheck
+                    checked={value.showOnHome}
+                    onChange={showOnHome => set({ showOnHome })}
+                    icon={<Home className="h-4 w-4" />}
+                    title="Show this photo on the home page banner"
+                    detail="Newest first. Clicking the slide opens this album's own page."
+                />
+
+                {/* Only while it is in the banner — the words are shown nowhere else. */}
+                {value.showOnHome && (
+                    <div className="mt-4">
+                        <BannerWordsFields
+                            value={{
+                                headline: value.bannerHeadline || '',
+                                highlight: value.bannerHighlight || '',
+                                subheadline: value.bannerSubheadline || '',
+                                align: value.bannerAlign === 'right' ? 'right' : 'left',
+                            }}
+                            onChange={(next) => set({
+                                ...(next.headline !== undefined ? { bannerHeadline: next.headline } : {}),
+                                ...(next.highlight !== undefined ? { bannerHighlight: next.highlight } : {}),
+                                ...(next.subheadline !== undefined ? { bannerSubheadline: next.subheadline } : {}),
+                                ...(next.align !== undefined ? { bannerAlign: next.align } : {}),
+                            })}
+                            preview={value.media?.url ? resolveMediaUrl(value.media.url) : ''}
+                            whenBlank={value.title
+                                ? `Leave them all blank and this album's own title and caption are shown instead ("${value.title}"). The banner's shared heading is used only when the album has no title either.`
+                                : "Leave them all blank and the banner's shared heading is shown, because this album has no title yet."}
+                            fallback={{ headline: value.title || '', subheadline: value.caption || '' }}
+                        />
+                    </div>
+                )}
             </CmsSection>
 
             <CmsSection
@@ -502,7 +584,7 @@ function ItemFields({ value, onChange, categories }: {
               */}
             <CmsSection
                 title="Where it appears"
-                hint="The gallery page, and optionally the home page banner and the collage."
+                hint="The gallery page, and optionally the collage. The home page banner has its own section, under the main photo."
             >
                 <div className="mb-3">
                     <CmsCheck
@@ -516,14 +598,6 @@ function ItemFields({ value, onChange, categories }: {
 
                 <div className="grid gap-3 sm:grid-cols-2">
                     <CmsCheck
-                        checked={value.showOnHome}
-                        onChange={showOnHome => set({ showOnHome })}
-                        icon={<Home className="h-4 w-4" />}
-                        title="Also on the home page banner"
-                        detail="Newest first. The slide opens this item's own page."
-                    />
-
-                    <CmsCheck
                         checked={value.featured}
                         onChange={featured => set({ featured })}
                         icon={<Star className="h-4 w-4" />}
@@ -531,6 +605,7 @@ function ItemFields({ value, onChange, categories }: {
                         detail="The frames across the top. The first three ticked are the ones used."
                     />
                 </div>
+
             </CmsSection>
 
             {/*
@@ -661,7 +736,14 @@ export default function GalleryManager() {
         setSavingEdit(true);
         setError('');
         try {
-            await updateGalleryItem(editingId, flatten(editDraft));
+            const back = await updateGalleryItem(editingId, flatten(editDraft));
+            const lost = bannerWordsLost(editDraft, back);
+            if (lost) {
+                // Keep the panel open with what was typed; say why it did not stick.
+                setError(lost);
+                cmsFailed('the banner words', lost);
+                return;
+            }
             cmsSaved(editDraft.title || 'Image');
             cancelEdit();
             await load({ quiet: true });
@@ -760,6 +842,10 @@ export default function GalleryManager() {
         featured: item.featured,
         pinned: item.pinned,
         showOnHome: item.showOnHome,
+        bannerHeadline: item.bannerHeadline,
+        bannerHighlight: item.bannerHighlight,
+        bannerSubheadline: item.bannerSubheadline,
+        bannerAlign: item.bannerAlign,
         ...(item.visible === undefined ? {} : { visible: item.visible }),
     });
 
@@ -772,7 +858,12 @@ export default function GalleryManager() {
         setAdding(true);
         setError('');
         try {
-            await addGalleryItem(flatten(draft));
+            const created = await addGalleryItem(flatten(draft));
+            /* The image IS created either way — saving again would duplicate
+               it — so a dropped heading is reported, to be re-entered by
+               editing the row once the backend is restarted. */
+            const lost = bannerWordsLost(draft, created);
+            if (lost) cmsFailed('the banner words', lost);
             setDraft({ ...BLANK_ITEM, media: { ...EMPTY_MEDIA } });
             /*
              * CLOSE IT. The form stayed open on a successful save, emptied of
@@ -851,7 +942,7 @@ export default function GalleryManager() {
                                 key={key}
                                 type="button"
                                 onClick={() => setTab(key)}
-                                className={`-mb-px border-b-2 px-5 py-3 text-[1.25rem] font-semibold transition-colors ${tab === key
+                                className={`-mb-px border-b-2 px-3 sm:px-5 py-3 text-[1.25rem] font-semibold transition-colors ${tab === key
                                     ? 'border-blue-600 text-blue-700 dark:text-blue-400'
                                     : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-neutral-200'}`}
                             >
@@ -1197,7 +1288,7 @@ export default function GalleryManager() {
                         {addOpen ? (
                             <form onSubmit={handleAdd}>
                                 <ItemFields value={draft} onChange={setDraft} categories={categories} />
-                                <div className="mt-8 flex gap-3">
+                                <div className="mt-6 sm:mt-8 flex flex-wrap gap-3">
                                     <CmsButton type="submit" disabled={adding}>
                                         {adding ? 'Adding…' : 'Add the album'}
                                     </CmsButton>
@@ -1207,7 +1298,7 @@ export default function GalleryManager() {
                         ) : editDraft && (
                             <>
                                 <ItemFields value={editDraft} onChange={setEditDraft} categories={categories} />
-                                <div className="mt-8 flex gap-3">
+                                <div className="mt-6 sm:mt-8 flex flex-wrap gap-3">
                                     <CmsButton type="button" onClick={saveEdit} disabled={savingEdit}>
                                         {savingEdit ? 'Saving…' : 'Save the album'}
                                     </CmsButton>
@@ -1248,13 +1339,13 @@ export default function GalleryManager() {
                                 const photoCount = (item.photos || []).filter(p => p && p.url).length + (item.media?.url ? 1 : 0);
                                 return (
                                     <div key={item._id}
-                                         className={`flex items-center gap-4 rounded-xl border border-slate-200 p-3 transition-colors
+                                         className={`flex flex-wrap items-center gap-3 sm:gap-4 rounded-xl border border-slate-200 p-3 transition-colors
                                                      hover:border-slate-300 dark:border-[#2a2a2a] ${item.visible === false ? 'opacity-60' : ''}`}>
                                         <button type="button" onClick={() => startEdit(item)}
-                                                className="h-20 w-28 shrink-0 overflow-hidden rounded-md bg-slate-100 dark:bg-[#161616]">
+                                                className="h-16 w-24 sm:h-20 sm:w-28 shrink-0 overflow-hidden rounded-md bg-slate-100 dark:bg-[#161616]">
                                             <CmsMediaFrame media={item.media} />
                                         </button>
-                                        <button type="button" onClick={() => startEdit(item)} className="min-w-0 flex-1 text-left">
+                                        <button type="button" onClick={() => startEdit(item)} className="min-w-0 flex-1 basis-[10rem] text-left">
                                             <p className="truncate text-[1.25rem] font-bold text-slate-900 dark:text-neutral-100">
                                                 {item.title || 'Untitled album'}
                                             </p>
@@ -1268,22 +1359,35 @@ export default function GalleryManager() {
                                                     ? <span className="text-amber-600">Hidden from the site</span>
                                                     : <span className="text-emerald-600">On the gallery page</span>}
                                                 {item.visible !== false && item.showOnHome !== false && (
-                                                    <span className="text-blue-600">On the home page banner</span>
+                                                    <span className="text-blue-600">
+                                                        On the home page banner
+                                                        {/* Whether it has words of its own, or is still
+                                                            printing the shared heading over itself. */}
+                                                        {item.bannerHeadline || item.bannerHighlight || item.bannerSubheadline
+                                                            ? ` · own heading (${item.bannerAlign === 'right' ? 'right' : 'left'})`
+                                                            : ''}
+                                                    </span>
+                                                )}
+                                                {item.visible !== false && item.showOnHome !== false
+                                                    && !item.bannerHeadline && !item.bannerHighlight && !item.bannerSubheadline && (
+                                                    item.title
+                                                        ? <span className="text-slate-500">Banner shows its album title</span>
+                                                        : <span className="text-amber-600">Shared banner heading — edit to add its own</span>
                                                 )}
                                                 {item.visible !== false && item.featured && <span className="text-blue-600">In the collage</span>}
                                                 {item.pinned && <span className="text-slate-500">Shown first</span>}
                                             </div>
                                         </button>
-                                        <div className="flex shrink-0 items-center gap-2">
+                                        <div className="ml-auto flex shrink-0 items-center gap-2">
                                             {item.visible !== false && (
-                                                <a href={`/gallery/${item._id}`} target="_blank" rel="noopener noreferrer"
+                                                <a href={galleryPath(item)} target="_blank" rel="noopener noreferrer"
                                                    aria-label="Open on the site"
                                                    className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-blue-600">
                                                     <ExternalLink className="h-4 w-4" />
                                                 </a>
                                             )}
                                             <button type="button" onClick={() => startEdit(item)}
-                                                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[1.0625rem] font-semibold
+                                                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 sm:py-1.5 text-[1.0625rem] font-semibold
                                                                text-blue-700 transition-colors hover:bg-blue-50 dark:text-blue-400">
                                                 <Pencil className="h-3.5 w-3.5" /> Edit
                                             </button>

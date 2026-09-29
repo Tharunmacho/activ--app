@@ -240,25 +240,25 @@ export default function PaymentGateway() {
     >
       <div className="max-w-3xl mx-auto py-2">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-5 sm:mb-8">
           <div className="flex items-center justify-center gap-3 mb-3">
-            <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center shadow-lg">
-              <Lock className="w-8 h-8 text-white" />
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-600 rounded-full flex items-center justify-center shadow-lg">
+              <Lock className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
             </div>
           </div>
-          <h1 className="text-[2.1875rem] font-bold mb-2">Payment Gateway</h1>
+          <h1 className="text-2xl sm:text-[2.1875rem] font-bold mb-2">Payment Gateway</h1>
           <p className="text-slate-500">Choose your preferred payment method</p>
         </div>
 
         {/* Payment Amount Summary */}
         <Card className="mb-6 bg-blue-50 border-blue-300">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-center">
-              <div>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+              <div className="min-w-0">
                 <p className="text-slate-600 mb-1">Total Amount to Pay</p>
-                <p className="text-[2.1875rem] font-bold text-blue-600">₹{paymentDetails.totalAmount}</p>
+                <p className="text-3xl sm:text-[2.1875rem] font-bold text-blue-600 break-words">₹{paymentDetails.totalAmount}</p>
               </div>
-              <div className="text-right">
+              <div className="sm:text-right">
                 <p className="text-[1.0625rem] text-slate-600">{paymentDetails.planType === 'annual' ? 'Annual' : 'Lifetime'} Membership</p>
                 <p className="text-[1.0625rem] text-slate-600">₹{paymentDetails.planAmount}</p>
                 {paymentDetails.supportAmount > 0 && (
@@ -290,10 +290,10 @@ export default function PaymentGateway() {
             <CardTitle>Select Payment Method</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
               <Button
                 variant={paymentMethod === 'card' ? 'default' : 'outline'}
-                className="h-20 flex flex-col items-center justify-center"
+                className="h-20 px-1 flex flex-col items-center justify-center"
                 onClick={() => setPaymentMethod('card')}
               >
                 <CreditCard className="w-6 h-6 mb-1" />
@@ -301,7 +301,7 @@ export default function PaymentGateway() {
               </Button>
               <Button
                 variant={paymentMethod === 'upi' ? 'default' : 'outline'}
-                className="h-20 flex flex-col items-center justify-center"
+                className="h-20 px-1 flex flex-col items-center justify-center"
                 onClick={() => setPaymentMethod('upi')}
               >
                 <svg className="w-6 h-6 mb-1" viewBox="0 0 24 24" fill="currentColor">
@@ -311,13 +311,13 @@ export default function PaymentGateway() {
               </Button>
               <Button
                 variant={paymentMethod === 'netbanking' ? 'default' : 'outline'}
-                className="h-20 flex flex-col items-center justify-center"
+                className="h-20 px-1 flex flex-col items-center justify-center"
                 onClick={() => setPaymentMethod('netbanking')}
               >
                 <svg className="w-6 h-6 mb-1" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/>
                 </svg>
-                <span className="text-[1.0625rem]">Net Banking</span>
+                <span className="text-sm sm:text-[1.0625rem] whitespace-normal leading-tight text-center">Net Banking</span>
               </Button>
             </div>
 
@@ -440,8 +440,8 @@ export default function PaymentGateway() {
         <Card className="mb-6 bg-green-50 border-green-200">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <Lock className="w-6 h-6 text-green-600" />
-              <div>
+              <Lock className="w-6 h-6 text-green-600 flex-shrink-0" />
+              <div className="min-w-0">
                 <p className="font-semibold text-green-900">Secure Payment</p>
                 <p className="text-[1.0625rem] text-green-700">
                   Your payment information is encrypted and secure. We never store your card details.
@@ -479,17 +479,17 @@ export default function PaymentGateway() {
         )}
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <Button
             variant="outline"
-            className="flex-1 py-6 text-[1.1875rem]"
+            className="flex-1 py-4 sm:py-6 text-base sm:text-[1.1875rem]"
             onClick={() => navigate('/payment/membership-plans')}
             disabled={processing}
           >
             Cancel
           </Button>
           <Button
-            className="flex-1 bg-green-600 hover:bg-green-700 text-white py-6 text-[1.1875rem]"
+            className="flex-1 bg-green-600 hover:bg-green-700 text-white py-4 sm:py-6 text-base sm:text-[1.1875rem]"
             onClick={handlePayment}
             /* Disabled until the server has said which checkout is live —
                see `payConfig`. A click before then has no flow to run. */

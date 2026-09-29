@@ -1,5 +1,6 @@
+import { galleryPath } from '@/lib/eventPath';
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Images, Calendar, MapPin, Grid3x3, ArrowRight } from 'lucide-react';
 import {
     getGallery, getGallerySettings,
@@ -33,7 +34,18 @@ import { Tilt3D } from '@/components/shared/Tilt3D';
 export function GallerySection() {
     const [images, setImages] = useState<GalleryItem[] | null>(null);
     const [settings, setSettings] = useState<GallerySettings | null>(null);
-    const [activeFilter, setActiveFilter] = useState('All');
+    /*
+     * THE CHOSEN CATEGORY LIVES IN THE ADDRESS (`/gallery?category=Conferences`),
+     * so a filtered gallery can be shared, bookmarked and reloaded. `replace`,
+     * so tapping through chips does not fill the history with one entry per tap.
+     */
+    const [params, setParams] = useSearchParams();
+    const activeFilter = params.get('category') || 'All';
+    const setActiveFilter = (value: string) => {
+        const next = new URLSearchParams(params);
+        if (!value || value === 'All') next.delete('category'); else next.set('category', value);
+        setParams(next, { replace: true });
+    };
     const [expanded, setExpanded] = useState(false);
 
     useEffect(() => {
@@ -125,7 +137,7 @@ export function GallerySection() {
         || badgeRows.length > 0 || headingRows.length > 0 || noteRows.length > 0;
 
     return (
-        <section className="w-full py-16 md:py-24 dot-band relative overflow-hidden font-sans">
+        <section className="w-full py-10 sm:py-16 md:py-24 dot-band relative overflow-hidden font-sans">
 
             {/* Decorative only — not authored. */}
             <div className="absolute top-0 right-0 w-1/3 h-full -z-10 opacity-30 pointer-events-none">
@@ -145,7 +157,7 @@ export function GallerySection() {
 
                 {/* ---- intro and collage ---- */}
                 {(hasIntro || collage.length > 0) && (
-                    <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 items-center mb-24">
+                    <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 items-center mb-12 sm:mb-24">
 
                         {hasIntro && (
                             <div className={`w-full ${collage.length ? 'lg:w-5/12' : ''} relative`}>
@@ -158,7 +170,7 @@ export function GallerySection() {
                                 )}
 
                                 {(settings?.heading || settings?.headingHighlight) && (
-                                    <h2 className={`${SECTION_HEADING} text-[#111827] mb-6`}>
+                                    <h2 className={`${SECTION_HEADING} text-[#111827] mb-4 sm:mb-6 break-words`}>
                                         {settings.heading}
                                         {settings.headingHighlight && (
                                             <> <span className="text-brand-600">{settings.headingHighlight}</span></>
@@ -234,9 +246,11 @@ export function GallerySection() {
                         )}
 
                         {collage.length > 0 && (
-                            <div className={`w-full ${hasIntro ? 'lg:w-7/12' : ''} mt-12 lg:mt-0 relative`}>
+                            <div className={`w-full ${hasIntro ? 'lg:w-7/12' : ''} mt-8 sm:mt-12 lg:mt-0 relative`}>
                                 {/* Added isolate to prevent z-index issues with sticky header during scroll */}
-                                <div className="relative h-[28.125rem] md:h-[31.25rem] w-full max-w-3xl mx-auto isolate">
+                                {/* Phones: a plain grid — the big photograph whole, the other two
+                                    as square thumbnails — instead of the overlapping collage. */}
+                                <div className="relative grid grid-cols-2 gap-3 sm:block sm:h-[28.125rem] md:h-[31.25rem] w-full max-w-3xl mx-auto isolate">
                                     {/* Fixed positions rather than a loop: the three frames
                                         are deliberately different sizes and angles. */}
                                     {/* Each frame links to its own item, like every other
@@ -244,28 +258,28 @@ export function GallerySection() {
                                         the biggest photograph on the page expects it to
                                         do what the small ones below it do. */}
                                     {collage[0] && (
-                                        <div className="absolute top-4 left-0 w-3/5 h-4/5 z-10 -rotate-2 group transform-gpu">
+                                        <div className="relative col-span-2 aspect-[4/3] sm:aspect-auto sm:absolute sm:top-4 sm:left-0 w-full sm:w-3/5 sm:h-4/5 z-10 sm:-rotate-2 group transform-gpu">
                                             <Link
-                                                to={`/gallery/${collage[0]._id}`}
+                                                to={galleryPath(collage[0])}
                                                 aria-label={collage[0].title ? `View details of ${collage[0].title}` : 'View gallery item'}
-                                                className="block w-full h-full rounded-3xl overflow-hidden border-[6px]
+                                                className="block w-full h-full rounded-3xl overflow-hidden border-4 sm:border-[6px]
                                                            border-white shadow-xl bg-gray-100 transform-gpu"
                                             >
                                                 <CmsMediaFrame
                                                     media={collage[0].media}
                                                     priority
                                                     width={520}
-                                                    className="group-hover:scale-105 transition-transform duration-700 transform-gpu"
+                                                    className="max-sm:!object-contain group-hover:scale-105 transition-transform duration-700 transform-gpu"
                                                 />
                                             </Link>
                                         </div>
                                     )}
                                     {collage[1] && (
-                                        <div className="absolute -top-4 right-4 w-[42%] h-[45%] z-20 rotate-2 group transform-gpu">
+                                        <div className="relative aspect-square sm:aspect-auto sm:absolute sm:-top-4 sm:right-4 w-full sm:w-[42%] sm:h-[45%] z-20 sm:rotate-2 group transform-gpu">
                                             <Link
-                                                to={`/gallery/${collage[1]._id}`}
+                                                to={galleryPath(collage[1])}
                                                 aria-label={collage[1].title ? `View details of ${collage[1].title}` : 'View gallery item'}
-                                                className="block w-full h-full rounded-3xl overflow-hidden border-[6px]
+                                                className="block w-full h-full rounded-3xl overflow-hidden border-4 sm:border-[6px]
                                                            border-white shadow-xl bg-gray-100 transform-gpu"
                                             >
                                                 <CmsMediaFrame
@@ -277,11 +291,11 @@ export function GallerySection() {
                                         </div>
                                     )}
                                     {collage[2] && (
-                                        <div className="absolute bottom-4 right-0 w-[45%] h-[45%] z-30 -rotate-1 group transform-gpu">
+                                        <div className="relative aspect-square sm:aspect-auto sm:absolute sm:bottom-4 sm:right-0 w-full sm:w-[45%] sm:h-[45%] z-30 sm:-rotate-1 group transform-gpu">
                                             <Link
-                                                to={`/gallery/${collage[2]._id}`}
+                                                to={galleryPath(collage[2])}
                                                 aria-label={collage[2].title ? `View details of ${collage[2].title}` : 'View gallery item'}
-                                                className="block w-full h-full rounded-3xl overflow-hidden border-[6px]
+                                                className="block w-full h-full rounded-3xl overflow-hidden border-4 sm:border-[6px]
                                                            border-white shadow-xl bg-gray-100 transform-gpu"
                                             >
                                                 <CmsMediaFrame
@@ -300,13 +314,18 @@ export function GallerySection() {
 
                 {/* ---- filter chips ---- */}
                 {categories.length > 0 && (
-                    <div className="flex flex-wrap items-center justify-center gap-3 mb-12">
+                    /* One swipeable row on a phone (the chips stacked one per line
+                       there); wrapped and centred from `sm`. */
+                    <div className="-mx-5 mb-7 flex snap-x items-center gap-2.5 overflow-x-auto px-5 pb-1
+                                    [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
+                                    sm:mx-0 sm:mb-12 sm:flex-wrap sm:justify-center sm:gap-3 sm:overflow-visible sm:px-0">
                         {[{ label: 'All', icon: '' }, ...categories].map((filter, index) => (
                             <button
                                 key={index}
                                 onClick={() => { setActiveFilter(filter.label); setExpanded(false); }}
-                                className={`flex items-center space-x-2.5 px-7 py-3 rounded-full text-[1.25rem] font-semibold
-                                            transition-all duration-200 border ${
+                                className={`flex shrink-0 snap-start items-center space-x-2 sm:space-x-2.5 px-4 sm:px-7 py-2.5 sm:py-3
+                                            rounded-full text-[1.05rem] sm:text-[1.25rem] font-semibold whitespace-nowrap
+                                            transition-all duration-200 border active:scale-95 ${
                                     activeFilter === filter.label
                                         ? 'bg-brand-800 border-brand-800 text-white shadow-md'
                                         : 'bg-white border-gray-200 text-brand-800 hover:border-brand-800 hover:bg-brand-50'
@@ -343,9 +362,9 @@ export function GallerySection() {
 
                 {/* ---- grid ---- */}
                 {loading ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8 sm:mb-12">
                         {Array.from({ length: 8 }).map((_, i) => (
-                            <div key={i} className="rounded-2xl h-72 bg-gray-100 animate-pulse border border-gray-200" />
+                            <div key={i} className="rounded-2xl h-56 sm:h-72 bg-gray-100 animate-pulse border border-gray-200" />
                         ))}
                     </div>
                 ) : visible.length === 0 ? (
@@ -356,7 +375,7 @@ export function GallerySection() {
                                 .replace('{category}', activeFilter))}
                     </p>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8 sm:mb-12">
                         {visible.map((card, i) => (
                             /* Staggered across the row, capped so the last tile of a
                                long gallery never looks like it failed to load. */
@@ -369,7 +388,7 @@ export function GallerySection() {
                                       whose picture is what everyone taps.
                                     */}
                                     <Link
-                                        to={`/gallery/${card._id}`}
+                                        to={galleryPath(card)}
                                         aria-label={card.title ? `View details of ${card.title}` : 'View gallery item'}
                                         className="bg-white rounded-[1.25rem] overflow-hidden h-full
                                                    border border-brand-100/70
@@ -420,7 +439,7 @@ export function GallerySection() {
                                           */}
                                         {(card.photos || []).filter((ph) => ph && ph.url).length > 0 && (
                                             <span className="absolute bottom-2 right-2 inline-flex items-center gap-1.5 rounded-full
-                                                             bg-black/65 px-3 py-1 text-[0.9375rem] font-bold text-white
+                                                             bg-black/65 px-2 py-0.5 sm:px-3 sm:py-1 text-[0.875rem] sm:text-[0.9375rem] font-bold text-white
                                                              shadow-sm backdrop-blur-sm">
                                                 <Images size={14} /> {(card.photos || []).filter((ph) => ph && ph.url).length + 1} photos
                                             </span>
@@ -436,7 +455,7 @@ export function GallerySection() {
                                     </div>
                                 </div>
 
-                                <div className="p-5 flex flex-col flex-grow">
+                                <div className="p-3 sm:p-5 flex flex-col flex-grow">
                                     {/*
                                       * A HEADING ON EVERY CARD, even an untitled one.
                                       *
@@ -449,7 +468,7 @@ export function GallerySection() {
                                       * reason: a missing name is information, and a
                                       * hole where a name goes reads as a broken card.
                                       */}
-                                    <h3 className="text-[1.3125rem] font-extrabold text-[#111827] leading-snug
+                                    <h3 className="text-[1.0625rem] sm:text-[1.3125rem] font-extrabold text-[#111827] leading-snug break-words
                                                    line-clamp-2 group-hover:text-brand-600 transition-colors">
                                         {card.title || 'Untitled album'}
                                     </h3>
@@ -479,8 +498,8 @@ export function GallerySection() {
                                       * nothing known still has a foot, so the grid lines
                                       * up whatever the editor filled in.
                                       */}
-                                    <div className="mt-auto flex items-end justify-between gap-3 border-t border-gray-100 pt-4">
-                                        <div className="min-w-0 flex flex-col gap-1.5 text-gray-500 text-[1.0625rem] font-medium">
+                                    <div className="mt-auto flex flex-wrap items-end justify-between gap-x-3 gap-y-1.5 border-t border-gray-100 pt-3 sm:pt-4">
+                                        <div className="min-w-0 flex flex-col gap-1.5 text-gray-500 text-[0.9375rem] sm:text-[1.0625rem] font-medium">
                                             {card.eventDate && (
                                                 <span className="flex items-center gap-1.5">
                                                     <Calendar size={15} className="shrink-0 text-gray-400" />
@@ -513,11 +532,11 @@ export function GallerySection() {
 
                 {/* Expands in place rather than navigating: there is no second page. */}
                 {hasMore && !expanded && settings?.viewMoreLabel && (
-                    <div className="flex justify-center mt-12">
+                    <div className="flex justify-center mt-8 sm:mt-12">
                         <button
                             onClick={() => setExpanded(true)}
                             className="flex items-center space-x-2 bg-white border-2 border-brand-100 hover:border-brand-200
-                                       text-brand-700 hover:bg-brand-50 px-8 py-3 rounded-full font-bold transition-all shadow-sm"
+                                       text-brand-700 hover:bg-brand-50 px-6 sm:px-8 py-3 rounded-full font-bold transition-all shadow-sm"
                         >
                             <Grid3x3 size={16} />
                             <span>{settings.viewMoreLabel}</span>

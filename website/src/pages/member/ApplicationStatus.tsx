@@ -257,7 +257,7 @@ export default function ApplicationStatus() {
     if (loading) {
         return (
             <MemberPageShell title="Application Status" subtitle="Track your membership approval progress" width="wide" sidebar={false} backTo={dashboard}>
-                <div className="flex flex-col items-center justify-center py-24 text-center">
+                <div className="flex flex-col items-center justify-center py-16 sm:py-24 text-center">
                     <div className="w-16 h-16 rounded-2xl bg-blue-600
                                     flex items-center justify-center mb-5 shadow-lg shadow-blue-500/30">
                         <Loader2 className="w-8 h-8 animate-spin text-white" />
@@ -272,7 +272,7 @@ export default function ApplicationStatus() {
     if (!application) {
         return (
             <MemberPageShell title="Application Status" subtitle="Track your membership approval progress" width="wide" sidebar={false} backTo={dashboard}>
-                <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="flex flex-col items-center justify-center py-12 sm:py-20 text-center">
                     <div className="w-[4.75rem] h-[4.75rem] rounded-full bg-white border border-slate-200
                                     flex items-center justify-center mb-5">
                         {error
@@ -401,7 +401,7 @@ export default function ApplicationStatus() {
               * click away and a second card style is how two halves of a
               * product stop looking like one product.
               */}
-            <div className="relative w-full space-y-6">
+            <div className="relative w-full space-y-4 sm:space-y-6">
                 <div className={`relative overflow-hidden rounded-3xl ${heroSolid}
                                  text-white shadow-xl shadow-blue-900/20`}>
                     {/* Two rings bled off the corner. Decoration, so `aria-hidden`
@@ -412,8 +412,8 @@ export default function ApplicationStatus() {
                     <span aria-hidden className="pointer-events-none absolute -right-40 -top-10
                                                 h-[26rem] w-[26rem] rounded-full border border-white/[0.07]" />
 
-                    <div className="relative p-6 lg:p-8">
-                        <div className="flex flex-wrap items-start justify-between gap-6">
+                    <div className="relative p-4 sm:p-6 lg:p-8">
+                        <div className="flex flex-wrap items-start justify-between gap-4 sm:gap-6">
                             <div className="min-w-0 flex-1">
                                 <span className="inline-flex items-center gap-1.5 rounded-xl bg-white/20
                                                  px-3 py-1.5 text-[1.0625rem] font-bold tracking-wide">
@@ -436,7 +436,7 @@ export default function ApplicationStatus() {
                         </div>
 
                         {/* ---- the track ---- */}
-                        <div className="mt-7 rounded-2xl bg-white/10 ring-1 ring-white/15 p-4 sm:p-5">
+                        <div className="mt-5 sm:mt-7 rounded-2xl bg-white/10 ring-1 ring-white/15 p-4 sm:p-5">
                             <p className="text-[1.0625rem] font-bold uppercase tracking-[0.1em] text-white/70">
                                 All three reviews run at the same time
                             </p>
@@ -506,7 +506,7 @@ export default function ApplicationStatus() {
                   * the left column while "Applicant" sat INSIDE its card, and
                   * every row down the page was offset from the one beside it.
                   */}
-                <div className="grid gap-6 lg:grid-cols-3 items-start">
+                <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 items-start">
 
                     <div className="lg:col-span-2">
                         <SectionCaption>Review timeline</SectionCaption>
@@ -539,7 +539,7 @@ export default function ApplicationStatus() {
                                 {/* Stops short of the first and last dot so the
                                     rail begins and ends on a node, not on the
                                     card's own edge. */}
-                                <span aria-hidden className="absolute left-[2.625rem] top-11 bottom-11 w-0.5
+                                <span aria-hidden className="absolute left-[2.125rem] sm:left-[2.625rem] top-9 bottom-9 sm:top-11 sm:bottom-11 w-0.5
                                                             rounded-full bg-slate-200" />
 
                                 {stages.map((stage, i) => {
@@ -548,7 +548,7 @@ export default function ApplicationStatus() {
                                     return (
                                         <div
                                             key={stage.key}
-                                            className={`relative flex gap-5 px-6 py-6 transition-colors ${
+                                            className={`relative flex gap-3 sm:gap-5 px-4 sm:px-6 py-4 sm:py-6 transition-colors ${
                                                 i > 0 ? 'border-t border-slate-100' : ''
                                             } ${stage.active ? 'bg-blue-50/60' : ''}`}
                                         >
@@ -642,11 +642,11 @@ export default function ApplicationStatus() {
                     <div>
                         <SectionCaption>Applicant</SectionCaption>
 
-                        <div className="space-y-6">
+                        <div className="space-y-4 sm:space-y-6">
                             {/* Same surface as the timeline cards beside it — two
                                 treatments on one screen is what made the two columns
                                 read as two pages. */}
-                            <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)] p-6">
+                            <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)] p-4 sm:p-6">
                                 <div className="space-y-4">
                                     <DetailLine icon={<User className="w-4 h-4" />} label="Full Name"
                                         value={application.fullName || personal.fullName || '—'} />
@@ -681,7 +681,7 @@ export default function ApplicationStatus() {
                               * once.
                               */}
                             <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)] overflow-hidden">
-                                <div className="p-6">
+                                <div className="p-4 sm:p-6">
                                     <div className="flex items-center gap-2">
                                         <span className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
                                             <Info className="w-4 h-4 text-[#1E50E6]" />
@@ -710,7 +710,7 @@ export default function ApplicationStatus() {
                                   * apply.
                                   */}
                                 {isApproved && !isPaid ? (
-                                    <div className="border-t border-slate-100 bg-slate-50 p-5">
+                                    <div className="border-t border-slate-100 bg-slate-50 p-4 sm:p-5">
                                         <Button
                                             onClick={() => navigate('/member/payment')}
                                             className="w-full bg-[#1E50E6] hover:bg-[#1a45c9] font-bold h-12 rounded-xl"
@@ -784,7 +784,7 @@ const ProgressDial = ({ percent }: { percent: number }) => {
     const r = 42;
     const c = 2 * Math.PI * r;
     return (
-        <div className="relative shrink-0 w-[6.5rem] h-[6.5rem]">
+        <div className="relative shrink-0 w-20 h-20 sm:w-[6.5rem] sm:h-[6.5rem]">
             <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90" aria-hidden>
                 <circle cx="50" cy="50" r={r} fill="none" stroke="currentColor"
                         strokeWidth="8" className="opacity-25" />
@@ -795,7 +795,7 @@ const ProgressDial = ({ percent }: { percent: number }) => {
                         className="transition-[stroke-dashoffset] duration-700 ease-out" />
             </svg>
             <span className="absolute inset-0 flex items-center justify-center
-                             font-display text-[1.5625rem] font-extrabold tabular tracking-tight">
+                             font-display text-xl sm:text-[1.5625rem] font-extrabold tabular tracking-tight">
                 {safe}%
             </span>
         </div>
@@ -820,7 +820,7 @@ const TrackNode = ({ stage }: { stage: { short: string; completed: boolean; acti
         }`}>
             {stage.completed ? <Check className="w-3.5 h-3.5 text-[#1E3FA8]" strokeWidth={3} /> : null}
         </span>
-        <span className="text-[1.0625rem] font-bold text-white/90 text-center leading-tight">
+        <span className="text-sm sm:text-[1.0625rem] font-bold text-white/90 text-center leading-tight break-words">
             {stage.short}
         </span>
     </div>

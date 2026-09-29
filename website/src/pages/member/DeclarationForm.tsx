@@ -63,7 +63,8 @@ const DeclarationForm = () => {
       setIsBusinessApplicant(
         !(business?.doingBusiness === false
           || business?.doingBusiness === "no"
-          || business?.registrationType === "aspirant"),
+          || business?.registrationType === "aspirant"
+          || business?.registrationType === "student"),
       );
 
       if (saved && Object.keys(saved).length > 0) {
@@ -169,10 +170,14 @@ const DeclarationForm = () => {
         return;
       }
 
+      const isStudent = String(business?.registrationType || "").toLowerCase() === "student";
       const isAspirant =
         business?.doingBusiness === false ||
         business?.doingBusiness === "no" ||
-        business?.registrationType === "aspirant";
+        business?.registrationType === "aspirant" ||
+        isStudent;
+      // Business, aspirant or student — each is its own plan and price.
+      const applicantKind = isStudent ? "student" : isAspirant ? "aspirant" : "business";
 
       const application = await submitApplication({
         applicationType: "membership",
@@ -182,8 +187,8 @@ const DeclarationForm = () => {
         state: profile.state,
         district: profile.district,
         block: profile.block,
-        registrationType: isAspirant ? "aspirant" : "business",
-        memberType: isAspirant ? "aspirant" : "business",
+        registrationType: applicantKind,
+        memberType: applicantKind,
         data: {
           personalDetails: {
             fullName: profile.fullName || "",

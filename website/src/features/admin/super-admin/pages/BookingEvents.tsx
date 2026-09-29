@@ -15,6 +15,7 @@ import {
 } from '@/services/eventBookingAdminApi';
 import { errorMessage } from '@/services/api';
 import BookingPeople from './BookingPeople';
+import { adminBasePath } from '@/features/admin/components/tierConfig';
 
 /**
  * Booking Events — every event, and how full it is.
@@ -92,8 +93,10 @@ export default function SuperAdminBookingEvents() {
         setError('');
         try {
             const response = await listBookingOverview(includeDrafts);
-            setData(response.events || []);
-            setTotals(response.totals);
+            setData(Array.isArray(response?.events) ? response.events : []);
+            // Merged over the zeros, so a response without `totals` leaves the
+            // tiles at 0 instead of crashing the page on `totals.seats`.
+            setTotals((t) => ({ ...t, events: 0, seats: 0, capacity: 0, bookings: 0, collected: 0, pending: 0, ...(response?.totals || {}) }));
         } catch (err) {
             setError(errorMessage(err, 'The events could not be loaded'));
         } finally {
@@ -103,7 +106,7 @@ export default function SuperAdminBookingEvents() {
 
     useEffect(() => { load(); }, [load]);
 
-    const open = (row: BookingOverviewRow) => navigate(`/super-admin/bookings/${row.id}`);
+    const open = (row: BookingOverviewRow) => navigate(`${adminBasePath()}/bookings/${row.id}`);
 
     const columns: AdminColumn<BookingOverviewRow>[] = useMemo(() => [
         {
@@ -308,7 +311,7 @@ export default function SuperAdminBookingEvents() {
 
                 <div className={`flex-1 overflow-y-auto ${ADMIN_PAGE}`}>
 
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                         <AdminStat
                             icon={<Users className="w-5 h-5" />}
                             label="Seats booked"
@@ -343,7 +346,7 @@ export default function SuperAdminBookingEvents() {
                     </div>
 
                     {error && (
-                        <div className="rounded-xl border border-rose-200 bg-rose-50 px-5 py-4
+                        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 sm:px-5 py-3 sm:py-4 break-words
                                         text-[1.25rem] font-semibold text-rose-700">
                             {error}
                         </div>

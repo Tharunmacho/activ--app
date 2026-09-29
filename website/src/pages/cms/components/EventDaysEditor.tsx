@@ -137,7 +137,7 @@ export function EventDaysEditor({ startDate, endDate, days, onChange }: {
     const setSessions = (iso: string, agenda: CmsAgendaItem[]) => setDay(iso, { agenda });
 
     return (
-        <div className="mt-6 rounded-xl border border-slate-200 p-4 dark:border-[#2a2a2a]">
+        <div className="mt-6 rounded-xl border border-slate-200 p-3 sm:p-4 dark:border-[#2a2a2a]">
             <div className="mb-1">
                 <p className="text-[1.25rem] font-bold text-slate-800 dark:text-neutral-100">
                     Each day’s hours and programme
@@ -156,7 +156,7 @@ export function EventDaysEditor({ startDate, endDate, days, onChange }: {
                     return (
                         <div
                             key={iso}
-                            className="rounded-xl border border-slate-200 bg-slate-50/60 p-4
+                            className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 sm:p-4
                                        dark:border-[#232323] dark:bg-[#0d0d0d]"
                         >
                             <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -190,7 +190,7 @@ export function EventDaysEditor({ startDate, endDate, days, onChange }: {
                             {/* ------------------------------ this day's sessions */}
                             <div className="mt-4 border-t border-dashed border-slate-200 pt-3
                                             dark:border-[#232323]">
-                                <div className="mb-2 flex items-center justify-between gap-3">
+                                <div className="mb-2 flex flex-wrap items-center justify-between gap-2 sm:gap-3">
                                     <p className="text-[1.0625rem] font-semibold text-slate-600
                                                   dark:text-neutral-300">
                                         Sessions on this day
@@ -220,7 +220,7 @@ export function EventDaysEditor({ startDate, endDate, days, onChange }: {
                                                            dark:border-[#2a2a2a] dark:bg-black"
                                             >
                                                 <div className="flex items-start gap-2">
-                                                    <Clock className="mt-2.5 h-4 w-4 shrink-0 text-slate-400" />
+                                                    <Clock className="mt-2.5 hidden h-4 w-4 shrink-0 text-slate-400 sm:block" />
                                                     <div className="min-w-0 flex-1 space-y-3">
                                                         <div className="grid gap-3 sm:grid-cols-2">
                                                             <CmsField label="Starts">
@@ -272,7 +272,7 @@ export function EventDaysEditor({ startDate, endDate, days, onChange }: {
                                                         onClick={() => setSessions(iso, sessions.filter((_, j) => j !== k))}
                                                         title="Delete this session"
                                                         className="inline-flex shrink-0 items-center gap-1.5 rounded-lg
-                                                                   border border-red-200 px-2.5 py-1.5 text-[1.0625rem]
+                                                                   border border-red-200 px-2.5 py-2.5 sm:py-1.5 text-[1.0625rem]
                                                                    font-semibold text-red-600 transition-colors
                                                                    hover:bg-red-50 dark:border-red-500/30
                                                                    dark:text-red-400"

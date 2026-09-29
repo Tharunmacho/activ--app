@@ -72,7 +72,7 @@ export default function Hero() {
               */}
             {unreachable && (
                 <div className="w-full border-b border-amber-200 bg-amber-50">
-                    <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-3 px-6 py-4
+                    <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-3 px-4 sm:px-6 py-4
                                     sm:flex-row sm:items-center sm:justify-between lg:px-10">
                         <p className="text-[1.0625rem] font-semibold text-amber-900">
                             The page content could not be loaded just now — the site is up but

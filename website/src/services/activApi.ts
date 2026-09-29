@@ -167,6 +167,8 @@ export interface Applicant {
     memberId: string;
     fullName: string;
     email: string;
+    /** The photo the member uploaded (`/uploads/...`); resolve before use. */
+    profilePhoto?: string;
     phone: string;
     role: string;
     /** Declared on the application; drives the Aspirant vs Business label. */
@@ -318,9 +320,17 @@ export const login = async (
         ...(portal ? { portal } : {}),
     });
 
-    const data = unwrap<any>(res, {});
+    return persistSession(unwrap<any>(res, {}), res.data?.message);
+};
+
+/**
+ * Store a signed-in session and say where it belongs. Shared by the password
+ * sign-in and the Google / Facebook / LinkedIn one, so the two cannot store
+ * different keys.
+ */
+const persistSession = (data: any, fallbackMessage = ''): LoginResult => {
     const token: string = data?.token || '';
-    if (!token) throw new Error(res.data?.message || 'Login failed');
+    if (!token) throw new Error(fallbackMessage || 'Login failed');
 
     const user = data.user || {};
     const role = (data.role || user.role || 'member') as UserRole;
@@ -381,6 +391,15 @@ export const register = async (payload: {
     // `payload` is posted whole, so a new field reaches the server as soon as
     // the type admits it — unlike the wrapper in `shared/services/authService`,
     // which names each field and silently drops any it has not been told about.
+    /*
+     * Forget whoever was signed in on this browser first, as `login()` does.
+     *
+     * Registering over a live session left the previous account's `userName`,
+     * `adminData` and `adminToken` in storage. A CMS admin's browser then
+     * greeted the brand-new member as "Hi, CMS" — the name the unpaid dashboard
+     * seeds itself from until the profile call lands.
+     */
+    clearSession();
     const res = await api.post(ENDPOINTS.AUTH.REGISTER, payload);
     const data = unwrap<any>(res, {});
     const token: string = data?.token || '';
@@ -413,8 +432,11 @@ export const register = async (payload: {
              * why a brand-new account was welcomed as "Member". The register
              * response already carries it on `memberDetails`.
              */
-            const registeredName = String(data.memberDetails?.fullName || user.fullName || '');
-            if (registeredName) localStorage.setItem(STORAGE_KEYS.USER_NAME, registeredName);
+            const registeredName = String(data.memberDetails?.fullName || user.fullName || payload.fullName || '');
+            localStorage.setItem(STORAGE_KEYS.USER_NAME, registeredName);
+            localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+            localStorage.setItem('memberId', String(user.memberId || user.id || user._id || ''));
+            localStorage.setItem('adminToken', token);
         } catch { /* ignore */ }
 
         setAuthToken(token);
@@ -450,6 +472,27 @@ export const verifyResetToken = async (token: string): Promise<boolean> => {
 
 export const resetPassword = async (token: string, newPassword: string) =>
     unwrap(await api.post(ENDPOINTS.AUTH.RESET_PASSWORD, { token, newPassword }), null);
+
+/* ------------------------------------------------ social sign-in (members) */
+
+export interface SocialProvider { key: 'google' | 'facebook' | 'linkedin'; label: string; enabled: boolean }
+
+/** Which of Google / Facebook / LinkedIn the server has keys for. */
+export const getSocialProviders = async (): Promise<SocialProvider[]> => {
+    const rows = unwrap<any>(await api.get(ENDPOINTS.AUTH.OAUTH_PROVIDERS), []);
+    return Array.isArray(rows) ? rows : [];
+};
+
+/** The browser navigation that starts a provider's sign-in (not an XHR). */
+export const socialStartUrl = (provider: string) =>
+    `${API_BASE_URL}${ENDPOINTS.AUTH.OAUTH_START(provider)}`;
+
+/** Trade the one-time hand-off code for a member session, stored like a password sign-in. */
+export const completeSocialLogin = async (code: string): Promise<LoginResult> => {
+    clearSession();
+    const res = await api.post(ENDPOINTS.AUTH.OAUTH_EXCHANGE, { code });
+    return persistSession(unwrap<any>(res, {}), res.data?.message);
+};
 
 /** The stored role, for route guards. Client-side only — the server re-checks. */
 export const getStoredRole = (): UserRole | null => {
@@ -743,9 +786,15 @@ export interface Certificate {
         block: string; district: string; state: string;
         /** Members outside India: no region — the place and country instead. */
         isInternational?: boolean; place?: string; country?: string;
+        /** The member's own PAN (the donor PAN on the tax certificate). `''` when not on record. */
+        pan?: string;
+        /** The membership certificate's company block — each `''` when not on record. */
+        companyName?: string; businessSector?: string; udyamNumber?: string; gstNumber?: string;
     };
     /** `annual` | `lifetime` | `''`. The client words it for display. */
     membershipType: 'annual' | 'lifetime' | '';
+    /** 'platinum' for the lifetime tier the Super Admin grants. */
+    membershipTier?: 'standard' | 'platinum';
     memberSince: string | null;
     activatedAt: string | null;
     /**
@@ -785,6 +834,8 @@ export interface Certificate {
         /** The gateway's transaction id, or `''`. */
         reference: string;
         receivedOn: string | null;
+        /** Each paid membership order, oldest first — the payment-details table. */
+        payments?: { date: string | null; amount: number | null; mode: string; reference: string }[];
     } | null;
     /** A quotable reference, stable for a given membership on a given day. */
     reference: string;
@@ -1123,6 +1174,14 @@ export const getPaymentStatus = async (): Promise<'completed' | 'pending'> => {
          * a payment order for them. `PAID_STATUSES` in the backend's
          * `memberContext.js` is the same list.
          */
+        /*
+         * A PAID STATUS PAST ITS END DATE IS NOT PAID. The nightly sweep writes
+         * `expired`, but until it runs the row still says `active`; the
+         * server's `renewal.state` already knows, and the member must land on
+         * the screen with the Renew button rather than a dashboard of
+         * benefits the payment gate no longer honours.
+         */
+        if (String(profile?.renewal?.state || '') === 'expired') return 'pending';
         return status === 'active' || status === 'completed' ? 'completed' : 'pending';
     } catch {
         // Unknown is treated as unpaid: showing paid-only features to someone
@@ -1615,6 +1674,8 @@ export const sendTestNotification = async (channel: 'email' | 'whatsapp', to: st
 // ---- super admin -----------------------------------------------------------
 
 export const getSuperOverview = async () => unwrap<any>(await api.get(ENDPOINTS.ADMIN.SUPER_OVERVIEW), {});
+/** The Hub's figures for a State / District admin — their own region (the super overview is Super Admin only). */
+export const getTeamOverview = async () => unwrap<any>(await api.get('/admin/team/overview'), {});
 export const superSearch = async (q: string) =>
     unwrap<any>(await api.get(ENDPOINTS.ADMIN.SUPER_SEARCH, { params: { q } }), {});
 export const getSuperApplications = async (params: Record<string, any> = {}) =>
@@ -1768,13 +1829,25 @@ export interface BulkReport {
  * bundle: there is one price, and it is the association's to set.
  */
 
+export type PlanAudience = 'business' | 'aspirant' | 'student' | 'platinum';
+
+/** Any stored audience, as one of the four; an unknown value is a business plan. */
+export const toPlanAudience = (value: unknown): PlanAudience => {
+    const v = String(value || '').toLowerCase();
+    return v === 'aspirant' || v === 'student' || v === 'platinum' ? v : 'business';
+};
+
 export interface MembershipPlanRow {
     key: string;
     name: string;
     description: string;
     /** Rupees. The server stores paise and converts at the edge. */
     price: number;
-    audience: 'business' | 'aspirant';
+    /**
+     * Who the plan is for. `platinum` is the lifetime tier the Super Admin
+     * grants by hand (paid offline) — never offered to an applicant to pay.
+     */
+    audience: PlanAudience;
     minYears: number;
     /** `null` is the open-ended top band — "10 and above". */
     maxYears: number | null;
@@ -1797,7 +1870,7 @@ export const getMyMembershipPlans = async () =>
         plans: MembershipPlanRow[];
         matched: MembershipPlanRow | null;
         years: number | null;
-        reason: 'band' | 'aspirant' | 'all' | 'no-year' | 'no-band';
+        reason: 'band' | 'aspirant' | 'student' | 'all' | 'no-year' | 'no-band';
         showAllPlans: boolean;
     }>(await api.get('/membership/plans/mine'), {
         plans: [], matched: null, years: null, reason: 'no-year', showAllPlans: false,
@@ -1850,7 +1923,7 @@ export const getMembershipPlanCatalogue = async (): Promise<MembershipPlanRow[]>
         name: String(row.name || ''),
         description: String(row.tagline || row.description || ''),
         price: Number(row.amount ?? (Number(row.amountPaise || 0) / 100)),
-        audience: row.audience === 'aspirant' ? 'aspirant' : 'business',
+        audience: toPlanAudience(row.audience),
         minYears: Number(row.minYears || 0),
         maxYears: row.maxYears === null || row.maxYears === undefined ? null : Number(row.maxYears),
         experience: String(row.experience || ''),

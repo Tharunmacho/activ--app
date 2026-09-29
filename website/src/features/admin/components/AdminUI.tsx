@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { Menu, ArrowRight, ArrowLeft } from 'lucide-react';
+import { ArrowRight, ArrowLeft } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { TIERS, tierForRole } from './tierConfig';
 
@@ -110,7 +110,7 @@ export const ADMIN_CARD_HOVER =
  * and the business area indent by the same amount at the same breakpoints.
  */
 export const ADMIN_PAGE =
-    'p-4 sm:p-5 lg:p-8 space-y-6 w-full [&>*]:max-w-[90rem] [&>*]:mx-auto';
+    'p-4 sm:p-5 lg:p-8 space-y-4 sm:space-y-6 w-full [&>*]:max-w-[90rem] [&>*]:mx-auto';
 
 /**
  * The same width and centring, for anything that sits OUTSIDE the scrolling
@@ -219,8 +219,8 @@ export function AdminCard({
             ? 'bg-amber-50 border border-amber-200 rounded-2xl shadow-[0_1px_2px_rgba(16,24,40,0.04)]'
             : ADMIN_CARD}>
             {(title || actions) && (
-                <header className={`flex flex-wrap items-start gap-3 p-6 ${children ? 'pb-0' : ''} ${
-                    flush ? 'border-b border-slate-100 pb-5' : ''
+                <header className={`flex flex-wrap items-start gap-3 p-4 sm:p-6 ${children ? 'pb-0' : ''} ${
+                    flush ? 'border-b border-slate-100 pb-4 sm:pb-5' : ''
                 }`}>
                     {icon && <AdminIconTile tone={tone}>{icon}</AdminIconTile>}
                     <div className="min-w-0 flex-1">
@@ -242,10 +242,10 @@ export function AdminCard({
                             </p>
                         )}
                     </div>
-                    {actions && <div className="shrink-0">{actions}</div>}
+                    {actions && <div className="shrink-0 max-w-full">{actions}</div>}
                 </header>
             )}
-            {children && <div className={flush ? '' : 'p-6'}>{children}</div>}
+            {children && <div className={flush ? '' : 'p-4 sm:p-6'}>{children}</div>}
         </section>
     );
 }
@@ -293,7 +293,7 @@ export function AdminBackButton({ to }: { to?: string }) {
             onClick={back}
             aria-label="Back"
             title="Back"
-            className="shrink-0 w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center
+            className="shrink-0 w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center shadow-sm active:scale-90
                        text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
         >
             <ArrowLeft className="w-5 h-5" />
@@ -343,28 +343,44 @@ export function AdminPageHeader({
             * its bottom rule still runs the width of the pane.
             */}
           <div className={`${ADMIN_COLUMN} flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4`}>
-            <div className="flex items-start gap-2.5 min-w-0 sm:flex-1">
+            {/* On a phone the menu and back tiles are their own row and the
+                title takes the full width under them; beside the title they
+                squeezed it and its explanation into a narrow column. */}
+            <div className="flex flex-col gap-3 min-w-0 sm:flex-row sm:items-start sm:gap-2.5 sm:flex-1">
+              {(onMenu || back) && (
+              <div className="flex shrink-0 items-center gap-2">
                 {onMenu && (
+                    /* THE MENU TILE — the same three-bar mark the public site's
+                       header uses, in a 40px tile a thumb cannot miss. It was a
+                       bare 20px icon floating in the corner. */
                     <button
                         type="button"
-                        className="lg:hidden shrink-0 mt-1 text-slate-600 hover:text-slate-900"
+                        className="lg:hidden shrink-0 grid h-10 w-10 place-items-center rounded-xl border
+                                   border-slate-200 bg-slate-50 text-slate-700 shadow-sm transition
+                                   hover:bg-slate-100 active:scale-90"
                         onClick={onMenu}
                         aria-label="Open menu"
                     >
-                        <Menu className="w-5 h-5" />
+                        <span aria-hidden="true" className="flex w-5 flex-col gap-[4px]">
+                            <span className="h-[2px] w-5 rounded-full bg-current" />
+                            <span className="h-[2px] w-3.5 rounded-full bg-current" />
+                            <span className="h-[2px] w-4 rounded-full bg-current" />
+                        </span>
                     </button>
                 )}
                 {back && (
-                    <div className="shrink-0 mt-0.5">
+                    <div className="shrink-0">
                         <AdminBackButton to={backTo} />
                     </div>
                 )}
+              </div>
+              )}
                 <div className="min-w-0">
                     {/* `font-extrabold` at 26px — the business shell's own
                         heading, so the two halves of the product open with the
                         same voice. It was `font-bold` at 28px, which is larger
                         and lighter: bigger without reading as more important. */}
-                    <h1 className={`${PAGE_TITLE} text-slate-900`}>
+                    <h1 className={`${PAGE_TITLE} text-slate-900 break-words`}>
                         {title}
                     </h1>
                     {subtitle && (
@@ -373,10 +389,11 @@ export function AdminPageHeader({
                 </div>
             </div>
             {actions && (
-                /* Each action fills the row on a phone and sizes to its label
-                   from `sm` — a 48px-tall button the width of the screen is the
-                   one shape a thumb never misses. */
-                <div className="flex flex-wrap gap-2 shrink-0 [&>*]:w-full sm:[&>*]:w-auto">{actions}</div>
+                /* On a phone the actions grow to fill the row (`flex-auto`): one
+                   action takes the full width, two or three share it and wrap
+                   only when their labels do not fit, rather than stacking as
+                   three full-width 48px bars. They size to their labels from `sm`. */
+                <div className="flex flex-wrap gap-2 shrink-0 [&>*]:flex-auto sm:[&>*]:flex-none">{actions}</div>
             )}
           </div>
         </header>
@@ -419,22 +436,22 @@ export function AdminStat({
 
     const body = (
         <>
-            <div className="flex items-start gap-3">
+            <div className="flex flex-col items-start gap-2.5 sm:flex-row sm:gap-3">
                 {icon && (
-                    <span className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+                    <span className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 ${
                         primary ? 'bg-white/20 text-white' : (TILE[tone] || TILE.blue)
                     }`}>
                         {icon}
                     </span>
                 )}
                 <div className="min-w-0">
-                    <p className={`text-[1.25rem] font-extrabold tracking-tight leading-snug ${
+                    <p className={`text-[1.05rem] sm:text-[1.25rem] font-extrabold tracking-tight leading-snug ${
                         primary ? 'text-white' : 'text-slate-900'
                     }`}>
                         {label}
                     </p>
                     {hint && (
-                        <p className={`text-[1.1875rem] mt-1 leading-snug ${
+                        <p className={`text-[0.95rem] sm:text-[1.1875rem] mt-1 leading-snug ${
                             primary ? 'text-blue-100' : 'text-slate-500'
                         }`}>
                             {hint}
@@ -467,14 +484,14 @@ export function AdminStat({
               * grid settled on, so the row aligns whether or not each card was
               * given a second line.
               */}
-            <p className={`mt-auto pt-5 text-[2.5625rem] sm:text-[3.375rem] font-extrabold tracking-tight tabular-nums ${
+            <p className={`mt-auto pt-3 sm:pt-5 text-[1.875rem] sm:text-[3.375rem] leading-tight sm:leading-[inherit] font-extrabold tracking-tight tabular-nums [overflow-wrap:anywhere] ${
                 primary ? 'text-white' : 'text-slate-900'
             }`}>
                 {value}
             </p>
 
             {footer && (
-                <span className={`mt-5 pt-4 flex items-center justify-between text-[1.25rem] font-bold border-t ${
+                <span className={`mt-3 pt-3 sm:mt-5 sm:pt-4 flex items-center justify-between gap-2 text-[1.0625rem] sm:text-[1.25rem] font-bold border-t ${
                     primary
                         ? 'border-white/25 text-white'
                         : 'border-slate-100 text-slate-700 group-hover:text-blue-600'
@@ -486,7 +503,7 @@ export function AdminStat({
         </>
     );
 
-    const shell = `group flex flex-col p-5 sm:p-6 text-left w-full min-w-0 ${
+    const shell = `group flex flex-col p-4 sm:p-6 text-left w-full min-w-0 ${
         primary
             ? 'rounded-2xl bg-blue-600 shadow-[0_10px_28px_-6px_rgba(37,99,235,0.55)]'
             : (interactive ? ADMIN_CARD_HOVER : ADMIN_CARD)
@@ -519,7 +536,7 @@ export function AdminSegmented<T extends string>({
         <div
             role="radiogroup"
             aria-label={label}
-            className="inline-flex items-center gap-1 rounded-full bg-slate-100 p-1"
+            className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-full bg-slate-100 p-1"
         >
             {options.map((option) => {
                 const active = option.value === value;
@@ -530,7 +547,7 @@ export function AdminSegmented<T extends string>({
                         role="radio"
                         aria-checked={active}
                         onClick={() => onChange(option.value)}
-                        className={`rounded-full px-4 h-9 text-[1.1875rem] font-semibold transition-colors ${
+                        className={`shrink-0 whitespace-nowrap rounded-full px-3 sm:px-4 h-9 text-[1.1875rem] font-semibold transition-colors ${
                             active
                                 ? 'bg-blue-600 text-white shadow-sm'
                                 : 'text-slate-600 hover:text-slate-900'

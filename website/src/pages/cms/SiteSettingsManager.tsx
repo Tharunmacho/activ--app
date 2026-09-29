@@ -252,7 +252,7 @@ export default function SiteSettingsManager() {
 
                             {/* What the two colours actually produce, at a glance. */}
                             <div
-                                className="mt-5 rounded-lg border border-slate-200 dark:border-[#1f1f1f] px-4 py-3
+                                className="mt-5 rounded-lg border border-slate-200 dark:border-[#1f1f1f] px-3 sm:px-4 py-3
                                            flex items-center justify-between gap-4 overflow-x-auto"
                                 style={{ backgroundColor: site.header.background || '#ffffff' }}
                             >
@@ -319,7 +319,7 @@ export default function SiteSettingsManager() {
                               * see everything the header contains on the screen called
                               * Header & Footer.
                               */}
-                            <div className="mt-3 flex items-center gap-3 rounded-xl border
+                            <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border
                                             border-slate-200 bg-slate-50/70 p-3.5 dark:border-[#2a2a2a]
                                             dark:bg-[#0f0f0f]">
                                 <span className="flex h-9 w-9 shrink-0 items-center justify-center
@@ -328,7 +328,7 @@ export default function SiteSettingsManager() {
                                     <Lock className="h-4 w-4" />
                                 </span>
 
-                                <div className="min-w-0 flex-1">
+                                <div className="min-w-0 flex-1 basis-[12rem]">
                                     <p className="text-[1.25rem] font-bold text-slate-900 dark:text-white">
                                         Zones
                                         <span className="ml-2 text-[1.0625rem] font-semibold text-slate-400">
@@ -405,7 +405,7 @@ export default function SiteSettingsManager() {
                             title="Logo and name"
                             hint="The same mark and name the header uses. Change them in the Header card above."
                         >
-                            <div className="flex items-center gap-4 rounded-lg border border-slate-200
+                            <div className="flex flex-wrap items-center gap-3 sm:gap-4 rounded-lg border border-slate-200
                                             dark:border-[#1f1f1f] bg-slate-50 dark:bg-black/40 px-4 py-3">
                                 {site.brand.logo?.url ? (
                                     <img
@@ -416,7 +416,7 @@ export default function SiteSettingsManager() {
                                 ) : (
                                     <span className="text-[1.0625rem] text-neutral-400 shrink-0">No logo set</span>
                                 )}
-                                <span className="text-[1.0625rem] text-slate-600 dark:text-neutral-300 min-w-0">
+                                <span className="text-[1.0625rem] text-slate-600 dark:text-neutral-300 min-w-0 break-words">
                                     {site.brand.fullName || 'No name set'}
                                 </span>
                             </div>
@@ -574,13 +574,13 @@ export default function SiteSettingsManager() {
                                 {policies.length > 0 && (
                                     <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5
                                                     dark:border-[#2a2a2a] dark:bg-[#0f0f0f]">
-                                        <div className="mb-2.5 flex items-start gap-3">
+                                        <div className="mb-2.5 flex flex-wrap items-start gap-3">
                                             <span className="flex h-9 w-9 shrink-0 items-center justify-center
                                                              rounded-lg bg-slate-200/70 text-slate-500
                                                              dark:bg-[#161616] dark:text-neutral-400">
                                                 <Lock className="h-4 w-4" />
                                             </span>
-                                            <div className="min-w-0 flex-1">
+                                            <div className="min-w-0 flex-1 basis-[12rem]">
                                                 <p className="text-[1.25rem] font-bold text-slate-900 dark:text-white">
                                                     Your published policies
                                                     <span className="ml-2 text-[1.0625rem] font-semibold text-slate-400">
@@ -609,8 +609,8 @@ export default function SiteSettingsManager() {
                                                         href={p.href}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="inline-flex items-center gap-1.5 rounded-lg border
-                                                                   border-slate-200 bg-white px-3 py-1.5 text-[1.0625rem]
+                                                        className="inline-flex max-w-full items-center gap-1.5 rounded-lg border
+                                                                   border-slate-200 bg-white px-3 py-2 sm:py-1.5 text-[1.0625rem]
                                                                    font-semibold text-slate-700 transition-colors
                                                                    hover:bg-slate-100 dark:border-[#2a2a2a]
                                                                    dark:bg-[#111] dark:text-neutral-300"

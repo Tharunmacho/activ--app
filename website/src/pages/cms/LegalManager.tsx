@@ -397,13 +397,13 @@ export default function LegalManager() {
                             <div
                                 key={d.slug}
                                 className={
-                                    'flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 '
+                                    'flex flex-wrap items-center gap-3 rounded-xl border px-3 sm:px-4 py-3 '
                                     + (slug === d.slug
                                         ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/25'
                                         : 'border-slate-200 dark:border-[#262626]')
                                 }
                             >
-                                <div className="min-w-0 flex-1">
+                                <div className="min-w-0 flex-1 basis-[12rem]">
                                     <p className="truncate text-[1.25rem] font-bold text-slate-900 dark:text-white">
                                         {d.title || d.slug}
                                     </p>
@@ -474,7 +474,7 @@ export default function LegalManager() {
                                   + 'or on the site, until you do.'
                         }
                         actions={
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                                 {!!draft.version && publicUrl && (
                                     <a
                                         href={publicUrl}
@@ -633,7 +633,7 @@ export default function LegalManager() {
                                     <div
                                         key={i}
                                         className="rounded-xl border border-slate-200 dark:border-[#262626]
-                                                   bg-slate-50/60 dark:bg-[#0A0A0A] p-4"
+                                                   bg-slate-50/60 dark:bg-[#0A0A0A] p-3 sm:p-4"
                                     >
                                         <div className="flex items-start justify-between gap-3 mb-3">
                                             {/*
@@ -771,8 +771,8 @@ export default function LegalManager() {
                           position an editor is actually in when they want it.
                           The same button, not a second save path.
                         */}
-                        <div className="mt-8 flex flex-wrap items-center gap-3 border-t
-                                        border-slate-200 pt-6 dark:border-[#1f1f1f]">
+                        <div className="mt-6 sm:mt-8 flex flex-wrap items-center gap-3 border-t
+                                        border-slate-200 pt-5 sm:pt-6 dark:border-[#1f1f1f]">
                             <SaveButton loading={saving} />
                             <CmsButton type="button" variant="ghost" onClick={() => setDraft(null)}>
                                 Cancel
@@ -808,7 +808,7 @@ export default function LegalManager() {
                             <div
                                 key={r.version}
                                 className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between
-                                           rounded-xl border border-slate-200 dark:border-[#262626] px-4 py-3"
+                                           rounded-xl border border-slate-200 dark:border-[#262626] px-3 sm:px-4 py-3"
                             >
                                 <div className="min-w-0">
                                     <p className="text-[1.1875rem] font-semibold text-slate-900 dark:text-white">

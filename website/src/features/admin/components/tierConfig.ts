@@ -20,7 +20,7 @@
  * Anything tier-specific belongs here, so a change lands in every tier at once.
  */
 
-export type AdminTier = 'block' | 'district' | 'state' | 'super';
+export type AdminTier = 'block' | 'district' | 'state' | 'super' | 'events';
 
 /** One entry in a tier's navigation rail. */
 export interface NavItem {
@@ -28,8 +28,8 @@ export interface NavItem {
     to: string;
     label: string;
     /** Which react-icons/fa glyph the sidebar renders. */
-    icon: 'home' | 'check' | 'users' | 'shield' | 'calendar' | 'megaphone' | 'bell' | 'cog'
-    | 'ticket' | 'tags' | 'list';
+    icon: 'home' | 'check' | 'users' | 'shield' | 'calendar' | 'megaphone' | 'bell' | 'cog' | 'image' | 'newspaper' | 'landmark'
+    | 'ticket' | 'tags' | 'list' | 'heart';
     /**
      * A SECTION rather than a single destination.
      *
@@ -220,6 +220,8 @@ export const TIERS: Record<AdminTier, TierConfig> = {
             // What a membership costs, and which commencement-year band earns
             // which plan. Only this role sets prices.
             { to: '/super-admin/membership', label: 'Membership', icon: 'shield' },
+            // Who donated, how much, and their 80G receipts and year certificates.
+            { to: '/super-admin/donations', label: 'Donors', icon: 'heart' },
             // Association Updates. Only this role authors them, and they are
             // not events — an update has no date, no venue and no attendees.
             { to: '/super-admin/updates', label: 'Updates', icon: 'megaphone' },
@@ -230,6 +232,63 @@ export const TIERS: Record<AdminTier, TierConfig> = {
             { to: '/super-admin/settings', label: 'Settings', icon: 'cog' },
         ],
     },
+    /*
+     * THE EVENTS ADMIN — one portal, the programme.
+     *
+     * A separate account for whoever runs the association's events. Its screens
+     * ARE the super admin's (the same components, mounted under `/events-admin`
+     * — see `adminBasePath`), so there is one events editor, one categories
+     * screen and one bookings screen, and nothing about an event can differ by
+     * which portal saved it. The Gallery, News and Schemes screens are the CMS's
+     * own, mounted the same way. The server opens exactly those endpoints to
+     * this role and refuses it everywhere else.
+     */
+    events: {
+        base: '/events-admin',
+        label: 'Events',
+        role: 'events_admin',
+        dashboardTitle: 'Events Dashboard',
+        regionKey: null,
+        queueLevel: 'super',
+        approvalFilters: [],
+        initials: 'EV',
+        nav: [
+            { to: '/events-admin/dashboard', label: 'Dashboard', icon: 'home' },
+            {
+                to: '/events-admin/events',
+                label: 'Events',
+                icon: 'calendar',
+                children: [
+                    { to: '/events-admin/events', label: 'All events', icon: 'list' },
+                    { to: '/events-admin/events/categories', label: 'Categories', icon: 'tags' },
+                    // No Bookings: attendees and takings are the super
+                    // admin's alone (`BOOKING_VIEWERS` in event.routes.js).
+                ],
+            },
+            /*
+             * The public site's photographs, newsroom and schemes — the CMS's
+             * own screens, mounted in this portal the way the event editor is.
+             * One write path per collection, whichever portal saved it.
+             */
+            { to: '/events-admin/gallery', label: 'Gallery', icon: 'image' },
+            { to: '/events-admin/news', label: 'News', icon: 'newspaper' },
+            { to: '/events-admin/schemes', label: 'Schemes', icon: 'landmark' },
+            // Profile and password — the account is issued with a temporary one.
+            { to: '/events-admin/settings', label: 'Settings', icon: 'cog' },
+        ],
+    },
+};
+
+/**
+ * Where the event screens live for whoever is signed in: `/events-admin` for
+ * the events admin, `/super-admin` for everyone else. The events, categories
+ * and bookings pages are shared by both portals and build every link through
+ * this, so a click never drops an events admin into a super-admin URL.
+ */
+export const adminBasePath = (): string => {
+    let role = '';
+    try { role = localStorage.getItem('role') || ''; } catch { /* storage blocked */ }
+    return role === 'events_admin' ? '/events-admin' : '/super-admin';
 };
 
 /**
@@ -240,6 +299,7 @@ export const TIERS: Record<AdminTier, TierConfig> = {
  */
 export const tierForRole = (role?: string | null): AdminTier => {
     switch (String(role || '')) {
+        case 'events_admin': return 'events';
         case 'district_admin': return 'district';
         case 'state_admin': return 'state';
         case 'super_admin': return 'super';

@@ -1,6 +1,9 @@
+import EventFilesEditor from './components/EventFilesEditor';
+import type { EventAttachment } from '@/services/cmsApi';
+import { useCardTable } from '@/lib/useCardTable';
 import { useEffect, useState } from 'react';
 import { ArrowLeft,
-    Plus, Pencil, Trash2, X, Save, Check, Loader2,
+    Plus, Pencil, Trash2, X, Save, Check, Loader2, QrCode,
     Lock, Globe, Building2, MapPin, Shield, Video, Home, Eye, EyeOff, Images, Search,
 } from 'lucide-react';
 import {
@@ -37,6 +40,7 @@ import EventDaysEditor, { addDays, dayDelta, shiftDays, daysInRange } from './co
 import RegionTargetPicker from './components/RegionTargetPicker';
 import { StatList, IconPicker, RepeatableList , ExtraFieldsEditor } from './components/CmsEditors';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
+import { EventQrDialog } from '@/components/shared/EventQr';
 import { CARD_TITLE } from '@/components/layout/appTypography';
 import EventDetailFields, {
     BLANK_DETAIL, toLocalDateTimeInput, type EventDetail,
@@ -126,6 +130,11 @@ const BLANK = {
      * and a CMS event is onboarding content by definition.
      */
     showOnOnboarding: false,
+    // The QR card on the event page; on for every new event (see EventQr).
+    showQrOnPage: true,
+    // Documents (agenda PDF …) and a video link — see EventFilesEditor.
+    attachments: [] as EventAttachment[],
+    videoUrl: '',
     /*
      * "Everyone in the association" — the first of the two audience cards.
      *
@@ -293,6 +302,7 @@ export default function EventsManager({
      */
     channel?: 'public' | 'members';
 } = {}) {
+    const cardTableRef = useCardTable();
     const [events, setEvents] = useState<CmsEvent[]>([]);
     /*
      * ==================================================================
@@ -330,6 +340,8 @@ export default function EventsManager({
     const [editing, setEditing] = useState<string | null>(null);
     const [form, setForm] = useState<typeof BLANK>({ ...BLANK });
     const [showForm, setShowForm] = useState(false);
+    // The QR panel: opened for a just-created event, or from a row's QR button.
+    const [qrFor, setQrFor] = useState<{ event: CmsEvent; justCreated: boolean } | null>(null);
     /**
      * Which audience the list is showing.
      *
@@ -484,16 +496,16 @@ export default function EventsManager({
         setForm({
             ...BLANK,
             /*
-             * The onboarding answer this surface opens at.
+             * The onboarding answer a new event opens at: ON, on every surface.
              *
-             * `true` in the CMS: that screen exists to post the onboarding
-             * site's programme, so anything written there is public content
-             * unless the editor says otherwise. `false` in the admin area,
-             * where an event is the association's own until someone chooses to
-             * advertise it. Both defaults are the answer the editor would have
-             * given, which is the only reason a default is safe here.
+             * The association wants every event it posts — from the CMS, the
+             * Super Admin or the Events Admin — on the onboarding site and in
+             * the CMS alike. It used to be `false` in the admin area, so an
+             * event posted there stayed off the public site unless the poster
+             * remembered a checkbox. The box is still on the form for the
+             * rare event that must stay inside the association.
              */
-            showOnOnboarding: channel === 'public',
+            showOnOnboarding: true,
             reachEveryone: true,
             detail: { ...BLANK.detail, audience: defaultAudience },
         });
@@ -556,6 +568,9 @@ export default function EventsManager({
              * would have told them that was the state it was already in.
              */
             showOnOnboarding: isOnPublicSite(e),
+            showQrOnPage: e.showQrOnPage !== false,
+            attachments: Array.isArray(e.attachments) ? e.attachments : [],
+            videoUrl: e.videoUrl || '',
             // `!== false`: the field postdates every event in the
             // collection, and those belong on the home page as before.
             /*
@@ -611,6 +626,8 @@ export default function EventsManager({
                  */
                 memberFee: e.memberFee == null ? '' : String(e.memberFee),
                 registrationNote: e.registrationNote || '',
+                topic: e.topic || '',
+                language: e.language || '',
                 registrationFields: Array.isArray(e.registrationFields) ? e.registrationFields : [],
                 reminderOffsetsHours: Array.isArray(e.reminderOffsetsHours) ? e.reminderOffsetsHours : [],
             },
@@ -705,6 +722,10 @@ export default function EventsManager({
                  * could account for. Sending what was loaded keeps one answer.
                  */
                 showOnOnboarding: form.showOnOnboarding,
+                showQrOnPage: form.showQrOnPage,
+                // JSON for the same reason the agenda is: this payload may become FormData.
+                attachments: JSON.stringify(form.attachments || []),
+                videoUrl: form.videoUrl || '',
                 // Sent alongside `targets`, never instead of it — the pair is
                 // what lets a reopened event show back both cards.
                 reachEveryone: form.reachEveryone,
@@ -721,6 +742,15 @@ export default function EventsManager({
                 speakers: JSON.stringify(form.detail.speakers),
                 reminderOffsetsHours: JSON.stringify(form.detail.reminderOffsetsHours),
 
+                /*
+                 * HOW IT IS ATTENDED. These three were loaded into the form
+                 * and never sent back, so "Online" and the joining link were
+                 * dropped on every save — the event reopened as "In person"
+                 * with the Zoom link gone. The server has always stored them.
+                 */
+                mode: form.detail.mode,
+                onlinePlatform: form.detail.onlinePlatform,
+                onlineUrl: form.detail.onlineUrl,
                 venueAddress: form.detail.venueAddress,
                 venueMapUrl: form.detail.venueMapUrl,
                 contactName: form.detail.contactName,
@@ -746,6 +776,9 @@ export default function EventsManager({
                     ? ''
                     : Number(form.detail.memberFee) || 0,
                 registrationNote: form.detail.registrationNote,
+                // Printed in the booking email and WhatsApp message.
+                topic: form.detail.topic,
+                language: form.detail.language,
                 // JSON-encoded for the same reason the agenda is: this payload
                 // becomes `FormData` whenever there is an image, and
                 // `FormData.append` would stringify the array to
@@ -753,8 +786,26 @@ export default function EventsManager({
                 registrationFields: JSON.stringify(form.detail.registrationFields),
             };
 
-            if (editing) await updateCmsEvent(editing, payload);
-            else await createCmsEvent(payload);
+            if (editing) {
+                await updateCmsEvent(editing, payload);
+            } else {
+                /*
+                 * A NEW EVENT OPENS ITS QR straight away — the moment somebody
+                 * posts an event is the moment they want the flyer code. The
+                 * server answers with the stored row, slug included.
+                 */
+                const created = await createCmsEvent(payload);
+                const newId = String(created?.id || created?._id || '');
+                if (newId) {
+                    setQrFor({
+                        event: {
+                            id: newId, slug: created?.slug || '', title: form.title,
+                            startAt: created?.startAt || null, showQrOnPage: form.showQrOnPage,
+                        } as CmsEvent,
+                        justCreated: true,
+                    });
+                }
+            }
             cmsSaved(editing ? 'Event' : 'New event');
             setShowForm(false);
             await load({ quiet: true });
@@ -817,7 +868,7 @@ export default function EventsManager({
                                     setWordingTab(false);
                                     setWhen(key as 'upcoming' | 'past');
                                 }}
-                                className={`-mb-px border-b-2 px-5 py-3 text-[1.25rem] font-semibold transition-colors ${on
+                                className={`-mb-px border-b-2 px-3 sm:px-5 py-3 text-[1.25rem] font-semibold transition-colors ${on
                                     ? 'border-blue-600 text-blue-700 dark:text-blue-400'
                                     : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-neutral-200'}`}
                             >
@@ -1191,7 +1242,7 @@ export default function EventsManager({
                     <div className="relative w-full bg-white dark:bg-[#0b0b0b] rounded-2xl
                                     border border-slate-200 dark:border-[#1f1f1f] flex flex-col">
 
-                        <header className="shrink-0 flex items-start gap-4 px-5 sm:px-7 py-5
+                        <header className="shrink-0 flex items-start gap-3 sm:gap-4 px-4 sm:px-7 py-4 sm:py-5
                                            border-b border-slate-200 dark:border-[#1f1f1f]">
                             <div className="min-w-0 flex-1">
                                 <h2 className={`${CARD_TITLE} text-slate-900 dark:text-neutral-100`}>
@@ -1214,7 +1265,7 @@ export default function EventsManager({
                         </header>
 
                     <form id="event-form" onSubmit={handleSubmit}
-                          className="px-5 sm:px-7 py-6
+                          className="px-4 sm:px-7 py-5 sm:py-6
                                      grid gap-4 sm:grid-cols-2 content-start">
                         <div className="sm:col-span-2">
                             {/*
@@ -1446,6 +1497,25 @@ export default function EventsManager({
                                         ))}
                                 </select>
                             </CmsField>
+
+                            {/* WHAT IT IS ABOUT, AND IN WHICH LANGUAGE — both go
+                                into the booking email and WhatsApp message. */}
+                            <CmsField label="Topic" hint="The subject in a few words, e.g. “Government procurement for MSMEs”.">
+                                <CmsInput
+                                    value={form.detail.topic}
+                                    maxLength={120}
+                                    onChange={(e) => setForm({ ...form, detail: { ...form.detail, topic: e.target.value } })}
+                                    placeholder="What the event is about"
+                                />
+                            </CmsField>
+                            <CmsField label="Language" hint="The language it is held in, e.g. Tamil, English, or Tamil & English.">
+                                <CmsInput
+                                    value={form.detail.language}
+                                    maxLength={60}
+                                    onChange={(e) => setForm({ ...form, detail: { ...form.detail, language: e.target.value } })}
+                                    placeholder="Tamil & English"
+                                />
+                            </CmsField>
                         </div>
 
                         {/* ===================== 2b · HOW IT IS ATTENDED
@@ -1531,12 +1601,12 @@ export default function EventsManager({
                                             />
                                         </CmsField>
                                         <CmsField
-                                            label="Joining link"
-                                            hint="Not shown publicly. It reaches the people who book, on their confirmation."
+                                            label="Registration link"
+                                            hint="The Zoom (or other) registration form. Not shown publicly — it is sent to the people who book, and the platform then emails each of them their joining link."
                                         >
                                             <CmsInput
                                                 value={form.detail.onlineUrl}
-                                                placeholder="https://zoom.us/j/…"
+                                                placeholder="https://zoom.us/meeting/register/…"
                                                 onChange={(e) => setForm({
                                                     ...form,
                                                     detail: { ...form.detail, onlineUrl: e.target.value },
@@ -1718,6 +1788,19 @@ export default function EventsManager({
                             </div>
                         )}
 
+                        <CmsCheck
+                            checked={form.showQrOnPage}
+                            onChange={(showQrOnPage) => setForm({ ...form, showQrOnPage })}
+                            icon={<QrCode className="w-4 h-4" />}
+                            title="Show the event's QR code on its page"
+                            detail="Scanning it opens this event on a phone. The code itself is always available from the QR button."
+                        />
+
+                        <EventFilesEditor
+                            attachments={form.attachments || []}
+                            videoUrl={form.videoUrl || ''}
+                            onChange={(next) => setForm({ ...form, ...next })}
+                        />
 
                         <EventDetailFields
                             value={form.detail}
@@ -1757,7 +1840,8 @@ export default function EventsManager({
                           * here — a submit button outside its form needs the id,
                           * or the button does nothing and nothing says why.
                           */}
-                        <footer className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-3 rounded-b-2xl px-5 sm:px-7 py-4
+                        <footer className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-2 sm:gap-3 rounded-b-2xl px-4 sm:px-7 py-3 sm:py-4
+                                           [&>button]:flex-1 sm:[&>button]:flex-none
                                            border-t border-slate-200 dark:border-[#1f1f1f]
                                            bg-slate-50/95 backdrop-blur dark:bg-[#0d0d0d]/95">
                             <CmsButton type="button" variant="ghost" onClick={() => setShowForm(false)}>
@@ -1780,7 +1864,7 @@ export default function EventsManager({
                 title={`Events (${visibleEvents.length}`
                     + `${visibleEvents.length === events.length ? '' : ' of ' + events.length})`}
                 description={channel === 'public'
-                    ? 'Everything on the onboarding site — the programme written here and anything the Super Admin posted there.'
+                    ? 'Everything on the onboarding site — the programme written here and every event posted from the admin portal.'
                     : 'Aim an event at a region when you create it.'}
                 actions={
                     /* ONE control in the header, and it is the one that
@@ -1846,11 +1930,11 @@ export default function EventsManager({
                                 value={originFilter}
                                 onChange={(e) => setOriginFilter(e.target.value as 'all' | 'cms' | 'admin')}
                                 aria-label="Filter events by where they came from"
-                                className={FILTER_SELECT}
+                                className={`${FILTER_SELECT} w-full sm:w-auto`}
                             >
                                 <option value="all">Everything on the site</option>
                                 <option value="cms">Written here</option>
-                                <option value="admin">Posted by the Super Admin ({adminPosted})</option>
+                                <option value="admin">Posted from the admin portal ({adminPosted})</option>
                             </select>
                         )}
 
@@ -1863,7 +1947,7 @@ export default function EventsManager({
                                 value={targetFilter}
                                 onChange={(e) => setTargetFilter(e.target.value)}
                                 aria-label="Filter events by who sees them"
-                                className={FILTER_SELECT}
+                                className={`${FILTER_SELECT} w-full sm:w-auto`}
                             >
                                 <option value="all">Every audience</option>
                                 {targetOptions.map(t => (
@@ -1895,7 +1979,7 @@ export default function EventsManager({
                             hint="No event answers all of the filters above. Clear one of them."
                         />
                     ) : (
-                    <div className="overflow-x-auto">
+                    <div ref={cardTableRef} className="overflow-x-auto card-table">
                         <table className="w-full text-[1.25rem]">
                             <thead>
                                 <tr className="text-left text-neutral-500 dark:text-neutral-400 border-b border-slate-200 dark:border-[#1f1f1f]">
@@ -2044,8 +2128,8 @@ export default function EventsManager({
                                                                  font-bold uppercase tracking-wide px-1.5 py-0.5
                                                                  rounded-full bg-violet-100 dark:bg-violet-950
                                                                  text-violet-700 dark:text-violet-400 align-middle"
-                                                    title="Posted from the Super Admin's events screen. Editable here as well.">
-                                                    <Shield className="w-2.5 h-2.5" /> Super Admin
+                                                    title="Posted from the admin portal (Super Admin or Events Admin). Editable here as well.">
+                                                    <Shield className="w-2.5 h-2.5" /> Admin portal
                                                 </span>
                                             ) : null}
                                             {channel === 'public' && !isOnPublicSite(e) ? (
@@ -2158,6 +2242,18 @@ export default function EventsManager({
                                                 it, so the two icons line up. */}
                                             <button
                                                 type="button"
+                                                onClick={() => setQrFor({ event: e, justCreated: false })}
+                                                title={`QR code for “${e.title || 'this event'}”`}
+                                                aria-label={`QR code for ${e.title || 'this event'}`}
+                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg
+                                                           border border-slate-300 text-neutral-500 transition-colors
+                                                           hover:bg-slate-100 dark:border-[#2a2a2a]
+                                                           dark:text-neutral-400 dark:hover:bg-[#161616]"
+                                            >
+                                                <QrCode className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                type="button"
                                                 onClick={() => openEdit(e)}
                                                 title={`Edit “${e.title || 'this event'}”`}
                                                 aria-label={`Edit ${e.title || 'this event'}`}
@@ -2203,6 +2299,26 @@ export default function EventsManager({
                   </>
                 )}
             </CmsCard>
+            )}
+
+            {qrFor && (
+                <EventQrDialog
+                    event={qrFor.event}
+                    justCreated={qrFor.justCreated}
+                    showOnPage={qrFor.event.showQrOnPage !== false}
+                    onClose={() => setQrFor(null)}
+                    onToggleShowOnPage={async (next) => {
+                        try {
+                            // Only this field: the server leaves every absent one untouched.
+                            await updateCmsEvent(qrFor.event.id, { showQrOnPage: next });
+                            setQrFor({ ...qrFor, event: { ...qrFor.event, showQrOnPage: next } });
+                            cmsSaved(next ? 'QR shown on the event page' : 'QR hidden from the event page');
+                            await load({ quiet: true });
+                        } catch (err) {
+                            cmsFailed('the QR setting', errorMessage(err, 'Could not save'));
+                        }
+                    }}
+                />
             )}
         </CmsPage>
     );

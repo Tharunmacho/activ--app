@@ -374,11 +374,15 @@ export const upcomingFeatures = (access: MemberAccess): MemberNavItem[] =>
  * derives to "business" — contradicting what the applicant plainly said. One
  * such row exists today.
  */
-export type ApplicantKind = 'aspirant' | 'business' | '';
+/**
+ * `student` is the third answer: not doing business, and studying — a plan and
+ * a price of its own, separate from the aspirant's.
+ */
+export type ApplicantKind = 'aspirant' | 'student' | 'business' | '';
 
 const DECLARED = (value: unknown): ApplicantKind => {
     const v = String(value || '').toLowerCase();
-    return v === 'aspirant' || v === 'business' ? v : '';
+    return v === 'aspirant' || v === 'student' || v === 'business' ? v : '';
 };
 
 export const resolveApplicantKind = (application: any | null): ApplicantKind => {
@@ -421,6 +425,7 @@ export const resolveApplicantKind = (application: any | null): ApplicantKind => 
 export const applicantKindLabel = (application: any | null): string => {
     const kind = resolveApplicantKind(application);
     if (kind === 'aspirant') return 'Aspirant';
+    if (kind === 'student') return 'Student';
     if (kind === 'business') return 'Business';
     return '';
 };
@@ -441,7 +446,7 @@ export const applicantKindLabel = (application: any | null): string => {
  * right about them on the day they pay, not on the day they get round to
  * filling in the business form.
  */
-export type MemberPlan = 'aspirant' | 'business' | 'unknown';
+export type MemberPlan = 'aspirant' | 'student' | 'business' | 'unknown';
 
 export interface PlanContext {
     /** What the applicant declared, from `resolveApplicantKind`. */
@@ -466,6 +471,7 @@ export interface PlanContext {
 export const resolvePlan = ({ declared, hasBusinessRecord }: PlanContext): MemberPlan => {
     if (declared === 'business') return 'business';
     if (declared === 'aspirant') return 'aspirant';
+    if (declared === 'student') return 'student';
     return hasBusinessRecord ? 'business' : 'unknown';
 };
 
@@ -473,6 +479,7 @@ export const resolvePlan = ({ declared, hasBusinessRecord }: PlanContext): Membe
 export const planLabel = (plan: MemberPlan): string => {
     if (plan === 'business') return 'Business Membership';
     if (plan === 'aspirant') return 'Aspirant Membership';
+    if (plan === 'student') return 'Student Membership';
     return '';
 };
 
@@ -500,7 +507,8 @@ export interface PlanEntitlements {
 }
 
 export const entitlementsFor = (plan: MemberPlan): PlanEntitlements => {
-    const trading = plan !== 'aspirant';
+    // Neither an aspirant nor a student trades — no catalogue to measure.
+    const trading = plan !== 'aspirant' && plan !== 'student';
 
     return {
         catalogue: trading,
@@ -523,7 +531,7 @@ export const planExplainer = (plan: MemberPlan, feature: keyof PlanEntitlements)
 
     if (feature === 'catalogue') {
         return 'Catalogue and stock tools come with a Company or Business membership. '
-            + 'An Aspirant membership covers association updates, events and the member directory.';
+            + 'An Aspirant or Student membership covers association updates, events and the member directory.';
     }
     if (feature === 'analytics') {
         return 'Operational analytics measure a catalogue, which comes with a Company or '
@@ -566,9 +574,20 @@ export interface MembershipCta {
     detail: string;
 }
 
-export const membershipCta = (access: MemberAccess): MembershipCta => {
+export const membershipCta = (
+    access: MemberAccess,
+    /** `useRenewal()`'s answer. An EXPIRED member is not an applicant: they renew. */
+    renewal?: { state: string; canRenew: boolean } | null,
+): MembershipCta => {
     if (access.membershipActive) {
         return { label: 'Your membership', to: '/payment/member-dashboard', detail: '' };
+    }
+    if (renewal?.state === 'expired' && renewal.canRenew) {
+        return {
+            label: 'Renew membership',
+            to: '/member/payment?renew=1',
+            detail: 'Your membership has ended. One payment renews it for another year.',
+        };
     }
     if (access.applicationApproved) {
         return {

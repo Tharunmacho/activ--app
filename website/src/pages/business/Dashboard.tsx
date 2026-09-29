@@ -10,7 +10,7 @@ import { apiFetch } from "@/services/activApi";
 import { resolveMediaUrl } from "@/config/api.config";
 import { useActiveCompanyStore } from "@/contexts/ActiveCompanyContext";
 
-import { CARD_TITLE } from '@/components/layout/appTypography';
+import { CARD_TITLE } from './BusinessUI';
 /**
  * The company `status` vocabulary is `pending | active | inactive` — the enum on
  * `company.model.js`. This screen tested for 'approved' and 'rejected', which
@@ -155,7 +155,7 @@ const BusinessDashboard = () => {
             {loading ? (
                 <Loading label="Loading dashboard…" />
             ) : (
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                     {/*
                         Four figures across, rather than the three-then-split
                         arrangement this had. The old layout put a single short
@@ -178,7 +178,7 @@ const BusinessDashboard = () => {
                         <StatTile label="Featured" value={stats.featured} unit="Promoted items" icon={Star} />
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 items-start">
                         {/* Active company */}
                         <Card className="lg:col-span-2">
                             <SectionHeading
@@ -216,23 +216,23 @@ const BusinessDashboard = () => {
                                     }
                                 />
                             ) : (
-                                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
                                     <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                                         {activeCompany.logo ? (
                                             <img
                                                 src={resolveMediaUrl(activeCompany.logo)}
                                                 alt={companyName(activeCompany)}
-                                                className="w-14 h-14 rounded-xl object-cover shrink-0"
+                                                className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl object-contain bg-white border border-slate-200 shrink-0"
                                             />
                                         ) : (
-                                            <span className="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                                            <span className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
                                                 <Store className="h-7 w-7 text-blue-600" />
                                             </span>
                                         )}
 
                                         <div className="flex-1 min-w-0">
                                             <div className="flex flex-wrap items-center gap-2 mb-1">
-                                                <h3 className={`${CARD_TITLE} text-slate-900 truncate`}>
+                                                <h3 className={`${CARD_TITLE} text-slate-900 truncate min-w-0 max-w-full`}>
                                                     {companyName(activeCompany)}
                                                 </h3>
                                                 <Chip tone={STATUS_TONES[status] || 'amber'}>{statusLabel}</Chip>
@@ -267,11 +267,11 @@ const BusinessDashboard = () => {
                                             </dl>
                                         </div>
 
-                                        <div className="flex sm:flex-col gap-2 shrink-0">
+                                        <div className="flex sm:flex-col gap-2 sm:shrink-0">
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="border-slate-200 text-slate-700 hover:bg-white"
+                                                className="flex-1 sm:flex-none h-10 border-slate-200 text-slate-700 hover:bg-white"
                                                 onClick={() => navigate(`/business/companies/${activeCompany._id}`)}
                                             >
                                                 <Eye className="h-4 w-4 mr-2" />
@@ -280,7 +280,7 @@ const BusinessDashboard = () => {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="border-slate-200 text-slate-700 hover:bg-white"
+                                                className="flex-1 sm:flex-none h-10 border-slate-200 text-slate-700 hover:bg-white"
                                                 onClick={() => navigate(`/business/companies/edit/${activeCompany._id}`)}
                                             >
                                                 <Pencil className="h-4 w-4 mr-2" />
@@ -297,7 +297,7 @@ const BusinessDashboard = () => {
                             <SectionHeading title="Recent Activity" description="Latest catalog changes" icon={Clock} />
 
                             {recentActivity.length === 0 ? (
-                                <div className="text-center py-10">
+                                <div className="text-center py-6 sm:py-10">
                                     <Package className="h-10 w-10 text-slate-300 mx-auto mb-2" />
                                     <p className="text-[1.1875rem] text-slate-500">No recent activity</p>
                                 </div>
@@ -319,7 +319,7 @@ const BusinessDashboard = () => {
                                 </ul>
                             )}
 
-                            <div className="mt-5 pt-5 border-t border-slate-200 space-y-2">
+                            <div className="mt-4 pt-4 sm:mt-5 sm:pt-5 border-t border-slate-200 space-y-2">
                                 <Button
                                     onClick={() => navigate('/business/products')}
                                     className="w-full bg-blue-600 hover:bg-blue-700"

@@ -260,7 +260,7 @@ export default function BookingPeople() {
     return (
         <>
             {error && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 px-5 py-4
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 sm:px-5 py-3 sm:py-4 break-words
                                 text-[1.25rem] font-semibold text-rose-700 mb-4">
                     {error}
                 </div>
@@ -344,18 +344,18 @@ function PersonDetail({ person, bookings, loading, onClose }: {
                         type="button"
                         onClick={onClose}
                         aria-label="Close"
-                        className="shrink-0 w-9 h-9 rounded-lg border border-slate-200
+                        className="shrink-0 w-10 h-10 sm:w-9 sm:h-9 rounded-lg border border-slate-200
                                    flex items-center justify-center text-slate-500 hover:bg-slate-50"
                     >
                         <X className="w-4 h-4" />
                     </button>
                 </header>
 
-                <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-5">
+                <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-5">
 
                     {/* ------------------------------------------- contact */}
                     <AdminCard icon={<UserRound className="w-5 h-5" />} title="Contact">
-                        <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-[1.1875rem]">
+                        <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-[1.1875rem] min-w-0">
                             <Row icon={<Mail className="w-4 h-4" />} label="Email" value={person.email} />
                             <Row icon={<Phone className="w-4 h-4" />} label="Mobile" value={person.phone} />
                             <Row
@@ -385,7 +385,7 @@ function PersonDetail({ person, bookings, loading, onClose }: {
                     </div>
 
                     {person.pending > 0 && (
-                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 sm:px-5 py-3 sm:py-4
                                         text-[1.25rem] font-semibold text-amber-800">
                             {rupees(person.pending)} is owed on a booking that was never completed.
                         </div>
@@ -399,13 +399,13 @@ function PersonDetail({ person, bookings, loading, onClose }: {
                         flush
                     >
                         {loading && (
-                            <div className="px-6 py-10 text-center">
+                            <div className="px-4 sm:px-6 py-10 text-center">
                                 <Loader2 className="w-5 h-5 animate-spin text-blue-600 mx-auto" />
                             </div>
                         )}
 
                         {!loading && !bookings?.length && (
-                            <p className="px-6 py-10 text-[1.25rem] font-semibold text-slate-500 text-center">
+                            <p className="px-4 sm:px-6 py-10 text-[1.25rem] font-semibold text-slate-500 text-center">
                                 No bookings found for this address.
                             </p>
                         )}
@@ -413,14 +413,14 @@ function PersonDetail({ person, bookings, loading, onClose }: {
                         {!loading && !!bookings?.length && (
                             <ul className="divide-y divide-slate-100">
                                 {bookings.map((booking) => (
-                                    <li key={booking.bookingRef} className="px-6 py-4">
-                                        <div className="flex flex-wrap items-start justify-between gap-3">
-                                            <div className="min-w-0">
+                                    <li key={booking.bookingRef} className="px-4 sm:px-6 py-3.5 sm:py-4">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0 flex-1">
                                                 <p className="text-[1.25rem] font-semibold tracking-tight
                                                               text-slate-900 truncate">
                                                     {booking.eventTitle || 'Untitled event'}
                                                 </p>
-                                                <p className="text-[1.1875rem] text-slate-500 mt-1 font-mono">
+                                                <p className="text-[1.1875rem] text-slate-500 mt-1 font-mono break-all">
                                                     {booking.bookingRef}
                                                     {booking.eventStartAt
                                                         ? ` · ${formatDay(booking.eventStartAt)}`
@@ -535,7 +535,7 @@ function Tile({ icon, label, value }: { icon: React.ReactNode; label: string; va
                 <span className="text-[1.0625rem] font-semibold uppercase tracking-wider">{label}</span>
             </div>
             <p className="text-[1.75rem] sm:text-[2.125rem] font-semibold tracking-tight text-slate-900
-                          mt-1.5 tabular-nums">{value}</p>
+                          mt-1.5 tabular-nums [overflow-wrap:anywhere]">{value}</p>
         </div>
     );
 }

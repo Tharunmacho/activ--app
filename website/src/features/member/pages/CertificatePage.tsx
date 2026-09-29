@@ -80,19 +80,30 @@ export default function CertificatePage() {
      * fixed 210mm the Back and Print buttons sat inside the edges of one and
      * outside the edges of the other.
      */
-    const sheetWidth = cert.kind === 'tax-exemption' ? '148mm' : '297mm';
+    // Tax: A4 portrait (210mm), to the association's template. Membership: A4 landscape.
+    const sheetWidth = cert.kind === 'tax-exemption' ? '210mm' : '297mm';
+
+    /*
+     * The sheet is laid out at its paper size (1123px landscape, 794px
+     * portrait), so a phone is shown the whole page zoomed down rather than a
+     * corner of it. `zoom`, not `transform`, because zoom also shrinks the space
+     * the sheet takes up. Print always gets the real size.
+     */
+    const fitToScreen = cert.kind === 'tax-exemption'
+        ? 'max-lg:[zoom:0.9] max-md:[zoom:0.75] max-sm:[zoom:0.4]'
+        : 'max-xl:[zoom:0.85] max-lg:[zoom:0.62] max-md:[zoom:0.5] max-sm:[zoom:0.28]';
 
     return (
-        <div className="min-h-screen overflow-x-auto bg-[#eef1f8] px-4 py-10 print:overflow-visible
+        <div className="min-h-screen overflow-x-auto bg-[#eef1f8] px-4 py-6 sm:py-10 print:overflow-visible
                         print:bg-white print:p-0">
             {/* Chrome — on screen only. */}
             <div
-                className="mx-auto mb-6 flex items-center justify-between print:hidden"
+                className="mx-auto mb-4 sm:mb-6 flex items-center justify-between gap-3 print:hidden"
                 style={{ maxWidth: sheetWidth }}
             >
                 <button
                     onClick={() => navigate(-1)}
-                    className="flex items-center gap-2 text-[1.25rem] font-semibold text-gray-500
+                    className="flex min-h-[2.75rem] items-center gap-2 text-[1.25rem] font-semibold text-gray-500
                                transition-colors hover:text-brand-900"
                 >
                     <ArrowLeft className="h-4 w-4" /> Back
@@ -100,7 +111,7 @@ export default function CertificatePage() {
 
                 <button
                     onClick={() => window.print()}
-                    className="flex items-center gap-2 rounded-xl bg-brand-800 px-5 py-2.5 text-[1.25rem]
+                    className="flex items-center gap-2 rounded-xl bg-brand-800 px-4 sm:px-5 py-2.5 text-base sm:text-[1.25rem]
                                font-semibold text-white transition-colors hover:bg-brand-900"
                 >
                     <Printer className="h-4 w-4" />
@@ -108,7 +119,9 @@ export default function CertificatePage() {
                 </button>
             </div>
 
-            <MemberCertificate cert={cert} />
+            <div className={`${fitToScreen} print:[zoom:1]`}>
+                <MemberCertificate cert={cert} />
+            </div>
         </div>
     );
 }

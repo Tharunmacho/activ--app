@@ -1,3 +1,5 @@
+import { publicUrl } from '@/lib/share';
+import { eventPath } from '@/lib/eventPath';
 /**
  * Taking an event OFF the page — into a calendar, into a chat, into maps.
  *
@@ -88,7 +90,8 @@ export const eventPlace = (event: CalendarEventLike): string =>
  */
 export const eventPageUrl = (event: CalendarEventLike): string => {
     if (typeof window === 'undefined') return '';
-    return `${window.location.origin}/events/${event.id || ''}`;
+    // The public site's address, not this tab's: an admin on another host shares the live page.
+    return publicUrl(eventPath(event));
 };
 
 /**

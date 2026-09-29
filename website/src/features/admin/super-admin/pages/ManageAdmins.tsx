@@ -1,3 +1,4 @@
+import { useCardTable } from '@/lib/useCardTable';
 import { useEffect, useState } from 'react';
 import {
     Plus, Search, Pencil, Trash2, Loader2, Users,
@@ -42,6 +43,7 @@ const BLANK = {
 };
 
 export default function ManageAdmins() {
+    const cardTableRef = useCardTable();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [admins, setAdmins] = useState<ManagedAdmin[]>([]);
     const [counts, setCounts] = useState({ all: 0, block_admin: 0, district_admin: 0, state_admin: 0 });
@@ -402,17 +404,17 @@ export default function ManageAdmins() {
                     <div className="flex items-start gap-2 min-w-0 sm:flex-1">
                         <button
                             type="button"
-                            className="lg:hidden shrink-0 mt-1 text-slate-500 hover:text-slate-900"
+                            className="lg:hidden shrink-0 -ml-2 grid h-10 w-10 place-items-center rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-50"
                             onClick={() => setSidebarOpen(true)}
                             aria-label="Open menu"
                         >
                             <Menu className="w-5 h-5" />
                         </button>
-                        <div className="shrink-0 mt-0.5">
+                        <div className="shrink-0">
                             <AdminBackButton />
                         </div>
                         <div className="min-w-0">
-                            <h1 className={`${PAGE_TITLE} text-slate-900`}>
+                            <h1 className={`${PAGE_TITLE} text-slate-900 break-words`}>
                                 Manage Admins
                             </h1>
                             <p className={`${PAGE_SUBTITLE} text-slate-600 mt-0.5`}>
@@ -436,7 +438,7 @@ export default function ManageAdmins() {
                 <main className={ADMIN_PAGE}>
                     {/* Filters */}
                     <div className="flex flex-wrap items-center gap-3">
-                        <div className="relative flex-1 min-w-[13.75rem]">
+                        <div className="relative flex-1 basis-full sm:basis-auto min-w-0 sm:min-w-[13.75rem]">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input
                                 value={query}
@@ -447,7 +449,7 @@ export default function ManageAdmins() {
                             />
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="flex w-full sm:w-auto gap-1 sm:gap-2">
                             {[
                                 { key: 'all', label: `All (${counts.all})` },
                                 { key: 'state_admin', label: `State (${counts.state_admin})` },
@@ -457,7 +459,7 @@ export default function ManageAdmins() {
                                 <button
                                     key={t.key}
                                     onClick={() => setRole(t.key)}
-                                    className={`px-3 py-2 rounded-lg text-[1.25rem] font-medium transition-colors ${
+                                    className={`flex-1 sm:flex-none min-w-0 min-h-10 px-1 sm:px-3 py-1.5 sm:py-2 rounded-lg text-[1.0625rem] sm:text-[1.25rem] leading-tight font-medium transition-colors ${
                                         role === t.key
                                             ? 'bg-blue-600 text-white'
                                             : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -472,11 +474,11 @@ export default function ManageAdmins() {
                     {/* List */}
                     <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] overflow-hidden">
                         {loading ? (
-                            <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] flex items-center justify-center gap-3 py-16 text-slate-500">
+                            <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] flex items-center justify-center gap-3 py-10 sm:py-16 text-slate-500">
                                 <Loader2 className="w-5 h-5 animate-spin" /> Loading admins…
                             </div>
                         ) : admins.length === 0 ? (
-                            <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] text-center py-16 px-6">
+                            <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] text-center py-10 sm:py-16 px-4 sm:px-6">
                                 <Users className="w-10 h-10 text-slate-300 mx-auto mb-3" />
                                 <p className="text-slate-900 font-medium">No admins match</p>
                                 <p className="text-[1.25rem] text-slate-500 mt-1">
@@ -486,7 +488,7 @@ export default function ManageAdmins() {
                                 </p>
                             </div>
                         ) : (
-                            <div className="overflow-x-auto">
+                            <div ref={cardTableRef} className="overflow-x-auto card-table">
                                 <table className="w-full text-[1.25rem]">
                                     <thead className="bg-slate-50 text-left border-b border-slate-200">
                                         <tr>
@@ -501,8 +503,8 @@ export default function ManageAdmins() {
                                         {admins.map(a => (
                                             <tr key={a.id} className={a.active ? '' : 'opacity-60'}>
                                                 <td className="px-5 py-3">
-                                                    <p className="font-medium text-slate-900">{a.fullName || '—'}</p>
-                                                    <p className="text-[1.1875rem] text-slate-500">{a.email}</p>
+                                                    <p className="font-medium text-slate-900 break-words">{a.fullName || '—'}</p>
+                                                    <p className="text-[1.1875rem] text-slate-500 break-all">{a.email}</p>
                                                 </td>
                                                 <td className="px-5 py-3 text-slate-700">
                                                     {ROLES.find(r => r.value === a.role)?.label || a.role}
@@ -524,14 +526,14 @@ export default function ManageAdmins() {
                                                     <button
                                                         onClick={() => openEdit(a)}
                                                         aria-label={`Edit ${a.fullName}`}
-                                                        className="p-2 rounded text-slate-500 hover:bg-slate-100"
+                                                        className="p-2.5 sm:p-2 rounded text-slate-500 hover:bg-slate-100"
                                                     >
                                                         <Pencil className="w-4 h-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => askRemove(a)}
                                                         aria-label={`Delete ${a.fullName}`}
-                                                        className="p-2 rounded text-red-500 hover:bg-red-50"
+                                                        className="p-2.5 sm:p-2 rounded text-red-500 hover:bg-red-50"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
@@ -548,22 +550,30 @@ export default function ManageAdmins() {
 
             {/* ---------------------------------------------------- the form */}
             {formOpen && (
+                /*
+                  A WIDE DIALOG, NOT A NARROW COLUMN. At max-w-lg every field was
+                  stacked and an edit meant scrolling past nine rows; on desktop
+                  the fields now sit two (region three) to a row. The OVERLAY is
+                  the scroller, not the form: the region suggestion lists render
+                  inline and must never be clipped by an overflow box. Header and
+                  footer are sticky, so Save is always in reach.
+                */
                 <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center overflow-y-auto p-4">
-                    <form onSubmit={submit} className="bg-white rounded-2xl shadow-xl w-full max-w-lg border border-slate-200 my-8">
-                        <header className="flex items-center justify-between px-6 py-5 border-b">
+                    <form onSubmit={submit} className="bg-white rounded-2xl shadow-xl w-[calc(100%-2rem)] sm:w-full sm:max-w-3xl lg:max-w-5xl border border-slate-200 my-2 sm:my-8">
+                        <header className="sticky top-0 z-10 flex items-center justify-between gap-3 rounded-t-2xl bg-white px-4 sm:px-8 py-4 sm:py-5 border-b">
                             <h2 className={`${CARD_TITLE} text-slate-900`}>
                                 {editingId ? 'Edit admin' : 'Add admin'}
                             </h2>
                             <button
                                 type="button" onClick={() => setFormOpen(false)}
-                                aria-label="Close" className="text-slate-400 hover:text-slate-700"
+                                aria-label="Close" className="shrink-0 -mr-2 grid h-10 w-10 place-items-center rounded-lg text-slate-400 hover:text-slate-700"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </header>
 
-                        <div className="p-6 space-y-4">
-                            <div className="space-y-1.5">
+                        <div className="p-4 sm:p-8 space-y-6">
+                            <div className="space-y-1.5 md:max-w-md">
                                 <label htmlFor="role" className="block text-[1.25rem] font-semibold text-slate-700 mb-2">Role</label>
                                 <select
                                     id="role"
@@ -598,43 +608,50 @@ export default function ManageAdmins() {
                             {/* Region first, as on mobile: it is the decision the rest
                                 of the form hangs off, and the one that opens a region
                                 for registration. */}
-                            <div className="space-y-4 pb-2 border-b">
+                            <div className="space-y-4 pb-6 border-b">
                                 <p className="text-[1.25rem] font-semibold text-slate-800">Region</p>
-                                {needs.map(regionField)}
+                                <div className={`grid grid-cols-1 gap-4 ${
+                                    needs.length >= 3 ? 'md:grid-cols-3' : needs.length === 2 ? 'md:grid-cols-2' : ''}`}>
+                                    {needs.map(regionField)}
+                                </div>
                             </div>
 
-                            {field('fullName', 'Full Name', 'text', undefined, undefined, 'Jane Doe')}
-                            {field('email', 'Email Address', 'email', undefined, undefined, 'name@activ.com')}
-                            {field('phoneNumber', 'Phone (optional)', 'tel', undefined, undefined, '9876543210')}
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                {field('fullName', 'Full Name', 'text', undefined, undefined, 'Jane Doe')}
+                                {field('email', 'Email Address', 'email', undefined, undefined, 'name@activ.com')}
+                                {field('phoneNumber', 'Phone (optional)', 'tel', undefined, undefined, '9876543210')}
+                            </div>
 
-                            {field('password',
-                                editingId ? 'New Password (leave blank to keep)' : 'Password',
-                                'password',
-                                editingId ? undefined : 'At least 8 characters.',
-                                undefined,
-                                'At least 8 characters')}
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                {field('password',
+                                    editingId ? 'New Password (leave blank to keep)' : 'Password',
+                                    'password',
+                                    editingId ? undefined : 'At least 8 characters.',
+                                    undefined,
+                                    'At least 8 characters')}
 
-                            {/* Asked for whenever a password is being set — on create
-                                always, on edit only once something has been typed. */}
-                            {(!editingId || form.password.length > 0) && field(
-                                'confirmPassword', 'Confirm Password', 'password',
-                                undefined, undefined, 'Type the password again',
-                            )}
+                                {/* Asked for whenever a password is being set — on create
+                                    always, on edit only once something has been typed. */}
+                                {(!editingId || form.password.length > 0) && field(
+                                    'confirmPassword', 'Confirm Password', 'password',
+                                    undefined, undefined, 'Type the password again',
+                                )}
+                            </div>
                         </div>
 
-                        <footer className="flex gap-3 px-6 py-4 border-t">
+                        <footer className="sticky bottom-0 z-10 flex flex-col-reverse gap-3 rounded-b-2xl bg-white px-4 sm:flex-row sm:justify-end sm:px-8 py-4 border-t">
                             <button
                                 type="button"
                                 onClick={() => setFormOpen(false)}
-                                className="h-11 px-5 rounded-xl border border-slate-200 text-[1.25rem] font-semibold text-slate-700 transition-colors hover:border-slate-300"
+                                className="h-11 w-full sm:w-auto px-6 rounded-xl border border-slate-200 text-[1.25rem] font-semibold text-slate-700 transition-colors hover:border-slate-300"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 disabled={saving}
-                                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg
-                                           bg-blue-600 text-white text-[1.25rem] font-medium disabled:opacity-60"
+                                className="flex h-11 w-full sm:w-auto sm:min-w-[14rem] items-center justify-center gap-2 px-6 rounded-xl
+                                           bg-blue-600 text-white text-[1.25rem] font-semibold disabled:opacity-60"
                             >
                                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                                 {editingId ? 'Save changes' : 'Create admin'}
@@ -647,7 +664,7 @@ export default function ManageAdmins() {
             {/* ------------------------------------------- removal confirmation */}
             {removing && (
                 <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5 sm:p-6">
                         <div className="flex items-start gap-3 mb-4">
                             <AlertTriangle className="w-6 h-6 text-red-500 shrink-0" />
                             <div>

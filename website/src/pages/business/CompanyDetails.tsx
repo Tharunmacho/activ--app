@@ -17,12 +17,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import BusinessPageShell from './BusinessPageShell';
-import { Card, SectionHeading, StatTile, Loading, Chip, companyName } from './BusinessUI';
+import { Card, SectionHeading, StatTile, Loading, Chip, companyName, CARD_TITLE } from './BusinessUI';
 import { apiFetch } from "@/services/activApi";
 import { resolveMediaUrl } from "@/config/api.config";
 import { useActiveCompanyStore } from "@/contexts/ActiveCompanyContext";
 
-import { CARD_TITLE } from '@/components/layout/appTypography';
 interface Company {
   _id: string;
   businessName: string;
@@ -164,7 +163,7 @@ const CompanyDetails = () => {
     return (
       <BusinessPageShell title="Company Profile" width="standard">
         <Card>
-          <div className="text-center py-16">
+          <div className="text-center py-10 sm:py-16">
             <Building2 className="h-12 w-12 text-slate-300 mx-auto mb-3" />
             <p className="text-[1.375rem] font-semibold text-slate-800">Company not found</p>
             <p className="text-[1.25rem] text-slate-500 mt-1">
@@ -192,23 +191,25 @@ const CompanyDetails = () => {
         <>
           <Button
             variant="outline"
-            className="border-slate-200 text-slate-700 hover:bg-slate-50"
+            className="border-slate-200 text-slate-700 hover:bg-slate-50 px-3 sm:px-4"
             onClick={() => navigate('/business/companies')}
+            aria-label="All Companies"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">All Companies</span>
           </Button>
           <Button
             variant="outline"
-            className="border-slate-200 text-slate-700 hover:bg-slate-50"
+            className="border-slate-200 text-slate-700 hover:bg-slate-50 px-3 sm:px-4"
             onClick={() => navigate(`/business/companies/edit/${company._id}`)}
+            aria-label="Edit"
           >
-            <Pencil className="h-4 w-4 mr-2" />
+            <Pencil className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Edit</span>
           </Button>
           <Button
             variant="outline"
-            className="border-red-200 text-red-600 hover:bg-red-50"
+            className="border-red-200 text-red-600 hover:bg-red-50 px-3"
             onClick={() => setDeleteDialogOpen(true)}
           >
             <Trash2 className="h-4 w-4" />
@@ -217,25 +218,25 @@ const CompanyDetails = () => {
         </>
       }
     >
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Identity */}
-        <Card className="flex flex-col sm:flex-row sm:items-center gap-5">
-          <span className="w-20 h-20 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
+        <Card className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5">
+          <span className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
             {/* Re-anchored to the API origin — see resolveMediaUrl. */}
             {company.logo ? (
               <img
                 src={resolveMediaUrl(company.logo)}
                 alt={companyName(company)}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
               />
             ) : (
-              <Building2 className="h-10 w-10 text-slate-400" />
+              <Building2 className="h-8 w-8 sm:h-10 sm:w-10 text-slate-400" />
             )}
           </span>
 
           <div className="flex-1 min-w-0">
             <h2 className={`${CARD_TITLE} text-slate-900 truncate`}>{companyName(company)}</h2>
-            <p className="text-[1.25rem] text-slate-500">{company.businessType}</p>
+            <p className="text-[1.25rem] text-slate-500 break-words">{company.businessType}</p>
             <div className="flex flex-wrap items-center gap-2 mt-3">
               <Chip tone={tone.tone} icon={tone.Icon}>
                 <span className="capitalize">{status}</span>
@@ -250,14 +251,14 @@ const CompanyDetails = () => {
           </div>
 
           {!isSelected && (
-            <Button className="bg-blue-600 hover:bg-blue-700 shrink-0" onClick={handleSetActive}>
+            <Button className="w-full sm:w-auto h-10 bg-blue-600 hover:bg-blue-700 shrink-0" onClick={handleSetActive}>
               Switch to this company
             </Button>
           )}
         </Card>
 
         {/* Catalog figures */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5">
           <StatTile label="Catalog Products" value={stats.total} unit="Total listed" icon={Package} />
           <StatTile label="Live Products" value={stats.active} unit="Visible in Discover" icon={CheckCircle2} />
           <StatTile label="Featured" value={stats.featured} unit="Promoted items" icon={Star} />
@@ -269,10 +270,10 @@ const CompanyDetails = () => {
             them hold about five short key/value pairs and took two full-width
             cards and ~400px of vertical space to say it.
         */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
           <Card>
             <SectionHeading title="About" icon={Building2} />
-            <p className="text-[1.25rem] text-slate-600 leading-relaxed">
+            <p className="text-[1.25rem] text-slate-600 leading-relaxed break-words whitespace-pre-line">
               {company.description || 'No description provided.'}
             </p>
 
@@ -293,9 +294,9 @@ const CompanyDetails = () => {
                   {(company.productCategories || []).map((category, index) => (
                     <li
                       key={`${category?.code || ''}-${index}`}
-                      className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5"
+                      className="max-w-full min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5"
                     >
-                      <span className="block text-[1.25rem] text-slate-700">
+                      <span className="block text-[1.25rem] text-slate-700 break-words">
                         {category?.description || '—'}
                       </span>
                       <span className="block text-[1rem] text-slate-500 mt-0.5">
@@ -317,21 +318,21 @@ const CompanyDetails = () => {
                 <Phone className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
                 <div className="min-w-0">
                   <dt className="text-slate-500 text-[1.1875rem] uppercase tracking-wider">Mobile</dt>
-                  <dd className="text-slate-800 font-medium">{company.mobileNumber || '—'}</dd>
+                  <dd className="text-slate-800 font-medium break-words">{company.mobileNumber || '—'}</dd>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <Mail className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
                 <div className="min-w-0">
                   <dt className="text-slate-500 text-[1.1875rem] uppercase tracking-wider">Email</dt>
-                  <dd className="text-slate-800 font-medium truncate">{company.email || '—'}</dd>
+                  <dd className="text-slate-800 font-medium break-all">{company.email || '—'}</dd>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <MapPin className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
                 <div className="min-w-0">
                   <dt className="text-slate-500 text-[1.1875rem] uppercase tracking-wider">Location</dt>
-                  <dd className="text-slate-800 font-medium">
+                  <dd className="text-slate-800 font-medium break-words">
                     {[company.area, company.location].filter(Boolean).join(', ') || '—'}
                   </dd>
                 </div>
@@ -341,12 +342,12 @@ const CompanyDetails = () => {
 
           <Card className="lg:col-span-2">
             <SectionHeading title="Timeline" icon={Clock} />
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[1.25rem]">
-              <div className="flex items-center justify-between rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-[1.25rem]">
+              <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 border border-slate-200 px-3 sm:px-4 py-3">
                 <dt className="text-slate-500">Registered</dt>
                 <dd className="text-slate-800 font-medium">{formatDate(company.createdAt)}</dd>
               </div>
-              <div className="flex items-center justify-between rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
+              <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 border border-slate-200 px-3 sm:px-4 py-3">
                 <dt className="text-slate-500">Last updated</dt>
                 <dd className="text-slate-800 font-medium">{formatDate(company.updatedAt)}</dd>
               </div>
@@ -356,7 +357,7 @@ const CompanyDetails = () => {
       </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[calc(100vw-2rem)] max-w-lg rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Company</AlertDialogTitle>
             <AlertDialogDescription>

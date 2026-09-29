@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     ArrowRight, BadgeCheck, CalendarDays, CreditCard, FileText, IndianRupee,
     MapPin, ReceiptText, RefreshCw, ShieldCheck, Sparkles, UserCircle,
@@ -8,6 +8,7 @@ import MemberPageShell from '@/pages/member/MemberPageShell';
 import { SectionCard, RowsSkeleton } from '@/features/member/components/MemberUI';
 import { BIZ_DETAIL_LABEL } from '@/components/layout/surface';
 import { getMyProfile, getMyApplication } from '@/services/activApi';
+import { RENEW_PATH, readRenewal, renewalDate, renewalMessage } from '@/features/member/useRenewal';
 import { resolvePlanEligibility, type MembershipPlan } from '@/features/member/membershipPlans';
 import { resolveApplicantKind, resolvePlan, planLabel } from '@/features/member/memberAccess';
 
@@ -82,8 +83,11 @@ function Fact({ icon: Icon, label, value }: {
 
 export default function MembershipPlanDetails() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const standalone = searchParams.get('view') === 'standalone';
 
     const [profile, setProfile] = useState<any>(null);
+    const renewal = useMemo(() => readRenewal(profile), [profile]);
     const [application, setApplication] = useState<any>(null);
     const [plan, setPlan] = useState<MembershipPlan | null>(null);
     const [priceFailed, setPriceFailed] = useState(false);
@@ -148,9 +152,18 @@ export default function MembershipPlanDetails() {
     const region = [profile?.block, profile?.district, profile?.state]
         .map((part: any) => String(part || '').trim()).filter(Boolean).join(' · ');
 
+    /*
+     * Opened from OUTSIDE the dashboard (the payment-success receipt), the plan is
+     * its own screen: no member rail, a back arrow to where the reader came from.
+     * From the dashboard's own links it keeps the rail.
+     */
+    const shellMode = standalone
+        ? { sidebar: false, backTo: '/payment/member-dashboard', onBack: () => (window.history.length > 1 ? navigate(-1) : navigate('/payment/member-dashboard')) }
+        : {};
+
     if (loading) {
         return (
-            <MemberPageShell title="Membership Plan" subtitle="Your plan, in full" width="standard">
+            <MemberPageShell title="Membership Plan" subtitle="Your plan, in full" width="standard" {...shellMode}>
                 <RowsSkeleton rows={4} />
             </MemberPageShell>
         );
@@ -161,16 +174,17 @@ export default function MembershipPlanDetails() {
             title="Membership Plan"
             subtitle="What your membership is, what it cost and when it renews"
             width="standard"
+            {...shellMode}
         >
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
 
                 {/* ================================================ the plan */}
                 <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white
                                     shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
-                    <div className="flex flex-col gap-5 bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white
+                    <div className="flex flex-col gap-5 bg-gradient-to-r from-blue-600 to-blue-700 p-4 sm:p-6 text-white
                                     sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-4">
-                            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl
+                            <span className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl
                                              bg-white/15 ring-1 ring-white/25">
                                 <UserCircle className="h-7 w-7" />
                             </span>
@@ -198,7 +212,7 @@ export default function MembershipPlanDetails() {
                         </span>
                     </div>
 
-                    <div className="grid gap-4 p-6 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="grid gap-3 sm:gap-4 p-4 sm:p-6 sm:grid-cols-2 xl:grid-cols-4">
                         {profile?.membershipNumber && (
                             <Fact icon={ShieldCheck} label="Member ID" value={profile.membershipNumber} />
                         )}
@@ -215,7 +229,7 @@ export default function MembershipPlanDetails() {
                 </section>
 
                 {/* ====================================== price · what you paid */}
-                <div className="grid items-stretch gap-6 lg:grid-cols-2">
+                <div className="grid items-stretch gap-4 sm:gap-6 lg:grid-cols-2">
 
                     <SectionCard
                         title="What this plan costs"
@@ -249,10 +263,10 @@ export default function MembershipPlanDetails() {
                             </div>
                         ) : (
                             <>
-                                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
                                     <p className={BIZ_DETAIL_LABEL}>Current rate</p>
-                                    <p className="mt-1 flex items-baseline gap-2">
-                                        <span className="text-[2.25rem] font-extrabold tracking-tight text-slate-900
+                                    <p className="mt-1 flex flex-wrap items-baseline gap-x-2">
+                                        <span className="text-[1.875rem] sm:text-[2.25rem] font-extrabold tracking-tight text-slate-900
                                                          tabular-nums">
                                             {rupees(plan.price)}
                                         </span>
@@ -292,9 +306,9 @@ export default function MembershipPlanDetails() {
                         className="h-full"
                     >
                         <div className="space-y-4">
-                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
                                 <p className={BIZ_DETAIL_LABEL}>Amount paid</p>
-                                <p className="mt-1 text-[2.25rem] font-extrabold tracking-tight text-slate-900
+                                <p className="mt-1 text-[1.875rem] sm:text-[2.25rem] font-extrabold tracking-tight text-slate-900
                                               tabular-nums">
                                     {rupees(paidAmount)}
                                 </p>
@@ -334,7 +348,7 @@ export default function MembershipPlanDetails() {
                     icon={<FileText className="w-5 h-5" />}
                     actionTo="/member/documents"
                 >
-                    <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="grid gap-3 sm:gap-4 sm:grid-cols-3">
                         {[
                             { label: 'Membership Certificate', to: '/member/certificate/membership', icon: FileText },
                             { label: 'Tax Exemption Certificate', to: '/member/certificate/tax-exemption', icon: ShieldCheck },
@@ -365,35 +379,53 @@ export default function MembershipPlanDetails() {
                 {/* ================================================ renewal */}
                 <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white
                                     shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
-                    <div className="flex flex-col gap-5 bg-gradient-to-r from-blue-50 via-white to-blue-50 p-6
+                    <div className="flex flex-col gap-5 bg-gradient-to-r from-blue-50 via-white to-blue-50 p-4 sm:p-6
                                     sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-4">
                             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl
                                              bg-blue-600 text-white">
                                 <Sparkles className="h-6 w-6" />
                             </span>
-                            <div>
-                                <p className="text-[1.5625rem] font-extrabold tracking-tight text-slate-900">
+                            <div className="min-w-0">
+                                <p className="text-[1.25rem] sm:text-[1.5625rem] font-extrabold tracking-tight text-slate-900">
                                     {lifetime ? 'This membership does not expire' : 'Keep your membership active'}
                                 </p>
                                 <p className="text-[1.1875rem] font-semibold text-slate-500">
                                     {lifetime
                                         ? 'Nothing to renew — your benefits continue for life.'
-                                        : expiresAt
-                                            ? `Your plan runs to ${formatDate(expiresAt)}.`
-                                            : 'Your renewal date is not recorded yet.'}
+                                        : renewal?.canRenew
+                                            ? renewalMessage(renewal)
+                                            : expiresAt
+                                                ? `Your plan runs to ${formatDate(expiresAt)}.${renewal?.opensAt ? ` Renewal opens on ${renewalDate(renewal.opensAt)}.` : ''}`
+                                                : 'Your renewal date is not recorded yet.'}
                                 </p>
                             </div>
                         </div>
 
-                        <Link
-                            to="/member/help"
-                            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white
-                                       px-6 py-3.5 text-[1.1875rem] font-bold text-slate-700 transition-colors
-                                       hover:border-blue-300 hover:text-blue-700"
-                        >
-                            Ask about renewal <ArrowRight className="h-5 w-5" />
-                        </Link>
+                        {/*
+                          RENEW, when the server says renewal is open (expired, or
+                          the last 30 days). Before that the office is the right
+                          place for a question, so the old link stays.
+                        */}
+                        {!lifetime && renewal?.canRenew ? (
+                            <Link
+                                to={RENEW_PATH}
+                                className="inline-flex w-full sm:w-auto shrink-0 justify-center items-center gap-2 rounded-xl
+                                           bg-gradient-to-r from-[#0b1f4d] to-blue-600 px-6 py-3.5 text-[1.1875rem] font-bold
+                                           text-white shadow-sm transition hover:brightness-110"
+                            >
+                                <RefreshCw className="h-5 w-5" /> Renew now <ArrowRight className="h-5 w-5" />
+                            </Link>
+                        ) : (
+                            <Link
+                                to="/member/help"
+                                className="inline-flex w-full sm:w-auto shrink-0 justify-center items-center gap-2 rounded-xl border border-slate-200 bg-white
+                                           px-6 py-3.5 text-[1.1875rem] font-bold text-slate-700 transition-colors
+                                           hover:border-blue-300 hover:text-blue-700"
+                            >
+                                Ask about renewal <ArrowRight className="h-5 w-5" />
+                            </Link>
+                        )}
                     </div>
                 </section>
             </div>

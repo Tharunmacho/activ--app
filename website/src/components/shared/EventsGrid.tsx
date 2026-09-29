@@ -1,8 +1,10 @@
+import { PosterFrame } from '@/components/shared/PosterFrame';
+import { eventPath } from '@/lib/eventPath';
 import { useEffect, useState } from 'react';
-import { MapPin, ArrowRight } from 'lucide-react';
+import { MapPin, ArrowRight, Video } from 'lucide-react';
+import { eventWhere } from '@/lib/eventWhere';
 import { Link } from 'react-router-dom';
 import { getCmsEvents, getEventsSettings, type CmsEvent, type EventsSettings } from '@/services/cmsApi';
-import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
 import { Reveal } from '@/components/shared/Reveal';
 import { Tilt3D } from '@/components/shared/Tilt3D';
 import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
@@ -66,17 +68,17 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
 
     if (isLoading) {
         return (
-            <section className="w-full py-24 dot-band">
+            <section className="w-full py-14 sm:py-24 dot-band">
                 <div className={`${SCREEN_CONTAINER} animate-pulse`}>
-                    <div className="flex flex-col items-center text-center mb-16 space-y-6">
+                    <div className="flex flex-col items-center text-center mb-10 sm:mb-16 space-y-6">
                         <div className="h-6 bg-slate-200 rounded w-24"></div>
                         <div className="h-10 bg-slate-200 rounded w-1/2"></div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-8 mb-10 sm:mb-16">
                         {[1, 2, 3].map((i) => (
                             <div key={i} className="bg-white rounded-[2rem] flex flex-col shadow-sm h-96 overflow-hidden">
                                 <div className="w-full h-48 bg-slate-200"></div>
-                                <div className="p-8 flex flex-col flex-grow space-y-4">
+                                <div className="p-5 sm:p-8 flex flex-col flex-grow space-y-4">
                                     <div className="h-4 bg-slate-200 rounded w-1/4"></div>
                                     <div className="h-6 bg-slate-200 rounded w-3/4"></div>
                                     <div className="h-4 bg-slate-200 rounded w-full mt-auto"></div>
@@ -153,20 +155,20 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
     if (!visible.length && !heading && !headingHighlight && !settings?.emptyText) return null;
 
     return (
-        <section className="w-full py-24 dot-band">
+        <section className="w-full py-14 sm:py-24 dot-band">
             <div className={SCREEN_CONTAINER}>
 
                 {(badge || heading || headingHighlight || subtitle) && (
-                    <Reveal className="flex flex-col items-center text-center mb-16">
+                    <Reveal className="flex flex-col items-center text-center mb-10 sm:mb-16">
                         {badge && (
                             <div className="inline-flex items-center space-x-2 bg-brand-50 border border-brand-100
-                                            rounded-full px-4 py-1.5 mb-6">
+                                            rounded-full px-4 py-1.5 mb-4 sm:mb-6">
                                 <span className={`${EYEBROW} text-brand-600`}>{badge}</span>
                             </div>
                         )}
 
                         {(heading || headingHighlight) && (
-                            <h2 className={`${SECTION_HEADING} text-brand-800 mb-6`}>
+                            <h2 className={`${SECTION_HEADING} text-brand-800 mb-4 sm:mb-6 break-words`}>
                                 {heading}
                                 {heading && headingHighlight && ' '}
                                 {headingHighlight && <span className="text-brand-600">{headingHighlight}</span>}
@@ -174,12 +176,12 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                         )}
 
                         {subtitle && (
-                            <div className="flex items-center space-x-4">
-                                <div className="h-px w-10 bg-brand-300" />
-                                <span className="text-[1.25rem] font-semibold text-gray-500 lowercase tracking-wider">
+                            <div className="flex items-center space-x-3 sm:space-x-4 max-w-full">
+                                <div className="h-px w-6 sm:w-10 shrink-0 bg-brand-300" />
+                                <span className="min-w-0 text-[1.0625rem] sm:text-[1.25rem] font-semibold text-gray-500 lowercase tracking-wider">
                                     {subtitle}
                                 </span>
-                                <div className="h-px w-10 bg-brand-300" />
+                                <div className="h-px w-6 sm:w-10 shrink-0 bg-brand-300" />
                             </div>
                         )}
                     </Reveal>
@@ -188,7 +190,7 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                 {visible.length === 0 ? (
                     <p className="text-center text-gray-500 py-8">{settings?.emptyText}</p>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-8 mb-10 sm:mb-16">
                         {visible.map((event, i) => (
                             /* Staggered so the row assembles left to right rather than
                                all at once. Capped: past ~360ms the last card in a long
@@ -203,7 +205,7 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                                         `EventsExplorer`), so the link's accessible
                                         name stays short. */}
                                     <article
-                                        className="group/card relative bg-white rounded-[2rem] flex flex-col h-full overflow-hidden
+                                        className="group/card relative bg-white rounded-3xl sm:rounded-[2rem] flex flex-col h-full overflow-hidden
                                                    focus-within:ring-4 focus-within:ring-brand-300
                                                    border border-brand-100/70
                                                    shadow-[0_10px_40px_-14px_rgb(28_46_104/0.18)]
@@ -211,24 +213,21 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                                                    hover:shadow-[0_30px_64px_-20px_rgb(28_46_104/0.38)]"
                                     >
                                 <Link
-                                    to={`/events/${event.id}`}
+                                    to={eventPath(event)}
                                     aria-label={`More about ${event.title || 'this event'}`}
                                     className="absolute inset-0 z-10 focus:outline-none"
                                 />
                                 {/* No image is a valid event; a broken frame is not. */}
                                 {event.media?.url && (
-                                    <div className="w-full h-56 overflow-hidden">
-                                        {/* Honours the fit and focal point set in the CMS, so a
-                                            portrait upload is not cropped to a strip here. */}
-                                        <CmsMediaFrame
-                                            media={event.media}
-                                            width={420}
-                                            className="hover:scale-105 transition-transform duration-700"
-                                        />
-                                    </div>
+                                    /* The whole poster, filling the card — see PosterFrame. */
+                                    <PosterFrame
+                                        media={event.media}
+                                        width={480}
+                                        imageClassName="hover:scale-105 transition-transform duration-700"
+                                    />
                                 )}
 
-                                <div className="p-8 flex flex-col flex-grow">
+                                <div className="p-5 sm:p-8 flex flex-col flex-grow">
                                     {/*
                                       * ALWAYS DRAWN, even with no date on the
                                       * event.
@@ -243,13 +242,13 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                                       * leaving a corner missing, which reads as
                                       * a render fault.
                                       */}
-                                    <p className={`${MICRO_LABEL} text-brand-500 mb-4`}>
+                                    <p className={`${MICRO_LABEL} text-brand-500 mb-3 sm:mb-4`}>
                                         {formatDate(event.startAt) || 'Date to be confirmed'}
                                     </p>
 
                                     <h3 className={`${CARD_TITLE} text-balance line-clamp-2 min-h-[2.4em]
                                                     text-brand-800 ${
-                                        event.description ? 'mb-3' : 'mb-8 flex-grow'
+                                        event.description ? 'mb-3' : 'mb-5 sm:mb-8 flex-grow'
                                     }`}>
                                         {event.title || 'Untitled event'}
                                     </h3>
@@ -257,25 +256,33 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                                     {/* Was captured in the CMS and rendered nowhere, which made it
                                         a field that quietly did nothing. */}
                                     {event.description && (
-                                        <p className={`${CARD_BODY} text-gray-500 mb-8 flex-grow line-clamp-3
+                                        <p className={`${CARD_BODY} text-gray-500 mb-5 sm:mb-8 flex-grow line-clamp-3
                                                        min-h-[4.9em]`}>
                                             {event.description}
                                         </p>
                                     )}
 
-                                    <div className="flex items-center justify-between pt-6 border-t border-gray-100 mt-auto">
-                                        <div className="flex items-center space-x-3 w-3/4">
+                                    <div className="flex items-center justify-between pt-4 sm:pt-6 border-t border-gray-100 mt-auto">
+                                        {(() => {
+                                            /* Never "Location —": falls through online → venue →
+                                               region → time (lib/eventWhere). */
+                                            const where = eventWhere(event);
+                                            const Icon = where.online ? Video : MapPin;
+                                            return (
+                                        <div className="flex items-center space-x-3 w-3/4 min-w-0">
                                             <div className="w-10 h-10 rounded-full bg-brand-50 flex items-center
                                                             justify-center shrink-0">
-                                                <MapPin size={18} className="text-brand-600" />
+                                                <Icon size={18} className="text-brand-600" />
                                             </div>
                                             <div className="min-w-0">
-                                                <p className="text-[1rem] font-bold text-brand-800 truncate pr-2">Location</p>
-                                                <p className={`${MICRO_LABEL} text-gray-500 truncate pr-2`}>
-                                                    {event.location || '—'}
+                                                <p className="text-[1rem] font-bold text-brand-800 truncate pr-2">{where.label}</p>
+                                                <p className={`${MICRO_LABEL} text-gray-500 truncate pr-2`} title={where.value}>
+                                                    {where.value}
                                                 </p>
                                             </div>
                                         </div>
+                                            );
+                                        })()}
 
                                         {/* A cue, not a second link — the card is the link. */}
                                         <span
@@ -300,7 +307,7 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                         <Link
                             to={settings.viewAllHref || '/events'}
                             className="border-2 border-gray-200 hover:border-brand-800 text-gray-600 hover:text-brand-800
-                                       px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase tracking-[0.1em] transition-colors"
+                                       px-6 sm:px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase tracking-[0.1em] transition-colors"
                         >
                             {settings.viewAllLabel}
                         </Link>

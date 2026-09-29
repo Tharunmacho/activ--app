@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-    LifeBuoy, Mail, Phone, Clock, MapPin, Send, ChevronRight, ChevronDown,
+    LifeBuoy, Mail, Phone, Clock, MapPin, Send, ChevronDown,
     ClipboardList, CreditCard, CalendarDays, UserCog,
 } from 'lucide-react';
 import MemberPageShell from '@/pages/member/MemberPageShell';
@@ -39,10 +38,9 @@ const FAQ = [
         icon: ClipboardList,
         question: 'How long does the review take?',
         answer:
-            'Your application passes through three reviews — Block, then District, then State. '
-            + 'Each one is carried out by the admin for your own region, and the Application '
-            + 'Status screen shows exactly which stage your file is at and when each approval '
-            + 'was recorded.',
+            'Your Block, District and State Admins — the admins for your own region — review your '
+            + 'application at the same time, and the State Admin gives the final decision. The '
+            + 'Application Status screen shows each of their answers as it is recorded.',
     },
     {
         icon: CreditCard,
@@ -64,9 +62,9 @@ const FAQ = [
         icon: UserCog,
         question: 'Can I still change my details?',
         answer:
-            'Your contact details can be updated at any time from Settings. The four application '
-            + 'forms lock when you submit them, so a correction to those needs the review team — '
-            + 'send the change below with your application reference and they will action it.',
+            'Your details are edited in My Profile. Once your application is submitted its forms '
+            + 'lock, so a correction then needs the office team — send the change below and it '
+            + 'reaches them with your application reference.',
     },
 ];
 
@@ -116,6 +114,7 @@ export default function MemberHelp() {
     const address = (contact?.addressLines || []).filter(Boolean) as string[];
     const email = contact?.email || '';
     const phone = contact?.phone || '';
+    const hasDetails = hours.length > 0 || !!email || !!phone || address.length > 0;
 
     const set = (key: keyof typeof form) => (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -144,9 +143,10 @@ export default function MemberHelp() {
                 subject: [(form.subject || '').trim() || 'Member support request',
                     appRef.full ? `(Application ${appRef.full})` : ''].filter(Boolean).join(' '),
                 message,
+                applicationRef: appRef.full || '',
             });
 
-            toast.success('Your message has been sent. The team will be in touch.');
+            toast.success('Your message has reached the ACTIV office. The team will reply to your email.');
             setForm((current) => ({ ...current, subject: '', message: '' }));
         } catch (err) {
             toast.error(errorMessage(err, 'Your message could not be sent'));
@@ -157,14 +157,14 @@ export default function MemberHelp() {
 
     return (
         <MemberPageShell title="Help & Support" subtitle="Questions about your membership" width="standard">
-            <div className="grid gap-5 lg:grid-cols-12 items-start">
+            <div className="grid gap-4 sm:gap-5 lg:grid-cols-12 items-start">
                 {/* ---------------------------------------------- ask ---------- */}
                 <div className="lg:col-span-7 space-y-5">
                     <SectionCard
                         title="Send us a message"
                         subtitle={appRef.full
                             ? `Sent with your application reference ${appRef.full}`
-                            : 'The support team reads every message'}
+                            : 'It goes straight to the ACTIV office team'}
                         icon={<Send className="w-5 h-5" />}
                     >
                         <form onSubmit={submit} className="space-y-4">
@@ -259,7 +259,7 @@ export default function MemberHelp() {
                                         </button>
 
                                         {expanded ? (
-                                            <p className={`text-slate-600 pl-12 pr-2 pb-4 ${CARD_BODY}`}>
+                                            <p className={`text-slate-600 pl-3 sm:pl-12 pr-2 pb-4 ${CARD_BODY}`}>
                                                 {answer}
                                             </p>
                                         ) : null}
@@ -272,6 +272,7 @@ export default function MemberHelp() {
 
                 {/* ---------------------------------------------- reach --------- */}
                 <div className="lg:col-span-5 space-y-5">
+                    {hasDetails ? (
                     <SectionCard
                         title="Contact the association"
                         subtitle="The same details as the public office"
@@ -311,36 +312,10 @@ export default function MemberHelp() {
                                 </Detail>
                             ) : null}
 
-                            {hours.length === 0 && !email && !phone && address.length === 0 ? (
-                                <li className={`text-slate-500 ${CARD_BODY}`}>
-                                    Send a message using the form and the team will get back to you.
-                                </li>
-                            ) : null}
                         </ul>
                     </SectionCard>
+                    ) : null}
 
-                    <SectionCard title="Where to look first" icon={<ClipboardList className="w-5 h-5" />}>
-                        <ul className="space-y-2">
-                            {[
-                                { label: 'Application status and timeline', to: '/member/application-status' },
-                                { label: 'Your documents and certificates', to: '/member/documents' },
-                                { label: 'Events programme', to: '/member/events' },
-                                { label: 'Account settings', to: '/member/settings' },
-                            ].map(({ label, to }) => (
-                                <li key={to}>
-                                    <Link
-                                        to={to}
-                                        className={`flex items-center justify-between gap-3 p-3 rounded-xl
-                                                   border border-slate-200 hover:border-blue-400 hover:bg-blue-50
-                                                   transition-colors text-slate-800 ${ACTION_TEXT}`}
-                                    >
-                                        {label}
-                                        <ChevronRight className="w-4 h-4 text-blue-500 shrink-0" />
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
-                    </SectionCard>
                 </div>
             </div>
         </MemberPageShell>

@@ -1,4 +1,4 @@
-import { getMyMembershipPlans } from '@/services/activApi';
+import { getMyMembershipPlans, toPlanAudience, type PlanAudience } from '@/services/activApi';
 import { getUserApplication } from '@/services/applicationApi';
 
 /**
@@ -25,6 +25,8 @@ export interface MembershipPlan {
     experience: string;
     features: string[];
     popular?: boolean;
+    /** business / aspirant / student. Platinum never reaches this list. */
+    audience: PlanAudience;
 }
 
 /*
@@ -49,6 +51,8 @@ export interface PlanEligibility {
     /** True when the answer is a single plan: an aspirant, or a matched band. */
     locked: boolean;
     isCompany: boolean;
+    /** Whose plan this is — the screens word "Company" / "Aspirant" / "Student" from it. */
+    audience: PlanAudience;
     experience: string;
     applicationId: string;
     /**
@@ -93,7 +97,7 @@ interface ServerPlan {
     name: string;
     description: string;
     price: number;
-    audience: 'business' | 'aspirant';
+    audience: PlanAudience;
     experience: string;
     features: string[];
     popular?: boolean;
@@ -111,7 +115,7 @@ interface ResolvedPlans {
      *   no-year   no commencement year on file
      *   no-band   a year that no band covers
      */
-    reason: 'band' | 'aspirant' | 'all' | 'no-year' | 'no-band';
+    reason: 'band' | 'aspirant' | 'student' | 'all' | 'no-year' | 'no-band';
     showAllPlans: boolean;
 }
 
@@ -123,6 +127,7 @@ const toPlan = (row: ServerPlan): MembershipPlan => ({
     experience: row.experience || '',
     features: Array.isArray(row.features) ? row.features : [],
     popular: row.popular === true,
+    audience: toPlanAudience(row.audience),
 });
 
 /**
@@ -145,7 +150,13 @@ export const resolvePlanEligibility = async (): Promise<PlanEligibility> => {
         readApplicationId(),
     ]);
 
-    const rows = Array.isArray(resolved?.plans) ? resolved!.plans : [];
+    /*
+     * PLATINUM IS NEVER FOR SALE HERE. It is a lifetime membership the Super
+     * Admin grants by hand against a cash payment; a row that reached this list
+     * would put a ₹2,00,000 Pay button in front of an applicant.
+     */
+    const rows = (Array.isArray(resolved?.plans) ? resolved!.plans : [])
+        .filter((row) => toPlanAudience(row?.audience) !== 'platinum');
 
     /*
      * NOTHING LOADED — say so, and show no price.
@@ -162,6 +173,7 @@ export const resolvePlanEligibility = async (): Promise<PlanEligibility> => {
             selected: null,
             locked: false,
             isCompany: true,
+            audience: 'business',
             experience: '',
             applicationId,
             failed: resolved === null,
@@ -169,7 +181,9 @@ export const resolvePlanEligibility = async (): Promise<PlanEligibility> => {
     }
 
     const plans = rows.map(toPlan);
-    const isCompany = rows[0].audience !== 'aspirant';
+    const audience = toPlanAudience(rows[0].audience);
+    // Neither an aspirant nor a student is a company.
+    const isCompany = audience === 'business';
 
     /*
      * `locked` means "there is nothing to choose", and that is now true in more
@@ -180,7 +194,8 @@ export const resolvePlanEligibility = async (): Promise<PlanEligibility> => {
      */
     const locked = plans.length === 1;
 
-    const matched = resolved?.matched ? toPlan(resolved.matched) : null;
+    const matched = resolved?.matched && toPlanAudience(resolved.matched.audience) !== 'platinum'
+        ? toPlan(resolved.matched) : null;
     const selected = matched
         || plans.find((plan) => plan.popular)
         || plans[0];
@@ -190,6 +205,7 @@ export const resolvePlanEligibility = async (): Promise<PlanEligibility> => {
         selected,
         locked,
         isCompany,
+        audience,
         experience: selected.experience,
         applicationId,
         failed: false,

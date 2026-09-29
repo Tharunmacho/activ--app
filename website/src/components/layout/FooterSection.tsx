@@ -7,8 +7,8 @@ import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
 import { getSiteSettings, getLegalLinks, type SiteSettings } from '@/services/cmsApi';
 import { zoneName, getRegionMap } from '@/services/cmsRegionsApi';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
-import { CmsIcon } from '@/components/shared/CmsIcon';
 import { SCREEN_CONTAINER } from './pageContainer';
+import { useSocialLinks, SocialButtons } from '@/components/shared/SocialLinks';
 
 /**
  * The public site's footer — the brand mark centred on the navy, contact on one
@@ -52,7 +52,7 @@ export function FooterSection() {
             .catch(() => { if (!cancelled) setSite(null); });
 
         getLegalLinks()
-            .then((rows) => { if (!cancelled) setPolicyLinks(rows || []); })
+            .then((rows) => { if (!cancelled) setPolicyLinks(Array.isArray(rows) ? rows : []); })
             .catch(() => { if (!cancelled) setPolicyLinks([]); });
 
         return () => { cancelled = true; };
@@ -87,9 +87,10 @@ export function FooterSection() {
 
     const addressLines = removed('footer.address') ? [] : (footer?.addressLines || []);
     const phones = removed('footer.contact') ? [] : (footer?.phones || []);
-    const socials = removed('footer.socials')
-        ? []
-        : (footer?.socials || []).filter((s) => isLive(s?.href));
+    /* CMS → Contact → Social media (plus any older footer rows), every link
+       made absolute — see SocialLinks. Removing the Socials card still hides them. */
+    const liveSocials = useSocialLinks();
+    const socials = removed('footer.socials') ? [] : liveSocials;
 
     /**
      * The legal row — the association's actual policy documents, live.
@@ -208,7 +209,7 @@ export function FooterSection() {
                 key={key}
                 href={href}
                 target={href.startsWith('http') ? '_blank' : undefined}
-                rel={href.startsWith('http') ? 'noreferrer' : undefined}
+                rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
                 className={className}
               >{label}</a>
     );
@@ -236,9 +237,9 @@ export function FooterSection() {
               as a different page stitched on at the bottom. One column, one
               left edge, all the way down.
             */}
-            <div className={`${SCREEN_CONTAINER} relative z-10 pt-16 pb-8`}>
+            <div className={`${SCREEN_CONTAINER} relative z-10 pt-10 pb-6 sm:pt-16 sm:pb-8`}>
 
-                <div className="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-10 lg:items-start">
+                <div className="grid grid-cols-1 gap-9 sm:gap-12 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-10 lg:items-start">
 
                     {/* ------------------------------------------- contact */}
                     {hasContact ? (
@@ -287,32 +288,14 @@ export function FooterSection() {
 
                             {columnFields('footer.contact')}
 
-                            {socials.length > 0 && (
-                                <div className="flex flex-wrap gap-2.5 mt-7">
-                                    {socials.map((s, i) => (
-                                        <a
-                                            key={i}
-                                            href={s.href}
-                                            target={s.href?.startsWith('http') ? '_blank' : undefined}
-                                            rel="noreferrer"
-                                            aria-label={s.icon}
-                                            className="w-11 h-11 rounded-full bg-white/10 ring-1 ring-white/15
-                                                       flex items-center justify-center text-white
-                                                       hover:bg-white hover:text-brand-800 hover:-translate-y-0.5
-                                                       transition-all duration-300"
-                                        >
-                                            <CmsIcon name={s.icon} size={16} fallback="globe" />
-                                        </a>
-                                    ))}
-                                </div>
-                            )}
+                            <SocialButtons links={socials} tone="dark" size="sm" className="mt-7 !gap-2" />
 
                             {columnFields('footer.socials')}
                         </div>
-                    ) : <div />}
+                    ) : <div aria-hidden="true" className="hidden lg:block" />}
 
                     {/* --------------------------------------------- brand */}
-                    <div className="min-w-0 text-center lg:px-10 lg:max-w-md">
+                    <div className="min-w-0 text-center order-first lg:order-none lg:px-10 lg:max-w-md">
                         {brand?.logo?.url && (
                             /*
                              * `brightness-0 invert` paints the mark white.
@@ -324,7 +307,7 @@ export function FooterSection() {
                              * and works because the mark is a single flat
                              * colour on transparency.
                              */
-                            <span className="mx-auto block h-16 w-auto max-w-[15rem]">
+                            <span className="mx-auto block h-12 sm:h-16 w-auto max-w-[12rem] sm:max-w-[15rem]">
                                 <CmsMediaFrame
                                     media={brand.logo}
                                     /*
@@ -377,19 +360,19 @@ export function FooterSection() {
 
                             {columnFields('footer.address')}
                         </div>
-                    ) : <div />}
+                    ) : <div aria-hidden="true" className="hidden lg:block" />}
                 </div>
 
                 {/* ----------------------------------------- navigation rule */}
                 {navLinks.length > 0 && (
-                    <nav className="mt-12 border-t border-white/15 pt-6">
+                    <nav className="mt-9 sm:mt-12 border-t border-white/15 pt-5 sm:pt-6">
                         <ul className="flex flex-wrap items-center justify-center gap-y-3">
                             {navLinks.map((item, i) => (
                                 <li key={i} className="flex items-center">
                                     {renderLink(
                                         item.label,
                                         item.href,
-                                        'px-5 py-2.5 text-[1.125rem] font-medium text-white/80 '
+                                        'px-3 sm:px-5 py-2.5 text-[1.0625rem] sm:text-[1.125rem] font-medium text-white/80 '
                                         + 'hover:text-white transition-colors',
                                         `nav-${i}`,
                                     )}
@@ -439,7 +422,7 @@ export function FooterSection() {
                         aria-label="Zones"
                         className={navLinks.length > 0
                             ? 'mt-1'
-                            : 'mt-12 border-t border-white/15 pt-6'}
+                            : 'mt-9 sm:mt-12 border-t border-white/15 pt-5 sm:pt-6'}
                     >
                         <ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
                             {regionLinks.map((item) => (
@@ -447,7 +430,7 @@ export function FooterSection() {
                                     {renderLink(
                                         item.label,
                                         item.href,
-                                        'text-[1.0625rem] font-semibold text-white/55 '
+                                        'inline-block py-1.5 text-[1.0625rem] font-semibold text-white/55 '
                                         + 'hover:text-white transition-colors',
                                         `region-${item.href}`,
                                     )}
@@ -478,22 +461,39 @@ export function FooterSection() {
                 )}
 
                 {hasBottomBar && (
-                    <div className="mt-6 border-t border-white/10 pt-5 flex flex-col md:flex-row
-                                    md:justify-between md:items-center gap-3 text-[1.0625rem] text-white/55">
-                        {copyright && <p className="text-center md:text-left">{copyright}</p>}
+                    /*
+                      ONE LINE, TWO HALVES. The notice ("All rights reserved.")
+                      used to ride at the end of the legal links, in a bare span
+                      without the links' padding — so it sat a few pixels above
+                      them and read as a stray fifth link. It belongs with the
+                      copyright it completes; the links get the right half to
+                      themselves, every item on the same line box.
+                    */
+                    <div className="mt-6 border-t border-white/10 pt-5 flex flex-col items-center gap-3
+                                    lg:flex-row lg:justify-between lg:gap-8
+                                    text-[0.9375rem] sm:text-[1rem] leading-6 text-white/55">
+                        {(copyright || note) && (
+                            <p className="min-w-0 text-center lg:text-left">
+                                {copyright}
+                                {copyright && note && <span aria-hidden="true" className="mx-2 text-white/30">·</span>}
+                                {note && <span className="whitespace-nowrap">{note}</span>}
+                            </p>
+                        )}
 
-                        {(legalLinks.length > 0 || note) && (
-                            <div className="flex flex-wrap justify-center md:justify-end gap-x-6 gap-y-2">
-                                {legalLinks.map((item, i) =>
-                                    renderLink(
-                                        item.label,
-                                        item.href,
-                                        'hover:text-white transition-colors',
-                                        `legal-${i}`,
-                                    ),
-                                )}
-                                {note && <span>{note}</span>}
-                            </div>
+                        {legalLinks.length > 0 && (
+                            <ul className="-mx-3 flex flex-wrap items-center justify-center lg:justify-end gap-y-1">
+                                {legalLinks.map((item, i) => (
+                                    <li key={`legal-${i}`} className="flex items-center">
+                                        {i > 0 && <span aria-hidden="true" className="h-3.5 w-px bg-white/20" />}
+                                        {renderLink(
+                                            item.label,
+                                            item.href,
+                                            'inline-flex min-h-10 items-center px-3 whitespace-nowrap hover:text-white transition-colors',
+                                            `legal-link-${i}`,
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
                         )}
                     </div>
                 )}

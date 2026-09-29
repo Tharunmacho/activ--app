@@ -216,16 +216,19 @@ export function SchemesAccordion({ accent, label, onNavigate }: {
                 type="button"
                 onClick={() => setOpen((v) => !v)}
                 aria-expanded={open}
-                className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-[1.0625rem]
-                           font-medium transition-colors hover:bg-black/5"
+                /* The same box as the drawer's plain links (HeaderSection) —
+                   px-4 / py-3.5 / semibold / 18px chevron — or this row sits
+                   visibly left of, and lighter than, its neighbours. */
+                className="flex w-full items-center justify-between rounded-2xl px-4 py-3.5 text-left text-[1.0625rem]
+                           font-semibold transition-all hover:bg-slate-50 active:scale-[0.98]"
                 style={{ color: accent }}
             >
                 {label}
-                <ChevronDown size={14} className={open ? 'rotate-180 transition-transform' : 'transition-transform'} />
+                <ChevronDown size={18} className={`shrink-0 opacity-40 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
             </button>
 
             {open && (
-                <div className="pb-2 pl-6 pr-3">
+                <div className="pb-2 pl-8 pr-4">
                     <Link
                         to="/schemes/central"
                         onClick={onNavigate}

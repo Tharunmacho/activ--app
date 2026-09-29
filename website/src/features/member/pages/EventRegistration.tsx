@@ -306,7 +306,7 @@ export default function EventRegistration() {
                         {step === 'details' ? (
                             <form
                                 onSubmit={submitDetails}
-                                className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-5 lg:p-6
+                                className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-4 sm:p-5 lg:p-6
                                            space-y-4"
                             >
                                 <div>
@@ -388,7 +388,7 @@ export default function EventRegistration() {
                         ) : null}
 
                         {step === 'payment' && registration ? (
-                            <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-5 lg:p-6
+                            <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-4 sm:p-5 lg:p-6
                                             space-y-5">
                                 <div>
                                     <h2 className={`${CARD_TITLE} text-slate-900`}>Payment</h2>
@@ -403,7 +403,7 @@ export default function EventRegistration() {
                                                   text-blue-200">
                                         Amount due
                                     </p>
-                                    <p className="text-[2.5625rem] font-extrabold mt-1 tabular-nums">
+                                    <p className="text-[2rem] sm:text-[2.5625rem] font-extrabold mt-1 tabular-nums">
                                         ₹{registration.payment.amount.toLocaleString('en-IN')}
                                     </p>
                                     {registration.payment.reference ? (
@@ -450,7 +450,7 @@ export default function EventRegistration() {
                                                 }`}
                                             >
                                                 <Icon className="w-5 h-5" />
-                                                <span className="text-[1.0625rem] font-bold">{label}</span>
+                                                <span className="px-1 text-center text-[1rem] sm:text-[1.0625rem] font-bold leading-tight">{label}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -484,7 +484,7 @@ export default function EventRegistration() {
                         ) : null}
 
                         {step === 'done' && registration ? (
-                            <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-6 lg:p-8
+                            <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-5 sm:p-6 lg:p-8
                                             text-center">
                                 <span className={`w-16 h-16 rounded-2xl mx-auto flex items-center
                                                   justify-center ${
@@ -579,7 +579,7 @@ export default function EventRegistration() {
                                 </div>
                             ) : null}
 
-                            <div className="p-5 space-y-3">
+                            <div className="p-4 sm:p-5 space-y-3">
                                 <h3 className={`${CARD_TITLE} text-slate-900`}>
                                     {event.title}
                                 </h3>
@@ -616,7 +616,7 @@ export default function EventRegistration() {
                               server reads it from the seat it wrote, so there is
                               nothing here a client could change.
                             */}
-                            <div className="border-t border-slate-100 p-5 bg-slate-50">
+                            <div className="border-t border-slate-100 p-4 sm:p-5 bg-slate-50">
                                 <div className="flex items-baseline justify-between gap-3">
                                     <span className="text-[1.0625rem] text-slate-600 flex items-center gap-1.5">
                                         <Ticket className="w-3.5 h-3.5" />

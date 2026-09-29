@@ -282,7 +282,7 @@ export default function RegionsManager() {
                             key={key}
                             type="button"
                             onClick={() => { setTab(key); }}
-                            className={`-mb-px px-5 py-3 text-[1.25rem] font-semibold border-b-2 transition-colors ${
+                            className={`-mb-px px-3 sm:px-5 py-3 text-[1.25rem] font-semibold border-b-2 transition-colors ${
                                 tab === key
                                     ? 'border-blue-600 text-blue-700 dark:text-blue-400'
                                     : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-neutral-200'
@@ -482,8 +482,8 @@ function EditorScreen({ title, subtitle, href, status, onBack, children }: {
               * the cards below are padded differently, so it over-reached on the
               * left and lined up with nothing.
               */}
-            <div className="mb-7 flex flex-wrap items-center gap-x-4 gap-y-3 border-b
-                            border-slate-200 pb-5 dark:border-[#1F1F1F]">
+            <div className="mb-5 sm:mb-7 flex flex-wrap items-center gap-x-3 sm:gap-x-4 gap-y-3 border-b
+                            border-slate-200 pb-4 sm:pb-5 dark:border-[#1F1F1F]">
                     {/*
                       * THE ARROW ALONE.
                       *
@@ -511,7 +511,7 @@ function EditorScreen({ title, subtitle, href, status, onBack, children }: {
                         <ArrowLeft className="h-[1.125rem] w-[1.125rem]" />
                     </button>
 
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 basis-[10rem]">
                         <h2 className={`${CARD_TITLE} truncate leading-tight text-slate-900 dark:text-white`}>
                             {title}
                         </h2>
@@ -562,11 +562,11 @@ function PageRow({ title, subtitle, status, href, onToggle, action }: {
     return (
         <div className="rounded-xl border border-slate-200 transition-colors hover:border-slate-300
                         dark:border-[#2a2a2a] overflow-hidden">
-            <div className="flex items-center gap-3 px-4 py-3.5 bg-slate-50/60 dark:bg-[#111]">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 sm:px-4 py-3 sm:py-3.5 bg-slate-50/60 dark:bg-[#111]">
                 <button
                     type="button"
                     onClick={onToggle}
-                    className="flex-1 min-w-0 text-left"
+                    className="flex-1 !min-w-[9rem] text-left"
                 >
                     <p className="text-[1.25rem] font-bold text-slate-900 dark:text-neutral-100">
                         {title}
@@ -582,8 +582,8 @@ function PageRow({ title, subtitle, status, href, onToggle, action }: {
 
                 <span className={`shrink-0 rounded-full px-2.5 py-1 text-[1.0625rem] font-semibold ${
                     status === 'published'
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : 'bg-amber-50 text-amber-700'
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                        : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
                 }`}>
                     {status === 'published' ? 'Published' : status ? 'Draft' : 'Not created'}
                 </span>
@@ -633,7 +633,7 @@ function AddState({ options, onAdded }: {
 
     return (
         <div className="flex flex-wrap items-end gap-3 pt-2">
-            <div className="min-w-[16rem] flex-1">
+            <div className="min-w-[min(16rem,100%)] flex-1">
                 <CmsField label="Add a state page">
                     <select
                         value={slug}
@@ -867,7 +867,7 @@ function BadgeRows({ label, rows, onChange }: {
 
     return (
         <div>
-            <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
                 <p className="text-[1.1875rem] font-semibold text-slate-700 dark:text-neutral-200">{label}</p>
                 <AddRowButton
                     label="Add"
@@ -886,7 +886,7 @@ function BadgeRows({ label, rows, onChange }: {
                             <select
                                 value={row.icon}
                                 onChange={(e) => patch(i, { icon: e.target.value })}
-                                className="h-11 w-40 shrink-0 rounded-lg border border-slate-300
+                                className="h-11 w-28 sm:w-40 shrink-0 rounded-lg border border-slate-300
                                            dark:border-[#2a2a2a] bg-white dark:bg-[#0b0b0b] px-3
                                            text-[1.1875rem] text-slate-900 dark:text-neutral-100"
                             >
@@ -904,7 +904,7 @@ function BadgeRows({ label, rows, onChange }: {
                                 type="button"
                                 onClick={() => onChange(rows.filter((_, index) => index !== i))}
                                 aria-label="Remove"
-                                className="p-1.5 rounded text-red-500 hover:bg-red-500/10 shrink-0"
+                                className="p-2.5 sm:p-1.5 rounded text-red-500 hover:bg-red-500/10 shrink-0"
                             >
                                 <Trash2 className="w-4 h-4" />
                             </button>
@@ -939,7 +939,7 @@ function FactRows({ rows, onChange }: { rows: Fact[]; onChange: (rows: Fact[]) =
 
     return (
         <div>
-            <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
                 <p className="text-[1.1875rem] font-semibold text-slate-700 dark:text-neutral-200">
                     Fact chips
                 </p>
@@ -960,7 +960,7 @@ function FactRows({ rows, onChange }: { rows: Fact[]; onChange: (rows: Fact[]) =
                             <select
                                 value={row.icon}
                                 onChange={(e) => patch(i, { icon: e.target.value })}
-                                className="h-11 w-36 shrink-0 rounded-lg border border-slate-300
+                                className="h-11 w-24 sm:w-36 shrink-0 rounded-lg border border-slate-300
                                            dark:border-[#2a2a2a] bg-white dark:bg-[#0b0b0b] px-3
                                            text-[1.1875rem] text-slate-900 dark:text-neutral-100"
                             >
@@ -983,7 +983,7 @@ function FactRows({ rows, onChange }: { rows: Fact[]; onChange: (rows: Fact[]) =
                                 type="button"
                                 onClick={() => onChange(rows.filter((_, index) => index !== i))}
                                 aria-label="Remove"
-                                className="p-1.5 rounded text-red-500 hover:bg-red-500/10 shrink-0"
+                                className="p-2.5 sm:p-1.5 rounded text-red-500 hover:bg-red-500/10 shrink-0"
                             >
                                 <Trash2 className="w-4 h-4" />
                             </button>
@@ -1004,7 +1004,7 @@ function GlanceRows({ rows, onChange }: { rows: Glance[]; onChange: (rows: Glanc
 
     return (
         <div>
-            <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
                 <p className="text-[1.1875rem] font-semibold text-slate-700 dark:text-neutral-200">
                     State at a Glance
                 </p>
@@ -1021,11 +1021,12 @@ function GlanceRows({ rows, onChange }: { rows: Glance[]; onChange: (rows: Glanc
             ) : (
                 <div className="space-y-2">
                     {rows.map((row, i) => (
-                        <div key={i} className="flex items-center gap-2">
+                        /* Phone: icon and delete on one line, the two text boxes full width under them. */
+                        <div key={i} className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
                             <select
                                 value={row.icon}
                                 onChange={(e) => patch(i, { icon: e.target.value })}
-                                className="h-11 w-36 shrink-0 rounded-lg border border-slate-300
+                                className="h-11 min-w-0 flex-1 sm:flex-none sm:w-36 shrink-0 rounded-lg border border-slate-300
                                            dark:border-[#2a2a2a] bg-white dark:bg-[#0b0b0b] px-3
                                            text-[1.1875rem] text-slate-900 dark:text-neutral-100"
                             >
@@ -1038,17 +1039,19 @@ function GlanceRows({ rows, onChange }: { rows: Glance[]; onChange: (rows: Glanc
                                 value={row.title}
                                 placeholder="2nd Largest Economy"
                                 onChange={(e) => patch(i, { title: e.target.value })}
+                                className="order-3 sm:order-none"
                             />
                             <CmsInput
                                 value={row.subtitle}
                                 placeholder="in India"
                                 onChange={(e) => patch(i, { subtitle: e.target.value })}
+                                className="order-3 sm:order-none"
                             />
                             <button
                                 type="button"
                                 onClick={() => onChange(rows.filter((_, index) => index !== i))}
                                 aria-label="Remove"
-                                className="p-1.5 rounded text-red-500 hover:bg-red-500/10 shrink-0"
+                                className="order-2 sm:order-none p-2.5 sm:p-1.5 rounded text-red-500 hover:bg-red-500/10 shrink-0"
                             >
                                 <Trash2 className="w-4 h-4" />
                             </button>
@@ -1073,7 +1076,7 @@ function CardRows({ label, rows, onChange }: {
 
     return (
         <div>
-            <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
                 <p className="text-[1.1875rem] font-semibold text-slate-700 dark:text-neutral-200">{label}</p>
                 <AddRowButton
                     label="Add"
@@ -1337,7 +1340,7 @@ function TierBelow({ title, hint, rows, emptyText, order, onOrder, children }: {
     return (
         <CmsSection title={title} hint={hint}>
             {!rows.length ? (
-                <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center
+                <p className="rounded-xl border border-dashed border-slate-300 p-4 sm:p-6 text-center
                               text-[1.25rem] text-slate-500 dark:border-[#2a2a2a]">
                     {emptyText}
                 </p>
@@ -1346,17 +1349,17 @@ function TierBelow({ title, hint, rows, emptyText, order, onOrder, children }: {
                     {shown.map((row, index) => (
                         <div
                             key={row.key}
-                            className="flex items-center gap-3 rounded-xl border border-slate-200
-                                       bg-white p-3.5 transition-colors hover:border-slate-300
+                            className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-slate-200
+                                       bg-white p-3 sm:p-3.5 transition-colors hover:border-slate-300
                                        dark:border-[#2a2a2a] dark:bg-[#0f0f0f]"
                         >
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center
-                                             rounded-lg bg-blue-50 text-[#2563EB]
+                            <span className="hidden h-10 w-10 shrink-0 items-center justify-center
+                                             rounded-lg bg-blue-50 text-[#2563EB] sm:flex
                                              dark:bg-blue-950/40">
                                 <MapPin className="h-4 w-4" />
                             </span>
 
-                            <div className="min-w-0 flex-1">
+                            <div className="min-w-0 flex-1 basis-[12rem]">
                                 <p className="truncate text-[1.25rem] font-bold text-slate-900
                                               dark:text-white">
                                     {row.label}
@@ -2255,15 +2258,15 @@ function EditorShell({ draft, set, save, onSaved, children }: {
           * owns the rhythm. The cards carry no bottom margin at all now, so there
           * is nothing left to disagree with.
           */}
-        <div className="space-y-8">
+        <div className="space-y-5 sm:space-y-8">
             {children}
 
-            <div className="flex flex-wrap items-center gap-3 pt-6 mt-6 border-t border-slate-200
+            <div className="flex flex-wrap items-center gap-3 pt-5 sm:pt-6 mt-5 sm:mt-6 border-t border-slate-200
                             dark:border-[#1f1f1f]">
                 <select
                     value={String(draft.status || 'draft')}
                     onChange={(e) => set({ status: e.target.value })}
-                    className="h-12 px-4 rounded-lg border border-slate-300 dark:border-[#2a2a2a]
+                    className="h-12 w-full sm:w-auto min-w-0 px-4 rounded-lg border border-slate-300 dark:border-[#2a2a2a]
                                bg-white dark:bg-[#0b0b0b] text-[1.25rem] font-medium
                                text-slate-900 dark:text-neutral-100"
                 >
@@ -2326,17 +2329,17 @@ function RowTools<T>({ rows, index, onChange }: {
         <div className="flex items-center gap-1 shrink-0">
             <button type="button" onClick={() => move(-1)} disabled={index === 0}
                 aria-label="Move up"
-                className="p-1.5 rounded text-slate-400 hover:bg-slate-100 disabled:opacity-30">
+                className="p-2 sm:p-1.5 rounded text-slate-400 hover:bg-slate-100 disabled:opacity-30">
                 <ChevronUp className="w-4 h-4" />
             </button>
             <button type="button" onClick={() => move(1)} disabled={index === rows.length - 1}
                 aria-label="Move down"
-                className="p-1.5 rounded text-slate-400 hover:bg-slate-100 disabled:opacity-30">
+                className="p-2 sm:p-1.5 rounded text-slate-400 hover:bg-slate-100 disabled:opacity-30">
                 <ChevronDown className="w-4 h-4" />
             </button>
             <button type="button" onClick={() => onChange(rows.filter((_, i) => i !== index))}
                 aria-label="Remove"
-                className="p-1.5 rounded text-red-500 hover:bg-red-500/10">
+                className="p-2 sm:p-1.5 rounded text-red-500 hover:bg-red-500/10">
                 <Trash2 className="w-4 h-4" />
             </button>
         </div>
@@ -2356,7 +2359,7 @@ function SlideRows({ rows, onChange }: { rows: RegionSlide[]; onChange: (rows: R
             {rows.map((row, i) => (
                 <div key={i} className="rounded-lg border border-slate-200 dark:border-[#2a2a2a] p-3">
                     <div className="flex items-start gap-3">
-                        <ImageIcon className="w-4 h-4 text-neutral-400 mt-2.5 shrink-0" />
+                        <ImageIcon className="hidden sm:block w-4 h-4 text-neutral-400 mt-2.5 shrink-0" />
                         <div className="flex-1 min-w-0 space-y-3">
                             <MediaPicker
                                 label="Photograph"
@@ -2833,7 +2836,7 @@ function DistrictRows({ rows, onChange, words, regionOptions, pageName, shapes }
 
     if (!rows.length) {
         return (
-            <div className="rounded-xl border border-dashed border-slate-300 dark:border-[#2a2a2a] p-6 text-center">
+            <div className="rounded-xl border border-dashed border-slate-300 dark:border-[#2a2a2a] p-4 sm:p-6 text-center">
                 <p className="text-[1.25rem] text-slate-500 dark:text-neutral-400">{words.emptyText}</p>
                 <button
                     type="button"
@@ -2862,13 +2865,13 @@ function DistrictRows({ rows, onChange, words, regionOptions, pageName, shapes }
                         }`}
                     >
                         {/* ------------- closed: which region or district this is ------------- */}
-                        <div className="flex items-center gap-3 p-3.5">
-                            <span className="w-10 h-10 shrink-0 rounded-lg bg-blue-50 dark:bg-blue-950/40
-                                             flex items-center justify-center text-[#2563EB]">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 p-3 sm:p-3.5">
+                            <span className="hidden w-10 h-10 shrink-0 rounded-lg bg-blue-50 dark:bg-blue-950/40
+                                             sm:flex items-center justify-center text-[#2563EB]">
                                 <MapPin className="w-4 h-4" />
                             </span>
 
-                            <div className="min-w-0 flex-1">
+                            <div className="min-w-0 flex-1 basis-[10rem]">
                                 <p className="text-[1.25rem] font-bold text-slate-900 dark:text-white truncate">
                                     {row.name || `Untitled ${words.nameLabel.toLowerCase()}`}
                                 </p>
@@ -2880,7 +2883,7 @@ function DistrictRows({ rows, onChange, words, regionOptions, pageName, shapes }
                                 </p>
                             </div>
 
-                            <div className="flex items-center gap-1 shrink-0">
+                            <div className="ml-auto flex items-center gap-1 shrink-0">
                                 {open ? <SaveNow className="mr-1" /> : null}
                                 <button
                                     type="button"
@@ -2925,7 +2928,7 @@ function DistrictRows({ rows, onChange, words, regionOptions, pageName, shapes }
 
                         {/* ------------- open: the record and its bench ------------- */}
                         {open ? (
-                            <div className="border-t border-slate-100 dark:border-[#1f1f1f] p-4 space-y-5">
+                            <div className="border-t border-slate-100 dark:border-[#1f1f1f] p-3 sm:p-4 space-y-5">
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <CmsField
                                         label={words.nameLabel}
@@ -3163,7 +3166,7 @@ function DistrictRows({ rows, onChange, words, regionOptions, pageName, shapes }
                                 </div>
 
                                 <div className="border-t border-slate-100 dark:border-[#1f1f1f] pt-4">
-                                    <div className="flex items-center justify-between gap-3 mb-3">
+                                    <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                                         <p className="text-[1.1875rem] font-semibold text-slate-600 dark:text-neutral-300">
                                             {row.name
                                                 ? `${row.name} — office bearers`
@@ -3308,7 +3311,7 @@ function ContactGroups({ field, draft, set, label, placeholder }: {
             </AddRow>
 
             {!rows.length ? (
-                <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center
+                <div className="rounded-xl border border-dashed border-slate-300 p-4 sm:p-6 text-center
                                 dark:border-[#2a2a2a]">
                     <p className="text-[1.25rem] text-slate-500 dark:text-neutral-400">
                         No {label} groups yet.
@@ -3433,7 +3436,7 @@ function ContactRows({ rows, onChange }: {
 
     if (!rows.length) {
         return (
-            <div className="rounded-xl border border-dashed border-slate-300 dark:border-[#2a2a2a] p-5 text-center">
+            <div className="rounded-xl border border-dashed border-slate-300 dark:border-[#2a2a2a] p-4 sm:p-5 text-center">
                 {/* It said "the office above and any office-bearer with their own
                     details are listed already", which described the leadership list to
                     somebody looking at the contacts list. The two are separate and the
@@ -3466,13 +3469,13 @@ function ContactRows({ rows, onChange }: {
                                 : 'border-slate-200 dark:border-[#2a2a2a] hover:border-slate-300'
                         }`}
                     >
-                        <div className="flex items-center gap-3 p-3">
-                            <span className="w-10 h-10 shrink-0 rounded-lg bg-slate-100 dark:bg-[#141414]
-                                             flex items-center justify-center text-neutral-400">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 p-3">
+                            <span className="hidden w-10 h-10 shrink-0 rounded-lg bg-slate-100 dark:bg-[#141414]
+                                             sm:flex items-center justify-center text-neutral-400">
                                 <Mail className="w-4 h-4" />
                             </span>
 
-                            <div className="min-w-0 flex-1">
+                            <div className="min-w-0 flex-1 basis-[10rem]">
                                 <p className="text-[1.1875rem] font-bold text-slate-900 dark:text-white truncate">
                                     {row.name || 'Untitled contact'}
                                 </p>
@@ -3483,7 +3486,7 @@ function ContactRows({ rows, onChange }: {
                                 </p>
                             </div>
 
-                            <div className="flex items-center gap-1 shrink-0">
+                            <div className="ml-auto flex items-center gap-1 shrink-0">
                                 {open ? <SaveNow className="mr-1" /> : null}
                                 <button
                                     type="button"
@@ -3526,7 +3529,7 @@ function ContactRows({ rows, onChange }: {
                         </div>
 
                         {open ? (
-                            <div className="border-t border-slate-100 dark:border-[#1f1f1f] p-4">
+                            <div className="border-t border-slate-100 dark:border-[#1f1f1f] p-3 sm:p-4">
                                 <div className="flex items-start gap-3">
                                 {/*
                                   * NO PHOTOGRAPH ON A CONTACT.
@@ -3697,7 +3700,7 @@ function LeaderRows({ rows, onChange }: { rows: RegionLeader[]; onChange: (rows:
 
     if (!rows.length) {
         return (
-            <div className="rounded-xl border border-dashed border-slate-300 dark:border-[#2a2a2a] p-6 text-center">
+            <div className="rounded-xl border border-dashed border-slate-300 dark:border-[#2a2a2a] p-4 sm:p-6 text-center">
                 <p className="text-[1.25rem] text-slate-500 dark:text-neutral-400">No office-bearers yet.</p>
                 <button
                     type="button"
@@ -3725,7 +3728,7 @@ function LeaderRows({ rows, onChange }: { rows: RegionLeader[]; onChange: (rows:
                         }`}
                     >
                         {/* ---------------- the closed card: who this is ---------------- */}
-                        <div className="flex items-center gap-3 p-3">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 p-3">
                             <span className="w-11 h-12 shrink-0 rounded-lg overflow-hidden bg-slate-100
                                              dark:bg-[#141414] flex items-center justify-center text-neutral-400">
                                 {row.photoUrl
@@ -3733,7 +3736,7 @@ function LeaderRows({ rows, onChange }: { rows: RegionLeader[]; onChange: (rows:
                                     : <Users className="w-4 h-4" />}
                             </span>
 
-                            <div className="min-w-0 flex-1">
+                            <div className="min-w-0 flex-1 basis-[10rem]">
                                 <p className="text-[1.1875rem] font-bold text-slate-900 dark:text-white truncate">
                                     {row.name || 'Untitled leader'}
                                 </p>
@@ -3746,7 +3749,7 @@ function LeaderRows({ rows, onChange }: { rows: RegionLeader[]; onChange: (rows:
                                 ) : null}
                             </div>
 
-                            <div className="flex items-center gap-1 shrink-0">
+                            <div className="ml-auto flex items-center gap-1 shrink-0">
                                 {open ? <SaveNow className="mr-1" /> : null}
 
                                 <button
@@ -3793,11 +3796,11 @@ function LeaderRows({ rows, onChange }: { rows: RegionLeader[]; onChange: (rows:
 
                         {/* ---------------- the open card: the record ---------------- */}
                         {open ? (
-                            <div className="border-t border-slate-100 dark:border-[#1f1f1f] p-4">
-                                <div className="flex items-start gap-3">
+                            <div className="border-t border-slate-100 dark:border-[#1f1f1f] p-3 sm:p-4">
+                                <div className="flex flex-col items-start gap-3 sm:flex-row">
                                     <LeaderPhoto url={row.photoUrl} onChange={(photoUrl) => patch(i, { photoUrl })} />
 
-                                    <div className="grid gap-3 sm:grid-cols-2 flex-1 min-w-0">
+                                    <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-2 flex-1 min-w-0">
                                         <CmsField label="Name">
                                             <CmsInput value={row.name} onChange={(e) => patch(i, { name: e.target.value })} />
                                         </CmsField>
@@ -4356,7 +4359,7 @@ function CustomSections({ draft, set, basePath }: {
                     {rows.map((row, i) => (
                         <div
                             key={i}
-                            className="rounded-xl border border-slate-300 dark:border-[#2a2a2a] p-4"
+                            className="rounded-xl border border-slate-300 dark:border-[#2a2a2a] p-3 sm:p-4"
                         >
                             <div className="flex items-start gap-3">
                                 <div className="flex-1 min-w-0 space-y-4">
@@ -4596,7 +4599,7 @@ function PagePhotos({ state, region, label }: {
                     No photographs yet. The Photo Gallery card is left off the page until there is one.
                 </p>
             ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
                     {rows.map((photo) => (
                         <div
                             key={photo.id}
@@ -4609,7 +4612,7 @@ function PagePhotos({ state, region, label }: {
                                     className="h-full w-full object-cover"
                                 />
                             </div>
-                            <div className="p-3 space-y-2">
+                            <div className="p-2 sm:p-3 space-y-2">
                                 <CmsInput
                                     defaultValue={photo.title}
                                     onBlur={(e) => rename(photo, e.target.value)}

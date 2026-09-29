@@ -179,7 +179,7 @@ export default function ApplicationSubmitted() {
             <div className="w-full pb-4">
 
                 {/* ------------------------------------------------- the hero */}
-                <section className="as-hero as-rise rounded-3xl px-6 py-12 sm:px-10 sm:py-14 text-center">
+                <section className="as-hero as-rise rounded-3xl px-4 py-8 sm:px-10 sm:py-14 text-center">
                     <div className="relative">
                         <SuccessBadge />
 
@@ -203,16 +203,16 @@ export default function ApplicationSubmitted() {
                           definitely catch it, and it still copies in one click.
                         */}
                         {appRef.short ? (
-                            <div className="mt-7 flex justify-center as-rise"
+                            <div className="mt-5 sm:mt-7 flex justify-center as-rise"
                                  style={{ ['--as-delay' as string]: '0.2s' }}>
-                                <div className="inline-flex items-center gap-3 rounded-full
+                                <div className="inline-flex max-w-full items-center gap-2 sm:gap-3 rounded-full
                                                 border border-white/25 bg-white/10 backdrop-blur
                                                 pl-4 pr-2 py-2">
                                     <span className="text-[1.0625rem] font-bold uppercase
                                                      tracking-[0.1em] text-blue-100/80">
                                         Reference
                                     </span>
-                                    <span className="text-[1.1875rem] font-semibold tracking-wide text-white tabular-nums"
+                                    <span className="min-w-0 truncate text-[1.1875rem] font-semibold tracking-wide text-white tabular-nums"
                                           title={appRef.full}>
                                         {appRef.short}
                                     </span>
@@ -221,7 +221,7 @@ export default function ApplicationSubmitted() {
                                         onClick={copyRef}
                                         title={`Copy full ID: ${appRef.full}`}
                                         aria-label="Copy full application ID"
-                                        className="rounded-full p-1.5 text-white/80 transition-colors
+                                        className="shrink-0 rounded-full p-2 text-white/80 transition-colors
                                                    hover:bg-white/20 hover:text-white
                                                    focus:outline-none focus-visible:ring-2
                                                    focus-visible:ring-white/70"
@@ -250,7 +250,7 @@ export default function ApplicationSubmitted() {
                   so the two read as one object: a confirmation with its details
                   attached, rather than a banner and then a table.
                 */}
-                <div className="px-2 sm:px-6 -mt-8 relative">
+                <div className="px-3 sm:px-6 -mt-6 sm:-mt-8 relative">
                     <div className="as-rise as-lift rounded-2xl bg-white shadow-[0_10px_30px_-12px_rgba(15,23,42,0.25)]
                                     border grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x"
                          style={{ borderColor: PALETTE.border, ['--as-delay' as string]: '0.26s' }}>
@@ -284,7 +284,7 @@ export default function ApplicationSubmitted() {
                   the same answer, so they sit side by side, and the actions go
                   under the rail where a member arrives at them having read it.
                 */}
-                <div className="grid gap-6 lg:grid-cols-2 items-start mt-8 px-2 sm:px-6">
+                <div className="grid gap-4 sm:gap-6 lg:grid-cols-2 items-start mt-6 sm:mt-8 px-0 sm:px-6">
 
                     <div className="space-y-6 as-rise" style={{ ['--as-delay' as string]: '0.32s' }}>
                         <Panel>
@@ -395,12 +395,12 @@ export default function ApplicationSubmitted() {
  * a screen reader is given.
  */
 const SuccessBadge = () => (
-    <div className="relative h-28 flex items-center justify-center mb-5">
-        <span aria-hidden className="as-mark-ring absolute w-24 h-24 rounded-full bg-white/25" />
-        <span aria-hidden className="as-mark-ring as-mark-ring--slow absolute w-24 h-24 rounded-full bg-white/20" />
-        <span className="relative w-[5.5rem] h-[5.5rem] rounded-full bg-white flex items-center
+    <div className="relative h-24 sm:h-28 flex items-center justify-center mb-4 sm:mb-5">
+        <span aria-hidden className="as-mark-ring absolute w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/25" />
+        <span aria-hidden className="as-mark-ring as-mark-ring--slow absolute w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/20" />
+        <span className="relative w-[4.5rem] h-[4.5rem] sm:w-[5.5rem] sm:h-[5.5rem] rounded-full bg-white flex items-center
                          justify-center shadow-[0_14px_34px_-10px_rgba(2,16,54,0.65)]">
-            <svg viewBox="0 0 52 52" className="w-14 h-14" role="img" aria-label="Submitted">
+            <svg viewBox="0 0 52 52" className="w-11 h-11 sm:w-14 sm:h-14" role="img" aria-label="Submitted">
                 <circle
                     className="as-check-circle"
                     cx="26" cy="26" r="24"

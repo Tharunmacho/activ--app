@@ -96,7 +96,7 @@ export function TimeField({ value, onChange, label }: {
     };
 
     return (
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
             <select
                 className={SELECT}
                 value={hour}

@@ -218,10 +218,11 @@ const EditProduct = () => {
                 <>
                     <Button
                         variant="outline"
-                        className="border-slate-200 text-slate-700 hover:bg-slate-50"
+                        className="border-slate-200 text-slate-700 hover:bg-slate-50 px-3 sm:px-4"
                         onClick={() => navigate("/business/products")}
+                        aria-label="Cancel"
                     >
-                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        <ArrowLeft className="h-4 w-4 sm:mr-2" />
                         <span className="hidden sm:inline">Cancel</span>
                     </Button>
                     <Button
@@ -229,7 +230,7 @@ const EditProduct = () => {
                         onClick={handleSave}
                         disabled={loading}
                     >
-                        {loading ? 'Saving…' : 'Save Changes'}
+                        {loading ? 'Saving…' : <>Save<span className="hidden sm:inline">&nbsp;Changes</span></>}
                     </Button>
                 </>
             }
@@ -242,7 +243,7 @@ const EditProduct = () => {
                 <Card>
                     <SectionHeading title="Product" icon={Package} />
 
-                    <div className="grid gap-6 md:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] items-start">
+                    <div className="grid gap-4 sm:gap-6 md:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] items-start">
                         <div>
                             <label
                                 htmlFor="product-image"
@@ -252,9 +253,9 @@ const EditProduct = () => {
                             >
                                 {imagePreview ? (
                                     <img src={imagePreview} alt="Product preview"
-                                        className="w-full h-52 object-cover" />
+                                        className="w-full h-44 sm:h-52 object-cover" />
                                 ) : (
-                                    <div className="flex flex-col items-center justify-center h-52 px-4 text-center">
+                                    <div className="flex flex-col items-center justify-center h-44 sm:h-52 px-4 text-center">
                                         <ImagePlus className="h-9 w-9 text-slate-400 mb-2.5" />
                                         <p className="text-[1.25rem] font-semibold text-slate-700">Add a picture</p>
                                         <p className="text-[1.1875rem] text-slate-500 mt-1">JPG or PNG, max 5MB</p>
@@ -275,7 +276,7 @@ const EditProduct = () => {
                             ) : null}
                         </div>
 
-                        <div className="space-y-5">
+                        <div className="space-y-4 sm:space-y-5 min-w-0">
                             <Field label="Product Name" required full>
                                 <Input
                                     placeholder="Enter product / service name"

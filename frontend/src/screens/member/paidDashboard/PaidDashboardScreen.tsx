@@ -68,6 +68,8 @@ const PaidDashboardScreen: React.FC<PaidDashboardProps> = ({ navigation }) => {
       let planType = 'Aspirant Membership';
       let profilePhoto = storedUser?.profilePhoto || '';
       let isBusinessUser = false;
+      // The Member ID the server assigned (ACTIV-2026-001). Never made up here.
+      let membershipId = String(storedUser?.membershipNumber || '');
 
       if (userId) {
         const [appResResult, profileResResult] = await Promise.allSettled([
@@ -112,6 +114,7 @@ const PaidDashboardScreen: React.FC<PaidDashboardProps> = ({ navigation }) => {
             memberName = prof.fullName || memberName;
             memberEmail = prof.email || memberEmail;
             if (prof.profilePhoto) profilePhoto = prof.profilePhoto;
+            membershipId = String(prof.membershipNumber || membershipId || '');
           }
         } else {
           console.log('Error loading profile:', profileResResult.status === 'rejected' ? profileResResult.reason : 'empty response');
@@ -124,18 +127,20 @@ const PaidDashboardScreen: React.FC<PaidDashboardProps> = ({ navigation }) => {
         planType,
         isBusinessUser,
         status: 'Active',
-        membershipId: `ACTIV-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 899999 + 100000))}`,
+        membershipId,
         profilePhoto,
       });
     } catch (error) {
       console.error('Error loading paid dashboard user data:', error);
+      // No invented member on failure: the screen shows what is known and a
+      // dash for the Member ID rather than somebody else's name and number.
       setUserData({
-        name: 'Pradeep',
-        email: 'pradeep@gmail.com',
-        planType: 'Business Membership',
-        isBusinessUser: true,
+        name: 'Member',
+        email: '',
+        planType: 'Membership',
+        isBusinessUser: false,
         status: 'Active',
-        membershipId: 'ACTIV-2026-849201',
+        membershipId: '',
         profilePhoto: '',
       });
     } finally {
@@ -146,7 +151,7 @@ const PaidDashboardScreen: React.FC<PaidDashboardProps> = ({ navigation }) => {
   const handleDownloadCertificate = () => {
     Alert.alert(
       'Membership Certificate',
-      `Official ACTIV Membership Certificate for ${userData?.name} (${userData?.membershipId}) is ready!`,
+      `Official ACTIV Membership Certificate for ${userData?.name} (${userData?.membershipId || "—"}) is ready!`,
       [{ text: 'Download PDF', onPress: () => console.log('Downloading Certificate...') }, { text: 'Close', style: 'cancel' }]
     );
   };
@@ -155,7 +160,7 @@ const PaidDashboardScreen: React.FC<PaidDashboardProps> = ({ navigation }) => {
     const textContent = `
 TAX EXEMPTION CERTIFICATE
 ================================
-Member ID: ${userData?.membershipId}
+Member ID: ${userData?.membershipId || "—"}
 Member Name: ${userData?.name}
 Plan Type: ${userData?.planType}
 Status: ACTIVE
@@ -265,7 +270,7 @@ Issue Date: ${new Date().toLocaleDateString()}
             </View>
 
             <View style={styles.cardBottomSection}>
-              <Text style={styles.memberIdText}>Member ID: {userData?.membershipId || 'TC-2024-1345'}</Text>
+              <Text style={styles.memberIdText}>Member ID: {userData?.membershipId || '—'}</Text>
             </View>
           </LinearGradient>
         </View>

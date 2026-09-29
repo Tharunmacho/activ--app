@@ -209,7 +209,7 @@ export default function MembershipCard({
             className={`overflow-hidden ${BIZ_CARD}`}
         >
             {/* ----------------------------------------------------- band */}
-            <div className="flex items-center justify-between gap-3 px-5 sm:px-6 py-3
+            <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3
                             border-b border-blue-100 bg-blue-50">
                 <p className={`truncate ${BIZ_DETAIL_LABEL} text-blue-700`}>
                     ACTIV Membership
@@ -222,9 +222,9 @@ export default function MembershipCard({
                 </span>
             </div>
 
-            <div className="px-5 sm:px-6 py-5">
+            <div className="px-4 sm:px-6 py-4 sm:py-5">
                 {/* ------------------------------------------------ holder */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 sm:gap-4">
                     {/*
                       The photograph, or the initials in its place. A fixed
                       square either way, so the name beside it starts at the same
@@ -236,7 +236,7 @@ export default function MembershipCard({
                       rather than painted on it — the same relationship the icon
                       plates have with the white cards below.
                     */}
-                    <span className="shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-blue-600
+                    <span className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-blue-600
                                      flex items-center justify-center">
                         {photoUrl ? (
                             <img
@@ -248,7 +248,7 @@ export default function MembershipCard({
                                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                             />
                         ) : (
-                            <span className="text-[1.5625rem] font-extrabold text-white">{initials}</span>
+                            <span className="text-[1.3125rem] sm:text-[1.5625rem] font-extrabold text-white">{initials}</span>
                         )}
                     </span>
 
@@ -270,8 +270,8 @@ export default function MembershipCard({
 
                 {/* ------------------------------------------------ fields */}
                 {hasFields && (
-                    <div className="mt-5 pt-5 border-t border-slate-200
-                                    grid gap-x-8 gap-y-5 grid-cols-2 sm:grid-cols-3">
+                    <div className="mt-4 sm:mt-5 pt-4 sm:pt-5 border-t border-slate-200
+                                    grid gap-x-4 sm:gap-x-8 gap-y-4 sm:gap-y-5 grid-cols-2 sm:grid-cols-3">
                         <Field
                             icon={<IdCard className="w-3.5 h-3.5" />}
                             label="Member ID"
@@ -320,7 +320,7 @@ export default function MembershipCard({
                  * different heights. Full width each, stacked, is the honest
                  * answer at that size.
                  */
-                <div className="flex flex-col sm:flex-row gap-2.5 px-5 sm:px-6 py-4
+                <div className="flex flex-col sm:flex-row gap-2.5 px-4 sm:px-6 py-4
                                 border-t border-slate-200 bg-slate-50">
                     {onCertificate && (
                         <button

@@ -72,20 +72,20 @@ function Stat({ label, value, caption, icon: Icon, to, dark, tone = 'plain' }: {
     return (
         <Link
             to={to}
-            className={`group rounded-2xl border p-5 transition-colors ${card}
+            className={`group min-w-0 rounded-2xl border p-4 sm:p-5 transition-colors ${card}
                         ${tone === 'alert' ? 'border-l-[3px] border-l-[#F59E0B]' : ''}`}
         >
-            <div className="flex items-center gap-3">
-                <span className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${chip}`}>
+            <div className="flex items-center gap-2.5 sm:gap-3">
+                <span className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl border flex items-center justify-center shrink-0 ${chip}`}>
                     <Icon className="w-[1.125rem] h-[1.125rem]" />
                 </span>
-                <p className={`text-[1.0625rem] font-bold uppercase tracking-[0.1em]
+                <p className={`min-w-0 text-[1.0625rem] leading-tight font-bold uppercase tracking-[0.1em]
                                ${dark ? 'text-[#A1A1AA]' : 'text-slate-500'}`}>
                     {label}
                 </p>
             </div>
 
-            <p className={`font-display text-[3.125rem] leading-none font-bold tabular-nums mt-4
+            <p className={`font-display text-[2.25rem] sm:text-[3.125rem] leading-none font-bold tabular-nums mt-3 sm:mt-4
                            ${dark ? 'text-white' : 'text-slate-900'}`}>
                 {value}
             </p>
@@ -103,12 +103,12 @@ function SectionRow({ label, to, ready, detail, icon: Icon, dark }: {
     return (
         <Link
             to={to}
-            className={`flex items-center gap-4 px-5 py-4 border-t first:border-t-0 transition-colors
+            className={`flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3.5 sm:py-4 border-t first:border-t-0 transition-colors
                         ${dark
                     ? 'border-[#1F1F1F] hover:bg-[#121212]'
                     : 'border-slate-200 hover:bg-slate-50'}`}
         >
-            <span className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0
+            <span className={`hidden sm:flex w-10 h-10 rounded-xl border items-center justify-center shrink-0
                               ${dark ? 'border-[#262626] text-[#A1A1AA]' : 'border-slate-200 text-slate-500'}`}>
                 <Icon className="w-[1.125rem] h-[1.125rem]" />
             </span>
@@ -130,7 +130,7 @@ function SectionRow({ label, to, ready, detail, icon: Icon, dark }: {
                 {ready ? 'Ready' : 'Not set up'}
             </span>
 
-            <ArrowRight className={`w-4 h-4 shrink-0 ${dark ? 'text-[#3F3F46]' : 'text-slate-300'}`} />
+            <ArrowRight className={`hidden sm:block w-4 h-4 shrink-0 ${dark ? 'text-[#3F3F46]' : 'text-slate-300'}`} />
         </Link>
     );
 }
@@ -225,7 +225,7 @@ export default function CmsDashboard() {
     const notReady = sections.filter(s => !s.ready).length;
 
     return (
-        <div className="w-full max-w-[100rem] mx-auto space-y-8">
+        <div className="w-full max-w-[100rem] mx-auto space-y-6 sm:space-y-8">
             <CmsError message={error} onRetry={load} />
 
             {/* An eyebrow above the title, as the reference lays it out — it says
@@ -235,7 +235,7 @@ export default function CmsDashboard() {
                                ${dark ? 'text-[#52525B]' : 'text-slate-400'}`}>
                     Workspace
                 </p>
-                <h1 className={`font-display text-[2.8125rem] leading-[1.1] font-bold tracking-tight
+                <h1 className={`font-display text-[2.25rem] sm:text-[2.8125rem] leading-[1.1] font-bold tracking-tight
                                 ${dark ? 'text-white' : 'text-slate-900'}`}>
                     Overview
                 </h1>
@@ -246,7 +246,7 @@ export default function CmsDashboard() {
                 </p>
             </header>
 
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
                 <Stat
                     label="Events" value={events.total || 0} icon={PartyPopper} to="/cms/events" dark={dark}
                     caption={events.total ? 'Published and draft, all tiers' : 'Nothing scheduled yet'}
@@ -277,8 +277,8 @@ export default function CmsDashboard() {
 
             <section className={`rounded-2xl border overflow-hidden
                                  ${dark ? 'bg-[#0A0A0A] border-[#1F1F1F]' : 'bg-white border-slate-200'}`}>
-                <header className={`px-5 py-5 border-b ${dark ? 'border-[#1F1F1F]' : 'border-slate-200'}`}>
-                    <h2 className={`font-display text-[1.5625rem] font-bold tracking-tight
+                <header className={`px-4 sm:px-5 py-4 sm:py-5 border-b ${dark ? 'border-[#1F1F1F]' : 'border-slate-200'}`}>
+                    <h2 className={`font-display text-[1.375rem] sm:text-[1.5625rem] font-bold tracking-tight
                                     ${dark ? 'text-white' : 'text-slate-900'}`}>
                         Site content
                     </h2>

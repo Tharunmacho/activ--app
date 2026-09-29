@@ -27,8 +27,11 @@ import {
 } from './components/CmsUI';
 import { RepeatableList, StatList, BulletList, IconPicker , ExtraFieldsEditor } from './components/CmsEditors';
 import { HomeGalleryPicker } from './components/HomeGalleryPicker';
+import { HomeEventBannerPicker } from './components/HomeEventBannerPicker';
 import { HomeRegionsPicker } from './components/HomeRegionsPicker';
 import MediaPicker from './components/MediaPicker';
+import BannerWordsFields from './components/BannerWordsFields';
+import { resolveMediaUrl } from '@/config/api.config';
 import RichTextEditor from './components/RichTextEditor';
 
 /**
@@ -112,6 +115,9 @@ export default function HomeManager() {
      */
     const [dirty, setDirty] = useState({ carousel: false, about: false });
 
+    /* Bumped after a successful banner save: the open slide folds shut. */
+    const [slidesSaved, setSlidesSaved] = useState(0);
+
     /** Save one block. The server leaves the other untouched. */
     const saveBlock = async (key: BlockKey) => {
         if (!home) return;
@@ -122,11 +128,43 @@ export default function HomeManager() {
             // Take the server's copy back: it drops empty slides and unknown
             // icons, and the editor should show what was actually stored.
             // `sections` rides along with either block — see `setSections`.
-            setHome(await updateHome({
+            const stored = await updateHome({
                 [key]: home[key],
                 sections: home.sections,
-            } as Partial<HomeContent>));
+            } as Partial<HomeContent>);
+
+            /*
+             * DID THE SERVER KEEP EACH SLIDE'S WORDS?
+             *
+             * A backend still running a build from before those fields existed
+             * answers 200 and silently drops them (Mongoose strict mode), and
+             * taking its copy back then wiped the editor's typing off the screen
+             * with a green "saved" toast. Compared slide by slide, matched on
+             * the image: if anything typed did not come back, keep the editor's
+             * copy, stay dirty, and say why.
+             */
+            if (key === 'carousel') {
+                const lost = (home.carousel.slides || []).some((sent) => {
+                    const back = (stored?.carousel?.slides || [])
+                        .find((s) => (s.media?.url || '') === (sent.media?.url || ''));
+                    if (!back) return false;
+                    return (!!sent.headline && !back.headline)
+                        || (!!sent.headlineHighlight && !back.headlineHighlight)
+                        || (!!sent.subheadline && !back.subheadline)
+                        || (sent.align === 'right' && back.align !== 'right');
+                });
+                if (lost) {
+                    const message = 'The server did not store the slide headings. Your backend is running an '
+                        + 'older build — restart it (npm run dev), then press Save again. Your text is still here.';
+                    setError(message);
+                    cmsFailed('the banner words', message);
+                    return;
+                }
+            }
+
+            setHome(stored);
             setDirty((d) => ({ ...d, [key]: false }));
+            if (key === 'carousel') setSlidesSaved((n) => n + 1);
             setSavedBlock(key);
             cmsSaved(key === 'carousel' ? 'Banner' : 'About block');
             setTimeout(() => setSavedBlock(null), 2500);
@@ -284,8 +322,8 @@ export default function HomeManager() {
                         sectionKey="carousel.headline"
                         fieldMode="content"
                         step="Banner 1"
-                        title="Headline"
-                        hint="The words over the banner."
+                        title="Shared headline"
+                        hint="Shown over any image that has no heading of its own. Give each slide (Banner 3) and each gallery image its own heading, subheading and Left / Right position."
                     >
                         <div className="grid gap-4 sm:grid-cols-2">
                             <CmsField label="Headline">
@@ -318,7 +356,7 @@ export default function HomeManager() {
 
                     <CmsStep sectionKey="carousel.buttons" ownFields={false} step="Banner 2" title="Buttons" hint="Leave a label blank to hide that button.">
                         <div className="grid gap-4 md:grid-cols-2">
-                            <div className="space-y-3 border border-slate-200 dark:border-[#2a2a2a] rounded-lg p-4">
+                            <div className="space-y-3 border border-slate-200 dark:border-[#2a2a2a] rounded-lg p-3 sm:p-4">
                                 <p className="text-[1.0625rem] font-semibold uppercase tracking-wider text-neutral-400">Primary</p>
                                 <CmsField label="Label" hint="Leave blank to hide this button.">
                                     <CmsInput
@@ -337,7 +375,7 @@ export default function HomeManager() {
                                 <IconPicker value={carousel.ctaIcon} onChange={ctaIcon => setCarousel({ ctaIcon })} />
                             </div>
 
-                            <div className="space-y-3 border border-slate-200 dark:border-[#2a2a2a] rounded-lg p-4">
+                            <div className="space-y-3 border border-slate-200 dark:border-[#2a2a2a] rounded-lg p-3 sm:p-4">
                                 <p className="text-[1.0625rem] font-semibold uppercase tracking-wider text-neutral-400">Secondary</p>
                                 <CmsField label="Label" hint="Leave blank to hide this button.">
                                     <CmsInput
@@ -368,6 +406,7 @@ export default function HomeManager() {
                             <RepeatableList<HeroSlide>
                                 items={carousel.slides}
                                 onChange={slides => setCarousel({ slides })}
+                                collapseSignal={slidesSaved}
                                 noun="slide"
                                 /* The caption is what the slide says; the file name is
                                    how an editor tells two untitled ones apart. */
@@ -376,11 +415,14 @@ export default function HomeManager() {
                                    name is how an editor tells two untitled ones
                                    apart when neither has a caption yet. */
                                 summary={(slide) => ({
-                                    title: slide.caption,
+                                    title: slide.headline || slide.caption,
                                     subtitle: (slide.media?.url || '').split('/').pop(),
                                     thumb: slide.media?.url,
                                 })}
-                                blank={() => ({ media: { ...EMPTY_MEDIA }, caption: '' })}
+                                blank={() => ({
+                                    media: { ...EMPTY_MEDIA }, caption: '',
+                                    headline: '', headlineHighlight: '', subheadline: '', align: 'left',
+                                })}
                                 row={(slide, update) => (
                                     <div className="space-y-3">
                                         {/* 21/9 — the real shape of the banner on the page. */}
@@ -390,7 +432,25 @@ export default function HomeManager() {
                                             value={slide.media}
                                             onChange={media => update({ media })}
                                         />
-                                        <CmsField label="Caption" hint="Optional text shown over this slide.">
+                                        {/* This slide's own heading, subheading and
+                                            side — the banner shows these while this
+                                            picture is on screen. */}
+                                        <BannerWordsFields
+                                            value={{
+                                                headline: slide.headline || '',
+                                                highlight: slide.headlineHighlight || '',
+                                                subheadline: slide.subheadline || '',
+                                                align: slide.align === 'right' ? 'right' : 'left',
+                                            }}
+                                            onChange={(next) => update({
+                                                ...(next.headline !== undefined ? { headline: next.headline } : {}),
+                                                ...(next.highlight !== undefined ? { headlineHighlight: next.highlight } : {}),
+                                                ...(next.subheadline !== undefined ? { subheadline: next.subheadline } : {}),
+                                                ...(next.align !== undefined ? { align: next.align } : {}),
+                                            })}
+                                            preview={slide.media?.url ? resolveMediaUrl(slide.media.url) : ''}
+                                        />
+                                        <CmsField label="Caption" hint="Optional small line near the bottom of this slide.">
                                             <CmsInput
                                                 value={slide.caption}
                                                 onChange={e => update({ caption: e.target.value })}
@@ -447,6 +507,16 @@ export default function HomeManager() {
                                 Which images ride the banner
                             </p>
                             <HomeGalleryPicker />
+                        </div>
+
+                        {/* The same switch for EVENTS — whoever posted them. An
+                            event's banner switch is `showInBanner`, its own
+                            field; the events strip lower down is `showOnHome`. */}
+                        <div className="mb-6 border-b border-slate-100 pb-6 dark:border-[#1a1a1a]">
+                            <p className="mb-3 text-[1.1875rem] font-extrabold text-slate-900 dark:text-white">
+                                Which events ride the banner
+                            </p>
+                            <HomeEventBannerPicker />
                         </div>
 
                         {/* “How many posters” used to lead this row and is gone:

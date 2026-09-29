@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { CalendarDays, Ticket } from 'lucide-react';
 import MemberPageShell from '@/pages/member/MemberPageShell';
 import { EmptyState, RowsSkeleton } from '@/features/member/components/MemberUI';
-import EventCard from '@/features/member/components/EventCard';
+import EventRow from '@/features/member/components/EventRow';
 import { isPast } from '@/features/member/components/eventFormat';
 import { listMemberEvents, type MemberEvent } from '@/services/memberHubApi';
 import { errorMessage } from '@/services/activApi';
@@ -87,8 +88,8 @@ export default function MemberEvents() {
             detail: 'Events that have finished stay here so you can look back at the programme.',
         },
         mine: {
-            title: 'You have not registered for anything',
-            detail: 'Open an upcoming event to see its agenda and take a seat.',
+            title: 'You have not registered for any events yet',
+            detail: 'Events you book — here or on the ACTIV website with this email — appear here with your ticket.',
         },
     };
 
@@ -140,20 +141,26 @@ export default function MemberEvents() {
                         icon={tab === 'mine' ? <Ticket className="w-6 h-6" /> : <CalendarDays className="w-6 h-6" />}
                         title={EMPTY[tab].title}
                         detail={EMPTY[tab].detail}
+                        action={tab === 'mine' && upcoming.length > 0 ? (
+                            <button
+                                type="button"
+                                onClick={() => setTab('upcoming')}
+                                className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-blue-600 px-4 font-semibold text-white"
+                            >
+                                See all events
+                            </button>
+                        ) : tab === 'mine' ? (
+                            <Link to="/events" className="font-semibold text-blue-700 hover:underline">Browse the events programme</Link>
+                        ) : undefined}
                     />
                 ) : (
                     /*
-                     * The grid stretches, and every card fills its row.
-                     *
-                     * This carried `items-start` for a real reason: a card with
-                     * no banner, pulled up to match one that had a poster, was a
-                     * title, a date and then 400px of white. The fix for that is
-                     * not to let the row go ragged — it is for a card with no
-                     * poster to have something in the space where the poster
-                     * goes, which `EventCard` now draws. See the note there.
+                     * Compact rows across the full width, like the paid
+                     * dashboard's Upcoming Events — not a two-column grid of
+                     * poster cards that showed three events a screen.
                      */
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        {rows.map((event) => <EventCard key={event.id} event={event} />)}
+                    <div className="space-y-3">
+                        {rows.map((event) => <EventRow key={event.id} event={event} />)}
                     </div>
                 )}
             </div>

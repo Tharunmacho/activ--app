@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { adminRegionLabel } from '@/lib/session';
 import { useNavigate } from "react-router-dom";
 
 import { toast } from "sonner";
@@ -145,7 +146,8 @@ export default function AdminApprovalsScreen({ tier }: { tier: AdminTier }) {
 
     return (
         <div className={`min-h-screen flex ${ADMIN_BG}`}>
-            <AdminSidebar tier={tier} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+            {/* The rail reads the tier from the SIGNED-IN role, never the route. */}
+            <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
             <div className="flex-1 min-w-0 flex flex-col">
                 {/*
@@ -170,7 +172,11 @@ export default function AdminApprovalsScreen({ tier }: { tier: AdminTier }) {
                             // a file only arrived once the tier below had signed
                             // it. Every application in the region is here from
                             // the moment it is submitted.
-                            : `Every application in your ${config.label.toLowerCase()} — any of them is yours to decide.`
+                            // Name the region outright: "your state" left a State
+                            // Admin reading a statewide list as a mistake.
+                            : adminRegionLabel()
+                                ? `Every application in ${adminRegionLabel()} (your ${config.label.toLowerCase()}) — any of them is yours to decide.`
+                                : `Every application in your ${config.label.toLowerCase()} — any of them is yours to decide.`
                     }
                     onMenu={() => setSidebarOpen(true)}
                 />

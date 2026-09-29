@@ -99,16 +99,16 @@ export function RegionStateMap({ regionKey, regionLabel, statePanels }: {
 
     return (
         <Reveal as="div" className="min-w-0">
-            <p className="mb-3 text-[1.25rem] font-bold uppercase tracking-[0.16em] text-brand-500">
+            <p className="mb-3 break-words text-[1rem] sm:text-[1.25rem] font-bold uppercase tracking-[0.12em] sm:tracking-[0.16em] text-brand-500">
                 {caption}
             </p>
 
-            <div className="rounded-[1.25rem] border border-gray-200/70 bg-white/70 p-5">
+            <div className="rounded-[1.25rem] border border-gray-200/70 bg-white/70 p-3 sm:p-5">
                 <svg
                     viewBox={map.viewBox}
                     role="img"
                     aria-label={caption}
-                    className="mx-auto block h-auto w-full max-h-[26rem]"
+                    className="mx-auto block h-auto w-full max-h-[20rem] sm:max-h-[26rem]"
                 >
                     {map.states.map((row, i) => {
                         const style = STATE_PALETTE[i % STATE_PALETTE.length];
@@ -181,10 +181,10 @@ export function RegionStateMap({ regionKey, regionLabel, statePanels }: {
                     })}
                 </svg>
 
-                <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-[1.0625rem]
+                <ul className="mt-4 grid grid-cols-2 gap-x-3 sm:gap-x-4 gap-y-2 text-[0.9375rem] sm:text-[1.0625rem]
                                font-semibold text-gray-600">
                     {map.states.map((row, i) => (
-                        <li key={row.slug} className="flex items-center gap-2">
+                        <li key={row.slug} className="flex min-w-0 items-center gap-2">
                             <span className={`h-3 w-3 shrink-0 rounded-full
                                               ${STATE_PALETTE[i % STATE_PALETTE.length].swatch}`} />
                             <span className="truncate" title={row.name}>{row.name}</span>
@@ -208,18 +208,18 @@ export function RegionStateMap({ regionKey, regionLabel, statePanels }: {
                             type="button"
                             onClick={() => setSelected(null)}
                             aria-label="Close"
-                            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center
+                            className="absolute right-1 top-1 sm:right-2 sm:top-2 flex h-10 w-10 sm:h-7 sm:w-7 items-center justify-center
                                        rounded-full text-gray-400 transition-colors
                                        hover:bg-gray-100 hover:text-gray-600"
                         >
                             <X size={14} />
                         </button>
 
-                        <p className="text-[1.25rem] font-bold uppercase tracking-[0.16em]
+                        <p className="px-8 break-words text-[1rem] sm:text-[1.25rem] font-bold uppercase tracking-[0.16em]
                                       text-brand-500">
                             {regionLabel}
                         </p>
-                        <h3 className="mt-1 text-[1.5625rem] font-black tracking-tight text-brand-900">
+                        <h3 className="mt-1 break-words text-[1.3125rem] sm:text-[1.5625rem] font-black tracking-tight text-brand-900">
                             {shape.name}
                         </h3>
 
@@ -270,7 +270,7 @@ export function RegionStateMap({ regionKey, regionLabel, statePanels }: {
                                                     </p>
                                                 )}
                                                 {c.email && (
-                                                    <p className="flex items-center justify-center gap-2.5">
+                                                    <p className="flex min-w-0 items-center justify-center gap-2.5">
                                                         <Mail size={14} className="shrink-0 text-brand-500" />
                                                         <a
                                                             href={`mailto:${c.email}`}
@@ -287,7 +287,7 @@ export function RegionStateMap({ regionKey, regionLabel, statePanels }: {
                                 {council.slug && (
                                     <Link
                                         to={`/states/${council.slug}`}
-                                        className="mt-4 inline-flex items-center gap-2 rounded-full
+                                        className="mt-4 inline-flex max-w-full min-h-[40px] items-center gap-2 rounded-full
                                                    bg-brand-800 px-4 py-2 text-[1.0625rem] font-bold
                                                    text-white transition-colors hover:bg-brand-700"
                                     >

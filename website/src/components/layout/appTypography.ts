@@ -109,7 +109,7 @@
  * The PHONE step is 32px.
  */
 export const PAGE_TITLE =
-    'text-[2rem] sm:text-[2.5rem] font-semibold tracking-tight leading-[1.1]';
+    'text-[1.5rem] sm:text-[2.5rem] font-semibold tracking-tight leading-[1.1]';
 
 /**
  * The line under a page title — "Everything you have submitted, in one place".
@@ -140,7 +140,7 @@ export const PAGE_SUBTITLE =
 
 /** The `<h2>`/`<h3>` that names a card — the biggest thing inside one. */
 export const CARD_TITLE =
-    'text-[2.1875rem] font-bold tracking-tight leading-snug';
+    'text-[1.5rem] sm:text-[2.1875rem] font-bold tracking-tight leading-snug';
 
 /** The explanatory line under a card title. */
 export const CARD_SUBTITLE =
@@ -153,7 +153,7 @@ export const CARD_SUBTITLE =
  * the base layer's `h1..h4` rule does not reach.
  */
 export const SECTION_TITLE =
-    'font-display text-[1.5625rem] font-semibold tracking-tight leading-snug';
+    'font-display text-[1.3125rem] sm:text-[1.5625rem] font-semibold tracking-tight leading-snug';
 
 /** Body copy inside a card. Never `text-[1.1875rem]` at 400 again. */
 export const CARD_BODY =
@@ -173,7 +173,7 @@ export const META_TEXT =
 
 /** A big number: a completion percentage, a total. `tabular` so it cannot jitter. */
 export const STAT_FIGURE =
-    'font-display text-[2.5rem] font-bold tracking-tight leading-none tabular';
+    'font-display text-[1.875rem] sm:text-[2.5rem] font-bold tracking-tight leading-none tabular';
 
 /** The small capitalised label above a value, or on a status pill. */
 export const EYEBROW =

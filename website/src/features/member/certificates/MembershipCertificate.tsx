@@ -1,414 +1,302 @@
-import { CertificateSheet, SignatureInk, SIGNATORY, ASSOCIATION_NAME } from './CertificateSheet';
-import { GOLD, GOLD_LIGHT, GOLD_PALE } from './CertificateMedallion';
-import { CertificateQr, verificationPayload } from './CertificateMarks';
-import { CertificateFrame } from './CertificateFrame';
-import { CertificateRosette } from './CertificateRosette';
+import {
+    Building2, IdCard, UserRound, FileBadge, Receipt, Briefcase, MapPin, CalendarDays, CalendarCheck, FileText, Globe, BadgeCheck,
+} from 'lucide-react';
+import { CertificateSheet, SignatureInk, ASSOCIATION_NAME } from './CertificateSheet';
+import { CertificateMedallion, GOLD, GOLD_LIGHT, GOLD_PALE, GOLD_DEEP } from './CertificateMedallion';
 import type { Certificate } from '@/services/activApi';
 
 /**
  * ============================================================================
- * THE MEMBERSHIP CERTIFICATE — A4 LANDSCAPE
+ * THE MEMBERSHIP CERTIFICATE — A4 LANDSCAPE, THE ASSOCIATION'S TEMPLATE
  * ============================================================================
  *
- *   +---------------------------------------------------------+
- *   |◤navy                                             navy◥   |
- *   |  [MARK]        |  Empowering Communities                 |
- *   |                |  Building Opportunities                 |
- *   |                |  Growing Together                       |
- *   |        --- CERTIFICATE OF ---           .-------.        |
- *   |            Membership                  ( ROSETTE )       |
- *   |     --- PROUD MEMBER OF ACTIV ---       `-------'        |
- *   |                                                          |
- *   |             This is to certify that                      |
- *   |                 Tharun .V                                |
- *   |          (o) Ariyalur, Ariyalur, Tamil Nadu              |
- *   |     is a registered MEMBER of the Adidravidar            |
- *   |     Confederation of Trade and Industrial Vision.        |
- *   |   +-------------------------+----------------------+     |
- *   |   | Certificate number      | Membership number    |     |
- *   |   | Issue date              | Expiry date          |     |
- *   |   +-------------------------+----------------------+     |
- *   |   [ BLOCK | DISTRICT | STATE ]                           |
- *   |   -- strapline        [ink]  CHAIRMAN     [QR]           |
- *   |◣navy      ~~~ skyline ~~~                        navy◢   |
- *   +---------------------------------------------------------+
+ * Laid out to the association's own template, element for element:
  *
- * ------------------------------------------- what changed, and what did not
+ *   a heavy navy frame with a gold rule inside it, broad navy + gold diagonal
+ *   bands across all four corners, navy bars along the foot
+ *   the mark CENTRED, the association's full name under it
+ *   MEMBERSHIP CERTIFICATE / the gold sub-line
+ *   the member company, "admitted as an official member of ACTIV"
+ *   a two-column facts panel with icons, split by a gold diamond
+ *   TOGETHER · TRADE · GROW
+ *   ONE signature — the Founder President's — the seal in the centre, and the
+ *   date of issue opposite the signature. NO QR code (the association's
+ *   instruction).
  *
- * The CONTENT is the content it has always had — the association was explicit
- * that the fields were right. What moved is the furniture:
+ * NOTHING IS INVENTED: a fact the server did not send is left out of the panel,
+ * and the company name falls back to the member's own name.
  *
- *   THE BORDER      round ribbons -> angular wedges (`CertificateFrame`). The
- *                   template's corners are straight-edged and cut on the
- *                   diagonal, and a curve beside a chevron is two designs on
- *                   one page.
- *
- *   THE SEAL        the struck medallion -> `CertificateRosette`, hanging at
- *                   the top right rather than standing in the foot row. The
- *                   medallion carries the association's full name and its motto
- *                   as ring type and wants 168px to be legible; the rosette
- *                   carries the mark and two words and works at 150. The
- *                   medallion is still on the tax certificate, where it has the
- *                   room.
- *
- *   THE FACTS       four cells in one panel, two columns — the template's
- *                   arrangement. They were a row of five along the foot.
- *
- * THE REGION KEEPS ITS OWN BAND. Block, district and state under three separate
- * headings, because in this association the block and the district are very
- * often the same word and one line of "Ariyalur, Ariyalur, Tamil Nadu" reads as
- * a stutter in the typesetting rather than as two answers that happen to match.
- *
- * ------------------------------------------------------- clearing the frame
- *
- * `CertificateFrame`'s corner bands reach 132 units, measured as `x + y` from
- * the corner. Every margin on this sheet is placed against that number:
- *
- *     the head    px-24 pt-10 -> the mark at (96, 40) = 136
- *     the foot    px-32 -> the strapline (128, 54) = 182, and the code likewise
- *     the body    px-[4.5rem]  — its panels span the full measure, and the
- *                 corner bands do not reach the middle of an edge
- *
- * Move a padding or widen a band and redo those sums.
- *
- * ---------------------------------------------------------------- on paper
- *
- * 297 x 210mm, and `CertificateSheet` emits the matching `@page`. A 297mm sheet
- * sent to a portrait page is CUT, not scaled.
- *
- * 297mm is 1122.5px at 96dpi and that is what the browser lays out, so screen
- * and paper are the same size and nothing here carries a `print:` type size.
- * `CertificateFrame` is drawn against that exact box, so the sheet's dimensions
- * and the frame's coordinates are two halves of one number.
+ * 297 x 210mm = 1123 x 794px at 96dpi; the frame SVG and every absolute offset
+ * below are drawn in those units.
  */
 
-const NAVY = 'hsl(var(--brand-800))';
-const NAVY_DEEP = '#0E1F4D';
-const INK = 'hsl(var(--brand-900))';
-const MUTED = '#6B7A9C';
-const PAPER = '#FCFBF7';
+const NAVY = '#0E1F4D';
+const NAVY_MID = '#1C2E68';
+const NAVY_SOFT = '#2A4A9A';
+const INK = '#13224F';
+const MUTED = '#5B6B8F';
 
-const PROMISE = ['Empowering Communities', 'Building Opportunities', 'Growing Together'];
-const KICKER = 'Proud member of ACTIV';
-const STRAPLINE = ['Stronger members and', 'a brighter future'];
-
-/**
- * The association's name, broken where it should break.
- *
- * Left to wrap it came out over three lines with "Adidravidar" alone on the
- * first — a body's name divided by whatever width the column happened to be.
- * `ASSOCIATION_NAME` is still the single string everywhere it is read rather
- * than set, so nothing downstream has to know about this.
- */
-const ASSOCIATION_LINES = ['Adidravidar Confederation of', 'Trade and Industrial Vision'];
-
-const formatDate = (iso?: string | null) => {
+const date = (iso?: string | null) => {
     if (!iso) return '';
     const d = new Date(iso);
-    return Number.isNaN(d.getTime())
-        ? ''
-        : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
-/**
- * THE REGION IS THREE LABELLED CELLS, not one sentence.
- *
- * "Ariyalur Block, Ariyalur District, Tamil Nadu" on one line is accurate and
- * reads as a stutter: in this association the block and the district are very
- * often the same word, so the line printed one name twice with two different
- * nouns after it and the eye took it for a typesetting fault.
- *
- * Three cells, each under its own heading, say the same thing and say WHICH IS
- * WHICH by position rather than by grammar. A level the server sent empty is
- * dropped, so a member with no block recorded gets two cells and not a heading
- * over a blank.
- */
-const placeCells = (member: Certificate['member']) =>
-    (member?.isInternational
-        /* Outside India there is no block, district or state — the place the
-           member gave, and the country their number is from. */
-        ? [
-            { label: 'Place', value: member?.place || '' },
-            { label: 'Country', value: member?.country || '' },
-        ]
-        : [
-            { label: 'Block', value: member?.block || '' },
-            { label: 'District', value: member?.district || '' },
-            { label: 'State', value: member?.state || '' },
-        ]).filter((c) => !!c.value);
+/* ------------------------------------------------------------------ frame */
 
-/* ------------------------------------------------------------- the furniture */
-
-/** One fact in the panel — a caption over a value, on its own quarter. */
-function Fact({ label, value }: { label: string; value: string }) {
+function Frame() {
     return (
-        <div className="min-w-0 px-6 py-3">
-            <p className="text-[0.6875rem] font-bold uppercase tracking-[0.16em]"
-               style={{ color: MUTED }}>
-                {label}
-            </p>
-            <p className="mt-1 truncate text-[1rem] font-bold" style={{ color: INK }}>
-                {value}
-            </p>
+        <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 1123 794"
+             preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+                <linearGradient id="mc-navy" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stopColor={NAVY_MID} /><stop offset="1" stopColor={NAVY} />
+                </linearGradient>
+                <linearGradient id="mc-royal" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stopColor="#3A5DB4" /><stop offset="1" stopColor={NAVY_SOFT} />
+                </linearGradient>
+                <linearGradient id="mc-gold" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stopColor={GOLD_PALE} /><stop offset="0.45" stopColor={GOLD} /><stop offset="1" stopColor={GOLD_DEEP} />
+                </linearGradient>
+                <linearGradient id="mc-bar" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0" stopColor={NAVY} /><stop offset="1" stopColor={NAVY_MID} />
+                </linearGradient>
+                <radialGradient id="mc-glow" cx="0.5" cy="0.42" r="0.62">
+                    <stop offset="0" stopColor="#FFFFFF" /><stop offset="1" stopColor="#EEF3FC" />
+                </radialGradient>
+            </defs>
+
+            <rect x="0" y="0" width="1123" height="794" fill="url(#mc-glow)" />
+
+            {/* faint guilloche waves across the paper */}
+            <g fill="none" stroke="#DCE6F7" strokeWidth="1" opacity="0.8">
+                {Array.from({ length: 10 }, (_, i) => (
+                    <path key={i} d={`M-20 ${150 + i * 60} C 300 ${80 + i * 60}, 760 ${250 + i * 60}, 1150 ${130 + i * 60}`} />
+                ))}
+            </g>
+
+            {/* the heavy outer frame: navy, a gold line inside it */}
+            <rect x="7" y="7" width="1109" height="780" fill="none" stroke="url(#mc-navy)" strokeWidth="14" />
+            <rect x="15.5" y="15.5" width="1092" height="763" fill="none" stroke="url(#mc-gold)" strokeWidth="3" />
+            {/* the thin gold inner rule */}
+            <rect x="30" y="30" width="1063" height="734" rx="4" fill="none" stroke="url(#mc-gold)" strokeWidth="1.3" />
+
+            {/* ---------------- top-left: broad diagonal bands */}
+            <polygon points="0,0 150,0 0,150" fill="url(#mc-navy)" />
+            <polygon points="150,0 163,0 0,163 0,150" fill="url(#mc-gold)" />
+            <polygon points="163,0 194,0 0,194 0,163" fill="url(#mc-royal)" opacity="0.92" />
+            <polygon points="194,0 200,0 0,200 0,194" fill="url(#mc-gold)" />
+            <polygon points="200,0 226,0 0,226 0,200" fill="#9FB6E4" opacity="0.28" />
+
+            {/* ---------------- top-right */}
+            <polygon points="1123,0 1018,0 1123,138" fill="url(#mc-navy)" />
+            <polygon points="1018,0 1004,0 1123,156 1123,138" fill="url(#mc-gold)" />
+            <polygon points="1004,0 978,0 1123,190 1123,156" fill="url(#mc-royal)" opacity="0.9" />
+            <polygon points="978,0 972,0 1123,198 1123,190" fill="url(#mc-gold)" />
+
+            {/* ---------------- bottom-left: diagonal bands, and the bar carrying the certificate number */}
+            <polygon points="0,560 0,794 234,794" fill="url(#mc-navy)" />
+            <polygon points="0,546 0,560 234,794 250,794" fill="url(#mc-gold)" />
+            <polygon points="0,512 0,546 250,794 284,794" fill="url(#mc-royal)" opacity="0.88" />
+            <polygon points="0,505 0,512 284,794 292,794" fill="url(#mc-gold)" />
+            <polygon points="0,730 500,730 470,776 0,776" fill="url(#mc-bar)" />
+            <polygon points="500,730 508,730 478,776 470,776" fill="url(#mc-gold)" />
+            <rect x="0" y="776" width="478" height="3" fill="url(#mc-gold)" />
+
+            {/* ---------------- bottom-right: the heaviest corner, as the template has it */}
+            <polygon points="1123,470 1123,794 890,794" fill="url(#mc-navy)" />
+            <polygon points="1123,452 1123,470 890,794 868,794" fill="url(#mc-gold)" />
+            <polygon points="1123,404 1123,452 868,794 832,794" fill="url(#mc-royal)" opacity="0.9" />
+            <polygon points="1123,396 1123,404 832,794 822,794" fill="url(#mc-gold)" />
+            <polygon points="1123,360 1123,396 822,794 790,794" fill="#9FB6E4" opacity="0.25" />
+            <polygon points="660,730 1123,730 1123,776 630,776" fill="url(#mc-bar)" />
+            <polygon points="652,730 660,730 630,776 622,776" fill="url(#mc-gold)" />
+            <rect x="622" y="776" width="501" height="3" fill="url(#mc-gold)" />
+
+            {/* skyline and gears, faint, bottom left above the bar — the template's motif */}
+            <g fill="none" stroke="#B9C8E6" strokeWidth="1.3" opacity="0.95" transform="translate(58 612) scale(1.05)">
+                <path d="M0 100 V58 H14 V40 H26 V100 M26 100 V30 H40 V100 M40 100 V6 H50 V0 H54 V6 H62 V100 M62 100 V44 H78 V100 M78 100 V22 H90 V100 M90 100 V52 H108 V100 M108 100 V34 H120 V100" />
+                <path d="M4 66 H22 M4 76 H22 M30 44 H36 M30 56 H36 M30 68 H36 M44 20 H58 M44 34 H58 M44 48 H58 M44 62 H58 M82 36 H86 M82 50 H86 M82 64 H86" opacity="0.8" />
+                <circle cx="140" cy="84" r="14" /><circle cx="140" cy="84" r="5" />
+                <circle cx="164" cy="70" r="9" /><circle cx="164" cy="70" r="3" />
+            </g>
+        </svg>
+    );
+}
+
+/* ------------------------------------------------------------ furniture */
+
+type RowData = { icon: typeof Building2; label: string; value: string };
+
+function Row({ icon: Icon, label, value, last }: RowData & { last: boolean }) {
+    return (
+        <div className={`grid min-h-[33px] grid-cols-[28px_144px_minmax(0,1fr)] items-center gap-x-2 py-[3px] ${last ? '' : 'border-b'}`}
+             style={{ borderColor: '#E3EAF6' }}>
+            <Icon className="h-[21px] w-[21px]" style={{ color: NAVY_MID }} strokeWidth={2.1} />
+            <span className="text-[14px] font-medium" style={{ color: MUTED }}>{label}</span>
+            <span className="break-words text-[15px] font-semibold leading-snug" style={{ color: INK }}>{value}</span>
+        </div>
+    );
+}
+
+function Rules({ children, width = 'w-24', className = '' }: { children: React.ReactNode; width?: string; className?: string }) {
+    return (
+        <div className={`flex items-center justify-center gap-4 ${className}`}>
+            <span className={`h-[1.5px] ${width}`} style={{ background: `linear-gradient(90deg, transparent, ${GOLD})` }} />
+            {children}
+            <span className={`h-[1.5px] ${width}`} style={{ background: `linear-gradient(90deg, ${GOLD}, transparent)` }} />
         </div>
     );
 }
 
 export default function MembershipCertificate({ cert }: { cert: Certificate }) {
     const member = cert.member || ({} as Certificate['member']);
+    const company = member.companyName || member.name || '—';
+    const platinum = cert.membershipTier === 'platinum';
+    const validTill = platinum
+        ? 'Lifetime'
+        : cert.validUntil ? date(cert.validUntil) : cert.membershipType === 'lifetime' ? 'Lifetime' : '';
 
-    /* A lifetime membership is the one with NO end date. Reading
-       `membershipType` alone printed "Lifetime" over a real expiry the server
-       had sent. */
-    const lifetime = cert.membershipType === 'lifetime' && !cert.validUntil;
-    const validUntil = lifetime ? 'Lifetime' : formatDate(cert.validUntil);
-    const place = placeCells(member);
+    /* One ordered list, split down the middle: with every fact present that is
+       exactly the template's five-and-four; with some missing, the two columns
+       stay within one row of each other instead of one running dry. */
+    /*
+     * Three groups, and the ADDRESS IS NEVER SPLIT across the two columns —
+     * Block / District / State read as one unit, top to bottom.
+     *
+     * With a short identity block (no company facts on record) the dates join
+     * it on the left and the address stands alone on the right; with a full
+     * one, the dates go under the address instead. Either way the columns stay
+     * within a row or two of each other.
+     */
+    const keep = (list: RowData[]) => list.filter((r) => !!r.value);
+    const identity = keep([
+        { icon: Building2, label: 'Company Name', value: member.companyName || '' },
+        { icon: IdCard, label: 'Membership No.', value: member.membershipNumber || '' },
+        { icon: UserRound, label: 'Representative', value: member.name || '' },
+        { icon: FileBadge, label: 'Udyam Registration', value: member.udyamNumber || '' },
+        { icon: Receipt, label: 'GSTIN', value: member.gstNumber || '' },
+        { icon: Briefcase, label: 'Business Sector', value: member.businessSector || '' },
+    ]);
+    /* The address as its parts, one labelled row each — never one
+       comma-joined line. Outside India: the place and the country. */
+    const address = keep(member.isInternational
+        ? [
+            { icon: MapPin, label: 'Place', value: member.place || '' },
+            { icon: Globe, label: 'Country', value: member.country || '' },
+        ]
+        : [
+            { icon: MapPin, label: 'Block', value: member.block || '' },
+            { icon: MapPin, label: 'District', value: member.district || '' },
+            { icon: MapPin, label: 'State', value: member.state || '' },
+        ]);
+    const dates = keep([
+        { icon: CalendarDays, label: 'Date of Membership', value: date(cert.memberSince || cert.activatedAt) },
+        { icon: CalendarCheck, label: 'Valid Till', value: validTill },
+        { icon: BadgeCheck, label: 'Membership', value: platinum ? 'Platinum Lifetime Member' : '' },
+    ]);
+    const columns = identity.length <= 3
+        ? [[...identity, ...dates], address]
+        : [identity, [...address, ...dates]];
+    const rows = [...columns[0], ...columns[1]];
 
-    /* Four, in reading order down then across, and an empty one is dropped
-       rather than printing a caption with nothing under it. */
-    const facts = [
-        { label: 'Certificate number', value: cert.reference || '' },
-        { label: 'Membership number', value: member.membershipNumber || '' },
-        { label: 'Issue date', value: formatDate(cert.issuedAt) },
-        { label: lifetime ? 'Validity' : 'Expiry date', value: validUntil },
-    ].filter((f) => !!f.value);
+    const nameSize = company.length > 40 ? 'text-[29px]' : company.length > 30 ? 'text-[34px]' : 'text-[40px]';
+    const issued = date(cert.issuedAt);
 
     return (
-        <CertificateSheet
-            size="a4-landscape"
-            bleed
-            onePage
-            letterhead={false}
-            registrations={false}
-            footNote={null}
-        >
-            <div className="relative flex w-full flex-1 flex-col overflow-hidden"
-                 style={{ background: PAPER, color: INK }}>
+        <CertificateSheet size="a4-landscape" bleed onePage letterhead={false} registrations={false} footNote={null}>
+            <div className="relative flex w-full flex-1 flex-col overflow-hidden" style={{ background: '#FBFCFF', color: INK }}>
+                <Frame />
 
-                <CertificateFrame navy={NAVY} deep={NAVY_DEEP} />
-
-                {/* The palest wash. Paper is never one value, and a flat fill is
-                    what makes a printed sheet read as a screen. */}
-                <div aria-hidden="true"
-                     style={{
-                         position: 'absolute',
-                         inset: 0,
-                         background: 'radial-gradient(120% 100% at 50% 34%, #FFFFFF 0%, #FDFCF8 56%, #F2EFE4 100%)',
-                         mixBlendMode: 'multiply',
-                     }} />
-
-                {/* ================================================== the head */}
-                <header className="relative z-10 flex items-start gap-7 px-24 pt-10">
-                    <img
-                        src="/logo_ACTIVian-removebg-preview.png"
-                        alt={ASSOCIATION_NAME}
-                        className="h-[3.5rem] w-auto shrink-0 object-contain"
-                    />
-                    <span className="h-14 w-px shrink-0"
-                          style={{ background: `linear-gradient(180deg, transparent, ${GOLD}, transparent)` }}
-                          aria-hidden="true" />
-                    <div className="shrink-0">
-                        {PROMISE.map((line) => (
-                            <p key={line} className="text-[0.8125rem] font-semibold leading-[1.5]"
-                               style={{ color: NAVY }}>
-                                {line}
-                            </p>
-                        ))}
-                    </div>
+                {/* ============================================ head: the mark, centred, and whose it is */}
+                <header className="relative z-10 flex flex-col items-center px-[150px] pt-[38px] text-center">
+                    <img src="/logo_ACTIVian-removebg-preview.png" alt={ASSOCIATION_NAME} className="h-[66px] w-auto object-contain" />
+                    <p className="mt-1 text-[13.5px] font-bold uppercase tracking-[0.16em]" style={{ color: NAVY_MID }}>
+                        {ASSOCIATION_NAME}
+                    </p>
                 </header>
 
-                {/*
-                  THE ROSETTE HANGS AT THE TOP RIGHT, placed absolutely.
-
-                  It is out of the flow on purpose: in the flow it would have to
-                  belong either to the head or to the title block, and it belongs
-                  to the SHEET — it sits across both, which is what the template
-                  does and what stops the top of the page reading as three
-                  stacked rows.
-
-                  Inline positioning, like everything else structural on this
-                  sheet. Its left edge is at 1123-72-160 = 891, and the title
-                  block's widest line finishes near 760, so they cannot meet.
-                */}
-                <CertificateRosette
-                    line="Member"
-                    navy={NAVY}
-                    deep={NAVY_DEEP}
-                    style={{ position: 'absolute', right: 72, top: 96, width: 160, height: 200, zIndex: 20 }}
-                />
-
-                {/* ================================================== the body */}
-                <div className="relative z-10 flex flex-1 flex-col items-center px-[4.5rem] pt-3
-                                text-center">
-
-                    <p className="flex items-center gap-3 text-[1rem] font-semibold uppercase
-                                  tracking-[0.34em]" style={{ color: NAVY }}>
-                        <span aria-hidden="true" className="h-px w-8"
-                              style={{ background: `linear-gradient(90deg, transparent, ${GOLD})` }} />
-                        Certificate of
-                        <span aria-hidden="true" className="h-px w-8"
-                              style={{ background: `linear-gradient(90deg, ${GOLD}, transparent)` }} />
-                    </p>
-
-                    {/* The one gold-filled line, and the reason the rest of the
-                        title is navy: two gold headings compete and neither
-                        wins. */}
-                    <h2 className="mt-0.5 font-certificate text-[3.25rem] font-bold leading-[1.1]"
-                        style={{
-                            background: `linear-gradient(180deg, ${GOLD_PALE} 0%, ${GOLD} 55%, #9A7220 100%)`,
-                            WebkitBackgroundClip: 'text',
-                            backgroundClip: 'text',
-                            color: 'transparent',
-                        }}>
-                        Membership
-                    </h2>
-
-                    <p className="mt-1 flex items-center gap-3 text-[0.75rem] font-bold uppercase
-                                  tracking-[0.3em]" style={{ color: NAVY }}>
-                        <span aria-hidden="true" className="h-px w-12"
-                              style={{ background: `linear-gradient(90deg, transparent, ${GOLD})` }} />
-                        {KICKER}
-                        <span aria-hidden="true" className="h-px w-12"
-                              style={{ background: `linear-gradient(90deg, ${GOLD}, transparent)` }} />
-                    </p>
-
-                    {/* ----------------------------------------------- the holder */}
-                    <p className="mt-5 text-[0.9375rem]" style={{ color: MUTED }}>
-                        This is to certify that
-                    </p>
-
-                    {/* The largest thing on the sheet and the reason it exists.
-                        `break-words` because a member name is free text and one
-                        long enough to overrun would otherwise push the panel off
-                        its measure. */}
-                    <p className="mt-0.5 break-words font-certificate text-[2.625rem] font-bold
-                                  leading-tight" style={{ color: INK }}>
-                        {member.name || '—'}
-                    </p>
-
-                    <p className="mx-auto mt-3 max-w-[34rem] text-[0.9375rem] leading-[1.7]"
-                       style={{ color: MUTED }}>
-                        is a registered{' '}
-                        <span className="font-extrabold uppercase tracking-[0.14em]"
-                              style={{ color: NAVY }}>
-                            member
-                        </span>{' '}
-                        of the {ASSOCIATION_NAME}.
-                    </p>
-
-                    {/* ------------------------------------------- the facts panel */}
-                    {/*
-                      TWO COLUMNS, not a row of five along the foot.
-
-                      `divide-*` rather than a border on each cell: per-cell
-                      borders double up at every join, so the rule between two
-                      cells prints at twice the weight of the ones at the ends.
-                    */}
-                    <dl className="mt-5 grid w-full grid-cols-2 divide-x divide-y overflow-hidden
-                                   rounded-lg border text-left"
-                        style={{ borderColor: 'rgba(28,46,104,0.14)', ['--tw-divide-opacity' as never]: 1 }}>
-                        {facts.map((f) => (
-                            <div key={f.label} style={{ borderColor: 'rgba(28,46,104,0.14)' }}>
-                                <Fact label={f.label} value={f.value} />
-                            </div>
-                        ))}
-                    </dl>
-
-                    {/* ------------------------------------------- the region band */}
-                    {place.length ? (
-                        <div className="mt-3 flex w-full items-stretch rounded-lg"
-                             style={{ background: 'rgba(28,46,104,0.05)' }}>
-                            {place.map((cell, i) => (
-                                <div key={cell.label} className="flex flex-1 items-stretch">
-                                    {i > 0 ? (
-                                        <span className="w-px shrink-0"
-                                              style={{ background: `linear-gradient(180deg, transparent, ${GOLD}, transparent)` }}
-                                              aria-hidden="true" />
-                                    ) : null}
-                                    <div className="flex-1 px-4 py-2.5 text-center">
-                                        <p className="text-[0.625rem] font-bold uppercase tracking-[0.18em]"
-                                           style={{ color: GOLD }}>
-                                            {cell.label}
-                                        </p>
-                                        <p className="mt-0.5 truncate text-[1rem] font-bold"
-                                           style={{ color: INK }}>
-                                            {cell.value}
-                                        </p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : null}
+                {/* ============================================ title */}
+                <div className="relative z-10 mt-[6px] px-[120px] text-center">
+                    <h1 className="font-certificate text-[54px] font-bold uppercase leading-[1.08] tracking-[0.02em]" style={{ color: NAVY }}>
+                        Membership Certificate
+                    </h1>
+                    <Rules width="w-[150px]" className="mt-1">
+                        <p className="text-[18px] font-bold tracking-[0.02em]" style={{ color: GOLD_DEEP }}>Empowering SC/ST Entrepreneurs</p>
+                    </Rules>
                 </div>
 
-                {/* ================================================== the foot */}
-                {/*
-                  The strapline on the left, as the template has it; the
-                  signature and the code on the right, on one baseline.
-                */}
-                <div className="relative z-10 flex items-end justify-between gap-8 px-32 pb-7 pt-4">
-                    <div className="shrink-0">
-                        <span className="mb-2 block h-px w-14"
-                              style={{ background: `linear-gradient(90deg, ${GOLD}, transparent)` }}
-                              aria-hidden="true" />
-                        {STRAPLINE.map((line) => (
-                            <p key={line} className="font-certificate text-[0.9375rem] italic leading-[1.45]"
-                               style={{ color: NAVY }}>
-                                {line}
-                            </p>
-                        ))}
+                {/* ============================================ holder */}
+                <div className="relative z-10 mt-[6px] px-[120px] text-center">
+                    <p className="text-[18px] italic" style={{ color: INK }}>This is to certify that</p>
+                    <p className={`mx-auto mt-0.5 max-w-[860px] break-words font-extrabold leading-[1.15] ${nameSize}`} style={{ color: NAVY }}>
+                        {company}
+                    </p>
+                    <span className="mx-auto mt-1 block h-[1.5px] w-[440px]" style={{ background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)` }} />
+                    <p className="mt-1 text-[17px]" style={{ color: INK }}>
+                        has been admitted as {platinum ? 'a Platinum Lifetime Member' : 'an official member'} of
+                    </p>
+                    <p className="text-[20px] font-bold" style={{ color: NAVY }}>ACTIV</p>
+                </div>
+
+                {/* ============================================ the facts panel */}
+                {rows.length > 0 && (
+                    <div className="relative z-10 mx-[92px] mt-[8px] grid grid-cols-[minmax(0,1.12fr)_2px_minmax(0,1fr)] gap-x-6 rounded-2xl border bg-white/85 px-6 py-1.5"
+                         style={{ borderColor: '#CFDBF1', boxShadow: '0 8px 26px -16px rgba(14,31,77,0.38)' }}>
+                        <div>
+                            {columns[0].map((r, i) => <Row key={r.label} {...r} last={i === columns[0].length - 1} />)}
+                        </div>
+                        <div className="relative my-1" style={{ background: `linear-gradient(${'#E3EAF6'}, ${GOLD_LIGHT}, ${'#E3EAF6'})` }}>
+                            <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rotate-45" style={{ background: GOLD }} />
+                        </div>
+                        <div>
+                            {columns[1].map((r, i) => <Row key={r.label} {...r} last={i === columns[1].length - 1} />)}
+                        </div>
                     </div>
+                )}
 
-                    <div className="flex items-end gap-8">
-                        <div className="w-44">
-                            <SignatureInk className="h-10" />
-                            <span className="-mt-1 block h-px w-full" style={{ background: MUTED }}
-                                  aria-hidden="true" />
-                            <p className="mt-1.5 whitespace-nowrap text-center text-[0.6875rem]
-                                          font-bold uppercase tracking-[0.16em]" style={{ color: INK }}>
-                                {SIGNATORY.title || 'Authorised signatory'}
-                            </p>
-                            <p className="text-center text-[0.625rem] font-semibold uppercase
-                                          tracking-[0.14em]" style={{ color: MUTED }}>
-                                ACTIV
-                            </p>
-                        </div>
+                <Rules width="w-[190px]" className="relative z-10 mt-[7px]">
+                    <p className="text-[14px] font-bold uppercase tracking-[0.34em]" style={{ color: NAVY_MID }}>
+                        Together <span style={{ color: GOLD }}>•</span> Trade <span style={{ color: GOLD }}>•</span> Grow
+                    </p>
+                </Rules>
 
-                        <div className="shrink-0 text-center">
-                            <CertificateQr
-                                className="h-[3.75rem] w-[3.75rem] rounded-[3px]"
-                                color={NAVY_DEEP}
-                                value={verificationPayload({
-                                    reference: cert.reference || '',
-                                    name: member.name || '',
-                                    membershipNumber: member.membershipNumber || '',
-                                    validUntil,
-                                })}
-                            />
-                            <p className="mt-1.5 text-[0.5625rem] font-bold uppercase tracking-[0.14em]"
-                               style={{ color: MUTED }}>
-                                Scan to verify
-                            </p>
-                        </div>
+                {/* ============================================ signature · seal · date */}
+                <div className="absolute left-[230px] top-[630px] z-10 w-[230px] text-center">
+                    <p className="text-[16px] font-bold" style={{ color: NAVY }}>Founder President</p>
+                    <SignatureInk className="h-[60px]" />
+                    <span className="mt-0.5 block h-px w-full" style={{ background: NAVY_MID }} />
+                </div>
+
+                <div className="absolute left-1/2 top-[606px] z-20 flex -translate-x-1/2 flex-col items-center">
+                    <CertificateMedallion line="Membership" className="h-[128px] w-[128px]" />
+                    <p className="mt-0.5 text-[14px] font-semibold" style={{ color: NAVY }}>Official Seal</p>
+                </div>
+
+                <div className="absolute right-[250px] top-[630px] z-10 w-[230px] text-center">
+                    <p className="text-[16px] font-bold" style={{ color: NAVY }}>Date of Issue</p>
+                    <p className="flex h-[56px] items-end justify-center pb-1 font-certificate text-[26px] font-bold" style={{ color: NAVY_MID }}>
+                        {issued || '—'}
+                    </p>
+                    <span className="mt-0.5 block h-px w-full" style={{ background: NAVY_MID }} />
+                </div>
+
+                {/* ============================================ the foot bars */}
+                {/* Held inside the left bar and clear of the seal: the bar ends at
+                    x=500 and the medallion starts at ~497, so the line is capped at
+                    410px and never runs under it. */}
+                <p className="absolute left-[40px] top-[730px] z-10 flex h-[46px] max-w-[410px] items-center gap-2 whitespace-nowrap text-[13.5px] font-medium text-white">
+                    <FileText className="h-[17px] w-[17px] shrink-0" style={{ color: GOLD_LIGHT }} />
+                    Certificate No: <span className="font-bold tracking-[0.03em]">{cert.reference || '—'}</span>
+                </p>
+                <div className="absolute right-[36px] top-[730px] z-10 flex h-[46px] items-center gap-2.5 text-white">
+                    <Globe className="h-[20px] w-[20px]" style={{ color: GOLD_LIGHT }} />
+                    <div className="leading-tight">
+                        <p className="text-[12.5px]"><span className="font-bold">Issued by:</span> ACTIV <span className="mx-1 opacity-60">|</span> Chennai, Tamil Nadu</p>
+                        <p className="text-[12.5px] opacity-90">www.activ.org.in</p>
                     </div>
                 </div>
             </div>
         </CertificateSheet>
     );
 }
-
-/*
- * ============================================================================
- * THE HEIGHT BUDGET
- * ============================================================================
- *
- * A4 landscape is 793.7px at 96dpi and `onePage` pins the printed height to it.
- * An overflow does NOT show on screen — it shows as a second sheet coming out
- * of the printer carrying the overflow and nothing else.
- *
- * `CertificateFrame` is drawn against a 1123 x 794 viewBox, so its coordinates
- * are page pixels and the frame and the sheet are two halves of one number.
- *
- * The check is that the rendered article measures 1122.5 x 793.7px, or that a
- * `Page.printToPDF` comes back one page. `npx vite build` will not tell you.
- */

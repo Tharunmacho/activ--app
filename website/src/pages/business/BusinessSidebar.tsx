@@ -107,13 +107,32 @@ export default function BusinessSidebar({
      * Read defensively: a private window throws on `localStorage`, and the rail
      * must still render.
      */
-    const [collapsed, setCollapsed] = useState<boolean>(() => {
+    const [collapsedPref, setCollapsed] = useState<boolean>(() => {
         try { return localStorage.getItem('activ:railCollapsed') === '1'; } catch { return false; }
     });
 
     useEffect(() => {
-        try { localStorage.setItem('activ:railCollapsed', collapsed ? '1' : '0'); } catch { /* storage unavailable */ }
-    }, [collapsed]);
+        try { localStorage.setItem('activ:railCollapsed', collapsedPref ? '1' : '0'); } catch { /* storage unavailable */ }
+    }, [collapsedPref]);
+
+    /*
+     * The collapse preference is a DESKTOP rail setting. Below `lg` the rail is
+     * a slide-over drawer, and a preference saved on a laptop used to open it
+     * on a phone as a 288px panel of bare icons with no labels.
+     */
+    const [isDesktop, setIsDesktop] = useState<boolean>(() => {
+        try { return typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches; } catch { return true; }
+    });
+    useEffect(() => {
+        let mq: MediaQueryList | null = null;
+        const onChange = () => setIsDesktop(!!mq?.matches);
+        try {
+            mq = window.matchMedia('(min-width: 1024px)');
+            mq.addEventListener?.('change', onChange);
+        } catch { /* matchMedia unavailable */ }
+        return () => { try { mq?.removeEventListener?.('change', onChange); } catch { /* ignore */ } };
+    }, []);
+    const collapsed = collapsedPref && isDesktop;
 
     /**
      * The page behind the open drawer does not scroll.
@@ -196,7 +215,7 @@ export default function BusinessSidebar({
             )}
 
             <aside
-                className={`fixed lg:sticky lg:top-0 inset-y-0 left-0 z-40 lg:h-screen w-72 shrink-0
+                className={`fixed lg:sticky lg:top-0 inset-y-0 left-0 z-40 lg:h-screen w-72 max-w-[85vw] lg:max-w-none shrink-0
                             bg-white border-r border-slate-200 flex flex-col
                             transition-transform duration-200 transition-[width]
                             ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
@@ -210,7 +229,7 @@ export default function BusinessSidebar({
                   button: in the flow, an invisible 40px button on one side
                   pushes the logo 20px off centre on desktop.
                 */}
-                <div className={`relative h-[5.5rem] bg-white border-b border-slate-200 flex-shrink-0
+                <div className={`relative h-16 sm:h-[5.5rem] bg-white border-b border-slate-200 flex-shrink-0
                                 flex items-center justify-center ${collapsed ? 'px-2' : 'px-6'}`}>
                     <Link
                         to="/business/dashboard"
@@ -228,7 +247,7 @@ export default function BusinessSidebar({
                         variant="ghost"
                         size="icon"
                         onClick={onClose}
-                        className="lg:hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+                        className="lg:hidden absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 text-slate-500"
                     >
                         <X className="h-5 w-5" />
                     </Button>

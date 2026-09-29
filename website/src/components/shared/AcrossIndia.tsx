@@ -163,25 +163,25 @@ export function AcrossIndia({ variant = 'pages' }: { variant?: 'pages' | 'contac
     const openStates = (open?.states || []).filter((s) => s.hasPage);
 
     return (
-        <section className="w-full border-t border-gray-100 bg-gray-50/60 py-14 md:py-16">
+        <section className="w-full border-t border-gray-100 bg-gray-50/60 py-10 sm:py-14 md:py-16">
             {/* On the Contact page, the Contact page's own column — the tiles
                 used to run ~70px past the form and the cards above them on
                 each side, because this band has its own wider width. */}
-            <div className={contact ? SCREEN_CONTAINER : 'mx-auto w-full max-w-[90rem] px-6 lg:px-10'}>
-                <Reveal as="header" className="mb-8 text-center">
+            <div className={contact ? SCREEN_CONTAINER : 'mx-auto w-full max-w-[90rem] px-4 sm:px-6 lg:px-10'}>
+                <Reveal as="header" className="mb-6 sm:mb-8 text-center">
                     {band?.eyebrow && (
                         <p className="text-[1.0625rem] font-bold uppercase tracking-[0.18em] text-brand-500">
                             {band.eyebrow}
                         </p>
                     )}
                     {band?.heading && (
-                        <h2 className="mt-1.5 text-[1.875rem] sm:text-[2.25rem] font-black tracking-tight
+                        <h2 className="mt-1.5 text-[1.625rem] sm:text-[2.25rem] font-black tracking-tight break-words
                                        text-brand-900">
                             {band.heading}
                         </h2>
                     )}
                     {band?.subtitle && (
-                        <p className="mx-auto mt-3 max-w-2xl text-[1.125rem] font-medium
+                        <p className="mx-auto mt-3 max-w-2xl text-[1.0625rem] sm:text-[1.125rem] font-medium
                                       leading-relaxed text-gray-600">
                             {band.subtitle}
                         </p>
@@ -189,7 +189,7 @@ export function AcrossIndia({ variant = 'pages' }: { variant?: 'pages' | 'contac
                 </Reveal>
 
                 <Reveal>
-                    <div className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-3 ${contact ? '2xl:grid-cols-6' : 'xl:grid-cols-6'}`}>
+                    <div className={`grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3 ${contact ? '2xl:grid-cols-6' : 'xl:grid-cols-6'}`}>
                         {/*
                           * THE COUNTRY FIRST, and drawn as the tier above rather
                           * than as a sixth region — solid where the others are
@@ -199,7 +199,7 @@ export function AcrossIndia({ variant = 'pages' }: { variant?: 'pages' | 'contac
                         {national && (
                             <Link
                                 to={`/regions/${national.slug}${hash}`}
-                                className="group flex items-center gap-3 rounded-2xl bg-brand-900 px-5 py-4
+                                className="group flex items-center gap-3 rounded-2xl bg-brand-900 px-4 py-3.5 sm:px-5 sm:py-4
                                            text-white transition-all duration-300 hover:-translate-y-1
                                            hover:shadow-[0_18px_40px_-20px_rgba(28,46,104,0.6)]
                                            xl:col-span-1"
@@ -227,8 +227,8 @@ export function AcrossIndia({ variant = 'pages' }: { variant?: 'pages' | 'contac
                             return (
                                 <div
                                     key={region.key}
-                                    className={`flex items-center gap-2 rounded-2xl border bg-white pl-4 pr-2
-                                                py-4 transition-all duration-300 ${isOpen
+                                    className={`flex items-center gap-2 rounded-2xl border bg-white pl-4 pr-1.5 sm:pr-2
+                                                py-3 sm:py-4 transition-all duration-300 ${isOpen
                                         ? 'border-brand-300 shadow-[0_14px_30px_-20px_rgba(28,46,104,0.5)]'
                                         : 'border-gray-200/80 hover:-translate-y-1 hover:border-brand-200'}`}
                                 >
@@ -276,7 +276,7 @@ export function AcrossIndia({ variant = 'pages' }: { variant?: 'pages' | 'contac
                                         disabled={!states.length}
                                         aria-expanded={isOpen}
                                         aria-label={`${isOpen ? 'Hide' : 'Show'} the states of the ${zoneName(region.label)}`}
-                                        className="shrink-0 rounded-lg p-2 text-gray-400 transition-colors
+                                        className="shrink-0 rounded-lg p-3 sm:p-2 text-gray-400 transition-colors
                                                    hover:bg-brand-50 hover:text-brand-700
                                                    disabled:opacity-30 disabled:hover:bg-transparent"
                                     >
@@ -300,7 +300,7 @@ export function AcrossIndia({ variant = 'pages' }: { variant?: 'pages' | 'contac
                   * mind. Here the row is still, and only this strip changes.
                   */}
                 {open && openStates.length > 0 && (
-                    <div className="mt-4 rounded-2xl border border-brand-100 bg-white p-5">
+                    <div className="mt-4 rounded-2xl border border-brand-100 bg-white p-4 sm:p-5">
                         <p className="mb-3 text-[1rem] font-bold uppercase tracking-[0.14em] text-brand-500">
                             {zoneName(open.label)} · states
                         </p>
@@ -309,7 +309,7 @@ export function AcrossIndia({ variant = 'pages' }: { variant?: 'pages' | 'contac
                                 <Link
                                     key={state.slug}
                                     to={`/states/${state.slug}${hash}`}
-                                    className="rounded-full border border-gray-200 px-4 py-2 text-[1.0625rem]
+                                    className="rounded-full border border-gray-200 px-3.5 py-2 sm:px-4 text-[1rem] sm:text-[1.0625rem]
                                                font-semibold text-brand-700 transition-colors
                                                hover:border-brand-300 hover:bg-brand-50"
                                 >

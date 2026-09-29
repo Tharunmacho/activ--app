@@ -61,9 +61,9 @@ export function SectionCard({
           * gives the card.
           */
         <section className={`flex flex-col bg-white rounded-2xl border border-slate-200 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)] ${className}`}>
-            <header className="flex items-start gap-3 px-5 lg:px-6 pt-5 pb-4">
+            <header className="flex items-start gap-3 px-4 sm:px-5 lg:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4">
                 {icon ? (
-                    <span className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center
+                    <span className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center
                                      justify-center shrink-0">
                         {icon}
                     </span>
@@ -88,7 +88,7 @@ export function SectionCard({
                 ) : null}
             </header>
 
-            <div className="flex-1 flex flex-col justify-center px-5 lg:px-6 pb-5 lg:pb-6">
+            <div className="flex-1 flex flex-col justify-center px-4 sm:px-5 lg:px-6 pb-4 sm:pb-5 lg:pb-6">
                 {children}
             </div>
         </section>
@@ -117,7 +117,7 @@ export function EmptyState({
     action?: ReactNode;
 }) {
     return (
-        <div className="py-10 px-4 text-center">
+        <div className="py-8 sm:py-10 px-4 text-center">
             <span className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 mx-auto mb-3
                              flex items-center justify-center">
                 {icon || <Inbox className="w-6 h-6" />}
@@ -153,7 +153,7 @@ export function PlanLockedCard({
     upgradeTo?: string;
 }) {
     return (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6">
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 sm:p-6">
             <div className="flex items-start gap-3">
                 <span className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400
                                  flex items-center justify-center shrink-0">
@@ -226,7 +226,7 @@ export function StatTile({
                 <span className="text-[1.0625rem] font-semibold uppercase tracking-wide
                                  leading-snug break-words min-w-0">{label}</span>
             </div>
-            <p className={`text-[1.75rem] font-bold mt-2 tabular-nums ${TONES[tone]}`}>{value}</p>
+            <p className={`text-[1.375rem] sm:text-[1.75rem] font-bold mt-1 sm:mt-2 tabular-nums break-words ${TONES[tone]}`}>{value}</p>
             {hint ? <p className="text-[1.0625rem] text-slate-400 mt-0.5 leading-snug break-words">{hint}</p> : null}
         </>
     );
@@ -304,9 +304,9 @@ export function MembershipGate({
     children?: ReactNode;
 }) {
     return (
-        <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-6 lg:p-8 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
-            <div className="flex items-start gap-4">
-                <span className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center
+        <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-4 sm:p-6 lg:p-8 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+            <div className="flex items-start gap-3 sm:gap-4">
+                <span className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-blue-600 text-white flex items-center
                                  justify-center shrink-0 shadow-sm">
                     {icon || <Lock className="w-5 h-5" />}
                 </span>
@@ -328,7 +328,7 @@ export function MembershipGate({
                         {cta.label} <ChevronRight className="w-4 h-4" />
                     </Link>
 
-                    {children ? <div className="mt-6">{children}</div> : null}
+                    {children ? <div className="mt-4 sm:mt-6">{children}</div> : null}
                 </div>
             </div>
         </div>

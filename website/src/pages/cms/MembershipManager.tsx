@@ -61,7 +61,15 @@ export default function MembershipManager() {
             const doc = await getMembership();
             /* A document nobody has written yet answers with empty fields, and
                the editor opens on them — which is how a new one is started. */
-            setCopy(doc || { ...EMPTY_MEMBERSHIP });
+            /* Merged over the empty shape, section by section, so a document
+               missing a whole section opens blank instead of crashing. */
+            const d: any = doc || {};
+            setCopy({
+                ...EMPTY_MEMBERSHIP,
+                ...d,
+                whyJoin: { ...EMPTY_MEMBERSHIP.whyJoin, ...(d.whyJoin || {}) },
+                whoShouldJoin: { ...EMPTY_MEMBERSHIP.whoShouldJoin, ...(d.whoShouldJoin || {}) },
+            });
         } catch (err) {
             setError(errorMessage(err, 'The prospectus could not be loaded'));
         } finally {

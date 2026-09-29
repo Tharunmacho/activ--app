@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useRenewal } from '@/features/member/useRenewal';
 import { Link } from 'react-router-dom';
 import { BadgeCheck, CheckCircle2, ChevronRight, Clock, Download, FileBadge, FileText, Lock, ReceiptText, ShieldCheck } from 'lucide-react';
 import MemberPageShell from '@/pages/member/MemberPageShell';
@@ -107,7 +108,8 @@ export default function MemberDocuments() {
         [profileCompletion, application, isPaid],
     );
 
-    const cta = useMemo(() => membershipCta(access), [access]);
+    const renewal = useRenewal();
+    const cta = useMemo(() => membershipCta(access, renewal), [access, renewal]);
     const appRef = useMemo(() => formatApplicationRef(application), [application]);
 
     const submittedAt = formatDate(application?.createdAt || application?.submittedAt);

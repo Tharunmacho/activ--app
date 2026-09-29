@@ -279,7 +279,7 @@ export const checkProfileCompletion = async (): Promise<{
   isComplete: boolean;
   completedForms: string[];
   totalFormsRequired: number;
-  memberType: 'business' | 'aspirant';
+  memberType: 'business' | 'aspirant' | 'student';
 }> => {
   const token = localStorage.getItem('token');
   
@@ -295,6 +295,7 @@ export const checkProfileCompletion = async (): Promise<{
   try {
     const completed: string[] = [];
     let isDoingBusiness = true;
+    let isStudent = false;
 
     // Check Personal Form
     const personalRes = await apiFetch(`${API_BASE_URL}/members/my-profile`, {
@@ -317,6 +318,7 @@ export const checkProfileCompletion = async (): Promise<{
         if (data.data.doingBusiness === 'no' || data.data.doingBusiness === false) {
           isDoingBusiness = false;
         }
+        if (String(data.data.registrationType || '').toLowerCase() === 'student') isStudent = true;
         if (data.data.doingBusiness) {
           completed.push('Business Information');
         }
@@ -338,7 +340,7 @@ export const checkProfileCompletion = async (): Promise<{
       isComplete: completed.length === TOTAL_FORMS,
       completedForms: completed,
       totalFormsRequired: TOTAL_FORMS,
-      memberType: isDoingBusiness ? 'business' : 'aspirant'
+      memberType: isDoingBusiness ? 'business' : isStudent ? 'student' : 'aspirant'
     };
   } catch (error) {
     console.error('Error checking profile completion:', error);

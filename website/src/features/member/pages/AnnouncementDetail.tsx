@@ -90,7 +90,7 @@ export default function AnnouncementDetail() {
                         </div>
                     ) : null}
 
-                    <div className="p-5 lg:p-7">
+                    <div className="p-4 sm:p-5 lg:p-7">
                         <div className="flex flex-wrap items-center gap-2 mb-3">
                             {style ? (
                                 <span className={`text-[1.0625rem] font-bold uppercase tracking-wide px-2 py-0.5

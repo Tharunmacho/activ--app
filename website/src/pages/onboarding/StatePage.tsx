@@ -135,11 +135,11 @@ export default function StatePage() {
             <div className="flex flex-col min-h-screen font-sans dot-band">
                 <HeaderSection />
                 <div className={`${SCREEN_CONTAINER} py-10 animate-pulse flex-grow`}>
-                    <div className="h-56 bg-slate-200 rounded-[1.5rem] mb-8" />
+                    <div className="h-40 sm:h-56 bg-slate-200 rounded-[1.5rem] mb-6 sm:mb-8" />
                     <div className="h-8 w-64 bg-slate-200 rounded mb-6" />
-                    <div className="grid gap-5 grid-cols-2 sm:grid-cols-3 xl:grid-cols-5">
+                    <div className="grid gap-3 sm:gap-5 grid-cols-2 sm:grid-cols-3 xl:grid-cols-5">
                         {[0, 1, 2, 3, 4].map((i) => (
-                            <div key={i} className="h-80 bg-slate-200 rounded-2xl" />
+                            <div key={i} className="h-56 sm:h-80 bg-slate-200 rounded-2xl" />
                         ))}
                     </div>
                 </div>
@@ -152,15 +152,15 @@ export default function StatePage() {
         return (
             <div className="flex flex-col min-h-screen font-sans dot-band">
                 <HeaderSection />
-                <div className={`${SCREEN_CONTAINER} py-24 flex-grow text-center`}>
+                <div className={`${SCREEN_CONTAINER} py-16 sm:py-24 flex-grow text-center`}>
                     <h1 className={`${SECTION_HEADING} text-brand-800 mb-4`}>Not published yet</h1>
-                    <p className="text-[1.25rem] sm:text-[1.0625rem] font-semibold text-gray-500 mb-8">
+                    <p className="text-[1rem] sm:text-[1.0625rem] font-semibold text-gray-500 mb-8 break-words">
                         {missing || 'This state page could not be loaded.'}
                     </p>
                     <Link
                         to="/"
                         className="inline-flex items-center gap-2 bg-brand-800 hover:bg-brand-700 text-white
-                                   px-8 py-3.5 rounded-full font-bold text-[1.0625rem] uppercase
+                                   px-6 sm:px-8 py-3.5 rounded-full font-bold text-[0.9375rem] sm:text-[1.0625rem] uppercase
                                    tracking-[0.1em] transition-colors"
                     >
                         <ArrowLeft size={15} /> Back to home
@@ -407,7 +407,7 @@ export default function StatePage() {
                           * sticky take effect at all — a stretched grid item
                           * has no room to move within.
                           */}
-                        <div className="grid items-start gap-8 lg:gap-12
+                        <div className="grid items-start gap-6 sm:gap-8 lg:gap-12
                                         lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
                             <div className="lg:sticky lg:top-24">
                                 <StateDistrictMap
@@ -427,7 +427,7 @@ export default function StatePage() {
                                 />
                             </div>
 
-                            <div className="min-w-0 space-y-10">
+                            <div className="min-w-0 space-y-8 sm:space-y-10">
                                 <ContactGroup
                                     label={`${page.stateName} State Council`}
                                     entries={stateContacts}

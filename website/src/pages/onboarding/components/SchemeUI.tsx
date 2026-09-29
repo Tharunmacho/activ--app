@@ -88,7 +88,7 @@ export function SchemesBand({ settings, title, highlight, description }: {
                 </>
             )}
 
-            <div className={`relative z-10 ${SCHEME_COLUMN} py-12 md:py-16`}>
+            <div className={`relative z-10 ${SCHEME_COLUMN} py-9 sm:py-12 md:py-16`}>
                 <Reveal>
                     <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5
                                      ring-1 ring-white/25">
@@ -99,7 +99,7 @@ export function SchemesBand({ settings, title, highlight, description }: {
                         </span>
                     </span>
 
-                    <h1 className="mt-4 text-[2.1875rem] sm:text-4xl md:text-5xl font-black leading-[1.06]
+                    <h1 className="mt-4 text-[2rem] sm:text-4xl break-words md:text-5xl font-black leading-[1.06]
                                    tracking-tight text-white">
                         {heading}
                         {accent && <> <span className="text-brand-300">{accent}</span></>}
@@ -121,7 +121,7 @@ export function SchemesBand({ settings, title, highlight, description }: {
 
 export function Crumbs({ trail }: { trail: { label: string; to?: string }[] }) {
     return (
-        <nav aria-label="Breadcrumb" className={`${SCHEME_COLUMN} pt-8`}>
+        <nav aria-label="Breadcrumb" className={`${SCHEME_COLUMN} pt-5 sm:pt-8`}>
             <ol className={`flex flex-wrap items-center gap-1.5 ${META_TEXT} text-gray-500`}>
                 {trail.map((step, i) => (
                     <li key={`${step.label}-${i}`} className="inline-flex items-center gap-1.5">
@@ -156,7 +156,7 @@ export function SchemeCard({ scheme, showWhere = true }: { scheme: SchemeRecord;
     const apply = externalHref(scheme.applyUrl);
 
     return (
-        <article className="group flex h-full flex-col rounded-2xl border border-gray-200/80 bg-white p-6
+        <article className="group flex h-full flex-col rounded-2xl border border-gray-200/80 bg-white p-4 sm:p-6
                             transition-all duration-300 hover:-translate-y-1 hover:border-brand-200
                             hover:shadow-[0_18px_40px_-20px_rgba(28,46,104,0.35)]">
             <div className="flex items-start justify-between gap-3">
@@ -181,7 +181,7 @@ export function SchemeCard({ scheme, showWhere = true }: { scheme: SchemeRecord;
             </div>
 
             <Link to={detail} className="mt-4 block">
-                <h3 className="text-[1.3125rem] font-extrabold leading-snug tracking-tight text-brand-900
+                <h3 className="text-[1.1875rem] sm:text-[1.3125rem] font-extrabold leading-snug tracking-tight text-brand-900
                                transition-colors group-hover:text-brand-700 line-clamp-3">
                     {scheme.title || 'Untitled scheme'}
                 </h3>
@@ -207,7 +207,7 @@ export function SchemeCard({ scheme, showWhere = true }: { scheme: SchemeRecord;
                 </p>
             )}
 
-            <div className="mt-auto flex flex-wrap items-center gap-2.5 pt-6">
+            <div className="mt-auto flex flex-wrap items-center gap-2.5 pt-4 sm:pt-6">
                 <Link
                     to={detail}
                     className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 px-4 py-2
@@ -240,14 +240,14 @@ export function SchemeGrid({ schemes, empty, showWhere = true }: {
 }) {
     if (!schemes.length) {
         return (
-            <p className={`rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center
+            <p className={`rounded-2xl border border-dashed border-gray-300 bg-white px-4 py-10 sm:px-6 sm:py-12 text-center
                            ${CARD_BODY} text-gray-500`}>
                 {empty}
             </p>
         );
     }
     return (
-        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {schemes.map((scheme, i) => (
                 <Reveal key={scheme.id || i} delay={Math.min(i, 5) * 60}>
                     <SchemeCard scheme={scheme} showWhere={showWhere} />

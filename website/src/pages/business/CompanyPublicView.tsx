@@ -4,9 +4,8 @@ import { Building2, MapPin, Phone, Mail, Package, ShieldCheck, ShieldPlus, Users
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import BusinessPageShell from './BusinessPageShell';
-import { Card, Loading, EmptyState, Chip } from './BusinessUI';
+import { Card, Loading, EmptyState, Chip, CARD_TITLE } from './BusinessUI';
 import { resolveMediaUrl } from '@/config/api.config';
-import { CARD_TITLE } from '@/components/layout/appTypography';
 import {
     getPublicCompany, addToTrustList, removeFromTrustList, errorMessage,
     type PublicCompany,
@@ -71,7 +70,7 @@ const Detail = ({ label, value }: { label: string; value?: string | null }) => {
     const text = (value || '').trim();
     if (!text) return null;
     return (
-        <div>
+        <div className="min-w-0">
             <dt className="text-[1.1875rem] font-semibold uppercase tracking-wider text-slate-400">{label}</dt>
             <dd className="text-[1.25rem] text-slate-700 mt-1 break-words">{text}</dd>
         </div>
@@ -79,13 +78,13 @@ const Detail = ({ label, value }: { label: string; value?: string | null }) => {
 };
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-    <h2 className={`${CARD_TITLE} text-slate-900 mb-4`}>{children}</h2>
+    <h2 className={`${CARD_TITLE} text-slate-900 mb-3 sm:mb-4 break-words`}>{children}</h2>
 );
 
 /** One product tile, used by both the Home preview and the Products grid. */
 const ProductTile = ({ product }: { product: NonNullable<PublicCompany['products']>[number] }) => (
     <div className="rounded-xl border border-slate-200 bg-white overflow-hidden flex flex-col">
-        <div className="h-36 bg-slate-50 flex items-center justify-center overflow-hidden">
+        <div className="h-28 sm:h-36 bg-slate-50 flex items-center justify-center overflow-hidden">
             {product.imageUrl ? (
                 <img
                     src={resolveMediaUrl(product.imageUrl)}
@@ -93,20 +92,20 @@ const ProductTile = ({ product }: { product: NonNullable<PublicCompany['products
                     className="w-full h-full object-cover"
                 />
             ) : (
-                <Package className="h-9 w-9 text-slate-300" />
+                <Package className="h-8 w-8 sm:h-9 sm:w-9 text-slate-300" />
             )}
         </div>
-        <div className="p-4 flex-1 flex flex-col">
-            <p className="font-semibold text-[1.25rem] text-slate-900 line-clamp-1">
+        <div className="p-3 sm:p-4 flex-1 flex flex-col min-w-0">
+            <p className="font-semibold text-[1.25rem] text-slate-900 line-clamp-1 break-all">
                 {product.name || 'Untitled product'}
             </p>
             <p className="text-[1.1875rem] text-slate-500 mt-0.5 line-clamp-1">
                 {product.category || 'General'}{product.sku ? ` · ${product.sku}` : ''}
             </p>
             {product.description ? (
-                <p className="text-[1.1875rem] text-slate-500 mt-2 line-clamp-2">{product.description}</p>
+                <p className="text-[1.1875rem] text-slate-500 mt-2 line-clamp-2 break-words">{product.description}</p>
             ) : null}
-            <div className="mt-auto pt-3 flex items-center justify-between">
+            <div className="mt-auto pt-3 flex flex-wrap items-center justify-between gap-1">
                 <span className="font-bold text-[1.25rem] text-blue-600 tabular-nums">
                     {money(product.price)}
                 </span>
@@ -272,7 +271,8 @@ export default function CompanyPublicView() {
                 <Button
                     type="button"
                     variant="outline"
-                    className="border-slate-200 text-slate-700 hover:bg-slate-50"
+                    className="border-slate-200 text-slate-700 hover:bg-slate-50 px-3 sm:px-4"
+                    aria-label="Back"
                     onClick={() => navigate(isOwner && cameFromOwner ? '/business/companies' : '/business/discover')}
                 >
                     <ArrowLeft className="h-4 w-4 sm:mr-2" />
@@ -280,7 +280,7 @@ export default function CompanyPublicView() {
                 </Button>
             }
         >
-            <div className="space-y-5">
+            <div className="space-y-4 sm:space-y-5">
                                 {/*
                     NO PREVIEW BAR.
 
@@ -319,13 +319,13 @@ export default function CompanyPublicView() {
                             src={resolveMediaUrl(company.banner)}
                             alt=""
                             onError={() => setBannerFailed(true)}
-                            className={`w-full h-32 sm:h-44 object-cover ${bannerFailed ? 'hidden' : ''}`}
+                            className={`w-full h-28 sm:h-44 object-cover ${bannerFailed ? 'hidden' : ''}`}
                         />
                     ) : null}
 
                     {(!company.banner || bannerFailed) && (
                         <div
-                            className="h-32 sm:h-44 bg-slate-100"
+                            className="h-28 sm:h-44 bg-slate-100"
                             style={{
                                 backgroundImage:
                                     'radial-gradient(circle at 1px 1px, rgba(100,116,139,0.18) 1px, transparent 0)',
@@ -334,32 +334,32 @@ export default function CompanyPublicView() {
                         />
                     )}
 
-                    <div className="px-5 sm:px-8 pb-6">
-                        <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-12 sm:-mt-14">
-                            <span className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-white border-4 border-white
+                    <div className="px-4 sm:px-8 pb-5 sm:pb-6">
+                        <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-10 sm:-mt-14">
+                            <span className="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl bg-white border-4 border-white
                                              shadow-sm overflow-hidden flex items-center justify-center shrink-0">
                                 {company.logo && !logoFailed ? (
                                     <img
                                         src={resolveMediaUrl(company.logo)}
                                         alt={company.businessName || 'Company'}
                                         onError={() => setLogoFailed(true)}
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-contain"
                                     />
                                 ) : (
-                                    <Building2 className="h-11 w-11 text-slate-300" />
+                                    <Building2 className="h-9 w-9 sm:h-11 sm:w-11 text-slate-300" />
                                 )}
                             </span>
                         </div>
 
-                        <div className="mt-4 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                        <div className="mt-3 sm:mt-4 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                             <div className="min-w-0">
-                                <h1 className="text-[2rem] sm:text-[2.5625rem] font-extrabold tracking-tight text-slate-900 break-words">
+                                <h1 className="text-[1.75rem] sm:text-[2.5625rem] font-extrabold tracking-tight text-slate-900 break-words">
                                     {company.businessName || 'Company'}
                                 </h1>
 
                                 {/* The one-line "who are you" — type, constitution,
                                     and the headline category if one is set. */}
-                                <p className="text-[1.375rem] text-slate-600 mt-1.5 font-medium">
+                                <p className="text-[1.25rem] sm:text-[1.375rem] text-slate-600 mt-1.5 font-medium break-words">
                                     {[
                                         company.businessType,
                                         company.constitutionType,
@@ -369,8 +369,8 @@ export default function CompanyPublicView() {
 
                                 <p className="text-[1.25rem] text-slate-500 mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
                                     {location ? (
-                                        <span className="inline-flex items-center gap-1.5">
-                                            <MapPin className="h-4 w-4" />
+                                        <span className="inline-flex min-w-0 items-center gap-1.5 break-words">
+                                            <MapPin className="h-4 w-4 shrink-0" />
                                             {location}
                                         </span>
                                     ) : null}
@@ -449,7 +449,7 @@ export default function CompanyPublicView() {
 
                     {/* --------------------------------------------- tabs */}
                     <div className="border-t border-slate-200 px-5 sm:px-8">
-                        <nav className="flex gap-6 -mb-px" aria-label="Company sections">
+                        <nav className="flex gap-5 sm:gap-6 -mb-px overflow-x-auto" aria-label="Company sections">
                             {TABS.map((entry) => {
                                 const active = tab === entry.key;
                                 return (
@@ -458,7 +458,7 @@ export default function CompanyPublicView() {
                                         type="button"
                                         onClick={() => setTab(entry.key)}
                                         aria-current={active ? 'page' : undefined}
-                                        className={`py-3 text-[1.25rem] font-semibold border-b-2 transition-colors ${active
+                                        className={`py-3 shrink-0 whitespace-nowrap text-[1.25rem] font-semibold border-b-2 transition-colors ${active
                                             ? 'border-blue-600 text-blue-700'
                                             : 'border-transparent text-slate-500 hover:text-slate-800'
                                             }`}
@@ -477,13 +477,13 @@ export default function CompanyPublicView() {
                 </Card>
 
                 {/* --------------------------------------- body: main + rail */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
-                    <div className="lg:col-span-2 space-y-5">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 items-start">
+                    <div className="lg:col-span-2 min-w-0 space-y-4 sm:space-y-5">
                         {tab === 'home' && (
                             <>
                                 <Card>
                                     <SectionTitle>Overview</SectionTitle>
-                                    <p className="text-[1.25rem] text-slate-600 leading-relaxed whitespace-pre-line">
+                                    <p className="text-[1.25rem] text-slate-600 leading-relaxed whitespace-pre-line break-words">
                                         {company.description
                                             || company.businessActivities
                                             || 'This company has not written an overview yet.'}
@@ -511,9 +511,9 @@ export default function CompanyPublicView() {
                                             {categories.map((category, index) => (
                                                 <li
                                                     key={`${category?.code || 'custom'}-${index}`}
-                                                    className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                                                    className="max-w-full min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
                                                 >
-                                                    <span className="block text-[1.25rem] text-slate-800">
+                                                    <span className="block text-[1.25rem] text-slate-800 break-words">
                                                         {category?.description || '—'}
                                                     </span>
                                                     <span className="block text-[1rem] text-slate-500 mt-0.5">
@@ -528,7 +528,7 @@ export default function CompanyPublicView() {
                                 )}
 
                                 <Card>
-                                    <div className="flex items-center justify-between mb-4">
+                                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-4">
                                         <h2 className={`${CARD_TITLE} text-slate-900`}>Products &amp; services</h2>
                                         {products.length > 3 ? (
                                             <button
@@ -547,7 +547,7 @@ export default function CompanyPublicView() {
                                             {isOwner ? ' Add some so other members can find you by what you sell.' : ''}
                                         </p>
                                     ) : (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                                             {products.slice(0, 3).map((product) => (
                                                 <ProductTile key={product._id} product={product} />
                                             ))}
@@ -560,11 +560,11 @@ export default function CompanyPublicView() {
                         {tab === 'about' && (
                             <Card>
                                 <SectionTitle>About {company.businessName}</SectionTitle>
-                                <p className="text-[1.25rem] text-slate-600 leading-relaxed whitespace-pre-line">
+                                <p className="text-[1.25rem] text-slate-600 leading-relaxed whitespace-pre-line break-words">
                                     {company.description || 'No overview provided.'}
                                 </p>
 
-                                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-6 pt-6 border-t border-slate-100">
+                                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-slate-100">
                                     <Detail label="Type of business" value={company.businessType} />
                                     <Detail label="Constitution" value={company.constitutionType} />
                                     <Detail label="Business activities" value={company.businessActivities} />
@@ -651,7 +651,7 @@ export default function CompanyPublicView() {
                                                 >
                                                     <Tag className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
                                                     <span className="min-w-0">
-                                                        <span className="block text-slate-800">
+                                                        <span className="block text-slate-800 break-words">
                                                             {category?.description || '—'}
                                                         </span>
                                                         <span className="block text-[1.1875rem] text-slate-500">
@@ -688,7 +688,7 @@ export default function CompanyPublicView() {
                                         ) : undefined}
                                     />
                                 ) : (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                                         {products.map((product) => (
                                             <ProductTile key={product._id} product={product} />
                                         ))}
@@ -699,14 +699,14 @@ export default function CompanyPublicView() {
                     </div>
 
                     {/* ------------------------------------------- right rail */}
-                    <div className="space-y-5">
+                    <div className="min-w-0 space-y-4 sm:space-y-5">
                         <Card>
                             <SectionTitle>Contact</SectionTitle>
                             <dl className="space-y-4 text-[1.25rem]">
                                 {company.mobileNumber ? (
                                     <div className="flex items-start gap-3">
                                         <Phone className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
-                                        <a href={`tel:${company.mobileNumber}`} className="text-slate-700 hover:underline">
+                                        <a href={`tel:${company.mobileNumber}`} className="text-slate-700 hover:underline break-words">
                                             {company.mobileNumber}
                                         </a>
                                     </div>
@@ -722,7 +722,7 @@ export default function CompanyPublicView() {
                                 {location ? (
                                     <div className="flex items-start gap-3">
                                         <MapPin className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
-                                        <span className="text-slate-700">{location}</span>
+                                        <span className="min-w-0 text-slate-700 break-words">{location}</span>
                                     </div>
                                 ) : null}
                                 {!company.mobileNumber && !company.email && !location ? (

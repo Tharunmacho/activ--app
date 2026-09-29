@@ -1,3 +1,4 @@
+import { galleryPath } from '@/lib/eventPath';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Search, X, ChevronLeft, ChevronRight, Images } from 'lucide-react';
@@ -117,15 +118,15 @@ export function RegionGallery() {
 
     return (
         <main className="flex-grow">
-            <div className={`${SCREEN_CONTAINER} py-10 md:py-14`}>
+            <div className={`${SCREEN_CONTAINER} py-6 sm:py-10 md:py-14`}>
                 <h1 className={`${SECTION_HEADING} text-brand-800 mb-2`}>Photo Gallery</h1>
-                <p className="text-[1.25rem] sm:text-[1.0625rem] font-semibold text-gray-600 mb-8">
+                <p className="text-[1rem] sm:text-[1.0625rem] font-semibold text-gray-600 mb-5 sm:mb-8">
                     Photographs from ACTIV events, meetings and programmes.
                 </p>
 
                 {/* ------------------------------------------------ filters */}
-                <div className={`${CARD} p-5 sm:p-6 mb-8`}>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)]">
+                <div className={`${CARD} p-4 sm:p-6 mb-5 sm:mb-8`}>
+                    <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)]">
                         <div>
                             <label htmlFor="g-category" className={`${ROW_LABEL} block mb-1.5`}>
                                 Category
@@ -181,7 +182,7 @@ export function RegionGallery() {
                                 />
                                 <button
                                     type="submit"
-                                    className="inline-flex h-12 items-center gap-2 rounded-xl bg-brand-800 px-5
+                                    className="inline-flex h-12 shrink-0 items-center gap-2 rounded-xl bg-brand-800 px-4 sm:px-5
                                                text-[1.0625rem] font-bold uppercase tracking-[0.1em] text-white
                                                transition-colors hover:bg-brand-700"
                                 >
@@ -208,7 +209,7 @@ export function RegionGallery() {
                                     key={chip.key}
                                     type="button"
                                     onClick={() => setFilter(chip.key, '')}
-                                    className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1.5
+                                    className="inline-flex max-w-full min-w-0 items-center gap-1.5 break-words text-left rounded-full bg-brand-50 px-3 py-1.5
                                                text-[1.0625rem] font-bold text-brand-700 transition-colors
                                                hover:bg-brand-100"
                                 >
@@ -230,17 +231,17 @@ export function RegionGallery() {
 
                 {/* -------------------------------------------------- grid */}
                 {loading ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 animate-pulse">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 animate-pulse">
                         {Array.from({ length: 8 }, (_, i) => (
                             <div key={i} className="aspect-[4/3] rounded-2xl bg-slate-100" />
                         ))}
                     </div>
                 ) : photos.length ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
                         {photos.map((photo) => (
                             <Link
                                 key={photo.id}
-                                to={`/gallery/${photo.id}`}
+                                to={galleryPath(photo)}
                                 className={`${CARD} group block overflow-hidden transition-shadow
                                             hover:shadow-[0_22px_48px_-20px_rgb(28_46_104/0.4)]`}
                             >
@@ -251,16 +252,16 @@ export function RegionGallery() {
                                         className="group-hover:scale-105 transition-transform duration-700 transform-gpu"
                                     />
                                 </div>
-                                <div className="px-4 py-3.5">
+                                <div className="px-3 py-2.5 sm:px-4 sm:py-3.5">
                                     {/* Title only, as the reference prints it.
                                         The rest is on the photograph's own page. */}
-                                    <p className="text-[1.0625rem] font-extrabold text-brand-900 line-clamp-2">
+                                    <p className="text-[0.9375rem] sm:text-[1.0625rem] font-extrabold text-brand-900 line-clamp-2 break-words">
                                         {photo.title || 'Untitled'}
                                     </p>
                                     {/* The state, not the category — see the note
                                         in `GallerySection`. */}
                                     {photo.state && (
-                                        <p className="mt-1 text-[1.0625rem] font-semibold text-gray-500">
+                                        <p className="mt-1 truncate text-[0.875rem] sm:text-[1.0625rem] font-semibold text-gray-500">
                                             {photo.state}
                                         </p>
                                     )}
@@ -269,7 +270,7 @@ export function RegionGallery() {
                         ))}
                     </div>
                 ) : (
-                    <div className={`${CARD} px-6 py-16 text-center`}>
+                    <div className={`${CARD} px-4 py-10 sm:px-6 sm:py-16 text-center`}>
                         <Images size={28} className="mx-auto text-gray-300 mb-4" />
                         <p className="text-[1.25rem] sm:text-[1.0625rem] font-extrabold text-brand-900">
                             No photographs match these filters
@@ -290,12 +291,12 @@ export function RegionGallery() {
 
                 {/* ---------------------------------------------- paging */}
                 {total > PAGE_SIZE && (
-                    <div className="mt-10 flex flex-wrap items-center justify-between gap-4">
+                    <div className="mt-8 sm:mt-10 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
                         <p className="text-[1.0625rem] font-semibold text-gray-500">
                             Showing <span className="font-extrabold text-brand-800">{from}–{to}</span>
                             {' '}of <span className="font-extrabold text-brand-800">{total}</span>
                         </p>
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                             <button
                                 type="button"
                                 disabled={offset <= 0}
@@ -305,7 +306,7 @@ export function RegionGallery() {
                                     if (back) next.set('offset', String(back)); else next.delete('offset');
                                     setParams(next);
                                 }}
-                                className="inline-flex items-center gap-2 rounded-full border border-brand-200 px-5
+                                className="inline-flex items-center gap-2 rounded-full border border-brand-200 px-4 sm:px-5
                                            py-2.5 text-[1.0625rem] font-bold uppercase tracking-[0.1em]
                                            text-brand-700 transition-colors hover:bg-brand-50
                                            disabled:opacity-40 disabled:cursor-not-allowed
@@ -321,7 +322,7 @@ export function RegionGallery() {
                                     next.set('offset', String(offset + PAGE_SIZE));
                                     setParams(next);
                                 }}
-                                className="inline-flex items-center gap-2 rounded-full bg-brand-800 px-5 py-2.5
+                                className="inline-flex items-center gap-2 rounded-full bg-brand-800 px-4 sm:px-5 py-2.5
                                            text-[1.0625rem] font-bold uppercase tracking-[0.1em] text-white
                                            transition-colors hover:bg-brand-700 disabled:opacity-40
                                            disabled:cursor-not-allowed disabled:hover:bg-brand-800"

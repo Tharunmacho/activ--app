@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { MapPin, Phone, Mail, Clock, Loader2, MessageSquare, User, FileText, Send } from 'lucide-react';
-import { getContactInfo, sendContactMessage, errorMessage, type ContactInfo } from '@/services/cmsApi';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { MapPin, Phone, Mail, Clock, Loader2, MessageSquare, User, FileText, Send, Navigation, ExternalLink, Building2 } from 'lucide-react';
+import { FaWhatsapp } from 'react-icons/fa6';
+import { getContactInfo, sendContactMessage, errorMessage, EMPTY_OFFICE, type ContactInfo, type ContactOffice } from '@/services/cmsApi';
+import SocialLinks from '@/components/shared/SocialLinks';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
 import { CmsIcon } from '@/components/shared/CmsIcon';
 import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
@@ -43,11 +45,75 @@ export function ContactFormSection() {
     /* Each card on the Contact screen can be removed — see `cmsSections`. */
     const removed = (key: string) => sectionHidden(info?.sections, key);
 
-    const addressLines = removed('contact.info') ? [] : (info?.addressLines || []);
-    const workingHours = removed('contact.info') ? [] : (info?.workingHours || []);
+    /*
+     * STATE-WISE OFFICES. The head office is first and selected by default; the
+     * switcher changes every detail and the map below. `?state=Kerala` opens
+     * that state's office directly. A page with no offices stored gets one built
+     * from the legacy fields, so nothing that was there disappears.
+     */
+    const offices: ContactOffice[] = useMemo(() => {
+        const list = (info?.offices || []).filter((o) => o.isActive !== false);
+        if (list.length) return list;
+        if (!info) return [];
+        const has = (info.addressLines || []).length || info.phone || info.email;
+        return has ? [{
+            ...EMPTY_OFFICE, id: 'head-office', label: 'Head Office', isHeadOffice: true,
+            addressLines: info.addressLines || [], phone: info.phone || '', alternatePhone: info.alternatePhone || '',
+            email: info.email || '', workingHours: info.workingHours || [],
+            mapEmbedUrl: info.mapEmbedUrl || '', mapLink: info.mapLink || '',
+        }] : [];
+    }, [info]);
+    const [params, setParams] = useSearchParams();
+    const wanted = (params.get('state') || '').trim().toLowerCase();
+    const [officeId, setOfficeId] = useState('');
+    const office: ContactOffice | null = offices.find((o) => o.id === officeId)
+        || (wanted ? offices.find((o) => (o.state || '').toLowerCase() === wanted) : undefined)
+        || offices.find((o) => o.isHeadOffice) || offices[0] || null;
+    const chooseOffice = (o: ContactOffice) => {
+        setOfficeId(o.id);
+        const next = new URLSearchParams(params);
+        if (o.isHeadOffice || !o.state) next.delete('state'); else next.set('state', o.state);
+        setParams(next, { replace: true });
+    };
+    const officeName = (o: ContactOffice) => (o.isHeadOffice ? (o.label || 'Head Office') : (o.label || o.state || 'Office'));
+
+    const addressLines = removed('contact.info') ? [] : (office?.addressLines || []);
+    const workingHours = removed('contact.info') ? [] : (office?.workingHours || []);
     const heroMedia = removed('contact.header') ? [] : (info?.heroMedia || []);
-    const phone = removed('contact.info') ? '' : (info?.phone || '');
-    const email = removed('contact.info') ? '' : (info?.email || '');
+    const phone = removed('contact.info') ? '' : (office?.phone || '');
+    const alternatePhone = removed('contact.info') ? '' : (office?.alternatePhone || '');
+    const email = removed('contact.info') ? '' : (office?.email || '');
+    const whatsapp = removed('contact.info') ? '' : (office?.whatsapp || '');
+    const whatsappHref = (() => {
+        let d = whatsapp.replace(/\D/g, '');
+        if (d.length === 10) d = `91${d}`;
+        return d.length >= 11 ? `https://wa.me/${d}` : '';
+    })();
+    const [mapFailed, setMapFailed] = useState(false);
+    const [mapReady, setMapReady] = useState(false);
+    useEffect(() => { setMapFailed(false); setMapReady(false); }, [office?.id]);
+
+    /*
+     * WARM THE MAP'S CONNECTIONS BEFORE THE FRAME ASKS FOR THEM.
+     *
+     * The embed is three origins deep (the frame, its script host, its tile
+     * host) and each costs a DNS + TLS handshake — on a phone that was most of
+     * the wait. Opening them while the contact details are still being fetched
+     * means the iframe starts with the sockets already up.
+     */
+    useEffect(() => {
+        const added: HTMLLinkElement[] = [];
+        for (const href of ['https://www.google.com', 'https://maps.gstatic.com', 'https://maps.googleapis.com', 'https://khms0.googleapis.com']) {
+            if (document.head.querySelector(`link[rel="preconnect"][href="${href}"]`)) continue;
+            const link = document.createElement('link');
+            link.rel = 'preconnect';
+            link.href = href;
+            link.crossOrigin = '';
+            document.head.appendChild(link);
+            added.push(link);
+        }
+        return () => { added.forEach((l) => l.remove()); };
+    }, []);
     const formCard = info?.formCard;
     const infoCard = removed('contact.info') ? undefined : info?.infoCard;
     const banner = removed('contact.banner') ? undefined : info?.banner;
@@ -92,7 +158,7 @@ export function ContactFormSection() {
         if (!show) return null;
         return (
             <>
-                <div className="flex gap-5 group">
+                <div className="flex gap-3 sm:gap-5 group">
                     <div className="w-10 h-10 bg-brand-50 rounded-full flex items-center justify-center shrink-0
                                     text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors">
                         {icon}
@@ -116,10 +182,10 @@ export function ContactFormSection() {
     const hasIntro = !removed('contact.header')
         && !!(info?.badgeText || info?.heading || info?.description || headerFields.length);
     const hasInfoCard = !!(addressLines.length || phone || email || workingHours.length
-        || infoCard?.title || infoFields.length);
+        || infoCard?.title || infoFields.length || offices.length);
 
     return (
-        <section className="w-full py-20 dot-band relative font-sans overflow-hidden">
+        <section className="w-full py-10 sm:py-20 dot-band relative font-sans overflow-hidden">
 
             {/* Decorative only — not authored. */}
             <div className="absolute top-0 right-0 w-1/3 h-full -z-10 opacity-30 pointer-events-none">
@@ -138,7 +204,7 @@ export function ContactFormSection() {
 
                 {/* ---- heading and collage ---- */}
                 {(hasIntro || heroMedia.length > 0) && (
-                    <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-8 mb-20 relative">
+                    <div className="flex flex-col lg:flex-row items-center gap-8 sm:gap-10 lg:gap-8 mb-10 sm:mb-20 relative">
 
                         {hasIntro && (
                             <div className={`w-full ${heroMedia.length ? 'lg:w-5/12' : ''} z-10`}>
@@ -151,7 +217,7 @@ export function ContactFormSection() {
                                 )}
 
                                 {(info?.heading || info?.headingHighlight) && (
-                                    <h2 className={`${SECTION_HEADING} text-[#111827] mb-6`}>
+                                    <h2 className={`${SECTION_HEADING} text-[#111827] mb-4 sm:mb-6 break-words`}>
                                         {info.heading}
                                         {info.headingHighlight && (
                                             <> <span className="text-brand-600">{info.headingHighlight}</span></>
@@ -184,12 +250,21 @@ export function ContactFormSection() {
 
                         {heroMedia.length > 0 && (
                             <div className={`w-full ${hasIntro ? 'lg:w-7/12' : ''} relative mt-8 lg:mt-0`}>
-                                <div className="relative h-[18.75rem] md:h-[25rem] w-full max-w-2xl ml-auto">
+                                {/* Phones: the first photograph alone, at its own shape and
+                                    whole — the overlapping collage crops people at 360px. */}
+                                <div className="relative h-auto sm:h-[18.75rem] md:h-[25rem] w-full max-w-2xl ml-auto">
                                     {heroMedia[0] && (
-                                        <div className="absolute top-0 right-10 w-[70%] h-full z-10">
-                                            <div className="w-full h-full rounded-3xl overflow-hidden border-[6px]
+                                        <div className="relative sm:absolute sm:top-0 sm:right-10 w-full sm:w-[70%] h-auto sm:h-full z-10">
+                                            {/* `sm:` on the offset: `right-10` on a relatively-positioned
+                                                box shifted the photo 40px off the left edge on phones. */}
+                                            <div className="w-full h-auto sm:h-full rounded-3xl overflow-hidden border-4 sm:border-[6px]
                                                             border-white shadow-xl bg-gray-100">
-                                                <CmsMediaFrame media={heroMedia[0]} priority width={560} />
+                                                <CmsMediaFrame
+                                                    media={heroMedia[0]}
+                                                    priority
+                                                    width={560}
+                                                    className="max-sm:!h-auto max-sm:max-h-[70vh] max-sm:!object-contain"
+                                                />
                                             </div>
                                         </div>
                                     )}
@@ -198,7 +273,7 @@ export function ContactFormSection() {
                                         of it fell off the side and the photograph was sliced down
                                         its right edge. */}
                                     {heroMedia[1] && (
-                                        <div className="absolute top-1/2 -translate-y-1/2 right-0 mr-0 sm:-mr-6
+                                        <div className="hidden sm:block absolute top-1/2 -translate-y-1/2 right-0 mr-0 sm:-mr-6
                                                         w-[45%] h-[55%]
                                                         z-20 rotate-3 shadow-2xl rounded-2xl bg-white p-1">
                                             <div className="w-full h-full rounded-[14px] overflow-hidden relative">
@@ -214,7 +289,7 @@ export function ContactFormSection() {
                 )}
 
                 {/* ---- the two cards ---- */}
-                <div className={`grid grid-cols-1 ${hasInfoCard ? 'lg:grid-cols-2' : ''} gap-8 mb-10`}>
+                <div className={`grid grid-cols-1 ${hasInfoCard ? 'lg:grid-cols-2' : ''} gap-5 sm:gap-8 mb-8 sm:mb-10`}>
 
                     {/* Form. Revealed but never tilted: a panel that shifts under the
                         pointer while somebody is filling in a field is an obstacle,
@@ -223,18 +298,18 @@ export function ContactFormSection() {
                         variant="left"
                         className="bg-white rounded-[2rem] border border-brand-100/70
                                    shadow-[0_14px_46px_-16px_rgb(28_46_104/0.22)]
-                                   p-8 md:p-10 flex flex-col"
+                                   p-4 sm:p-8 md:p-10 flex flex-col lg:self-start lg:sticky lg:top-28"
                     >
 
                         {(formCard?.title || formCard?.subtitle) && (
-                            <div className="flex items-start gap-4 mb-8">
+                            <div className="flex items-start gap-3 sm:gap-4 mb-6 sm:mb-8">
                                 <div className="w-12 h-12 bg-brand-50 text-brand-600 rounded-xl flex items-center
                                                 justify-center shrink-0">
                                     <CmsIcon name={formCard.icon} size={24} fallback="send" />
                                 </div>
                                 <div>
                                     {formCard.title && (
-                                        <h3 className="text-[1.5625rem] font-extrabold tracking-tight text-[#111827]">
+                                        <h3 className="text-[1.375rem] sm:text-[1.5625rem] font-extrabold tracking-tight text-[#111827]">
                                             {formCard.title}
                                         </h3>
                                     )}
@@ -247,7 +322,10 @@ export function ContactFormSection() {
                             </div>
                         )}
 
-                        <form onSubmit={handleSubmit} className="flex flex-col gap-5 flex-grow">
+                        {/* Natural height: the form no longer stretches to the office card's
+                            height (that left a tall empty message box), and stays in view
+                            beside it while the office details scroll. */}
+                        <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:gap-5">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -296,22 +374,22 @@ export function ContactFormSection() {
                                 </div>
                             </div>
 
-                            <div className="relative flex-grow">
+                            <div className="relative">
                                 <div className="absolute top-4 left-4 flex items-start pointer-events-none">
                                     <MessageSquare size={18} className="text-gray-400" />
                                 </div>
                                 <textarea
-                                    placeholder={formCard?.messagePlaceholder || 'Your Message'} rows={5} value={form.message}
+                                    placeholder={formCard?.messagePlaceholder || 'Your Message'} rows={6} value={form.message}
                                     onChange={e => setForm({ ...form, message: e.target.value })}
-                                    className={`${inputClass} resize-none h-full min-h-[8.75rem]`}
+                                    className={`${inputClass} resize-y min-h-[10rem]`}
                                 />
                             </div>
 
                             <div className="pt-2">
                                 <button
                                     type="submit" disabled={sending}
-                                    className="bg-brand-900 hover:bg-brand-900 text-white px-9 py-4 rounded-xl text-[1.25rem]
-                                               font-semibold transition-all inline-flex items-center gap-2 shadow-lg
+                                    className="bg-brand-900 hover:bg-brand-900 text-white px-6 sm:px-9 py-3.5 sm:py-4 rounded-xl text-[1.25rem]
+                                               font-semibold transition-all inline-flex w-full sm:w-auto justify-center items-center gap-2 shadow-lg
                                                shadow-brand-900/20 disabled:opacity-70"
                                 >
                                     {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
@@ -341,18 +419,18 @@ export function ContactFormSection() {
                             delay={120}
                             className="bg-white rounded-[2rem] border border-brand-100/70
                                        shadow-[0_14px_46px_-16px_rgb(28_46_104/0.22)]
-                                       p-8 md:p-10 flex flex-col"
+                                       p-4 sm:p-8 md:p-10 flex flex-col"
                         >
 
                             {(infoCard?.title || infoCard?.subtitle) && (
-                                <div className="flex items-start gap-4 mb-10">
+                                <div className="flex items-start gap-3 sm:gap-4 mb-6 sm:mb-10">
                                     <div className="w-12 h-12 bg-brand-50 text-brand-600 rounded-xl flex items-center
                                                     justify-center shrink-0">
                                         <CmsIcon name={infoCard.icon} size={24} fallback="users" />
                                     </div>
                                     <div>
                                         {infoCard.title && (
-                                            <h3 className="text-[1.5625rem] font-extrabold tracking-tight text-[#111827]">
+                                            <h3 className="text-[1.375rem] sm:text-[1.5625rem] font-extrabold tracking-tight text-[#111827]">
                                                 {infoCard.title}
                                             </h3>
                                         )}
@@ -365,9 +443,51 @@ export function ContactFormSection() {
                                 </div>
                             )}
 
-                            <div className="space-y-8 pl-1">
+                            {offices.length > 1 && (
+                                <div className="mb-6 sm:mb-8">
+                                    {/* Phones: a select — seven pills do not fit 360px. */}
+                                    <label className="sm:hidden block">
+                                        <span className="mb-1.5 block text-[0.9375rem] font-bold text-gray-500">Choose an office</span>
+                                        <select
+                                            value={office?.id || ''}
+                                            onChange={(e) => { const o = offices.find((x) => x.id === e.target.value); if (o) chooseOffice(o); }}
+                                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-base font-semibold text-[#111827]
+                                                       focus:outline-none focus:ring-2 focus:ring-brand-600"
+                                        >
+                                            {offices.map((o) => (
+                                                <option key={o.id} value={o.id}>
+                                                    {officeName(o)}{o.isHeadOffice && o.state ? ` · ${o.state}` : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                    <div role="tablist" aria-label="Offices" className="hidden sm:flex flex-wrap gap-2">
+                                        {offices.map((o) => {
+                                            const on = o.id === office?.id;
+                                            return (
+                                                <button
+                                                    key={o.id}
+                                                    type="button"
+                                                    role="tab"
+                                                    aria-selected={on}
+                                                    onClick={() => chooseOffice(o)}
+                                                    className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[1rem] font-semibold transition-colors ${on
+                                                        ? 'bg-brand-900 text-white shadow-md'
+                                                        : 'bg-brand-50 text-brand-700 hover:bg-brand-100'}`}
+                                                >
+                                                    {o.isHeadOffice ? <Building2 size={15} /> : <MapPin size={15} />}
+                                                    {officeName(o)}
+                                                    {o.isHeadOffice && o.state ? <span className={on ? 'text-white/70' : 'text-brand-500'}>· {o.state}</span> : null}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="space-y-6 sm:space-y-8 pl-1">
                                 {detail(
-                                    infoCard?.addressLabel || '',
+                                    offices.length > 1 && office ? officeName(office) : (infoCard?.addressLabel || ''),
                                     <MapPin size={18} />,
                                     <p className="text-[1.25rem] font-semibold text-gray-700 leading-relaxed
                                                   max-w-md">
@@ -385,7 +505,7 @@ export function ContactFormSection() {
                                     infoCard?.phoneLabel || '',
                                     <Phone size={18} />,
                                     <div className="text-[1.125rem] font-semibold text-gray-700 space-y-1">
-                                        {[phone, info?.alternatePhone].filter(Boolean).map((p, i) => (
+                                        {[phone, alternatePhone].filter(Boolean).map((p, i) => (
                                             <p key={i}>
                                                 <a
                                                     href={`tel:${(p || '').replace(/\s+/g, '')}`}
@@ -404,12 +524,26 @@ export function ContactFormSection() {
                                     <Mail size={18} />,
                                     <a
                                         href={`mailto:${email}`}
-                                        className="block py-3 -my-1.5 text-[1.125rem] font-semibold text-gray-700
+                                        className="block py-3 -my-1.5 text-[1.125rem] font-semibold text-gray-700 break-all
                                                    hover:text-brand-600 transition-colors"
                                     >
                                         {email}
                                     </a>,
                                     !!email,
+                                )}
+
+                                {detail(
+                                    'WhatsApp',
+                                    <FaWhatsapp size={18} />,
+                                    <a
+                                        href={whatsappHref}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block py-3 -my-1.5 text-[1.125rem] font-semibold text-gray-700 hover:text-brand-600 transition-colors"
+                                    >
+                                        {whatsapp}
+                                    </a>,
+                                    !!whatsappHref,
                                 )}
 
                                 {detail(
@@ -439,36 +573,120 @@ export function ContactFormSection() {
                                 />
                             </div>
 
-                            {info?.mapEmbedUrl && (
-                                <div className="mt-8 rounded-2xl overflow-hidden border border-gray-100 h-56">
-                                    <iframe
-                                        src={info.mapEmbedUrl}
-                                        title="Head office location"
-                                        className="w-full h-full border-0"
-                                        loading="lazy"
-                                        referrerPolicy="no-referrer-when-downgrade"
-                                    />
+                            {/*
+                              THE MAP — the chosen office's. `mapEmbedUrl` is always a
+                              frameable Google URL (the server turns a pasted share link,
+                              embed code or address into one). If it cannot load, the
+                              address and the buttons below still get the visitor there.
+                            */}
+                            {office && (office.mapEmbedUrl || office.mapLink) && (
+                                <div className="mt-8">
+                                    {office.mapEmbedUrl && !mapFailed ? (
+                                        <div className="relative w-full overflow-hidden rounded-2xl border border-gray-100 bg-brand-50 aspect-[16/10]">
+                                            {/* Until the frame reports in: a calm placeholder
+                                                rather than a blank tile, gone the moment it loads. */}
+                                            {!mapReady && (
+                                                <div aria-hidden="true" className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-brand-50 animate-pulse">
+                                                    <MapPin size={28} className="text-brand-400" />
+                                                    <span className="text-[0.9375rem] font-semibold text-brand-700/70">Loading map…</span>
+                                                </div>
+                                            )}
+                                            {/* Eager, not lazy: the map is what this page is for,
+                                                and `lazy` held the request back until the visitor
+                                                had already scrolled to an empty box. The referrer
+                                                policy is the one Google's own embed code carries. */}
+                                            <iframe
+                                                key={office.id}
+                                                src={office.mapEmbedUrl}
+                                                title={`Map — ${officeName(office)}${office.state ? `, ${office.state}` : ''}`}
+                                                className={`absolute inset-0 h-full w-full border-0 transition-opacity duration-300 ${mapReady ? 'opacity-100' : 'opacity-0'}`}
+                                                loading="eager"
+                                                allowFullScreen
+                                                referrerPolicy="strict-origin-when-cross-origin"
+                                                onLoad={() => setMapReady(true)}
+                                                onError={() => setMapFailed(true)}
+                                            />
+                                            {/* Tapping the map opens Google Maps directions FROM the
+                                                visitor's current location to this office. */}
+                                            <a
+                                                href={office.directionsUrl
+                                                    || `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addressLines.join(', '))}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                aria-label={`Directions to ${officeName(office)} from your location`}
+                                                className="group absolute inset-0 z-10 flex items-end justify-center p-3"
+                                            >
+                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3.5 py-2 text-[0.9375rem]
+                                                                 font-semibold text-brand-800 shadow-md ring-1 ring-brand-100 transition group-hover:bg-brand-900 group-hover:text-white">
+                                                    <Navigation size={15} /> Tap for directions from your location
+                                                </span>
+                                            </a>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-start gap-3 rounded-2xl border border-dashed border-brand-200 bg-brand-50/60 p-4">
+                                            <MapPin size={18} className="mt-1 shrink-0 text-brand-600" />
+                                            <p className="text-[1.0625rem] font-semibold text-gray-700">{addressLines.join(', ') || 'Location'}</p>
+                                        </div>
+                                    )}
+                                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                                        {office.mapLink && (
+                                            <a
+                                                href={office.mapLink}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-brand-200
+                                                           bg-white px-4 text-[1.0625rem] font-semibold text-brand-700 hover:bg-brand-50 transition-colors"
+                                            >
+                                                <ExternalLink size={16} /> Open in Google Maps
+                                            </a>
+                                        )}
+                                        {/* Directions start from the visitor's CURRENT location: a
+                                            /maps/dir link with a destination and NO origin. Built from
+                                            the address when the office carries no saved link. */}
+                                        {(office.directionsUrl || addressLines.length > 0) && (
+                                            <a
+                                                href={office.directionsUrl
+                                                    || `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addressLines.join(', '))}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-brand-900 px-4
+                                                           text-[1.0625rem] font-semibold text-white shadow-md hover:brightness-110 transition"
+                                            >
+                                                <Navigation size={16} /> Get directions
+                                            </a>
+                                        )}
+                                    </div>
                                 </div>
                             )}
+
+                            {/* The association's social profiles — only those that are set. */}
+                            <div className="mt-8 border-t border-dashed border-gray-200 pt-6 empty:hidden">
+                                <SocialLinks />
+                            </div>
                         </Reveal>
                     )}
                 </div>
 
                 {/* ---- the strip at the foot ---- */}
                 {banner?.enabled && (banner.title || banner.ctaLabel) && (
-                    <div className="bg-[#f8fafc] rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center
-                                    justify-between gap-6 border border-gray-100">
-                        <div className="flex items-center gap-5">
-                            <div className="w-14 h-14 bg-brand-100 text-brand-600 rounded-2xl flex items-center
+                    /* A real card: the pale-grey strip sat on a pale-grey page and read as
+                       faded. The brand navy -> blue gradient, like the site's other calls to action. */
+                    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0b1f5c] via-[#1e3a8a] to-[#2563eb]
+                                    p-5 sm:p-7 md:p-9 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6
+                                    text-white shadow-[0_18px_44px_-18px_rgba(30,58,138,0.65)]">
+                        <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-sky-300/20 blur-3xl" />
+                        <div aria-hidden="true" className="pointer-events-none absolute -bottom-20 left-1/3 h-48 w-48 rounded-full bg-blue-400/20 blur-3xl" />
+                        <div className="relative flex items-center gap-3 sm:gap-5 min-w-0">
+                            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/15 text-white ring-1 ring-white/25 rounded-2xl flex items-center
                                             justify-center shrink-0">
                                 <CmsIcon name={banner.icon} size={28} fallback="users" />
                             </div>
                             <div>
                                 {banner.title && (
-                                    <h3 className="text-[1.375rem] md:text-[1.5625rem] font-bold text-[#111827]">{banner.title}</h3>
+                                    <h3 className="text-[1.375rem] md:text-[1.75rem] font-bold text-white">{banner.title}</h3>
                                 )}
                                 {banner.subtitle && (
-                                    <p className="text-[1.125rem] font-medium text-gray-600 mt-1">
+                                    <p className="text-[1.125rem] font-medium text-blue-100 mt-1">
                                         {banner.subtitle}
                                     </p>
                                 )}
@@ -480,16 +698,16 @@ export function ContactFormSection() {
                                 ? (
                                     <Link
                                         to={banner.ctaHref}
-                                        className="bg-brand-900 hover:bg-brand-900 text-white px-7 py-3.5 rounded-xl text-[1.25rem]
-                                                   font-semibold transition-all whitespace-nowrap shrink-0 shadow-md"
+                                        className="relative bg-white text-brand-900 hover:bg-blue-50 px-7 py-3.5 rounded-xl text-[1.25rem] text-center
+                                                   font-bold transition-all hover:-translate-y-0.5 sm:whitespace-nowrap shrink-0 shadow-lg"
                                     >
                                         {banner.ctaLabel}
                                     </Link>
                                 ) : (
                                     <a
                                         href={banner.ctaHref || '#'}
-                                        className="bg-brand-900 hover:bg-brand-900 text-white px-7 py-3.5 rounded-xl text-[1.25rem]
-                                                   font-semibold transition-all whitespace-nowrap shrink-0 shadow-md"
+                                        className="relative bg-white text-brand-900 hover:bg-blue-50 px-7 py-3.5 rounded-xl text-[1.25rem] text-center
+                                                   font-bold transition-all hover:-translate-y-0.5 sm:whitespace-nowrap shrink-0 shadow-lg"
                                     >
                                         {banner.ctaLabel}
                                     </a>

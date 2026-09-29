@@ -26,7 +26,7 @@ import { apiFetch } from "@/services/activApi";
 import { resolveMediaUrl } from "@/config/api.config";
 import { useActiveCompanyStore } from "@/contexts/ActiveCompanyContext";
 
-import { CARD_TITLE } from '@/components/layout/appTypography';
+import { CARD_TITLE } from './BusinessUI';
 interface Company {
   _id: string;
   businessName: string;
@@ -85,7 +85,7 @@ const MyCompanies = () => {
 
       if (response.ok) {
         const result = await response.json();
-        setCompanies(result.data || []);
+        setCompanies(Array.isArray(result?.data) ? result.data : []);
       }
 
       // Keep the shared selection in step: a company deleted elsewhere must not
@@ -148,11 +148,12 @@ const MyCompanies = () => {
       width="wide"
       actions={
         <Button
-          className="bg-blue-600 hover:bg-blue-700"
+          className="bg-blue-600 hover:bg-blue-700 px-3 sm:px-4"
           onClick={() => navigate("/business/companies/add")}
+          aria-label="Add Company"
         >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Company
+          <Plus className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">Add Company</span>
         </Button>
       }
     >
@@ -176,7 +177,7 @@ const MyCompanies = () => {
           />
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-5 items-start">
           {companies.map((company) => {
             const status = (company.status || 'pending').toLowerCase();
             const isActive = activeCompanyId === company._id;
@@ -216,7 +217,7 @@ const MyCompanies = () => {
                     <button
                       type="button"
                       aria-label={`Actions for ${companyName(company)}`}
-                      className="absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center
+                      className="absolute top-2 right-2 sm:top-4 sm:right-4 w-10 h-10 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center
                                  text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                     >
                       <MoreVertical className="h-4 w-4" />
@@ -256,18 +257,18 @@ const MyCompanies = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <div className="flex items-start gap-4">
-                  <span className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <span className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
                     {/* Stored as a relative `/uploads/...` path, which belongs to
                         the API origin rather than to this site. */}
                     {company.logo ? (
                       <img
                         src={resolveMediaUrl(company.logo)}
                         alt={companyName(company)}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                     ) : (
-                      <Building2 className="h-7 w-7 text-slate-400" />
+                      <Building2 className="h-6 w-6 sm:h-7 sm:w-7 text-slate-400" />
                     )}
                   </span>
                   {/* `pr-8` so a long name stops short of the ⋮ rather than
@@ -281,7 +282,7 @@ const MyCompanies = () => {
                   </div>
                 </div>
 
-                <div className="mt-4">
+                <div className="mt-3 sm:mt-4">
                   <Chip tone={STATUS_TONES[status] || 'amber'}>
                     <span className="capitalize">{status}</span>
                   </Chip>
@@ -295,12 +296,12 @@ const MyCompanies = () => {
                     than space left out.
                 */}
 
-                <div className="mt-5 pt-4 border-t border-slate-100">
+                <div className="mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-slate-100">
                   {isActive ? (
                     <Button
                       size="sm"
                       variant="outline"
-                      className="w-full border-slate-200 text-slate-700 hover:bg-slate-50"
+                      className="w-full h-10 sm:h-9 border-slate-200 text-slate-700 hover:bg-slate-50"
                       onClick={() => navigate(`/business/company/${company._id}?preview=1`)}
                     >
                       <Eye className="h-4 w-4 mr-1.5" />
@@ -309,7 +310,7 @@ const MyCompanies = () => {
                   ) : (
                     <Button
                       size="sm"
-                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      className="w-full h-10 sm:h-9 bg-blue-600 hover:bg-blue-700"
                       onClick={() => handleSetActive(company._id)}
                     >
                       Switch to this company
@@ -323,7 +324,7 @@ const MyCompanies = () => {
       )}
 
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[calc(100vw-2rem)] max-w-lg rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Company</AlertDialogTitle>
             <AlertDialogDescription>

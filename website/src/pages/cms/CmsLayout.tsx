@@ -113,7 +113,33 @@ const TITLES: Record<string, string> = {
     '/cms/leader-messages': 'Leader enquiries',
 };
 
-const THEME_KEY = 'cms_theme';
+/** One row on the bell: a new contact-form message or a message to a leader. */
+interface CmsNote {
+    id: string;
+    kind: 'contact' | 'leader';
+    title: string;
+    text: string;
+    at: string;
+    to: string;
+}
+
+/** "5m ago", "3h ago", "12 Oct". */
+const ago = (value: string) => {
+    const t = new Date(value).getTime();
+    if (!Number.isFinite(t)) return '';
+    const mins = Math.round((Date.now() - t) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    if (mins < 60 * 24) return `${Math.round(mins / 60)}h ago`;
+    return new Date(t).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+};
+
+/*
+ * `_v2`: the panel opens LIGHT. The old key held 'dark' for every editor,
+ * because dark was the default and the choice was saved on every visit, so a
+ * new default under the old key would never have reached anybody.
+ */
+const THEME_KEY = 'cms_theme_v2';
 
 export default function CmsLayout() {
     const navigate = useNavigate();
@@ -136,7 +162,7 @@ export default function CmsLayout() {
      * while a request is in flight.
      */
     const [dark, setDark] = useState(() => {
-        try { return localStorage.getItem(THEME_KEY) !== 'light'; } catch { return true; }
+        try { return localStorage.getItem(THEME_KEY) === 'dark'; } catch { return false; }
     });
 
     const role = getStoredRole();
@@ -197,17 +223,55 @@ export default function CmsLayout() {
 
     // The inbox count is the one number worth carrying on every screen: a
     // message nobody notices is the same as one never sent.
+    /*
+     * THE BELL: every new message, from BOTH inboxes — the contact form and the
+     * messages written to a leader on a region or state page. It only ever
+     * counted the first, so a leader enquiry arrived with nothing on the bell.
+     * Refreshed on every navigation and once a minute, so a message that lands
+     * while an editor is working still shows up.
+     */
+    const [notes, setNotes] = useState<CmsNote[]>([]);
+    const [notesOpen, setNotesOpen] = useState(false);
     useEffect(() => {
         let cancelled = false;
-        listContactMessages({ limit: 1 })
-            .then((r) => { if (!cancelled) setUnread(r.unread || 0); })
-            .catch(() => { /* a badge is not worth an error */ });
+        const load = () => {
+            listContactMessages({ status: 'new', limit: 6 })
+                .then((r) => {
+                    if (cancelled) return;
+                    setUnread(r.unread || 0);
+                    setNotes((prev) => [
+                        ...prev.filter((n) => n.kind !== 'contact'),
+                        ...(r.messages || []).map((m) => ({
+                            id: m._id, kind: 'contact' as const, at: m.createdAt,
+                            title: `${m.name || m.email || 'Website visitor'} · ${m.source === 'member_dashboard' ? 'Member dashboard' : 'Website'}`,
+                            text: m.subject || m.message || '', to: '/cms/messages',
+                        })),
+                    ]);
+                })
+                .catch(() => { /* a badge is not worth an error */ });
 
-        listLeaderMessages({ limit: 1 })
-            .then((r) => { if (!cancelled) setLeaderUnread(r.unread || 0); })
-            .catch(() => { /* likewise */ });
-        return () => { cancelled = true; };
+            listLeaderMessages({ status: 'new', limit: 6 })
+                .then((r) => {
+                    if (cancelled) return;
+                    setLeaderUnread(r.unread || 0);
+                    setNotes((prev) => [
+                        ...prev.filter((n) => n.kind !== 'leader'),
+                        ...(r.messages || []).map((m) => ({
+                            id: m._id, kind: 'leader' as const, at: m.createdAt || '',
+                            title: m.sender?.name || 'A visitor',
+                            text: `To ${m.leader?.name || 'a leader'}${m.purposeLabel ? ` · ${m.purposeLabel}` : ''}`,
+                            to: '/cms/leader-messages',
+                        })),
+                    ]);
+                })
+                .catch(() => { /* likewise */ });
+        };
+        load();
+        const timer = window.setInterval(load, 60_000);
+        return () => { cancelled = true; window.clearInterval(timer); };
     }, [location.pathname]);
+
+    useEffect(() => { setNotesOpen(false); }, [location.pathname]);
 
     // Close the drawer on navigation, or it stays open over the new screen.
     useEffect(() => { setDrawer(false); setQuery(''); }, [location.pathname]);
@@ -352,15 +416,15 @@ export default function CmsLayout() {
         // `h-screen overflow-hidden`, not `min-h-screen`. The rail and the working
         // area are two independent scroll regions; with a growing page height they
         // scrolled together, which carried the rail's footer off the bottom.
-        <div className={`h-screen overflow-hidden flex font-sans ${dark ? 'dark ' : ''}${t.shell}`}>
+        <div className={`h-[100dvh] overflow-hidden flex font-sans ${dark ? 'dark ' : ''}${t.shell}`}>
             {drawer && (
                 <div className="fixed inset-0 bg-black/70 z-30 lg:hidden" onClick={() => setDrawer(false)} />
             )}
 
             {/* ======================================================= sidebar */}
             <aside
-                className={`fixed lg:sticky lg:top-0 inset-y-0 left-0 z-40 w-[20rem] shrink-0 border-r
-                            h-screen min-h-0 flex flex-col transition-transform duration-200 ${t.side}
+                className={`fixed lg:sticky lg:top-0 inset-y-0 left-0 z-40 w-[min(20rem,85vw)] lg:w-[20rem] shrink-0 border-r
+                            h-[100dvh] min-h-0 flex flex-col transition-transform duration-200 ${t.side}
                             ${drawer ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
             >
                 {/*
@@ -396,7 +460,8 @@ export default function CmsLayout() {
                     )}
 
                     <button
-                        className={`lg:hidden absolute right-4 top-1/2 -translate-y-1/2 ${t.muted}`}
+                        className={`lg:hidden absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center
+                                    justify-center ${t.muted}`}
                         onClick={() => setDrawer(false)}
                         aria-label="Close menu"
                     >
@@ -478,7 +543,8 @@ export default function CmsLayout() {
             <div className="flex-1 min-w-0 min-h-0 flex flex-col">
                 <header className={`h-[5.5rem] shrink-0 border-b flex items-center gap-2 sm:gap-3 px-4 sm:px-5 lg:px-8
                                     backdrop-blur ${t.head}`}>
-                    <button className={`lg:hidden ${t.muted}`} onClick={() => setDrawer(true)} aria-label="Open menu">
+                    <button className={`lg:hidden -ml-2 w-10 h-10 shrink-0 flex items-center justify-center ${t.muted}`}
+                            onClick={() => setDrawer(true)} aria-label="Open menu">
                         <Menu className="w-5 h-5" />
                     </button>
 
@@ -522,7 +588,7 @@ export default function CmsLayout() {
                         )}
                     </div>
 
-                    <h1 className={`sm:hidden font-display ${PAGE_TITLE} ${t.title}`}>
+                    <h1 className={`sm:hidden min-w-0 truncate font-display ${PAGE_TITLE} ${t.title}`}>
                         {pageTitle}
                     </h1>
 
@@ -535,26 +601,96 @@ export default function CmsLayout() {
                             Live
                         </span>
 
-                        <NavLink
-                            to="/cms/messages"
-                            aria-label={`Inbox${unread ? `, ${unread} unread` : ''}`}
-                            className={`relative w-9 h-9 rounded-full border flex items-center justify-center
+                        {/* Light / dark — here as well as in the rail, so it is one
+                            tap away on a phone without opening the menu. */}
+                        <button
+                            type="button"
+                            onClick={() => setDark((v) => !v)}
+                            aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
+                            className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full border flex items-center justify-center
                                         transition-colors ${t.card} ${t.muted} ${t.iconHover}`}
                         >
-                            <Bell className="w-4 h-4" />
-                            {unread > 0 && (
-                                <span className="absolute -top-1 -right-1 min-w-[1.125rem] text-[1.0625rem]
-                                                 font-bold bg-[#DC2626] text-white rounded-full px-1 py-0.5">
-                                    {unread}
-                                </span>
+                            {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                        </button>
+
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setNotesOpen((v) => !v)}
+                                aria-expanded={notesOpen}
+                                aria-label={`Notifications${unread + leaderUnread ? `, ${unread + leaderUnread} new` : ''}`}
+                                className={`relative w-10 h-10 sm:w-9 sm:h-9 rounded-full border flex items-center justify-center
+                                            transition-colors ${t.card} ${t.muted} ${t.iconHover}`}
+                            >
+                                <Bell className="w-4 h-4" />
+                                {unread + leaderUnread > 0 && (
+                                    <span className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 grid place-items-center
+                                                     text-[0.7rem] font-bold bg-[#DC2626] text-white rounded-full px-1
+                                                     ring-2 ring-white dark:ring-[#0a0a0a]">
+                                        {unread + leaderUnread > 99 ? '99+' : unread + leaderUnread}
+                                    </span>
+                                )}
+                            </button>
+
+                            {notesOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setNotesOpen(false)} aria-hidden="true" />
+                                    <div className={`absolute right-0 top-[calc(100%+0.5rem)] z-50 w-[min(22rem,calc(100vw-2rem))]
+                                                     rounded-2xl border shadow-2xl overflow-hidden ${t.card}`}>
+                                        <div className={`flex items-center justify-between px-4 py-3 border-b ${t.divide}`}>
+                                            <span className={`text-[1rem] font-bold ${t.title}`}>Notifications</span>
+                                            <span className={`text-[0.85rem] ${t.muted}`}>
+                                                {unread + leaderUnread ? `${unread + leaderUnread} new` : 'All caught up'}
+                                            </span>
+                                        </div>
+                                        <div className="max-h-[60vh] overflow-y-auto">
+                                            {notes.length === 0 ? (
+                                                <p className={`px-4 py-8 text-center text-[0.95rem] ${t.muted}`}>
+                                                    No new messages.
+                                                </p>
+                                            ) : [...notes]
+                                                .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+                                                .map((n) => (
+                                                    <button
+                                                        key={`${n.kind}-${n.id}`}
+                                                        type="button"
+                                                        onClick={() => navigate(n.to)}
+                                                        className={`w-full flex items-start gap-3 px-4 py-3 text-left border-b last:border-0
+                                                                    ${t.divide} ${t.item}`}
+                                                    >
+                                                        <span className={`mt-0.5 w-8 h-8 shrink-0 rounded-full grid place-items-center
+                                                                          ${n.kind === 'contact' ? 'bg-blue-500/15 text-blue-500' : 'bg-emerald-500/15 text-emerald-500'}`}>
+                                                            {n.kind === 'contact' ? <Inbox className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
+                                                        </span>
+                                                        <span className="min-w-0 flex-1">
+                                                            <span className={`block text-[0.95rem] font-semibold truncate ${t.title}`}>{n.title}</span>
+                                                            <span className={`block text-[0.85rem] truncate ${t.muted}`}>{n.text}</span>
+                                                            <span className={`block text-[0.75rem] mt-0.5 ${t.faint}`}>
+                                                                {n.kind === 'contact' ? 'Contact form' : 'Leader message'} · {ago(n.at)}
+                                                            </span>
+                                                        </span>
+                                                    </button>
+                                                ))}
+                                        </div>
+                                        <div className={`grid grid-cols-2 border-t ${t.divide}`}>
+                                            <NavLink to="/cms/messages" className={`px-4 py-2.5 text-center text-[0.85rem] font-semibold text-[#2563EB] ${t.item}`}>
+                                                Inbox{unread ? ` (${unread})` : ''}
+                                            </NavLink>
+                                            <NavLink to="/cms/leader-messages" className={`px-4 py-2.5 text-center text-[0.85rem] font-semibold text-[#2563EB] border-l ${t.divide} ${t.item}`}>
+                                                Leader messages{leaderUnread ? ` (${leaderUnread})` : ''}
+                                            </NavLink>
+                                        </div>
+                                    </div>
+                                </>
                             )}
-                        </NavLink>
+                        </div>
 
                         <a
                             href="/"
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-[#2563EB]
+                            aria-label="View site"
+                            className="inline-flex items-center justify-center gap-2 h-10 sm:h-11 min-w-[2.5rem] px-3 sm:px-5 rounded-xl bg-[#2563EB]
                                        hover:bg-[#1D4ED8] text-white text-[1.1875rem] font-semibold
                                        transition-colors"
                         >

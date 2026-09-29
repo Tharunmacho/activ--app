@@ -47,7 +47,7 @@ export default function MockPayment() {
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}
-          className="mb-6 text-slate-600 hover:text-slate-900 hover:bg-white/50"
+          className="mb-4 sm:mb-6 text-slate-600 hover:text-slate-900 hover:bg-white/50"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
@@ -63,14 +63,14 @@ export default function MockPayment() {
         >
           {/* Left Panel - Payment Info */}
           <div
-            className="p-8 lg:p-10"
+            className="p-5 sm:p-8 lg:p-10"
             style={{
               background: 'linear-gradient(145deg, #0f766e 0%, #134e4a 100%)'
             }}
           >
             <div className="h-full flex flex-col">
               {/* Logo/Brand */}
-              <div className="flex items-center gap-3 mb-10">
+              <div className="flex items-center gap-3 mb-6 sm:mb-10">
                 <div
                   className="w-11 h-11 rounded-xl flex items-center justify-center"
                   style={{ background: 'rgba(255, 255, 255, 0.15)' }}
@@ -84,10 +84,10 @@ export default function MockPayment() {
               </div>
 
               {/* Amount Display */}
-              <div className="mb-10">
+              <div className="mb-6 sm:mb-10">
                 <p className="text-teal-200 text-[1.0625rem] uppercase tracking-widest mb-2">Amount to Pay</p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-[3.125rem] lg:text-[3.375rem] font-bold text-white">₹{amount || '0'}</span>
+                <div className="flex flex-wrap items-baseline gap-1">
+                  <span className="text-4xl sm:text-[3.125rem] lg:text-[3.375rem] font-bold text-white break-all">₹{amount || '0'}</span>
                   <span className="text-teal-300 text-[1.25rem]">.00</span>
                 </div>
               </div>
@@ -102,7 +102,7 @@ export default function MockPayment() {
                     <Hash className="w-4 h-4 text-teal-300" />
                     <div>
                       <p className="text-teal-300 text-[1.0625rem]">Payment Request ID</p>
-                      <p className="mt-0.5 text-[1.0625rem] font-semibold tracking-wide tabular-nums text-white">
+                      <p className="mt-0.5 text-[1.0625rem] font-semibold tracking-wide tabular-nums text-white break-all">
                         {paymentRequestId || 'N/A'}
                       </p>
                     </div>
@@ -129,7 +129,7 @@ export default function MockPayment() {
               </div>
 
               {/* Security Badge */}
-              <div className="mt-8 flex items-center gap-2">
+              <div className="mt-6 sm:mt-8 flex items-center gap-2">
                 <Lock className="w-3.5 h-3.5 text-emerald-300" />
                 <p className="text-teal-200 text-[1.0625rem]">256-bit SSL Encrypted</p>
               </div>
@@ -137,17 +137,17 @@ export default function MockPayment() {
           </div>
 
           {/* Right Panel - Actions */}
-          <div className="bg-white p-8 lg:p-10 flex flex-col">
+          <div className="bg-white p-5 sm:p-8 lg:p-10 flex flex-col">
             {/* Header */}
-            <div className="text-center mb-8">
+            <div className="text-center mb-5 sm:mb-8">
               <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
+                className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-5"
                 style={{
                   background: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)',
                   boxShadow: '0 8px 24px -4px rgba(20, 184, 166, 0.4)'
                 }}
               >
-                <CreditCard className="w-8 h-8 text-white" />
+                <CreditCard className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
               <h1 className="text-[1.5625rem] font-bold text-slate-900 mb-1">Test Payment</h1>
               <p className="text-slate-500 text-[1.0625rem]">Simulate payment for testing</p>
@@ -155,7 +155,7 @@ export default function MockPayment() {
 
             {/* Test Mode Badge */}
             <div
-              className="p-4 rounded-2xl mb-8 flex items-start gap-3"
+              className="p-4 rounded-2xl mb-5 sm:mb-8 flex items-start gap-3"
               style={{ background: '#fef3c7' }}
             >
               <div
@@ -175,7 +175,7 @@ export default function MockPayment() {
             {/* Action Buttons */}
             <div className="space-y-3 flex-1">
               <Button
-                className="w-full py-6 text-[1.0625rem] font-semibold rounded-xl transition-all duration-200"
+                className="w-full py-5 sm:py-6 text-[1.0625rem] font-semibold rounded-xl transition-all duration-200"
                 style={{
                   background: processing ? '#d1d5db' : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
                   boxShadow: processing ? 'none' : '0 8px 24px -4px rgba(5, 150, 105, 0.4)'
@@ -215,8 +215,8 @@ export default function MockPayment() {
             </div>
 
             {/* Footer */}
-            <div className="mt-8 pt-6 border-t border-slate-100">
-              <div className="flex items-center justify-center gap-6 text-slate-400">
+            <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-slate-100">
+              <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-slate-400">
                 <div className="flex items-center gap-1.5">
                   <Shield className="w-3.5 h-3.5" />
                   <span className="text-[1.0625rem]">Secure</span>

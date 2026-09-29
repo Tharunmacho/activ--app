@@ -1,3 +1,4 @@
+import { publicUrl, shareLink } from '@/lib/share';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowUpRight, Calendar, MapPin, Newspaper, Share2 } from 'lucide-react';
@@ -80,16 +81,8 @@ export default function NewsDetailPage() {
         return () => { cancelled = true; };
     }, [slug]);
 
-    const share = () => {
-        const url = window.location.href;
-        try {
-            if (navigator.share) { navigator.share({ title: article?.title, url }); return; }
-            navigator.clipboard?.writeText(url);
-        } catch {
-            /* No share sheet and no clipboard: the URL is in the address bar,
-               which is where it was before this button existed. */
-        }
-    };
+    // One share behaviour site-wide — see lib/share.
+    const share = () => shareLink({ title: article?.title, url: publicUrl(window.location.pathname) });
 
     const date = article?.displayDate || (article?.publishedAt
         ? new Date(article.publishedAt).toLocaleDateString('en-IN', {
@@ -111,7 +104,7 @@ export default function NewsDetailPage() {
             <HeaderSection />
 
             <main className="flex-grow">
-                <div className="mx-auto w-full max-w-[90rem] px-6 py-8 lg:px-10">
+                <div className="mx-auto w-full max-w-[90rem] px-4 sm:px-6 py-5 sm:py-8 lg:px-10">
                     <Link
                         to="/news"
                         className="inline-flex items-center gap-2 rounded-full border border-gray-200
@@ -123,7 +116,7 @@ export default function NewsDetailPage() {
                 </div>
 
                 {state === 'loading' && (
-                    <div className="mx-auto w-full max-w-[90rem] px-6 pb-20 lg:px-10">
+                    <div className="mx-auto w-full max-w-[90rem] px-4 sm:px-6 pb-14 sm:pb-20 lg:px-10">
                         <div className="h-[22rem] animate-pulse rounded-2xl bg-gray-100 lg:w-2/3" />
                         <div className="mt-8 space-y-4 lg:w-2/3">
                             {[1, 2, 3, 4].map((i) => (
@@ -134,8 +127,8 @@ export default function NewsDetailPage() {
                 )}
 
                 {state === 'missing' && (
-                    <div className="mx-auto w-full max-w-3xl px-6 pb-24 text-center lg:px-10">
-                        <h1 className="text-[2.1875rem] font-black tracking-tight text-brand-900">
+                    <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 pb-16 sm:pb-24 text-center lg:px-10">
+                        <h1 className="text-[1.75rem] sm:text-[2.1875rem] font-black tracking-tight text-brand-900">
                             That article is not here
                         </h1>
                         <p className={`mt-3 ${CARD_BODY} text-gray-500`}>
@@ -165,8 +158,8 @@ export default function NewsDetailPage() {
                       * headline and the photograph span the story's width, and
                       * the source card sits beside the story, not under it.
                       */
-                    <article className="mx-auto w-full max-w-[90rem] px-6 pb-20 lg:px-10">
-                        <div className="grid gap-10 lg:grid-cols-12">
+                    <article className="mx-auto w-full max-w-[90rem] px-4 sm:px-6 pb-14 sm:pb-20 lg:px-10">
+                        <div className="grid gap-8 sm:gap-10 lg:grid-cols-12">
                             <div className="lg:col-span-8">
                                 <Reveal as="header">
                                     {article.category && (
@@ -177,7 +170,7 @@ export default function NewsDetailPage() {
                                         </span>
                                     )}
 
-                                    <h1 className="mt-3 text-[2rem] sm:text-[2.5rem] lg:text-[2.75rem] font-black
+                                    <h1 className="mt-3 text-[1.75rem] sm:text-[2.5rem] break-words lg:text-[2.75rem] font-black
                                                    leading-[1.12] tracking-tight text-brand-900">
                                         {article.title || 'Untitled article'}
                                     </h1>
@@ -206,18 +199,18 @@ export default function NewsDetailPage() {
 
                                 {article.image?.url && (
                                     <Reveal>
-                                        <div className="mt-8 overflow-hidden rounded-2xl bg-brand-900/5">
+                                        <div className="mt-6 sm:mt-8 overflow-hidden rounded-2xl bg-brand-900/5">
                                             <img
                                                 src={sizedMediaUrl(article.image.url, 1400)}
                                                 alt={article.image.alt || article.title}
-                                                className="aspect-[16/9] w-full object-cover"
+                                                className="h-auto max-h-[75vh] w-full object-contain sm:aspect-[16/9] sm:h-auto sm:max-h-none sm:object-cover"
                                             />
                                         </div>
                                     </Reveal>
                                 )}
 
                                 {article.summary && (
-                                    <p className="mt-8 border-l-4 border-brand-200 pl-5 text-[1.25rem]
+                                    <p className="mt-8 border-l-4 border-brand-200 pl-4 sm:pl-5 text-[1.25rem]
                                                   font-semibold leading-relaxed text-gray-700">
                                         {article.summary}
                                     </p>
@@ -231,7 +224,7 @@ export default function NewsDetailPage() {
                                     story — where a reader who has just finished it is. */}
                                 {article.externalUrl && (
                                     <div className="mt-10 flex flex-col items-start gap-4 rounded-2xl border border-gray-200
-                                                    bg-gray-50 p-6 sm:flex-row sm:items-center sm:justify-between">
+                                                    bg-gray-50 p-4 sm:p-6 sm:flex-row sm:items-center sm:justify-between">
                                         <p className={`${CARD_BODY} text-gray-700`}>
                                             This story was first reported by{' '}
                                             <span className="font-bold">{article.sourceName || 'another publication'}</span>.
@@ -258,14 +251,14 @@ export default function NewsDetailPage() {
                                 </div>
 
                                 {article.photos?.length > 0 && (
-                                    <div className="mt-12 grid gap-5 sm:grid-cols-2">
+                                    <div className="mt-8 sm:mt-12 grid gap-4 sm:gap-5 sm:grid-cols-2">
                                         {article.photos.map((photo, i) => (
                                             <Reveal key={i} delay={Math.min(i, 4) * 60}>
                                                 <img
                                                     src={sizedMediaUrl(photo.url, 900)}
                                                     alt={photo.alt || `${article.title} — ${i + 1}`}
                                                     loading="lazy"
-                                                    className="aspect-[4/3] w-full rounded-xl object-cover"
+                                                    className="h-auto w-full rounded-xl bg-brand-900/5 object-contain sm:aspect-[4/3] sm:object-cover"
                                                 />
                                             </Reveal>
                                         ))}
@@ -277,7 +270,7 @@ export default function NewsDetailPage() {
                             <aside className="lg:col-span-4">
                                 <div className="space-y-5 lg:sticky lg:top-28">
                                     {article.externalUrl && (
-                                        <div className="rounded-2xl bg-brand-900 p-6 text-white">
+                                        <div className="rounded-2xl bg-brand-900 p-4 sm:p-6 text-white">
                                             <p className="text-[0.9375rem] font-bold uppercase tracking-[0.14em] text-brand-300">
                                                 Original source
                                             </p>
@@ -300,7 +293,7 @@ export default function NewsDetailPage() {
                                         </div>
                                     )}
 
-                                    <div className="rounded-2xl border border-gray-200 bg-white p-6">
+                                    <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6">
                                         <dl className="space-y-4">
                                             {date && <Fact label="Published" value={date} />}
                                             {article.location && <Fact label="Place" value={article.location} />}
@@ -346,7 +339,7 @@ function Fact({ label, value }: { label: string; value: string }) {
     return (
         <div>
             <dt className="text-[0.9375rem] font-bold uppercase tracking-[0.1em] text-gray-400">{label}</dt>
-            <dd className="mt-0.5 text-[1.0625rem] font-semibold text-gray-800">{value}</dd>
+            <dd className="mt-0.5 text-[1.0625rem] font-semibold text-gray-800 break-words">{value}</dd>
         </div>
     );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useRenewal } from '@/features/member/useRenewal';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, Building2, Package, Users, CalendarDays, MessageSquare, Lock, Loader2 } from 'lucide-react';
 import MemberPageShell from '@/pages/member/MemberPageShell';
@@ -136,14 +137,24 @@ export default function DirectoryProfile() {
         [profileCompletion, application, isPaid],
     );
 
-    const cta = useMemo(() => membershipCta(access), [access]);
+    const renewal = useRenewal();
+    const cta = useMemo(() => membershipCta(access, renewal), [access, renewal]);
 
     useEffect(() => {
         let cancelled = false;
         setLoading(true);
 
         getDirectoryEntry(id)
-            .then((row) => { if (!cancelled) setEntry(row); })
+            .then((row) => {
+                if (cancelled) return;
+                // Arrays normalised once, so a sparse profile renders instead of throwing.
+                setEntry(row ? {
+                    ...row,
+                    sectors: Array.isArray(row.sectors) ? row.sectors : [],
+                    companies: Array.isArray(row.companies) ? row.companies : [],
+                    products: Array.isArray(row.products) ? row.products : [],
+                } : row);
+            })
             .catch((err) => {
                 if (!cancelled) setError(errorMessage(err, 'Could not open this member'));
             })
@@ -214,15 +225,15 @@ export default function DirectoryProfile() {
                     pair this carried made it the odd one out. */}
                 <div className="bg-white rounded-2xl border border-slate-200
                                 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]
-                                p-5 lg:p-6 flex flex-wrap items-start gap-5">
+                                p-4 sm:p-5 lg:p-6 flex flex-wrap items-start gap-4 sm:gap-5">
                     {photo ? (
                         <img
                             src={photo}
                             alt=""
-                            className="w-20 h-20 rounded-2xl object-cover shrink-0 ring-2 ring-blue-50"
+                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover shrink-0 ring-2 ring-blue-50"
                         />
                     ) : (
-                        <span className="w-20 h-20 rounded-2xl bg-blue-600 text-white shrink-0
+                        <span className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-blue-600 text-white shrink-0
                                          flex items-center justify-center text-[1.5625rem] font-bold">
                             {(entry.fullName || '?').split(' ').filter(Boolean).slice(0, 2)
                                 .map((part) => part[0]).join('').toUpperCase()}
@@ -230,7 +241,7 @@ export default function DirectoryProfile() {
                     )}
 
                     <div className="min-w-0 flex-1">
-                        <h2 className={`${CARD_TITLE} text-slate-900`}>{entry.fullName}</h2>
+                        <h2 className={`${CARD_TITLE} text-slate-900 break-words`}>{entry.fullName}</h2>
 
                         {/*
                           * REGION AND MEMBER-SINCE AS LABELLED FIELDS.
@@ -242,7 +253,7 @@ export default function DirectoryProfile() {
                           * `BIZ_DETAIL_VALUE` in `components/layout/surface.ts`),
                           * and that is what these are.
                           */}
-                        <div className="mt-4 grid gap-x-8 gap-y-4 grid-cols-1 sm:grid-cols-2">
+                        <div className="mt-4 grid gap-x-6 sm:gap-x-8 gap-y-3 sm:gap-y-4 grid-cols-1 sm:grid-cols-2">
                             {where ? (
                                 <div className="min-w-0">
                                     <p className="flex items-center gap-1.5 text-[1.0625rem] font-extrabold
@@ -315,7 +326,7 @@ export default function DirectoryProfile() {
                                 onClick={() => (access.membershipActive
                                     ? startConversation()
                                     : setAskedToConnect(true))}
-                                className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl
+                                className="inline-flex w-full sm:w-auto items-center justify-center gap-2 h-11 px-5 rounded-xl
                                            bg-blue-600 text-[1.1875rem] font-bold text-white shadow-sm
                                            transition-colors hover:bg-blue-700 disabled:opacity-60"
                             >
@@ -418,7 +429,7 @@ export default function DirectoryProfile() {
                             detail="This member has not published any products or services."
                         />
                     ) : (
-                        <div className="grid gap-5 grid-cols-2 lg:grid-cols-3">
+                        <div className="grid gap-3 sm:gap-5 grid-cols-2 lg:grid-cols-3">
                             {entry.products.map((product) => {
                                 const image = resolveMediaUrl(product.imageUrl);
 

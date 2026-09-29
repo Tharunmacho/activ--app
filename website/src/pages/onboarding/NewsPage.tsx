@@ -127,7 +127,7 @@ export default function NewsPage() {
                         </>
                     )}
 
-                    <div className="relative z-10 mx-auto w-full max-w-[90rem] px-6 py-14 md:py-20
+                    <div className="relative z-10 mx-auto w-full max-w-[90rem] px-4 sm:px-6 py-10 sm:py-14 md:py-20
                                     lg:px-10">
                         <Reveal>
                             <span className="inline-flex items-center gap-2 rounded-full bg-white/15
@@ -144,7 +144,7 @@ export default function NewsPage() {
                                 </span>
                             </span>
 
-                            <h1 className="mt-4 text-[2.1875rem] sm:text-4xl md:text-5xl font-black
+                            <h1 className="mt-4 text-[2rem] sm:text-4xl md:text-5xl font-black
                                            leading-[1.06] tracking-tight text-white">
                                 {settings?.heading || 'What is happening at'}
                                 {settings?.headingHighlight && (
@@ -161,7 +161,7 @@ export default function NewsPage() {
                             )}
 
                             {where && (
-                                <p className="mt-4 inline-flex items-center gap-2 rounded-lg
+                                <p className="mt-4 inline-flex max-w-full flex-wrap items-center gap-2 rounded-lg
                                               bg-white/15 px-3 py-1.5 text-[1rem] font-bold text-white
                                               ring-1 ring-white/20">
                                     Filtered to {where}
@@ -181,10 +181,10 @@ export default function NewsPage() {
                 )}
 
                 {/* ------------------------------------------- the articles */}
-                <section className="w-full py-14 md:py-20">
-                    <div className="mx-auto w-full max-w-[90rem] px-6 lg:px-10">
+                <section className="w-full py-8 sm:py-14 md:py-20">
+                    <div className="mx-auto w-full max-w-[90rem] px-4 sm:px-6 lg:px-10">
                         {categories.length > 0 && (
-                            <div className="mb-8 flex flex-wrap gap-2.5">
+                            <div className="mb-6 sm:mb-8 flex flex-wrap gap-2 sm:gap-2.5">
                                 {/* "All" is a chip and not the absence of one: a row
                                     of chips with none lit reads as a filter that has
                                     failed rather than as no filter. */}
@@ -233,7 +233,7 @@ export default function NewsPage() {
 
                 {/* The editor's own rows on these two cards. */}
                 {bandRows.length > 0 && (
-                    <div className="mx-auto w-full max-w-[90rem] px-6 pb-16 lg:px-10
+                    <div className="mx-auto w-full max-w-[90rem] px-4 sm:px-6 pb-12 sm:pb-16 lg:px-10
                                     text-[1.125rem] font-medium leading-relaxed text-gray-600">
                         <CmsExtraFields fields={bandRows} force="content" />
                     </div>

@@ -1,15 +1,17 @@
+import { MenuTile } from '@/components/shared/MenuTile';
+import { MemberAvatar, uploadMemberPhoto } from '@/features/member/memberPhoto';
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-    Menu, User, Briefcase, FileText, Building2, Edit, Camera,
+    User, Briefcase, FileText, Building2, Edit, Camera,
     CheckCircle2, Circle, ArrowRight, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
     getMyProfile, getBusinessInfo, getFinancialInfo, getDeclarationInfo,
-    getMyApplication, uploadProfilePhoto, errorMessage,
+    getMyApplication, errorMessage,
 } from "@/services/activApi";
 import MemberSidebar from "./MemberSidebar";
 import MemberTopBar from "@/features/member/components/MemberTopBar";
@@ -264,22 +266,12 @@ const ProfileView = () => {
             toast.error("Please upload an image file");
             return;
         }
-        if (file.size > 2 * 1024 * 1024) {
-            toast.error("Image size should be less than 2MB");
-            return;
-        }
-
         setUploading(true);
         try {
-            const saved = await uploadProfilePhoto(file);
-            const url = resolveMediaUrl(saved?.profilePhoto || '') || '';
-
-            if (url) {
-                setProfileImage(url);
-                try { localStorage.setItem('userProfilePhoto', url); } catch { /* storage unavailable */ }
-                // The sidebar avatar reads that key and listens for this.
-                window.dispatchEvent(new CustomEvent('profilePhotoUpdated'));
-            }
+            // The shared store: sidebar, dashboards and Settings update at once.
+            const saved = await uploadMemberPhoto(file);
+            const url = resolveMediaUrl(saved) || '';
+            if (url) setProfileImage(url);
 
             toast.success("Profile photo updated");
         } catch (err) {
@@ -324,13 +316,7 @@ const ProfileView = () => {
                       */}
                     <div className="h-[5.5rem] px-4 sm:px-6 flex items-center justify-between gap-2 sm:gap-3">
                         <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
-                            <button
-                                className="lg:hidden shrink-0 p-2 rounded-xl hover:bg-slate-100"
-                                onClick={() => setSidebarOpen(true)}
-                                aria-label="Open menu"
-                            >
-                                <Menu className="h-6 w-6" />
-                            </button>
+                            <MenuTile onClick={() => setSidebarOpen(true)} />
                             <div className="min-w-0">
                                 <h1 className={`${PAGE_TITLE} text-slate-900 truncate`}>My Profile</h1>
                                 <p className={`${PAGE_SUBTITLE} text-slate-500 mt-0.5 truncate hidden sm:block`}>
@@ -364,18 +350,17 @@ const ProfileView = () => {
 
                 {/* Main Content */}
                 <main className="flex-1 overflow-y-auto p-4 sm:p-6">
-                    <div className="w-full max-w-[110rem] mx-auto space-y-6">
+                    <div className="w-full max-w-[110rem] mx-auto space-y-4 sm:space-y-6">
                         {/* ---------------------------------------------- header card */}
-                        <Card className="p-6">
-                            <div className="flex flex-col md:flex-row items-center gap-6">
+                        <Card className="p-4 sm:p-6">
+                            <div className="flex flex-col md:flex-row items-center gap-4 sm:gap-6">
                                 <div className="relative">
-                                    <div className="w-32 h-32 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center border-4 border-white shadow-lg">
-                                        {profileImage ? (
-                                            <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <User className="h-16 w-16 text-slate-400" />
-                                        )}
-                                    </div>
+                                    {/* Tap to see the photo full size, and change it there. */}
+                                    <MemberAvatar
+                                        name={personalData?.fullName || personalData?.name || 'Member'}
+                                        className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-slate-100 border-4 border-white shadow-lg"
+                                        initialsClassName="bg-gradient-to-br from-[#1e3a8a] to-[#2563eb] text-white font-display text-[2rem] sm:text-[2.5rem] font-bold"
+                                    />
                                     <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 shadow-lg">
                                         {uploading
                                             ? <Loader2 className="h-4 w-4 animate-spin" />
@@ -401,7 +386,7 @@ const ProfileView = () => {
                                         rendered at the browser's 16px default — the
                                         smallest text anywhere on a signed-in screen, and
                                         it was the member's own email address. */}
-                                    <p className={`${CARD_BODY} text-slate-500 mt-1.5`}>
+                                    <p className={`${CARD_BODY} text-slate-500 mt-1.5 break-all`}>
                                         {personalData?.email || ""}
                                     </p>
                                     <p className={`${CARD_BODY} text-slate-500 tabular-nums`}>
@@ -438,7 +423,7 @@ const ProfileView = () => {
                               * the data rather than from a stored flag — a flag goes stale
                               * the moment a form is submitted and nothing rewrites it.
                               */}
-                            <div className="mt-6 pt-5 border-t border-slate-100">
+                            <div className="mt-5 sm:mt-6 pt-4 sm:pt-5 border-t border-slate-100">
                                 <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                                     {/* It names the block beneath it, so it is a
                                         SECTION_TITLE — it was set smaller than the
@@ -542,7 +527,7 @@ const ProfileView = () => {
 
                         {/* ---------------------------------------------- personal */}
                         {personalData ? (
-                            <div className="p-6">
+                            <div className="p-4 sm:p-6">
                                 <div className="flex items-start justify-between gap-3">
                                     <SectionHeading icon={<User className="h-5 w-5 text-blue-600" />}>
                                         Personal Information
@@ -602,7 +587,7 @@ const ProfileView = () => {
 
                         {/* ---------------------------------------------- business */}
                         {hasBusiness ? (
-                            <div className="p-6">
+                            <div className="p-4 sm:p-6">
                                 <div className="flex items-start justify-between gap-3">
                                     <SectionHeading icon={<Briefcase className="h-5 w-5 text-blue-600" />}>
                                         Business Information
@@ -622,7 +607,9 @@ const ProfileView = () => {
                                     <div className="grid grid-cols-1 gap-4">
                                         <InfoItem
                                             label="Business Status"
-                                            value="Aspirant (not currently doing business)"
+                                            value={String(businessData?.registrationType || '').toLowerCase() === 'student'
+                                                ? 'Student (not currently doing business)'
+                                                : 'Aspirant (not currently doing business)'}
                                         />
                                         <InfoItem label="Registration Type" value={businessData.registrationType} />
                                     </div>
@@ -657,7 +644,7 @@ const ProfileView = () => {
                             a turnover, so the card would carry two "No" answers and
                             nothing else. Mobile omits it on the same condition. */}
                         {isAspirant ? null : hasFinancial ? (
-                            <div className="p-6">
+                            <div className="p-4 sm:p-6">
                                 <div className="flex items-start justify-between gap-3">
                                     <SectionHeading icon={<Building2 className="h-5 w-5 text-blue-600" />}>
                                         Financial &amp; Compliance
@@ -690,7 +677,7 @@ const ProfileView = () => {
 
                         {/* ---------------------------------------------- declaration */}
                         {hasDeclaration ? (
-                            <div className="p-6">
+                            <div className="p-4 sm:p-6">
                                 <div className="flex items-start justify-between gap-3">
                                     <SectionHeading icon={<FileText className="h-5 w-5 text-blue-600" />}>
                                         Declaration
@@ -699,14 +686,19 @@ const ProfileView = () => {
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <InfoItem
-                                        label="Number of Sister Concerns"
-                                        value={declarationData.sisterConcerns}
-                                    />
-                                    <InfoItem
-                                        label="Company Names"
-                                        value={asText(declarationData.companyNames)}
-                                    />
+                                    {/* Business-only: an aspirant or student has no sister concerns. */}
+                                    {isAspirant || ['aspirant', 'student'].includes(String(businessData?.registrationType || '').toLowerCase()) ? null : (
+                                        <>
+                                            <InfoItem
+                                                label="Number of Sister Concerns"
+                                                value={declarationData.sisterConcerns}
+                                            />
+                                            <InfoItem
+                                                label="Company Names"
+                                                value={asText(declarationData.companyNames)}
+                                            />
+                                        </>
+                                    )}
                                     <InfoItem
                                         label="Declaration Agreed?"
                                         value={yesNo(declarationData.agreeToDeclaration)}
@@ -805,7 +797,7 @@ const InfoItem = ({ label, value }: { label: string; value?: string | number | n
               label up a step with it so the pair stay legible together.
             */}
             <p className="mb-1 text-[1.25rem] font-semibold text-slate-500">{label}</p>
-            <p className="text-[1.375rem] font-semibold text-slate-900 break-words">
+            <p className="text-[1.1875rem] sm:text-[1.375rem] font-semibold text-slate-900 break-words">
                 {String(value)}
             </p>
         </div>
@@ -858,8 +850,8 @@ const NotYetCard = ({
     /* A section inside the shared card, not a card of its own — see the note
        on the wrapper. The dashed rule is kept as an inset outline so an
        unfinished part still reads as unfinished. */
-    <div className="p-6">
-      <div className="rounded-xl border border-dashed border-slate-300 p-5">
+    <div className="p-4 sm:p-6">
+      <div className="rounded-xl border border-dashed border-slate-300 p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-start gap-3 min-w-0">
                 <span className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
@@ -873,7 +865,7 @@ const NotYetCard = ({
 
             <Button
                 onClick={() => onGo(to)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold shrink-0"
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold shrink-0"
             >
                 Complete now
                 <ArrowRight className="ml-1.5 h-4 w-4" />

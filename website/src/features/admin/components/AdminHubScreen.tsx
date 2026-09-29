@@ -263,7 +263,7 @@ export default function AdminHubScreen({ tier }: { tier: AdminTier }) {
 
     return (
         <div className="min-h-screen bg-white flex">
-            <AdminSidebar tier={tier} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+            <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
             <div className="flex-1 min-w-0">
                 {/*
@@ -278,13 +278,13 @@ export default function AdminHubScreen({ tier }: { tier: AdminTier }) {
                       page's own padding, so the title lines up with the first
                       card instead of hanging to the left of it. */}
                   <div className={`${ADMIN_COLUMN} flex items-start gap-2 sm:gap-3`}>
-                    <button className="lg:hidden shrink-0 mt-1 text-slate-500 hover:text-slate-900"
+                    <button className="lg:hidden shrink-0 -ml-2 -mt-1.5 grid h-10 w-10 place-items-center rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-50"
                             onClick={() => setSidebarOpen(true)} aria-label="Open menu">
                         <Menu className="w-5 h-5" />
                     </button>
 
                     {level !== 'levels' && (
-                        <button onClick={back} className="shrink-0 mt-1 text-slate-500 hover:text-slate-900" aria-label="Back">
+                        <button onClick={back} className="shrink-0 -mt-1.5 grid h-10 w-10 place-items-center rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-50" aria-label="Back">
                             <ArrowLeft className="w-5 h-5" />
                         </button>
                     )}
@@ -309,7 +309,7 @@ export default function AdminHubScreen({ tier }: { tier: AdminTier }) {
                     {/* ------------------------------------------------ levels */}
                     {level === 'levels' && (
                         <>
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                                 {/* `AdminStat` — see the note on the super
                                     admin's Hub, which carried the twin of the
                                     private helper this replaces. */}
@@ -345,7 +345,7 @@ export default function AdminHubScreen({ tier }: { tier: AdminTier }) {
                             </div>
 
                             {loading ? <Busy /> : (
-                                <div className={`grid gap-4 ${levels.length > 1 ? 'md:grid-cols-2' : ''}`}>
+                                <div className={`grid gap-3 sm:gap-4 ${levels.length > 1 ? 'md:grid-cols-2' : ''}`}>
                                     {levels.map((which) => {
                                         const card = LEVEL_CARDS[which];
                                         const Icon = card.icon;
@@ -383,8 +383,8 @@ export default function AdminHubScreen({ tier }: { tier: AdminTier }) {
                                                     from across the page. */}
                                                 <span className={`absolute inset-x-0 top-0 h-1 ${card.rule}`} />
 
-                                                <div className={`flex items-center gap-3 px-5 pt-5 pb-4 ${card.head}`}>
-                                                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${card.accent}`}>
+                                                <div className={`flex items-center gap-3 px-4 pt-4 pb-3 sm:px-5 sm:pt-5 sm:pb-4 ${card.head}`}>
+                                                    <div className={`w-9 h-9 sm:w-11 sm:h-11 shrink-0 rounded-xl flex items-center justify-center ${card.accent}`}>
                                                         <Icon className="w-5 h-5" />
                                                     </div>
                                                     <p className="font-bold tracking-tight text-slate-900 flex-1">
@@ -403,12 +403,12 @@ export default function AdminHubScreen({ tier }: { tier: AdminTier }) {
                                                     {figures.map((f, i) => (
                                                         <div
                                                             key={f.label}
-                                                            className="px-5 py-4 -mt-px first:mt-0"
+                                                            className="min-w-0 px-3 py-3 sm:px-5 sm:py-4 -mt-px first:mt-0"
                                                         >
                                                             <p className={`text-[1.75rem] sm:text-[2.125rem] font-semibold tracking-tight tabular-nums ${f.tone}`}>
                                                                 {Number(f.value || 0)}
                                                             </p>
-                                                            <p className="text-[1.1875rem] font-semibold text-slate-500 mt-0.5">{f.label}</p>
+                                                            <p className="text-[1rem] sm:text-[1.1875rem] font-semibold text-slate-500 mt-0.5 truncate">{f.label}</p>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -447,7 +447,7 @@ export default function AdminHubScreen({ tier }: { tier: AdminTier }) {
                                                        hover:bg-slate-50 text-left gap-2 sm:gap-4"
                                         >
                                             <div className="min-w-0">
-                                                <p className="font-medium text-slate-900">{r.name}</p>
+                                                <p className="font-medium text-slate-900 break-words">{r.name}</p>
                                                 <p className="text-[1.1875rem] text-slate-500 mt-0.5">
                                                     {[r.district, r.state].filter(Boolean).join(', ') || '—'}
                                                     {/*
@@ -485,12 +485,12 @@ export default function AdminHubScreen({ tier }: { tier: AdminTier }) {
                     {/* ------------------------------------------ applications */}
                     {level === 'applications' && (
                         <>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex gap-1 sm:gap-2">
                                 {STATUSES.map(s => (
                                     <button
                                         key={s}
                                         onClick={() => region && openRegion(region, s)}
-                                        className={`px-4 py-2 rounded-lg text-[1.25rem] font-medium capitalize transition-colors ${
+                                        className={`flex-1 sm:flex-none min-w-0 min-h-10 px-1.5 sm:px-4 py-2 rounded-lg text-[1.0625rem] sm:text-[1.25rem] font-medium capitalize truncate transition-colors ${
                                             status === s
                                                 ? 'bg-blue-600 text-white'
                                                 : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -555,11 +555,11 @@ const Pill = ({ tone, children }: { tone: 'amber' | 'green' | 'red'; children: R
 };
 
 const Busy = () => (
-    <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] flex items-center justify-center gap-3 py-16 text-slate-500">
+    <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] flex items-center justify-center gap-3 py-10 sm:py-16 text-slate-500">
         <Loader2 className="w-5 h-5 animate-spin" /> Loading…
     </div>
 );
 
 const Empty = ({ text }: { text: string }) => (
-    <p className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] text-center text-slate-500 py-16">{text}</p>
+    <p className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] text-center text-slate-500 px-4 py-10 sm:py-16">{text}</p>
 );

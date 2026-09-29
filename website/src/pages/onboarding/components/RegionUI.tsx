@@ -1,3 +1,4 @@
+import { galleryPath } from '@/lib/eventPath';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -61,8 +62,8 @@ export function ReadMore({ short, full }: { short: string; full: string }) {
 
     return (
         <div className="max-w-4xl">
-            <p className="text-[1.25rem] sm:text-[1.0625rem] leading-relaxed font-semibold text-gray-600
-                          whitespace-pre-line">
+            <p className="text-[1rem] sm:text-[1.0625rem] leading-relaxed font-semibold text-gray-600
+                          whitespace-pre-line break-words">
                 {open && hasMore ? full : short || full}
             </p>
             {hasMore && (
@@ -129,7 +130,25 @@ export function HeroCarousel({ slides }: { slides: RegionSlide[] }) {
         >
             <div className="relative w-full aspect-[16/10] bg-gray-50">
                 {slide.media?.url ? (
-                    <CmsMediaFrame media={slide.media} width={900} priority />
+                    /* The whole photograph, never cropped: `contain` over a
+                       blurred copy of itself, so a portrait shot or a wide
+                       group photo shows everybody in it — `cover` cut the
+                       people at the edges off, worst on a phone. */
+                    <>
+                        <div aria-hidden="true" className="absolute inset-0 overflow-hidden">
+                            <CmsMediaFrame
+                                media={{ ...slide.media, fit: 'cover', alt: '' }}
+                                width={400}
+                                className="scale-125 blur-2xl opacity-60"
+                            />
+                        </div>
+                        <div className="absolute inset-0">
+                            <CmsMediaFrame media={slide.media} width={900} priority transparent
+                                           className="!object-contain !object-center"
+                                           fallback={<div aria-hidden="true" className="absolute inset-0
+                                                bg-gradient-to-br from-[#0f1d4a] via-[#1c2e68] to-[#2563eb]" />} />
+                        </div>
+                    </>
                 ) : (
                     /* A slot an editor has created but not filled. Saying so is
                        more useful than a blank rectangle that reads as a failed
@@ -205,8 +224,8 @@ export function LeadershipPanel({ title, leaders }: { title: string; leaders: Re
     if (!people.length) return null;
 
     return (
-        <div className={`${CARD} p-6 sm:p-7`}>
-            <h2 className={`${PANEL_HEADING} mb-6`}>{title}</h2>
+        <div className={`${CARD} p-4 sm:p-7`}>
+            <h2 className={`${PANEL_HEADING} mb-4 sm:mb-6`}>{title}</h2>
 
             {/*
               * ONE PER ROW, photograph beside the words.
@@ -249,13 +268,13 @@ export function LeadershipPanel({ title, leaders }: { title: string; leaders: Re
                           * no src draws the browser's torn-page icon, which
                           * reads as a fault rather than as a gap.
                           */}
-                        <div className="w-24 h-28 shrink-0 rounded-xl overflow-hidden bg-gray-100
+                        <div className="w-20 h-24 sm:w-24 sm:h-28 shrink-0 rounded-xl overflow-hidden bg-gray-100
                                         border border-gray-200 flex items-center justify-center">
                             {person.photoUrl ? (
                                 <img
                                     src={sizedMediaUrl(person.photoUrl, 480)}
                                     alt={person.name || 'Leader'}
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-contain sm:object-cover"
                                 loading="lazy"
                             decoding="async"
                         />
@@ -264,7 +283,7 @@ export function LeadershipPanel({ title, leaders }: { title: string; leaders: Re
                             )}
                         </div>
 
-                        <div className="min-w-0">
+                        <div className="min-w-0 break-words">
                         {person.name && (
                             <p className="text-[1.25rem] sm:text-[1.0625rem] font-extrabold text-brand-900">
                                 {person.name}
@@ -388,7 +407,7 @@ export function LeaderProfileDialog({ person, context, onClose }: {
     const reach = [person.email, person.phone].filter(Boolean);
 
     return (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 sm:p-6">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-6">
             <button
                 type="button"
                 aria-label="Close"
@@ -404,17 +423,17 @@ export function LeaderProfileDialog({ person, context, onClose }: {
                    the designation, the contact lines and a five-option form
                    were stacked in a 448px column, so the card was mostly
                    scrollbar — the association asked for it bigger. */
-                className={`relative w-full sm:max-w-2xl ${CARD} max-h-[90vh] overflow-y-auto
-                            text-center`}
+                className={`relative w-full min-w-0 sm:max-w-2xl ${CARD} max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh]
+                            overflow-y-auto overflow-x-hidden text-center`}
             >
                 {/* A ROW OF ITS OWN. Floated over the content it collided with a
                     long designation; here it can never overlap anything. */}
-                <div className="flex justify-end px-4 pt-4">
+                <div className="flex justify-end px-3 pt-3 sm:px-4 sm:pt-4">
                     <button
                         type="button"
                         onClick={onClose}
                         aria-label="Close"
-                        className="flex h-9 w-9 items-center justify-center rounded-full
+                        className="flex h-10 w-10 sm:h-9 sm:w-9 items-center justify-center rounded-full
                                    border border-gray-200 text-gray-500 transition-colors
                                    hover:bg-gray-50"
                     >
@@ -422,18 +441,18 @@ export function LeaderProfileDialog({ person, context, onClose }: {
                     </button>
                 </div>
 
-                <div className="px-6 pb-8 sm:px-10 md:px-14">
+                <div className="px-4 pb-6 sm:px-10 sm:pb-8 md:px-14 break-words">
                     {/* 4:5, and the whole photograph inside it — see `PersonPhoto`. */}
                     {/* Bigger with the card. A 160px portrait in a 672px card
                         reads as a thumbnail somebody forgot to replace. */}
-                    <span className="mx-auto block w-44 sm:w-52 aspect-[4/5] overflow-hidden rounded-2xl
+                    <span className="mx-auto block w-32 sm:w-52 aspect-[4/5] overflow-hidden rounded-2xl
                                      bg-gradient-to-b from-gray-100 to-gray-200
                                      shadow-[0_2px_6px_rgba(16,24,40,0.08),0_16px_36px_-24px_rgba(28,46,104,0.55)]">
                         <PersonPhoto url={person.photoUrl} name={person.name} width={520} fallbackSize={34} />
                     </span>
 
                     {person.name && (
-                        <p className="mt-5 text-[1.5625rem] font-extrabold leading-snug text-brand-900">
+                        <p className="mt-4 sm:mt-5 text-[1.3125rem] sm:text-[1.5625rem] font-extrabold leading-snug text-brand-900">
                             {person.name}
                         </p>
                     )}
@@ -467,7 +486,7 @@ export function LeaderProfileDialog({ person, context, onClose }: {
                                 <p>
                                     <a
                                         href={`mailto:${person.email}`}
-                                        className="inline-flex items-center gap-2 break-all text-[1.0625rem]
+                                        className="inline-flex max-w-full items-center gap-2 break-all text-[1.0625rem]
                                                    font-semibold text-gray-600 transition-colors
                                                    hover:text-brand-700"
                                     >
@@ -490,7 +509,7 @@ export function LeaderProfileDialog({ person, context, onClose }: {
                                 </p>
                             )}
                             {person.address && (
-                                <p className="text-[1.25rem] font-medium leading-relaxed text-gray-500
+                                <p className="text-[1rem] sm:text-[1.25rem] font-medium leading-relaxed text-gray-500
                                               whitespace-pre-line">
                                     {person.address}
                                 </p>
@@ -522,8 +541,8 @@ export function LeaderProfileDialog({ person, context, onClose }: {
                         <button
                             type="button"
                             onClick={() => setMessaging(true)}
-                            className="mt-6 inline-flex w-full items-center justify-center gap-2
-                                       rounded-full bg-brand-600 px-6 py-3 text-[1.125rem]
+                            className="mt-5 sm:mt-6 inline-flex w-full items-center justify-center gap-2
+                                       rounded-full bg-brand-600 px-4 sm:px-6 py-3 text-[1rem] sm:text-[1.125rem]
                                        font-bold text-white transition-colors hover:bg-brand-700"
                         >
                             <MessageSquare size={16} />
@@ -571,21 +590,21 @@ export function AchievementBand({ items, title = 'Achievements' }: {
     return (
         <section>
             <h2 className={`${PANEL_HEADING} mb-4`}>{title}</h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                 {rows.slice(0, 8).map((row, i) => (
                     <div
                         key={row.id || i}
                         className="rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50/80
-                                   to-white p-5 sm:p-6
+                                   to-white min-w-0 p-3.5 sm:p-6
                                    shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_28px_-20px_rgba(28,46,104,0.35)]"
                     >
                         {/* The figure leads. It is the reason the card exists. */}
-                        <p className="text-[2.1875rem] sm:text-4xl font-black tracking-tight text-brand-800
+                        <p className="break-words text-[1.625rem] sm:text-4xl font-black tracking-tight text-brand-800
                                       leading-none">
                             {row.title}
                         </p>
                         {row.summary && (
-                            <p className="mt-2.5 text-[1.0625rem] font-semibold leading-relaxed text-gray-600">
+                            <p className="mt-2 sm:mt-2.5 break-words text-[0.9375rem] sm:text-[1.0625rem] font-semibold leading-relaxed text-gray-600">
                                 {row.summary}
                             </p>
                         )}
@@ -641,11 +660,11 @@ export function GalleryStrip({ state, region, title = 'Photo Gallery', href }: {
                 </Link>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                 {photos.map((photo) => (
                     <Link
                         key={photo.id}
-                        to={`/gallery/${photo.id}`}
+                        to={galleryPath(photo)}
                         className={`${CARD} group block overflow-hidden transition-shadow
                                     hover:shadow-[0_22px_48px_-20px_rgb(28_46_104/0.4)]`}
                     >
@@ -657,7 +676,7 @@ export function GalleryStrip({ state, region, title = 'Photo Gallery', href }: {
                             />
                         </div>
                         {photo.title && (
-                            <p className="px-4 py-3 text-[1.25rem] font-bold text-brand-800 line-clamp-2">
+                            <p className="px-3 py-2.5 sm:px-4 sm:py-3 text-[0.9375rem] sm:text-[1.25rem] font-bold text-brand-800 line-clamp-2 break-words">
                                 {photo.title}
                             </p>
                         )}
@@ -718,7 +737,7 @@ export function FeedList({
                         <li key={row.id || i}>
                             <FeedLink
                                 href={row.href}
-                                className={`block px-5 sm:px-6 py-4 sm:py-5 transition-colors ${
+                                className={`block min-w-0 px-4 sm:px-6 py-3.5 sm:py-5 transition-colors ${
                                     row.href ? 'hover:bg-brand-50/40' : ''
                                 }`}
                             >
@@ -727,15 +746,15 @@ export function FeedList({
                                         {[row.date, row.location].filter(Boolean).join(' · ')}
                                     </p>
                                 )}
-                                <p className="text-[1.25rem] sm:text-[1.0625rem] font-extrabold text-brand-900
+                                <p className="text-[1.0625rem] font-extrabold text-brand-900
                                               leading-snug flex items-start gap-2">
-                                    <span>{row.title}</span>
+                                    <span className="min-w-0 break-words">{row.title}</span>
                                     {row.href && !row.href.startsWith('/') && (
                                         <ExternalLink size={13} className="mt-1.5 shrink-0 text-gray-400" />
                                     )}
                                 </p>
                                 {row.summary && (
-                                    <p className="mt-1.5 text-[1.0625rem] leading-relaxed font-semibold
+                                    <p className="mt-1.5 break-words text-[1rem] sm:text-[1.0625rem] leading-relaxed font-semibold
                                                   text-gray-600 line-clamp-3">
                                         {row.summary}
                                     </p>
@@ -782,7 +801,7 @@ export function DatedList({ title, items, limit = 6, readAllHref }: {
                     <li key={row.id || i}>
                         <FeedLink
                             href={row.href}
-                            className={`block px-5 py-3.5 text-[1.0625rem] font-semibold text-gray-700
+                            className={`block break-words px-4 sm:px-5 py-3.5 text-[1.0625rem] font-semibold text-gray-700
                                         transition-colors ${row.href ? 'hover:bg-brand-50/40' : ''}`}
                         >
                             {row.date && <span className="text-gray-400">{row.date} : </span>}
@@ -810,10 +829,10 @@ export function DatedList({ title, items, limit = 6, readAllHref }: {
 export function RailCard({ title, children }: { title: string; children: React.ReactNode }) {
     return (
         <div className={`${CARD} overflow-hidden`}>
-            <p className={`${ROW_LABEL} bg-[#f7f8fa] px-5 py-3.5 border-b border-gray-200`}>
+            <p className={`${ROW_LABEL} bg-[#f7f8fa] px-4 sm:px-5 py-3.5 border-b border-gray-200`}>
                 {title}
             </p>
-            <div className="px-5 py-4">{children}</div>
+            <div className="px-4 sm:px-5 py-4">{children}</div>
         </div>
     );
 }

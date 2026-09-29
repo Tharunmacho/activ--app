@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
-import { getPaymentOrder } from '@/services/paymentApi';
+import { getPaymentOrder, resolvePaymentReturn } from '@/services/paymentApi';
+import { isMemberSession } from '@/lib/session';
 import MemberPageShell from '../member/MemberPageShell';
 
 /**
@@ -69,30 +70,95 @@ export default function PaymentReturn() {
 
     /* Instamojo's own verdict. Used ONLY to tell a cancelled payment from one
        that is still settling — never to decide that a payment succeeded. */
-    const gatewaySaysFailed = (params.get('payment_status') || '').toLowerCase() === 'failed';
+    const gatewayStatus = params.get('payment_status') || '';
+    const gatewaySaysFailed = gatewayStatus.toLowerCase() === 'failed';
+    const gatewayPaymentId = params.get('payment_id') || '';
+
+    /*
+     * WHICH PURCHASE THIS WAS — a membership, or seats at an event.
+     *
+     * Asked of the PUBLIC `/payment/return/:orderId` first, because a guest who
+     * booked seats has no token: the signed-in order lookup answered them 401,
+     * and the interceptor sent a buyer whose money had just left their account
+     * to the login screen. For an event booking the server also verifies the
+     * payment with Instamojo and confirms the booking, and this page then hands
+     * over to the booking's own confirmation screen.
+     */
+    const [booking, setBooking] = useState<{ eventId: string; eventSlug: string; bookingRef: string } | null>(null);
 
     useEffect(() => {
         if (!orderId) { setOutcome('unknown'); return; }
 
+        let cancelled = false;
         const startedAt = Date.now();
         let timer: ReturnType<typeof setTimeout>;
+        let isBooking: boolean | null = null;
+        /** The booking this order is for, once the server has said: where every exit goes. */
+        let target: { event: string; ref: string } | null = null;
+
+        const bookingHref = (eventKey: string, ref: string) => {
+            // A MEMBER returns into the member area; anyone else — a guest, or
+            // an admin who booked — to the public booking page. "Signed in"
+            // alone sent a super admin into the member area after paying.
+            return `${isMemberSession() ? '/member' : ''}/events/${encodeURIComponent(eventKey)}/book`
+                + `?ref=${encodeURIComponent(ref)}`;
+        };
 
         const ask = async () => {
-            if (stopped.current) return;
+            if (cancelled || stopped.current) return;
             try {
-                const order = await getPaymentOrder(orderId);
-                if (stopped.current) return;
+                if (isBooking !== false) {
+                    const found = await resolvePaymentReturn(orderId, {
+                        paymentId: gatewayPaymentId,
+                        paymentStatus: gatewayStatus,
+                    });
+                    if (cancelled) return;
 
-                if (order && typeof order.amount === 'number') setAmount(order.amount);
+                    isBooking = found?.orderType === 'event_booking';
+                    if (typeof found?.amount === 'number') setAmount(found.amount);
 
-                if (order?.status === 'paid') { setOutcome('paid'); return; }
-                if (order?.status === 'failed') { setOutcome('failed'); return; }
+                    if (isBooking) {
+                        setBooking({ eventId: found.eventId || '', eventSlug: found.eventSlug || '', bookingRef: found.bookingRef || '' });
+                        if ((found.eventSlug || found.eventId) && found.bookingRef) {
+                            target = { event: found.eventSlug || found.eventId, ref: found.bookingRef };
+                        }
+                        if (found.status === 'paid' && (found.eventSlug || found.eventId) && found.bookingRef) {
+                            try { sessionStorage.removeItem('activ:lastOrderId'); } catch { /* private mode */ }
+                            navigate(bookingHref(found.eventSlug || found.eventId, found.bookingRef), { replace: true });
+                            return;
+                        }
+                        if (found.status === 'failed' || gatewaySaysFailed) { setOutcome('failed'); return; }
+                    }
+                }
+
+                if (isBooking === false) {
+                    const order = await getPaymentOrder(orderId);
+                    if (cancelled) return;
+
+                    if (order && typeof order.amount === 'number') setAmount(order.amount);
+
+                    if (order?.status === 'paid') { setOutcome('paid'); return; }
+                    if (order?.status === 'failed') { setOutcome('failed'); return; }
+                }
             } catch {
                 /* A failed read is not an answer about the payment. Keep
-                   asking; the deadline below is what ends it. */
+                   asking; the deadline below is what ends it. An older server
+                   without the public route falls back to the membership read. */
+                if (isBooking === null) isBooking = false;
             }
 
             if (Date.now() - startedAt >= GIVE_UP_AFTER_MS) {
+                /*
+                 * AN EVENT BOOKING ALWAYS ENDS ON ITS OWN SCREEN. The booking
+                 * page shows the payment as it stands (and updates itself), so a
+                 * buyer is never left on a "still confirming" card or sent to a
+                 * dashboard — the one screen they came back for is their booking.
+                 */
+                if (isBooking && target && !gatewaySaysFailed) {
+                    try { sessionStorage.removeItem('activ:lastOrderId'); } catch { /* private mode */ }
+                    navigate(bookingHref(target.event, target.ref), { replace: true });
+                    return;
+                }
                 setOutcome(gatewaySaysFailed ? 'failed' : 'unconfirmed');
                 return;
             }
@@ -100,8 +166,8 @@ export default function PaymentReturn() {
         };
 
         ask();
-        return () => { stopped.current = true; clearTimeout(timer); };
-    }, [orderId, gatewaySaysFailed]);
+        return () => { cancelled = true; clearTimeout(timer); };
+    }, [orderId, gatewaySaysFailed, gatewayStatus, gatewayPaymentId, navigate]);
 
     const money = (value: number | null) =>
         (typeof value === 'number' && Number.isFinite(value)
@@ -110,14 +176,14 @@ export default function PaymentReturn() {
 
     return (
         <MemberPageShell title="Payment" sidebar={false}>
-            <div className="mx-auto max-w-2xl px-4 py-12">
+            <div className="mx-auto max-w-2xl px-0 sm:px-4 py-4 sm:py-12">
                 <Card>
-                    <CardContent className="p-8 text-center">
+                    <CardContent className="p-5 sm:p-8 text-center">
 
                         {outcome === 'checking' && (
                             <>
                                 <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-blue-600" />
-                                <h1 className="text-[1.75rem] font-bold text-slate-900">
+                                <h1 className="text-xl sm:text-[1.75rem] font-bold text-slate-900">
                                     Confirming your payment
                                 </h1>
                                 <p className="mt-2 text-[1.125rem] text-slate-600">
@@ -130,7 +196,7 @@ export default function PaymentReturn() {
                         {outcome === 'paid' && (
                             <>
                                 <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-green-600" />
-                                <h1 className="text-[1.75rem] font-bold text-slate-900">
+                                <h1 className="text-xl sm:text-[1.75rem] font-bold text-slate-900">
                                     Payment received
                                 </h1>
                                 <p className="mt-2 text-[1.125rem] text-slate-600">
@@ -138,8 +204,8 @@ export default function PaymentReturn() {
                                     Your ACTIV membership is active.
                                 </p>
                                 <Button
-                                    className="mt-6 bg-green-600 py-6 text-[1.125rem] hover:bg-green-700"
-                                    onClick={() => navigate('/member/dashboard')}
+                                    className="mt-6 bg-green-600 w-full sm:w-auto py-5 sm:py-6 text-[1.125rem] hover:bg-green-700"
+                                    onClick={() => navigate('/payment/member-dashboard')}
                                 >
                                     Go to my dashboard
                                 </Button>
@@ -157,21 +223,30 @@ export default function PaymentReturn() {
                         {outcome === 'unconfirmed' && (
                             <>
                                 <Clock className="mx-auto mb-4 h-12 w-12 text-amber-500" />
-                                <h1 className="text-[1.75rem] font-bold text-slate-900">
+                                <h1 className="text-xl sm:text-[1.75rem] font-bold text-slate-900">
                                     We are still confirming your payment
                                 </h1>
                                 <p className="mt-2 text-[1.125rem] text-slate-600">
                                     If money has left your account it has reached us and your
-                                    membership will go live shortly — <strong>please do not
-                                    pay again</strong>. Check your dashboard in a few minutes,
-                                    or contact us with your payment reference.
+                                    {booking ? ' booking will be confirmed' : ' membership will go live'}
+                                    {' '}shortly — <strong>please do not pay again</strong>.
+                                    {booking
+                                        ? ' You will receive the confirmation by email and WhatsApp.'
+                                        : ' Check your dashboard in a few minutes, or contact us with your payment reference.'}
                                 </p>
+                                {booking?.bookingRef && (
+                                    <p className="mt-2 text-[1.125rem] font-semibold text-slate-700">
+                                        Booking reference: {booking.bookingRef}
+                                    </p>
+                                )}
                                 <Button
                                     variant="outline"
-                                    className="mt-6 py-6 text-[1.125rem]"
-                                    onClick={() => navigate('/member/dashboard')}
+                                    className="mt-6 w-full sm:w-auto py-5 sm:py-6 text-[1.125rem]"
+                                    onClick={() => navigate((booking?.eventSlug || booking?.eventId) && booking?.bookingRef
+                                        ? `/events/${encodeURIComponent(booking.eventSlug || booking.eventId)}/book?ref=${encodeURIComponent(booking.bookingRef)}`
+                                        : '/payment/member-dashboard')}
                                 >
-                                    Go to my dashboard
+                                    {booking ? 'View my booking' : 'Go to my dashboard'}
                                 </Button>
                             </>
                         )}
@@ -179,7 +254,7 @@ export default function PaymentReturn() {
                         {outcome === 'failed' && (
                             <>
                                 <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-600" />
-                                <h1 className="text-[1.75rem] font-bold text-slate-900">
+                                <h1 className="text-xl sm:text-[1.75rem] font-bold text-slate-900">
                                     The payment did not go through
                                 </h1>
                                 <p className="mt-2 text-[1.125rem] text-slate-600">
@@ -187,10 +262,12 @@ export default function PaymentReturn() {
                                     ready.
                                 </p>
                                 <Button
-                                    className="mt-6 py-6 text-[1.125rem]"
-                                    onClick={() => navigate('/payment/membership-plans')}
+                                    className="mt-6 w-full sm:w-auto py-5 sm:py-6 text-[1.125rem]"
+                                    onClick={() => navigate((booking?.eventSlug || booking?.eventId)
+                                        ? `/events/${encodeURIComponent(booking.eventSlug || booking.eventId)}/book`
+                                        : '/payment/membership-plans')}
                                 >
-                                    Choose a plan
+                                    {booking ? 'Book again' : 'Choose a plan'}
                                 </Button>
                             </>
                         )}
@@ -198,7 +275,7 @@ export default function PaymentReturn() {
                         {outcome === 'unknown' && (
                             <>
                                 <AlertCircle className="mx-auto mb-4 h-12 w-12 text-slate-400" />
-                                <h1 className="text-[1.75rem] font-bold text-slate-900">
+                                <h1 className="text-xl sm:text-[1.75rem] font-bold text-slate-900">
                                     We could not match this to a payment
                                 </h1>
                                 <p className="mt-2 text-[1.125rem] text-slate-600">
@@ -208,8 +285,8 @@ export default function PaymentReturn() {
                                 </p>
                                 <Button
                                     variant="outline"
-                                    className="mt-6 py-6 text-[1.125rem]"
-                                    onClick={() => navigate('/member/dashboard')}
+                                    className="mt-6 w-full sm:w-auto py-5 sm:py-6 text-[1.125rem]"
+                                    onClick={() => navigate('/payment/member-dashboard')}
                                 >
                                     Go to my dashboard
                                 </Button>

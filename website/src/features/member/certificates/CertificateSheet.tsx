@@ -200,6 +200,17 @@ function PaperRule({
  * with its own rule — there the signature stands alone and has no row to align
  * to.
  */
+/*
+ * MARKER WEIGHT. The scanned signature is a thin pen line and read as faint on
+ * the sheet. Four hairline drop-shadows in the ink colour dilate every stroke
+ * by about a pixel in each direction (the PNG is transparent, so only the ink
+ * grows), then contrast darkens it — the look of a felt-tip, with no
+ * pixelation because nothing is scaled. Filters print in Chrome/Edge.
+ */
+const INK_WEIGHT =
+    'drop-shadow(0.7px 0 0 #0B1A45) drop-shadow(-0.7px 0 0 #0B1A45) ' +
+    'drop-shadow(0 0.7px 0 #0B1A45) drop-shadow(0 -0.7px 0 #0B1A45) contrast(1.35) brightness(0.8)';
+
 export function SignatureInk({ className = 'h-14' }: { className?: string }) {
     return (
         <img
@@ -207,6 +218,7 @@ export function SignatureInk({ className = 'h-14' }: { className?: string }) {
             alt=""
             aria-hidden="true"
             className={`mx-auto w-auto object-contain ${className}`}
+            style={{ filter: INK_WEIGHT }}
         />
     );
 }

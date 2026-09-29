@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import { Children, createContext, isValidElement, useContext, useState, type ReactNode, type ReactElement } from 'react';
+import { Children, createContext, isValidElement, useContext, useEffect, useRef, useState, type ReactNode, type ReactElement } from 'react';
 import {
     Loader2, AlertCircle, Save, X, Check, Pencil,
     Trash2, Undo2, Plus, ArrowUp, ArrowDown, EyeOff, ChevronDown,
@@ -39,7 +39,7 @@ export function CmsCard({ title, description, children, actions }: {
                     {/* 24px black: the card title is the top of the page's
                         hierarchy and has to win against the section headings
                         under it, which are themselves extrabold. */}
-                    <h2 className={`font-display ${CARD_TITLE} text-slate-900 dark:text-white`}>
+                    <h2 className={`font-display ${CARD_TITLE} break-words text-slate-900 dark:text-white`}>
                         {title}
                     </h2>
                     {description && (
@@ -289,6 +289,12 @@ interface ListProps<T> {
     /** Off for lists where position carries no meaning. */
     reorderable?: boolean;
     max?: number;
+    /**
+     * Change this number to close whichever row is open — the screen bumps it
+     * after a successful save, so a saved slide folds back to its summary
+     * instead of staying open looking unsaved.
+     */
+    collapseSignal?: number;
 }
 
 /**
@@ -320,7 +326,7 @@ interface ListProps<T> {
  * editor does when the only Add is underneath the last row.
  */
 export function RepeatableList<T>({
-    items, onChange, noun, blank, row, reorderable = true, max, summary, compact = false,
+    items, onChange, noun, blank, row, reorderable = true, max, summary, compact = false, collapseSignal,
 }: ListProps<T> & {
     /**
      * What the CLOSED card says. Without it a row is "slide 3", which is the
@@ -366,6 +372,14 @@ export function RepeatableList<T>({
      * adding one is always followed by filling it in.
      */
     const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+    /* Saved -> fold the open row away. Skips the first render. */
+    const lastSignal = useRef(collapseSignal);
+    useEffect(() => {
+        if (collapseSignal === lastSignal.current) return;
+        lastSignal.current = collapseSignal;
+        setOpenIndex(null);
+    }, [collapseSignal]);
 
     const update = (index: number, patch: Partial<T>) =>
         onChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
@@ -454,7 +468,7 @@ export function RepeatableList<T>({
                             : 'border-slate-200 hover:border-slate-300 dark:border-[#2a2a2a]'}`}
                     >
                         {/* ---------------- closed: what this row IS ---------------- */}
-                        <div className="flex items-center gap-3 p-3.5">
+                        <div className="flex flex-wrap items-center gap-3 p-3.5">
                             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg
                                              bg-blue-50 text-[1.0625rem] font-bold text-[#2563EB]
                                              dark:bg-blue-950/40">
@@ -480,7 +494,7 @@ export function RepeatableList<T>({
                                 </span>
                             ) : null}
 
-                            <div className="min-w-0 flex-1">
+                            <div className="!min-w-[9rem] flex-1">
                                 <p className="truncate text-[1.25rem] font-bold text-slate-900
                                               dark:text-white">
                                     {said.title || `Untitled ${noun}`}
@@ -493,7 +507,7 @@ export function RepeatableList<T>({
                                 )}
                             </div>
 
-                            <div className="flex shrink-0 items-center gap-1">
+                            <div className="ml-auto flex shrink-0 items-center gap-1">
                                 <button
                                     type="button"
                                     onClick={() => setOpenIndex(open ? null : index)}
@@ -513,7 +527,7 @@ export function RepeatableList<T>({
                                             onClick={() => move(index, -1)}
                                             disabled={index === 0}
                                             aria-label={`Move this ${noun} up`}
-                                            className="rounded p-1.5 text-slate-400 hover:bg-slate-100
+                                            className="rounded p-2.5 sm:p-1.5 text-slate-400 hover:bg-slate-100
                                                        disabled:opacity-30 dark:hover:bg-[#161616]"
                                         >
                                             <ArrowUp size={14} />
@@ -523,7 +537,7 @@ export function RepeatableList<T>({
                                             onClick={() => move(index, 1)}
                                             disabled={index === items.length - 1}
                                             aria-label={`Move this ${noun} down`}
-                                            className="rounded p-1.5 text-slate-400 hover:bg-slate-100
+                                            className="rounded p-2.5 sm:p-1.5 text-slate-400 hover:bg-slate-100
                                                        disabled:opacity-30 dark:hover:bg-[#161616]"
                                         >
                                             <ArrowDown size={14} />
@@ -573,6 +587,25 @@ export function RepeatableList<T>({
                         {open && (
                             <div className="border-t border-slate-100 p-4 dark:border-[#1f1f1f]">
                                 {row(item, (patch) => update(index, patch), index)}
+
+                                {/*
+                                  A SECOND "Done", at the foot of the form.
+                                  The first sits on the row's header, which on a
+                                  long form (a slide with its banner words) is
+                                  scrolled far out of sight by the time the
+                                  editor has finished — so the row just stayed
+                                  open with no visible way to close it.
+                                */}
+                                <div className="mt-4 flex justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => setOpenIndex(null)}
+                                        className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] px-4 py-2
+                                                   text-[1.0625rem] font-semibold text-white transition-colors hover:bg-blue-700"
+                                    >
+                                        <Check className="w-4 h-4" /> Done
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -776,7 +809,7 @@ export function CmsStep({
                             dark:border-[#1F1F1F] dark:bg-[#0A0A0A] dark:shadow-none">
 
             {title ? (
-                <header className="flex items-start justify-between gap-4 rounded-t-2xl border-b
+                <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 rounded-t-2xl border-b
                                    border-slate-100 bg-slate-50/70 px-4 pt-5 pb-5 sm:px-6 sm:pt-6 sm:pb-6
                                    dark:border-[#1a1a1a] dark:bg-[#0F0F0F]">
                     <div className="min-w-0">
@@ -824,7 +857,7 @@ export function CmsStep({
                     </div>
 
                     {(actions || removable) ? (
-                        <div className="flex shrink-0 items-center gap-2">
+                        <div className="flex flex-wrap shrink-0 items-center gap-2">
                             {actions}
                             {removable && <RemoveSection onRemove={() => tools.setHidden(true)} />}
                         </div>
@@ -895,7 +928,7 @@ function StepTitle({ shipped, value, onChange }: {
     if (!editing) {
         return (
             <div className="mt-1 flex items-center gap-2">
-                <h3 className={`${CARD_TITLE} min-w-0 text-slate-900 dark:text-neutral-100`}>
+                <h3 className={`${CARD_TITLE} min-w-0 break-words text-slate-900 dark:text-neutral-100`}>
                     {value || shipped}
                 </h3>
                 <button
@@ -1038,7 +1071,7 @@ export function CmsSteps({ children }: { children: ReactNode }) {
      * and the following card's heading read as one continuous column and
      * the cards stopped looking like cards.
      */
-    return <div className="space-y-8">{children}</div>;
+    return <div className="space-y-5 sm:space-y-8">{children}</div>;
 }
 
 /**
@@ -1063,7 +1096,7 @@ export function CmsSteps({ children }: { children: ReactNode }) {
 export function CmsBlock({ title, hint }: { title: string; hint?: string }) {
     return (
         <header className="mb-4 mt-2 border-l-4 border-[#2563EB] pl-4">
-            <h2 className={`font-display ${CARD_TITLE} text-slate-900 dark:text-white`}>
+            <h2 className={`font-display ${CARD_TITLE} break-words text-slate-900 dark:text-white`}>
                 {title}
             </h2>
             {hint && (
@@ -1325,7 +1358,7 @@ export function CmsSection({ title, hint, actions, children }: {
 }) {
     return (
         <section className="pt-7 first:pt-0 border-t first:border-t-0 border-slate-200 dark:border-[#1F1F1F]">
-            <div className="flex items-start justify-between gap-4 mb-4">
+            <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4 mb-4">
                 <div className="min-w-0">
                     {/* 19px and extrabold: a section heading has to win against
                         the bold field labels under it, or the form reads as one
@@ -1446,7 +1479,7 @@ export function CmsField({ label, hint, children, onClear, canClear = true }: {
         <label className="block">
             {(label || showClear) ? (
                 <span className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-[1.25rem] font-semibold text-slate-800 dark:text-neutral-100">{label}</span>
+                    <span className="min-w-0 text-[1.25rem] font-semibold text-slate-800 dark:text-neutral-100">{label}</span>
                     {showClear && (
                         <button
                             type="button"
@@ -1610,7 +1643,7 @@ export function CmsError({ message, onRetry }: { message: string; onRetry?: () =
 
 export function CmsEmpty({ title, hint }: { title: string; hint?: string }) {
     return (
-        <div className="text-center py-12">
+        <div className="text-center py-8 sm:py-12">
             <p className="text-slate-700 dark:text-[#D4D4D8] font-medium">{title}</p>
             {hint && <p className="text-[1.25rem] text-slate-500 dark:text-[#A1A1AA] mt-1">{hint}</p>}
         </div>
@@ -2059,7 +2092,7 @@ export function IconPicker({ value, onChange, label = 'Icon' }: {
                     onClick={() => setOpen(v => !v)}
                     aria-label={open ? 'Hide the icons' : 'Show all the icons'}
                     aria-expanded={open}
-                    className="shrink-0 rounded p-0.5 text-slate-500 hover:text-slate-800
+                    className="shrink-0 -mr-1.5 rounded p-1.5 text-slate-500 hover:text-slate-800
                                dark:text-neutral-400 dark:hover:text-neutral-100"
                 >
                     <ChevronDown size={14} className={open ? 'rotate-180' : ''} />
@@ -2088,7 +2121,7 @@ export function IconPicker({ value, onChange, label = 'Icon' }: {
                  * control — in a three-column row that is 11rem, which squeezed
                  * the grid to about 20px a cell.
                  */
-                <div className="absolute z-30 mt-1 w-full min-w-[20rem] max-h-72 overflow-y-auto
+                <div className="absolute z-30 mt-1 w-full sm:min-w-[20rem] max-h-72 overflow-y-auto
                                 bg-white dark:bg-[#0a0a0a]
                                 border border-slate-200 dark:border-[#2a2a2a] rounded-lg shadow-xl p-3 space-y-3">
                     {groups.length === 0 ? (
@@ -2100,7 +2133,7 @@ export function IconPicker({ value, onChange, label = 'Icon' }: {
                             <p className="text-[1.0625rem] font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">
                                 {group.label}
                             </p>
-                            <div className="grid grid-cols-8 gap-1">
+                            <div className="grid grid-cols-6 sm:grid-cols-8 gap-1">
                                 {group.icons.map(name => (
                                     <button
                                         key={name}

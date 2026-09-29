@@ -43,7 +43,7 @@ export interface EventActionsProps {
 
 /** One control. Same paint for all of them, so the row reads as a set. */
 const BTN =
-    'inline-flex items-center gap-2 rounded-full border border-brand-100 bg-white px-4 py-2.5 ' +
+    'inline-flex min-h-11 items-center gap-2 rounded-full border border-brand-100 bg-white px-4 py-2.5 ' +
     'text-[1rem] font-bold text-brand-800 transition-colors hover:border-brand-200 ' +
     'hover:bg-brand-50/60 hover:text-brand-700';
 
@@ -53,7 +53,7 @@ const MENU_ITEM =
     'text-brand-800 transition-colors hover:bg-brand-50';
 
 const MENU =
-    'absolute left-0 top-[calc(100%+0.5rem)] z-30 w-60 overflow-hidden rounded-2xl border ' +
+    'absolute left-0 top-[calc(100%+0.5rem)] z-30 w-60 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border ' +
     'border-brand-100 bg-white py-1 shadow-[0_18px_50px_-18px_rgb(28_46_104/0.45)]';
 
 export function EventActions({ event, layout = 'row', className = '' }: EventActionsProps) {
@@ -140,8 +140,11 @@ export function EventActions({ event, layout = 'row', className = '' }: EventAct
         <div ref={holder} className={`relative ${wrap} ${className}`}>
 
             {/* ---------------------------------------------------- calendar */}
+            {/* `sm:relative` on each wrapper: on a phone the menus anchor to the
+                whole row (the holder is `relative`) instead of to a button that may
+                sit at the right edge, where a 240px menu ran off the screen. */}
             {calendarHref && (
-                <div className="relative">
+                <div className="sm:relative">
                     <button
                         type="button"
                         onClick={() => setOpenMenu(openMenu === 'calendar' ? null : 'calendar')}
@@ -183,7 +186,7 @@ export function EventActions({ event, layout = 'row', className = '' }: EventAct
             )}
 
             {/* ------------------------------------------------------- share */}
-            <div className="relative">
+            <div className="sm:relative">
                 <button
                     type="button"
                     onClick={() => setOpenMenu(openMenu === 'share' ? null : 'share')}
