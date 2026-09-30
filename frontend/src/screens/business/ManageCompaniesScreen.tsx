@@ -1,23 +1,21 @@
-// Manage Companies Screen - Purple Theme Design System
+// Manage Companies — every company under the membership, the ONE place a
+// company switch is made from a list. Premium (business tone, violet).
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet,
-  Alert,
-  StatusBar,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, FlatList, StyleSheet, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '../../types';
 import api from '../../services/api';
-import { ENDPOINTS } from '../../config/api.config';
+import { ENDPOINTS, resolveMediaUrl } from '../../config/api.config';
 import { useActiveCompanyStore } from '../../stores/activeCompanyStore';
+import {
+  Badge, PALETTE, SPACE, TYPE, BrandFrame, BrandHeaderBlock, BrandTopBar, BrandHero, GlassIconButton,
+  PREMIUM_OVERLAP, FadeInUp, LiftCard, CompanyLogoTile, ArtEmptyState, Briefcase3D, PressableScale,
+  GlassFigure, premiumTone,
+} from '../../ui';
+import { CardSkeletons, SoftAction, companyStatus } from './businessKit';
 
 type ManageCompaniesScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -38,6 +36,7 @@ interface Company {
   area?: string;
   status: string;
   isActive: boolean;
+  logo?: string;
 }
 
 const ManageCompaniesScreen: React.FC<Props> = ({ navigation }) => {
@@ -108,367 +107,205 @@ const ManageCompaniesScreen: React.FC<Props> = ({ navigation }) => {
     );
   };
 
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#7C3AED" />
-      </View>
-    );
-  }
+  const list = companies || [];
+  const count = list.length;
+  const listed = list.filter((c) => c?.isActive !== false).length;
+  const active = list.find((c) => c?._id === activeCompanyId);
+
+  const header = (
+    <View>
+      <BrandHeaderBlock tone="business">
+        <BrandTopBar
+          onBack={() => navigation.goBack()}
+          title="My companies"
+          right={<GlassIconButton icon="add" onPress={() => navigation.navigate('AddCompany')} accessibilityLabel="Add company" />}
+        />
+        <BrandHero
+          eyebrow="Your membership"
+          title="Manage companies"
+          subtitle="Switch the company you are working as, or tidy up the ones you run."
+          art={<Briefcase3D tone="business" size={92} />}
+          artSize={92}
+        >
+          <View style={styles.figures}>
+            <GlassFigure icon="apartment" value={String(count)} label={count === 1 ? 'Company' : 'Companies'} />
+            <GlassFigure icon="travel-explore" value={String(listed)} label="In Discover" />
+          </View>
+        </BrandHero>
+      </BrandHeaderBlock>
+      {active ? (
+        <FadeInUp delay={220} style={styles.overlap}>
+          <LiftCard tone="business" style={styles.gutter}>
+            <View style={styles.nowRow}>
+              <Icon name="bolt" size={18} color={PALETTE.violet} />
+              <Text style={styles.nowText} numberOfLines={2} maxFontSizeMultiplier={1.3}>
+                Working as <Text style={styles.nowStrong}>{active?.businessName || 'this company'}</Text>
+              </Text>
+            </View>
+          </LiftCard>
+        </FadeInUp>
+      ) : <View style={styles.overlapSpacer} />}
+    </View>
+  );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F7F7FD" />
-
-      {/* Nav Header */}
-      <View style={styles.navHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-          <Icon name="arrow-back" size={24} color="#1E1B4B" />
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Manage Companies</Text>
-        </View>
-        <TouchableOpacity onPress={() => navigation.navigate('AddCompany')} style={styles.addButtonHeader} activeOpacity={0.7}>
-          <Icon name="add" size={24} color="#7C3AED" />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        style={styles.scrollContainer}
-        contentContainerStyle={styles.scrollContent}
+    <BrandFrame tone="business">
+      <FlatList
+        data={isLoading ? [] : list}
+        keyExtractor={(item, index) => String(item?._id || (item as any)?.id || index)}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
         showsVerticalScrollIndicator={false}
-      >
-        {(companies || []).length > 0 ? (
-          (companies || []).map((comp) => (
-            <View
-              key={comp._id}
-              style={[styles.companyCard, activeCompanyId === comp._id && styles.companyCardActive]}
-            >
-              <View style={styles.cardHeaderRow}>
-                <View style={styles.iconBox}>
-                  <Icon name="storefront" size={26} color="#7C3AED" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.companyName}>{comp.businessName}</Text>
-                  <Text style={styles.companyType}>{comp.businessType}</Text>
-                  <Text style={styles.companyPhone}>{comp.mobileNumber}</Text>
-                </View>
-                <View style={styles.statusBadge}>
-                  <Text style={styles.statusText}>
-                    {comp.status === 'pending'
-                      ? 'Under Review'
-                      : comp.status === 'active'
-                      ? 'Active'
-                      : comp.status || 'Under Review'}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Active / switch control - the single company-switch point */}
-              {activeCompanyId === comp._id ? (
-                <View style={styles.activeRow}>
-                  <Icon name="check-circle" size={16} color="#10B981" style={{ marginRight: 6 }} />
-                  <Text style={styles.activeRowText}>
-                    Currently active — products, profile & analytics show this company
-                  </Text>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.switchRow}
-                  onPress={() => handleUseCompany(comp)}
-                  activeOpacity={0.85}
-                >
-                  <Icon name="swap-horiz" size={16} color="#7C3AED" style={{ marginRight: 6 }} />
-                  <Text style={styles.switchRowText}>Switch to this company</Text>
-                </TouchableOpacity>
-              )}
-
-              <View style={styles.actionRow}>
-                <TouchableOpacity
-                  style={styles.editBtn}
-                  onPress={() => navigation.navigate('EditCompany', { companyId: comp._id })}
-                  activeOpacity={0.8}
-                >
-                  <Icon name="edit" size={16} color="#7C3AED" style={{ marginRight: 4 }} />
-                  <Text style={styles.editBtnText}>Edit</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.productsBtn}
-                  onPress={() => {
-                    // Opening a company's catalog switches the active company,
-                    // so no screen ends up mixing two companies' data.
-                    setActiveCompany(comp._id);
-                    navigation.navigate('ProductsServices', { companyId: comp._id });
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Icon name="inventory-2" size={16} color="#10B981" style={{ marginRight: 4 }} />
-                  <Text style={styles.productsBtnText}>Products</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.deleteBtn}
-                  onPress={() => handleDelete(comp)}
-                  activeOpacity={0.8}
-                >
-                  <Icon name="delete-outline" size={16} color="#EF4444" style={{ marginRight: 4 }} />
-                  <Text style={styles.deleteBtnText}>Delete</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))
-        ) : (
-          <View style={styles.emptyCard}>
-            <Icon name="storefront" size={54} color="#9CA3AF" />
-            <Text style={styles.emptyTitle}>No Companies Registered</Text>
-            <Text style={styles.emptySub}>Add your business profile to showcase products and services.</Text>
-            <TouchableOpacity
-              style={styles.addBtnPrimary}
-              onPress={() => navigation.navigate('AddCompany')}
-              activeOpacity={0.85}
-            >
-              <Icon name="add" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.addBtnPrimaryText}>Add Company</Text>
-            </TouchableOpacity>
-          </View>
+        ListHeaderComponent={header}
+        contentContainerStyle={styles.list}
+        renderItem={({ item, index }) => (
+          <FadeInUp delay={Math.min(index, 5) * 70} distance={14}>
+            <CompanyCard
+              company={item}
+              active={activeCompanyId === item?._id}
+              onUse={() => handleUseCompany(item)}
+              onPreview={() => navigation.navigate('CompanyPublic', { companyId: item._id })}
+              onView={() => navigation.navigate('ViewCompany', { companyId: item._id })}
+              onEdit={() => navigation.navigate('EditCompany', { companyId: item._id })}
+              onProducts={() => {
+                // Opening a company's catalog switches the active company,
+                // so no screen ends up mixing two companies' data.
+                setActiveCompany(item._id);
+                navigation.navigate('ProductsServices', { companyId: item._id });
+              }}
+              onDelete={() => handleDelete(item)}
+            />
+          </FadeInUp>
         )}
-      </ScrollView>
-    </SafeAreaView>
+        ListEmptyComponent={
+          isLoading ? <CardSkeletons rows={3} tall /> : (
+            <LiftCard tone="business" style={styles.gutter}>
+              <ArtEmptyState tone="business"
+                compact
+                art={<Briefcase3D tone="business" size={78} />}
+                title="No companies registered"
+                message="Add your business profile to showcase products and services."
+                action="Add company"
+                actionIcon="add-business"
+                onAction={() => navigation.navigate('AddCompany')}
+              />
+            </LiftCard>
+          )
+        }
+      />
+    </BrandFrame>
   );
 };
 
+function statusLabel(status?: string) {
+  return status === 'pending'
+    ? 'Under Review'
+    : status === 'active'
+    ? 'Active'
+    : status || 'Under Review';
+}
+
+/** One company: identity, the switch control, and its actions. */
+function CompanyCard({ company, active, onUse, onPreview, onView, onEdit, onProducts, onDelete }: {
+  company: Company; active: boolean;
+  onUse: () => void; onPreview: () => void; onView: () => void; onEdit: () => void; onProducts: () => void; onDelete: () => void;
+}) {
+  const p = premiumTone('business');
+  const logo = company?.logo ? resolveMediaUrl(company.logo) : '';
+  const label = statusLabel(company?.status);
+  const st = companyStatus(company?.status);
+  const listed = company?.isActive !== false;
+  return (
+    <LiftCard tone="business" style={[styles.card, active && { borderColor: p.accent, borderWidth: 1.5 }]}>
+      <View style={styles.headRow}>
+        <CompanyLogoTile tone="business" uri={logo} name={company?.businessName} size={56} ring={active} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.name} maxFontSizeMultiplier={1.3}>{company?.businessName || 'Company'}</Text>
+          {company?.businessType ? <Text style={styles.type} numberOfLines={2} maxFontSizeMultiplier={1.3}>{company.businessType}</Text> : null}
+          {company?.mobileNumber ? (
+            <View style={styles.metaRow}>
+              <Icon name="phone" size={14} color={PALETTE.textFaint} />
+              <Text style={styles.meta} numberOfLines={1}>{company.mobileNumber}</Text>
+            </View>
+          ) : null}
+        </View>
+        <Badge size="sm" label={label} status={st.key === 'active' ? 'active' : st.key === 'pending' ? 'pending' : st.key} />
+      </View>
+
+      <View style={styles.tags}>
+        <Badge size="sm" dot label={listed ? 'Listed in Discover' : 'Hidden from Discover'} color={listed ? PALETTE.successText : PALETTE.warningText} bg={listed ? PALETTE.successSoft : PALETTE.warningSoft} />
+      </View>
+
+      {/* Active / switch control — the single company-switch point */}
+      {active ? (
+        <LinearGradient colors={p.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.strip}>
+          <Icon name="check-circle" size={18} color={PALETTE.white} />
+          <Text style={[styles.stripText, { color: PALETTE.white }]} maxFontSizeMultiplier={1.3}>
+            Active — products, profile & analytics show this company
+          </Text>
+        </LinearGradient>
+      ) : (
+        <PressableScale
+          onPress={onUse}
+          contentStyle={[styles.strip, styles.stripIdle]}
+          accessibilityRole="button"
+          accessibilityLabel={`Switch to ${company?.businessName || 'this company'}`}
+        >
+          <Icon name="swap-horiz" size={18} color={p.accent} />
+          <Text style={[styles.stripText, { color: p.accentDark }]} maxFontSizeMultiplier={1.3}>Switch to this company</Text>
+          <Icon name="chevron-right" size={20} color={p.accent} />
+        </PressableScale>
+      )}
+
+      <View style={styles.actions}>
+        <View style={styles.actionRow}>
+          <SoftAction icon="visibility" label="View" onPress={onView} accessibilityLabel={`View ${company?.businessName || 'company'}`} />
+          <SoftAction icon="edit" label="Edit" onPress={onEdit} />
+        </View>
+        <View style={styles.actionRow}>
+          <SoftAction icon="inventory-2" label="Products" onPress={onProducts} />
+          <SoftAction icon="delete-outline" label="Delete" danger onPress={onDelete} />
+        </View>
+      </View>
+
+      {/* Website MyCompanies "View as member": the member-facing page,
+          the one view an owner cannot get any other way. */}
+      <PressableScale onPress={onPreview} contentStyle={styles.preview} accessibilityRole="button" accessibilityLabel="View as member">
+        <Icon name="public" size={17} color={p.accent} />
+        <Text style={[styles.previewText, { color: p.accentDark }]} maxFontSizeMultiplier={1.3}>View as member</Text>
+        <Icon name="chevron-right" size={18} color={p.accent} />
+      </PressableScale>
+    </LiftCard>
+  );
+}
+
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F7F7FD',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F7F7FD',
-  },
-  navHeader: {
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    backgroundColor: '#F7F7FD',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addButtonHeader: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F3E8FF',
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
+  list: { paddingBottom: SPACE.huge, flexGrow: 1 },
+  gutter: { marginHorizontal: SPACE.lg },
+  overlap: { marginTop: -PREMIUM_OVERLAP, marginBottom: SPACE.md },
+  overlapSpacer: { height: SPACE.xs },
+  figures: { flexDirection: 'row', gap: SPACE.sm, marginTop: SPACE.lg, marginBottom: SPACE.sm },
+  nowRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
+  nowText: { ...TYPE.body, flex: 1, minWidth: 0 },
+  nowStrong: { fontWeight: '800', color: PALETTE.text },
 
-  scrollContainer: {
-    flex: 1,
+  card: { marginHorizontal: SPACE.lg, marginBottom: SPACE.md },
+  headRow: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.md },
+  name: { ...TYPE.heading },
+  type: { ...TYPE.caption, fontSize: 13, lineHeight: 18, marginTop: SPACE.xxs },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs, marginTop: SPACE.xs },
+  meta: { ...TYPE.caption, color: PALETTE.textSoft, flexShrink: 1 },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.md },
+  strip: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, minHeight: 46,
+    borderRadius: 14, paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm, marginTop: SPACE.md,
   },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 60,
-  },
-
-  // Company Card
-  companyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#F3E8FF',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  companyCardActive: {
-    borderWidth: 1.5,
-    borderColor: '#7C3AED',
-  },
-  activeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#DCFCE7',
-    borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    marginBottom: 12,
-  },
-  activeRowText: {
-    flex: 1,
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#166534',
-  },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3E8FF',
-    borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    marginBottom: 12,
-  },
-  switchRowText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#7C3AED',
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  iconBox: {
-    width: 50,
-    height: 50,
-    borderRadius: 14,
-    backgroundColor: '#F3E8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  companyName: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  companyType: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  companyPhone: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#7C3AED',
-    marginTop: 2,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    backgroundColor: '#FEF3C7',
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#D97706',
-  },
-
-  actionRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  editBtn: {
-    flex: 1,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.2,
-    borderColor: '#7C3AED',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  editBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#7C3AED',
-  },
-  productsBtn: {
-    flex: 1,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#DCFCE7',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  productsBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#10B981',
-  },
-  deleteBtn: {
-    flex: 1,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#FFF1F2',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#EF4444',
-  },
-
-  // Empty State
-  emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 30,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#F3E8FF',
-  },
-  emptyTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1E1B4B',
-    marginTop: 14,
-  },
-  emptySub: {
-    fontSize: 13,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginTop: 6,
-    marginBottom: 18,
-  },
-  addBtnPrimary: {
-    height: 48,
-    paddingHorizontal: 24,
-    backgroundColor: '#7C3AED',
-    borderRadius: 14,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  addBtnPrimaryText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
+  stripIdle: { backgroundColor: PALETTE.violetTint, borderWidth: 1, borderColor: PALETTE.violetBorder },
+  stripText: { flex: 1, minWidth: 0, fontSize: 13, lineHeight: 18, fontWeight: '700' },
+  actions: { gap: SPACE.sm, marginTop: SPACE.md },
+  actionRow: { flexDirection: 'row', gap: SPACE.sm },
+  preview: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs, minHeight: 44, marginTop: SPACE.sm, alignSelf: 'flex-start' },
+  previewText: { fontSize: 13, lineHeight: 18, fontWeight: '700' },
 });
 
 export default ManageCompaniesScreen;

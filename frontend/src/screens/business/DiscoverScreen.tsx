@@ -1,35 +1,49 @@
-// Discover Screen - Active Company by default, whole network on search
-//
-// Idle (no search term): shows ONLY the company you have switched to, exactly
-// like every other business screen.
-// Searching: opens up to the whole network, so a buyer typing "chairs" finds
-// every member selling chairs, whoever owns them.
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  StyleSheet,
-  StatusBar,
-  ActivityIndicator,
-  Image,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Image, Alert, Linking, ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
 import { RootStackParamList } from '../../types';
+import {
+  SegmentedTabs, Badge, PALETTE, SPACE, SIZE, TYPE, money, BRAND,
+  BrandFrame, BrandHeaderBlock, BrandTopBar, BrandHero, GlassIconButton, PREMIUM_OVERLAP, FadeInUp, LiftCard,
+  LiftSearchBar, CompanyLogoTile, TrustStar, ArtEmptyState, MarketGlobe3D, SearchLens3D, VaultLock3D,
+  PressableScale, premiumTone,
+} from '../../ui';
 import api from '../../services/api';
 import { resolveMediaUrl } from '../../config/api.config';
-import { useActiveCompany, useActiveCompanyStore } from '../../stores/activeCompanyStore';
+import { getGeography } from '../../services/regions';
+import { getMyProfile } from '../../services/memberApi';
+import {
+  getTrustListIds, addToTrustList, removeFromTrustList, getMyCompanies, errorMessage,
+} from '../../services/businessApi';
+import { useMembershipPaid } from './MembershipGate';
+import { BusinessTabBar } from './BusinessTabBar';
+import { CardSkeletons, SoftAction } from './businessKit';
 
-type DiscoverScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Discover'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'Discover'>;
 
-interface Props {
-  navigation: DiscoverScreenNavigationProp;
-}
+/**
+ * DISCOVER — the website's /business/discover, same requests:
+ *
+ *   GET /business-profiles/discover?q&state&district&block   companies (+ products, matchedProducts)
+ *   GET /products/discover?q&state&district&block            products (companyId populated)
+ *   GET /regions/geography[?state[&district]]                the three region pickers (all of India)
+ *   GET /members/my-profile                                  home region (default) + paid check
+ *   GET /business-profiles/all                               my own companies (no Trust on them)
+ *   GET /business-profiles/trust-list/ids                    which cards start trusted
+ *   POST/DELETE /business-profiles/trust-list/:id            trust / untrust
+ *
+ * No search term is NOT "no query": the region alone is browsed (q is optional
+ * on both endpoints). The screen opens on the member's own region, and every
+ * level can be changed or cleared ("Any state" = the whole network).
+ *
+ * The directory is a membership benefit: an unpaid member is told HOW MANY
+ * matches there are and nothing else — no names, no numbers.
+ */
 
 interface ProductItem {
   _id: string;
@@ -40,7 +54,6 @@ interface ProductItem {
   description?: string;
   sku?: string;
   imageUrl?: string;
-  isFeatured?: boolean;
   companyId?: any;
 }
 
@@ -54,856 +67,715 @@ interface CompanyItem {
   email?: string;
   description?: string;
   logo?: string;
+  trustedBy?: number;
+  ownerIsMember?: boolean;
   products?: ProductItem[];
   matchedProducts?: ProductItem[];
 }
 
-const SEARCH_DEBOUNCE_MS = 400;
-
-// A single character matches too many names to be a useful search.
-const MIN_QUERY_LENGTH = 2;
-
+type Region = { state: string; district: string; block: string };
+type Level = keyof Region;
 type DiscoverFilter = 'all' | 'companies' | 'products';
 
-const FILTERS: { key: DiscoverFilter; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'companies', label: 'Companies' },
-  { key: 'products', label: 'Products' },
+const SEARCH_DEBOUNCE_MS = 400;
+const MIN_QUERY_LENGTH = 2;
+const EMPTY_REGION: Region = { state: '', district: '', block: '' };
+const FILTERS: { value: DiscoverFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'companies', label: 'Companies' },
+  { value: 'products', label: 'Products' },
 ];
+const LEVEL_LABEL: Record<Level, string> = { state: 'Any state', district: 'Any district', block: 'Any block' };
+
+const listOf = (res: any): any[] => {
+  const payload = res?.data?.data ?? res?.data ?? [];
+  return Array.isArray(payload) ? payload : [];
+};
+
+
+/* ------------------------------------------------------------------ region picker */
+
+function RegionPill({ level, value, disabled, open, onPress }: {
+  level: Level; value: string; disabled: boolean; open: boolean; onPress: () => void;
+}) {
+  const p = premiumTone('business');
+  const set = !!value;
+  const inner = (
+    <>
+      <Text style={[s.regionPillText, set && { color: PALETTE.white }]} numberOfLines={1} maxFontSizeMultiplier={1.2}>{value || LEVEL_LABEL[level]}</Text>
+      <Icon name={open ? 'expand-less' : 'expand-more'} size={18} color={set ? PALETTE.white : PALETTE.textFaint} />
+    </>
+  );
+  return (
+    <PressableScale
+      disabled={disabled}
+      onPress={onPress}
+      scaleTo={0.95}
+      style={[s.regionCell, disabled && { opacity: 0.45 }]}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: open, disabled }}
+      accessibilityLabel={`${level}: ${value || LEVEL_LABEL[level]}`}
+    >
+      {set ? (
+        <LinearGradient colors={p.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[s.regionPill, open && s.regionPillOpen]}>{inner}</LinearGradient>
+      ) : (
+        <View style={[s.regionPill, s.regionPillIdle, open && s.regionPillOpenIdle]}>{inner}</View>
+      )}
+    </PressableScale>
+  );
+}
+
+/** Inline options panel — no native Modal (CLAUDE.md Rule 2). */
+function RegionPanel({ level, options, value, onPick }: {
+  level: Level; options: string[]; value: string; onPick: (v: string) => void;
+}) {
+  const [q, setQ] = useState('');
+  const shown = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const list = options || [];
+    return needle ? list.filter((o) => String(o || '').toLowerCase().includes(needle)) : list;
+  }, [options, q]);
+
+  return (
+    <View style={s.panel}>
+      {(options || []).length > 8 ? (
+        <View style={s.panelSearch}>
+          <Icon name="search" size={18} color={PALETTE.textFaint} />
+          <TextInput value={q} onChangeText={setQ} placeholder={`Find a ${level}`} placeholderTextColor={PALETTE.textFaint} style={s.panelInput} />
+        </View>
+      ) : null}
+      <ScrollView style={{ maxHeight: 300 }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+        <TouchableOpacity style={[s.option, !value && s.optionRowOn]} onPress={() => onPick('')} activeOpacity={0.7} accessibilityRole="radio" accessibilityState={{ checked: !value }}>
+          <Text style={[s.optionText, !value && s.optionOn]}>{LEVEL_LABEL[level]}</Text>
+          {!value ? <Icon name="check-circle" size={18} color={PALETTE.violet} /> : null}
+        </TouchableOpacity>
+        {shown.slice(0, 120).map((o) => (
+          <TouchableOpacity key={o} style={[s.option, o === value && s.optionRowOn]} onPress={() => onPick(o)} activeOpacity={0.7} accessibilityRole="radio" accessibilityState={{ checked: o === value }}>
+            <Text style={[s.optionText, o === value && s.optionOn]} numberOfLines={2}>{o}</Text>
+            {o === value ? <Icon name="check-circle" size={18} color={PALETTE.violet} /> : null}
+          </TouchableOpacity>
+        ))}
+        {(options || []).length === 0 ? <Text style={s.panelEmpty}>Nothing to choose here yet.</Text> : null}
+      </ScrollView>
+    </View>
+  );
+}
+
+/* ------------------------------------------------------------------ company card */
+
+function CompanyCard({ item, ordered, highlightIds, matchedOnly, own, trusted, busy, onOpen, onTrust }: {
+  item: CompanyItem; ordered: ProductItem[]; highlightIds: Set<string>; matchedOnly: boolean;
+  own: boolean; trusted: boolean; busy: boolean; onOpen: () => void; onTrust: () => void;
+}) {
+  const p = premiumTone('business');
+  const logo = item?.logo ? resolveMediaUrl(item.logo) : '';
+  const trustedBy = Number(item?.trustedBy || 0);
+  const phone = String(item?.mobileNumber || '');
+  const shownProducts = (ordered || []).slice(0, 4);
+  const place = [item?.location, item?.area].filter(Boolean).join(', ');
+
+  return (
+    <FadeInUp distance={12} style={s.cardWrap}>
+      <LiftCard tone="business">
+        <View style={s.cardHead}>
+          <PressableScale onPress={onOpen} scaleTo={0.98} style={{ flex: 1, minWidth: 0 }} contentStyle={s.cardHeadMain} accessibilityRole="button" accessibilityLabel={`Open ${item?.businessName || 'company'}`}>
+            <CompanyLogoTile tone="business" uri={logo} name={item?.businessName} size={56} ring={trusted} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <View style={s.nameRow}>
+                <Text style={s.name} numberOfLines={2} maxFontSizeMultiplier={1.3}>{item?.businessName || 'Business'}</Text>
+                {item?.ownerIsMember === true ? (
+                  <LinearGradient colors={['#FDE68A', '#D97706']} style={s.memberStar} accessibilityLabel="ACTIV member">
+                    <Icon name="star" size={11} color={PALETTE.white} />
+                  </LinearGradient>
+                ) : null}
+              </View>
+              <Text style={s.type} numberOfLines={2} maxFontSizeMultiplier={1.3}>{item?.businessType || '—'}</Text>
+              {trustedBy > 0 ? (
+                <View style={s.trustLine}>
+                  <Icon name="verified-user" size={13} color={PALETTE.green} />
+                  <Text style={s.trustLineText} maxFontSizeMultiplier={1.3}>{trustedBy} {trustedBy === 1 ? 'member trusts them' : 'members trust them'}</Text>
+                </View>
+              ) : null}
+            </View>
+          </PressableScale>
+          <TrustStar
+            trusted={trusted}
+            busy={busy}
+            disabled={own}
+            onPress={onTrust}
+            accessibilityLabel={own ? 'Your own company' : trusted ? 'On your trust list — remove' : 'Add to your trust list'}
+          />
+        </View>
+
+        <View style={s.facts}>
+          <View style={s.factChip}>
+            <Icon name="place" size={14} color={p.accent} />
+            <Text style={s.factText} numberOfLines={1} maxFontSizeMultiplier={1.3}>{place || 'Location not set'}</Text>
+          </View>
+          {phone ? (
+            <PressableScale onPress={() => Linking.openURL(`tel:${phone.replace(/[^\d+]/g, '')}`).catch(() => null)} contentStyle={[s.factChip, s.factChipLink]} accessibilityRole="link" accessibilityLabel={`Call ${phone}`}>
+              <Icon name="call" size={14} color={p.accentDark} />
+              <Text style={[s.factText, s.factLink]} numberOfLines={1} maxFontSizeMultiplier={1.3}>{phone}</Text>
+            </PressableScale>
+          ) : null}
+          {item?.email ? (
+            <PressableScale onPress={() => Linking.openURL(`mailto:${item?.email || ''}`).catch(() => null)} contentStyle={s.factChip} accessibilityRole="link" accessibilityLabel={`Email ${item?.email || ''}`}>
+              <Icon name="mail-outline" size={14} color={PALETTE.textMuted} />
+              <Text style={s.factText} numberOfLines={1} maxFontSizeMultiplier={1.3}>{item?.email}</Text>
+            </PressableScale>
+          ) : null}
+        </View>
+
+        {item?.description ? <Text style={s.desc} numberOfLines={2} maxFontSizeMultiplier={1.3}>{item.description}</Text> : null}
+
+        {shownProducts.length > 0 ? (
+          <View style={s.products}>
+            <Text style={s.productsLabel}>
+              {matchedOnly ? `Matching products (${(ordered || []).length})` : `Products & services (${(ordered || []).length})`}
+            </Text>
+            {shownProducts.map((pr, i) => {
+              const hit = highlightIds.has(String(pr?._id));
+              const img = pr?.imageUrl ? resolveMediaUrl(pr.imageUrl) : '';
+              return (
+                <View key={String(pr?._id || i)} style={[s.product, hit && s.productHit]}>
+                  {img ? <Image source={{ uri: img }} style={s.productImg} resizeMode="cover" /> : (
+                    <LinearGradient colors={[PALETTE.violetSoft, PALETTE.violetTint]} style={[s.productImg, s.productImgEmpty]}><Icon name="inventory-2" size={18} color={p.accent} /></LinearGradient>
+                  )}
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={s.productName} numberOfLines={1} maxFontSizeMultiplier={1.3}>{pr?.name || 'Item'}</Text>
+                    <Text style={s.productMeta} numberOfLines={1} maxFontSizeMultiplier={1.3}>{pr?.category || 'General'}{pr?.sku ? ` · ${pr.sku}` : ''}</Text>
+                  </View>
+                  <View style={s.priceCol}>
+                    <Text style={s.productPrice} numberOfLines={1} maxFontSizeMultiplier={1.2}>{money(pr?.price)}</Text>
+                    {Number(pr?.stock || 0) > 0 ? <Text style={s.stock} numberOfLines={1} maxFontSizeMultiplier={1.2}>Stock {Number(pr?.stock || 0)}</Text> : null}
+                  </View>
+                </View>
+              );
+            })}
+            {(ordered || []).length > shownProducts.length ? (
+              <Text style={s.moreProducts}>+{(ordered || []).length - shownProducts.length} more on the company page</Text>
+            ) : null}
+          </View>
+        ) : null}
+
+        <View style={s.cardFoot}>
+          {own ? (
+            <View style={s.ownChip}><Icon name="storefront" size={16} color={PALETTE.violetDark} /><Text style={s.ownChipText} numberOfLines={1}>Your company</Text></View>
+          ) : (
+            <SoftAction
+              icon={trusted ? 'verified-user' : 'add-moderator'}
+              label={busy ? 'Saving…' : trusted ? 'Trusted' : 'Trust'}
+              onPress={onTrust}
+              disabled={busy}
+              accessibilityLabel={trusted ? 'Trusted — remove from your trust list' : 'Add to your trust list'}
+            />
+          )}
+          <SoftAction icon="arrow-forward" label="View company" primary onPress={onOpen} />
+        </View>
+      </LiftCard>
+    </FadeInUp>
+  );
+}
+
+/* ------------------------------------------------------------------ compact row (list view) */
+
+/**
+ * The website's list view: one company a row, carrying the four things somebody
+ * scans a directory for — who, what trade, where, what number — and dropping
+ * the catalogue, write-up and trust count, so a screen holds many at once.
+ */
+function CompanyRow({ item, onOpen }: { item: CompanyItem; onOpen: () => void }) {
+  const p = premiumTone('business');
+  const logo = item?.logo ? resolveMediaUrl(item.logo) : '';
+  const phone = String(item?.mobileNumber || '');
+  return (
+    <PressableScale onPress={onOpen} scaleTo={0.98} style={s.listRowWrap} contentStyle={[s.listRow, { shadowColor: p.shadow }]} accessibilityRole="button" accessibilityLabel={`Open ${item?.businessName || 'company'}`}>
+      <CompanyLogoTile tone="business" uri={logo} name={item?.businessName} size={42} ring={false} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <View style={s.nameRow}>
+          <Text style={s.listName} numberOfLines={1} maxFontSizeMultiplier={1.3}>{item?.businessName || 'Business'}</Text>
+          {item?.ownerIsMember === true ? <Icon name="star" size={13} color={PALETTE.amber} accessibilityLabel="ACTIV member" /> : null}
+        </View>
+        <Text style={s.listMeta} numberOfLines={1} maxFontSizeMultiplier={1.3}>
+          {[item?.businessType || '—', [item?.location, item?.area].filter(Boolean).join(', ') || 'Location not set'].join(' · ')}
+        </Text>
+      </View>
+      {phone ? (
+        <PressableScale
+          onPress={() => Linking.openURL(`tel:${phone.replace(/[^\d+]/g, '')}`).catch(() => null)}
+          scaleTo={0.9}
+          contentStyle={s.listCall}
+          accessibilityLabel={`Call ${item?.businessName || 'company'}`}
+          hitSlop={6}
+        >
+          <Icon name="call" size={18} color={PALETTE.white} />
+        </PressableScale>
+      ) : null}
+      <Icon name="chevron-right" size={20} color={PALETTE.textFaint} />
+    </PressableScale>
+  );
+}
+
+/* ------------------------------------------------------------------ count only (unpaid) */
+
+function CountOnly({ companies, products, term, regionLabel, onJoin }: {
+  companies: number; products: number; term: string; regionLabel: string; onJoin: () => void;
+}) {
+  const title = `${companies} ${companies === 1 ? 'company' : 'companies'}${products > 0 ? ` · ${products} ${products === 1 ? 'product' : 'products'}` : ''}`;
+  return (
+    <LiftCard tone="business" style={s.gutter}>
+      <ArtEmptyState tone="business"
+        compact
+        art={<VaultLock3D tone="business" size={80} />}
+        title={title}
+        message={`${term ? `match “${term}” in ${regionLabel}. ` : `in ${regionLabel}. `}Membership opens the directory — names, catalogues and contact details for every one of them.`}
+        action="Become a member"
+        actionIcon="workspace-premium"
+        onAction={onJoin}
+      >
+        <Badge label="Members only" icon="workspace-premium" color={PALETTE.violetDark} bg={PALETTE.violetSoft} size="sm" style={{ marginTop: SPACE.md }} />
+      </ArtEmptyState>
+    </LiftCard>
+  );
+}
+
+/* ------------------------------------------------------------------ screen */
 
 const DiscoverScreen: React.FC<Props> = ({ navigation }) => {
-  const activeCompany = useActiveCompany();
-  const loadCompanies = useActiveCompanyStore((state) => state.loadCompanies);
+  const paid = useMembershipPaid();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeQuery, setActiveQuery] = useState('');
   const [filter, setFilter] = useState<DiscoverFilter>('all');
+  // Card view or the compact list — the website's grid/list toggle.
+  const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
+
+  const [homeRegion, setHomeRegion] = useState<Region>(EMPTY_REGION);
+  const [region, setRegion] = useState<Region>(EMPTY_REGION);
+  const [openLevel, setOpenLevel] = useState<Level | null>(null);
+  const [stateList, setStateList] = useState<string[]>([]);
+  const [districtList, setDistrictList] = useState<string[]>([]);
+  const [blockList, setBlockList] = useState<string[]>([]);
+
   const [companies, setCompanies] = useState<CompanyItem[]>([]);
   const [products, setProducts] = useState<ProductItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const requestIdRef = useRef(0);
-  // Bumped every time the screen regains focus. The data effects below key off
-  // it as well as the company id, so returning here after creating, editing or
-  // deleting something re-reads from the server instead of showing the copy
-  // fetched the first time this company was selected.
+  const [loading, setLoading] = useState(true);
+  const [ownIds, setOwnIds] = useState<Set<string>>(new Set());
+  const [trustedIds, setTrustedIds] = useState<Set<string>>(new Set());
+  const [trustPending, setTrustPending] = useState<string | null>(null);
   const [focusTick, setFocusTick] = useState(0);
+  const requestIdRef = useRef(0);
 
-  useFocusEffect(
-    useCallback(() => {
-      setFocusTick((tick) => tick + 1);
-    }, [])
-  );
+  // Returning to the screen re-reads (a company trusted elsewhere, a new product).
+  useFocusEffect(useCallback(() => { setFocusTick((t) => t + 1); }, []));
 
-  // The idle view needs to know which company is active
+  /* ---- once: home region, states, own companies */
   useEffect(() => {
-    loadCompanies();
-  }, [loadCompanies]);
+    let alive = true;
+    getMyProfile()
+      .then((me: any) => {
+        if (!alive || !me) return;
+        const mine: Region = { state: String(me?.state || ''), district: String(me?.district || ''), block: String(me?.block || '') };
+        setHomeRegion(mine);
+        // Only if nothing has been picked yet — never overwrite a deliberate choice.
+        setRegion((cur) => (cur.state || cur.district || cur.block ? cur : mine));
+      })
+      .catch(() => null);
+    getGeography().then((rows) => { if (alive) setStateList((rows || []).filter(Boolean).map(String)); }).catch(() => null);
+    getMyCompanies()
+      .then((rows) => { if (alive) setOwnIds(new Set((rows || []).map((r: any) => String(r?._id || '')))); })
+      .catch(() => null);
+    return () => { alive = false; };
+  }, []);
 
-  // Debounce keystrokes so typing doesn't fire a request per character
+  /* ---- trust ids, on every focus */
   useEffect(() => {
-    const handle = setTimeout(() => {
-      setActiveQuery(searchQuery.trim());
-    }, SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(handle);
+    let alive = true;
+    getTrustListIds()
+      .then((ids) => { if (alive) setTrustedIds(new Set((ids || []).map(String))); })
+      .catch(() => null);
+    return () => { alive = false; };
+  }, [focusTick]);
+
+  /* ---- each level narrows the next */
+  useEffect(() => {
+    let alive = true;
+    if (!region.state) { setDistrictList([]); setBlockList([]); return undefined; }
+    getGeography(region.state).then((rows) => { if (alive) setDistrictList((rows || []).filter(Boolean).map(String)); }).catch(() => { if (alive) setDistrictList([]); });
+    return () => { alive = false; };
+  }, [region.state]);
+
+  useEffect(() => {
+    let alive = true;
+    if (!region.state || !region.district) { setBlockList([]); return undefined; }
+    getGeography(region.state, region.district).then((rows) => { if (alive) setBlockList((rows || []).filter(Boolean).map(String)); }).catch(() => { if (alive) setBlockList([]); });
+    return () => { alive = false; };
+  }, [region.state, region.district]);
+
+  /* ---- debounce the search box */
+  useEffect(() => {
+    const h = setTimeout(() => setActiveQuery((searchQuery || '').trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(h);
   }, [searchQuery]);
 
+  /* ---- the directory */
   useEffect(() => {
-    fetchDiscoverData(activeQuery);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeQuery, activeCompany?._id, focusTick]);
+    const term = (activeQuery || '').length >= MIN_QUERY_LENGTH ? activeQuery : '';
+    const params: Record<string, string> = {};
+    if (term) params.q = term;
+    if (region.state) params.state = region.state;
+    if (region.district) params.district = region.district;
+    if (region.block) params.block = region.block;
 
-  const fetchDiscoverData = useCallback(
-    async (rawTerm: string) => {
-      const term = (rawTerm || '').length >= MIN_QUERY_LENGTH ? rawTerm : '';
-      const requestId = requestIdRef.current + 1;
-      requestIdRef.current = requestId;
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    setLoading(true);
 
+    (async () => {
       try {
-        setIsLoading(true);
-
-        // No search term: stay inside the switched company, like every other
-        // business screen. Only its own catalog is fetched.
-        if (!term) {
-          const companyId = activeCompany?._id;
-          if (!companyId) {
-            setCompanies([]);
-            setProducts([]);
-            return;
-          }
-
-          const ownRes = await api.get('/products/discover', {
-            params: { companyId },
-          });
-
-          if (requestIdRef.current !== requestId) return;
-
-          const ownPayload = ownRes.data?.data || ownRes.data || [];
-          const ownProducts: ProductItem[] = (Array.isArray(ownPayload) ? ownPayload : []).filter(
-            (p: ProductItem) => p && p._id
-          );
-
-          setCompanies([{ ...(activeCompany as CompanyItem), products: ownProducts, matchedProducts: [] }]);
-          setProducts([]);
-          return;
-        }
-
-        // Search term present: open up to the whole network
-        const params = { q: term };
-
         const [compRes, prodRes] = await Promise.allSettled([
           api.get('/business-profiles/discover', { params }),
           api.get('/products/discover', { params }),
         ]);
-
-        // A slower earlier request must not overwrite a newer result
         if (requestIdRef.current !== requestId) return;
-
-        let compList: CompanyItem[] = [];
-        if (compRes.status === 'fulfilled') {
-          const payload = compRes.value.data?.data || compRes.value.data || [];
-          compList = Array.isArray(payload) ? payload : [];
-        }
-
-        let prodList: ProductItem[] = [];
-        if (prodRes.status === 'fulfilled') {
-          const payload = prodRes.value.data?.data || prodRes.value.data || [];
-          prodList = Array.isArray(payload) ? payload : [];
-        }
-
-        // Drop obvious test rows from the public directory
-        compList = compList.filter((c) => {
-          const name = (c?.businessName || '').toLowerCase();
-          return name && !name.includes('test company') && !name.includes('dummy');
+        const compList = (compRes.status === 'fulfilled' ? listOf(compRes.value) : []).filter((c: CompanyItem) => {
+          const n = String(c?.businessName || '').toLowerCase();
+          return !!n && !n.includes('test company') && !n.includes('dummy');
         });
-
+        const prodList = (prodRes.status === 'fulfilled' ? listOf(prodRes.value) : []).filter((p: ProductItem) => p && p._id);
         setCompanies(compList);
-        setProducts(prodList.filter((p) => p && p._id));
-      } catch (error) {
-        console.log('Error fetching discover data:', error);
-        if (requestIdRef.current === requestId) {
-          setCompanies([]);
-          setProducts([]);
-        }
+        setProducts(prodList);
+      } catch (err) {
+        console.warn('Discover load safely caught:', err);
+        if (requestIdRef.current === requestId) { setCompanies([]); setProducts([]); }
       } finally {
-        if (requestIdRef.current === requestId) {
-          setIsLoading(false);
-        }
+        if (requestIdRef.current === requestId) setLoading(false);
       }
-    },
-    [activeCompany]
-  );
+    })();
+  }, [activeQuery, region.state, region.district, region.block, focusTick]);
 
   const hasQuery = activeQuery.length >= MIN_QUERY_LENGTH;
   const isTermTooShort = activeQuery.length > 0 && !hasQuery;
 
-  const includesTerm = useCallback(
-    (value?: string | null) => {
-      const term = (activeQuery || '').toLowerCase();
-      if (!term) return false;
-      return (value || '').toLowerCase().includes(term);
-    },
-    [activeQuery]
-  );
+  const includesTerm = useCallback((v?: string | null) => {
+    const term = (activeQuery || '').toLowerCase();
+    return !!term && String(v || '').toLowerCase().includes(term);
+  }, [activeQuery]);
 
-  // Match only what a person actually types a search for - the item's own
-  // name / category / sku. Free-text description is deliberately excluded:
-  // matching it is what made a short term pull in the whole directory.
-  const productMatchesQuery = useCallback(
-    (p?: ProductItem | null) =>
-      !!p && (includesTerm(p.name) || includesTerm(p.category) || includesTerm(p.sku)),
-    [includesTerm]
-  );
+  const productMatches = useCallback((p?: ProductItem | null) =>
+    !!p && (includesTerm(p?.name) || includesTerm(p?.category) || includesTerm(p?.sku)), [includesTerm]);
+  const companyMatches = useCallback((c?: CompanyItem | null) =>
+    !!c && (includesTerm(c?.businessName) || includesTerm(c?.businessType)), [includesTerm]);
 
-  const companyMatchesQuery = useCallback(
-    (c?: CompanyItem | null) =>
-      !!c && (includesTerm(c.businessName) || includesTerm(c.businessType)),
-    [includesTerm]
-  );
-
-  // Product hits are what a buyer typing "chairs" actually wants to see first
   const productResults = useMemo(() => {
     if (!hasQuery || filter === 'companies') return [];
-    return (products || []).filter((p) => p && p.name && productMatchesQuery(p));
-  }, [products, hasQuery, filter, productMatchesQuery]);
+    return (products || []).filter((p) => p && p.name && productMatches(p));
+  }, [products, hasQuery, filter, productMatches]);
 
-  // A company survives only if its own name/type matches, or it owns a product
-  // that matches. This re-checks locally so nothing loose can leak through.
-  //
-  // Product hits are then folded into their seller's card, so a search for
-  // "chairs" renders the same detailed company card as a search for the
-  // business name - never a thinner, different-looking result row.
+  /** Product hits fold into their seller's card (website Discover). */
   const companyResults = useMemo(() => {
     if (!hasQuery) return companies || [];
-
     const byId = new Map<string, CompanyItem>();
-
     (companies || []).forEach((c) => {
       if (!c?._id) return;
-      const nameHit = companyMatchesQuery(c);
-      const productHit = (c?.matchedProducts || []).some(productMatchesQuery);
+      const nameHit = companyMatches(c);
+      const productHit = (c?.matchedProducts || []).some(productMatches);
       if (!nameHit && !productHit) return;
       if (filter === 'companies' && !nameHit) return;
       if (filter === 'products' && !productHit) return;
       byId.set(String(c._id), c);
     });
-
-    // A matching product whose seller the company search didn't return still
-    // deserves a card - build one from the populated companyId.
     if (filter !== 'companies') {
       (productResults || []).forEach((prod) => {
-        const seller =
-          prod?.companyId && typeof prod.companyId === 'object' ? prod.companyId : null;
+        const seller = prod?.companyId && typeof prod.companyId === 'object' ? prod.companyId : null;
         const sellerId = seller?._id ? String(seller._id) : '';
         if (!sellerId) return;
-
         const existing = byId.get(sellerId);
-        if (!existing) {
-          byId.set(sellerId, { ...seller, products: [prod], matchedProducts: [prod] });
-          return;
-        }
-
+        if (!existing) { byId.set(sellerId, { ...seller, products: [prod], matchedProducts: [prod] }); return; }
         const known = new Set((existing.matchedProducts || []).map((p) => String(p?._id)));
         if (!known.has(String(prod?._id))) {
-          byId.set(sellerId, {
-            ...existing,
-            matchedProducts: [...(existing.matchedProducts || []), prod],
-          });
+          byId.set(sellerId, { ...existing, matchedProducts: [...(existing.matchedProducts || []), prod] });
         }
       });
     }
-
     return Array.from(byId.values());
-  }, [companies, productResults, hasQuery, filter, companyMatchesQuery, productMatchesQuery]);
+  }, [companies, productResults, hasQuery, filter, companyMatches, productMatches]);
 
-  const renderCompanyCard = (item: CompanyItem) => {
-    const catalog = item.products || [];
-    const matched = (item.matchedProducts || []).filter(productMatchesQuery);
+  const regionLabel = [region.block, region.district, region.state].filter(Boolean).join(', ') || 'the whole network';
+  const awayFromHome = !!homeRegion.state
+    && (region.state !== homeRegion.state || region.district !== homeRegion.district || region.block !== homeRegion.block);
+
+  const pickRegion = (level: Level, value: string) => {
+    setOpenLevel(null);
+    setRegion((r) => (level === 'state'
+      ? { state: value, district: '', block: '' }
+      : level === 'district' ? { ...r, district: value, block: '' } : { ...r, block: value }));
+  };
+
+  const toggleTrust = async (companyId: string, name: string) => {
+    if (!companyId || trustPending) return;
+    const was = trustedIds.has(companyId);
+    setTrustPending(companyId);
+    setTrustedIds((cur) => { const n = new Set(cur); if (was) n.delete(companyId); else n.add(companyId); return n; });
+    try {
+      if (was) await removeFromTrustList(companyId); else await addToTrustList(companyId);
+    } catch (err) {
+      setTrustedIds((cur) => { const n = new Set(cur); if (was) n.add(companyId); else n.delete(companyId); return n; });
+      Alert.alert('Trust list', errorMessage(err, `Could not update your trust list for ${name}.`));
+    } finally {
+      setTrustPending(null);
+    }
+  };
+
+  const goJoin = () => navigation.navigate('MemberMain');
+
+  const renderItem = ({ item }: { item: CompanyItem }) => {
+    if (viewMode === 'list') {
+      return <CompanyRow item={item} onOpen={() => navigation.navigate('CompanyPublic', { companyId: String(item?._id || '') })} />;
+    }
+    const catalog = item?.products || [];
+    const matched = (item?.matchedProducts || []).filter(productMatches);
     const highlightIds = new Set(matched.map((p) => String(p?._id)));
-    // The company itself matched -> show its catalog, hits first.
-    // It only surfaced via a product -> show that product alone, so searching
-    // "chairs" doesn't dump every other item the seller stocks.
+    const nameHit = companyMatches(item);
     const ordered = !hasQuery
       ? catalog
-      : companyMatchesQuery(item)
-      ? [...matched, ...catalog.filter((p) => !highlightIds.has(String(p?._id)))]
-      : matched;
-
+      : nameHit ? [...matched, ...catalog.filter((p) => !highlightIds.has(String(p?._id)))] : matched;
+    const id = String(item?._id || '');
     return (
-      <View key={item._id} style={styles.companyCard}>
-        <View style={styles.companyHeader}>
-          {item.logo ? (
-            <Image source={{ uri: resolveMediaUrl(item.logo) }} style={styles.companyLogo} />
-          ) : (
-            <View style={styles.companyLogoPlaceholder}>
-              <Icon name="business" size={28} color="#7C3AED" />
-            </View>
-          )}
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={styles.companyName}>{item.businessName || 'Business'}</Text>
-            <Text style={styles.companyType}>{item.businessType || '—'}</Text>
-
-            <View style={styles.locationRow}>
-              <Icon name="location-on" size={14} color="#6B7280" style={{ marginRight: 2 }} />
-              <Text style={styles.locationText}>
-                {item.location || 'Location not set'}
-                {item.area ? `, ${item.area}` : ''}
-              </Text>
-            </View>
-
-            {item.mobileNumber ? (
-              <View style={styles.phoneRow}>
-                <Icon name="phone" size={14} color="#7C3AED" style={{ marginRight: 4 }} />
-                <Text style={styles.phoneText}>{item.mobileNumber}</Text>
-              </View>
-            ) : null}
-
-            {item.email ? (
-              <View style={styles.phoneRow}>
-                <Icon name="email" size={14} color="#6B7280" style={{ marginRight: 4 }} />
-                <Text style={styles.emailText} numberOfLines={1}>
-                  {item.email}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-        </View>
-
-        {item.description ? (
-          <Text style={styles.companyDesc} numberOfLines={2}>
-            {item.description}
-          </Text>
-        ) : null}
-
-        {ordered.length > 0 ? (
-          <View style={styles.productsContainer}>
-            <Text style={styles.productsHeaderLabel}>
-              {hasQuery && !companyMatchesQuery(item)
-                ? `Matching Products (${ordered.length})`
-                : `Products & Services (${ordered.length})`}
-            </Text>
-
-            {ordered.map((prod, index) => {
-              const isMatch = highlightIds.has(String(prod?._id));
-              return (
-                <View
-                  key={String(prod?._id || index)}
-                  style={[styles.productRow, isMatch && styles.productRowMatch]}
-                >
-                  {prod?.imageUrl ? (
-                    <Image
-                      source={{ uri: resolveMediaUrl(prod.imageUrl) }}
-                      style={styles.productRowImage}
-                    />
-                  ) : (
-                    <View style={styles.productRowImagePlaceholder}>
-                      <Icon name="inventory-2" size={20} color="#7C3AED" />
-                    </View>
-                  )}
-
-                  <View style={styles.productRowBody}>
-                    <Text style={styles.productRowName} numberOfLines={1}>
-                      {prod?.name || 'Item'}
-                    </Text>
-                    <Text style={styles.productRowMeta} numberOfLines={1}>
-                      {prod?.category || 'General'}
-                      {prod?.sku ? ` · ${prod.sku}` : ''}
-                    </Text>
-                    {prod?.description ? (
-                      <Text style={styles.productRowDesc} numberOfLines={2}>
-                        {prod.description}
-                      </Text>
-                    ) : null}
-                  </View>
-
-                  <View style={styles.productRowRight}>
-                    <Text style={styles.productRowPrice}>
-                      ₹{Number(prod?.price || 0).toLocaleString('en-IN')}
-                    </Text>
-                    {prod?.stock ? (
-                      <View style={styles.stockPill}>
-                        <Text style={styles.stockPillText}>Stock {prod.stock}</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        ) : null}
-      </View>
+      <CompanyCard
+        item={item}
+        ordered={ordered}
+        highlightIds={highlightIds}
+        matchedOnly={hasQuery && !nameHit}
+        own={ownIds.has(id)}
+        trusted={trustedIds.has(id)}
+        busy={trustPending === id}
+        onOpen={() => navigation.navigate('CompanyPublic', { companyId: id })}
+        onTrust={() => toggleTrust(id, item?.businessName || 'Company')}
+      />
     );
   };
 
-  return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F7F7FD" />
+  const optionsFor = (level: Level) => (level === 'state' ? stateList : level === 'district' ? districtList : blockList);
 
-      {/* Nav Header */}
-      <View style={styles.navHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-          <Icon name="arrow-back" size={24} color="#1E1B4B" />
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Discover Network</Text>
-        </View>
-        <View style={{ width: 40 }} />
+
+  const header = (
+    <View>
+      <BrandHeaderBlock tone="business">
+        <BrandTopBar
+          onBack={() => navigation.goBack()}
+          title="Discover"
+          right={<GlassIconButton icon="verified-user" onPress={() => navigation.navigate('TrustList')} accessibilityLabel="My trust list" />}
+        />
+        <BrandHero
+          eyebrow="The ACTIV business network"
+          title="Discover businesses"
+          subtitle={`Browsing ${regionLabel}`}
+          art={<MarketGlobe3D tone="business" size={92} />}
+          artSize={92}
+        />
+        <View style={s.headerGap} />
+      </BrandHeaderBlock>
+
+      <View style={s.overlap}>
+        <LiftSearchBar tone="business"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search a product or company — e.g. chairs"
+          style={s.gutter}
+        />
+      </View>
+      {isTermTooShort ? <Text style={s.tooShort}>Type at least {MIN_QUERY_LENGTH} characters to search.</Text> : null}
+
+      <View style={{ marginTop: SPACE.md }}>
+        <SegmentedTabs tone="business" options={FILTERS} value={filter} onChange={setFilter} />
       </View>
 
-      <ScrollView
-        style={styles.scrollContainer}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Search Bar */}
-        <View style={styles.searchBar}>
-          <Icon name="search" size={22} color="#7C3AED" style={{ marginRight: 10 }} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search any product or company (e.g. chairs)..."
-            placeholderTextColor="#94A3B8"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            returnKeyType="search"
+      <View style={s.regionHead}>
+        <Icon name="place" size={16} color={PALETTE.textMuted} />
+        <Text style={s.regionHeadText}>Where</Text>
+        {awayFromHome ? (
+          <PressableScale onPress={() => { setOpenLevel(null); setRegion(homeRegion); }} contentStyle={s.homeBtn} accessibilityRole="button" hitSlop={6}>
+            <Icon name="my-location" size={14} color={PALETTE.violetDark} />
+            <Text style={s.homeBtnText}>My region</Text>
+          </PressableScale>
+        ) : null}
+      </View>
+      {/* Region chips — each level narrows the next. */}
+      <View style={s.regionRow}>
+        {(['state', 'district', 'block'] as Level[]).map((level) => (
+          <RegionPill
+            key={level}
+            level={level}
+            value={region[level]}
+            disabled={level === 'district' ? !region.state : level === 'block' ? !region.district : false}
+            open={openLevel === level}
+            onPress={() => setOpenLevel((cur) => (cur === level ? null : level))}
           />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Icon name="close" size={18} color="#64748B" />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-
-        {/* Result-type filters */}
-        <View style={styles.filterRow}>
-          {FILTERS.map((f) => {
-            const isActive = filter === f.key;
-            return (
-              <TouchableOpacity
-                key={f.key}
-                style={[styles.filterPill, isActive && styles.filterPillActive]}
-                onPress={() => setFilter(f.key)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.filterPillText, isActive && styles.filterPillTextActive]}>
-                  {f.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Banner - explains which of the two modes the screen is in */}
-        <View style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <Icon name="travel-explore" size={22} color="#7C3AED" style={{ marginRight: 8 }} />
-            <Text style={styles.cardHeaderTitle}>
-              {hasQuery ? 'Statewide Business Network' : 'Your Active Company'}
-            </Text>
-          </View>
-          <Text style={styles.cardSub}>
-            {hasQuery
-              ? `Showing only results matching "${activeQuery}".`
-              : isTermTooShort
-              ? `Type at least ${MIN_QUERY_LENGTH} characters to search the network.`
-              : `Showing ${activeCompany?.businessName || 'your company'} only. Type a product or company name to search the whole network.`}
-          </Text>
-        </View>
-
-        {isLoading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="large" color="#7C3AED" />
-            <Text style={styles.loadingText}>
-              {hasQuery ? 'Searching the business network...' : 'Loading your catalog...'}
-            </Text>
-          </View>
-        ) : (
-          <>
-            {companyResults.length > 0 ? (
-              <>
-                <Text style={styles.sectionTitle}>
-                  {hasQuery ? `Results (${companyResults.length})` : 'Your Business'}
-                </Text>
-                {companyResults.map(renderCompanyCard)}
-              </>
-            ) : null}
-
-            {companyResults.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <Icon name="travel-explore" size={54} color="#7C3AED" />
-                <Text style={styles.emptyTitle}>
-                  {hasQuery ? 'No Matching Results' : 'No Active Company'}
-                </Text>
-                <Text style={styles.emptySub}>
-                  {hasQuery
-                    ? `No ${
-                        filter === 'companies'
-                          ? 'businesses'
-                          : filter === 'products'
-                          ? 'products'
-                          : 'products or businesses'
-                      } matching "${activeQuery}"`
-                    : isTermTooShort
-                    ? `Type at least ${MIN_QUERY_LENGTH} characters to search.`
-                    : 'Switch to a company from the Business dashboard to see it here.'}
-                </Text>
-              </View>
-            ) : null}
-          </>
-        )}
-      </ScrollView>
-
-      {/* Floating Bottom Navigation Tab Bar */}
-      <View style={styles.bottomNavCard}>
-        <TouchableOpacity
-          style={styles.navTabItem}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('BusinessDashboard')}
-        >
-          <Icon name="storefront" size={24} color="#6B7280" />
-          <Text style={styles.navTabText}>Business</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navTabItem}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('ProductsServices', {})}
-        >
-          <Icon name="grid-view" size={24} color="#6B7280" />
-          <Text style={styles.navTabText}>Products</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navTabItem} activeOpacity={0.7}>
-          <Icon name="search" size={24} color="#7C3AED" />
-          <Text style={styles.navTabActiveText}>Discover</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navTabItem}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('Analytics')}
-        >
-          <Icon name="bar-chart" size={24} color="#6B7280" />
-          <Text style={styles.navTabText}>Analytics</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navTabItem}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('Settings')}
-        >
-          <Icon name="settings" size={24} color="#6B7280" />
-          <Text style={styles.navTabText}>Settings</Text>
-        </TouchableOpacity>
+        ))}
       </View>
-    </SafeAreaView>
+      {openLevel ? (
+        <RegionPanel
+          key={openLevel}
+          level={openLevel}
+          options={optionsFor(openLevel)}
+          value={region[openLevel]}
+          onPick={(v) => pickRegion(openLevel, v)}
+        />
+      ) : null}
+
+      {!loading && paid === true && companyResults.length > 0 ? (
+        <View style={s.resultsHead}>
+          <Text style={s.resultsTitle} numberOfLines={2} maxFontSizeMultiplier={1.3}>
+            {hasQuery ? `Results (${companyResults.length})` : `Companies in ${regionLabel} (${companyResults.length})`}
+          </Text>
+          <View style={s.viewToggle}>
+            {([['cards', 'view-agenda', 'Card view'], ['list', 'view-list', 'List view']] as const).map(([mode, icon, label]) => (
+              <TouchableOpacity
+                key={mode}
+                onPress={() => setViewMode(mode)}
+                style={[s.viewBtn, viewMode === mode && s.viewBtnOn]}
+                accessibilityRole="button"
+                accessibilityLabel={label}
+                accessibilityState={{ selected: viewMode === mode }}
+                hitSlop={{ top: 4, bottom: 4 }}
+              >
+                <Icon name={icon} size={18} color={viewMode === mode ? PALETTE.white : PALETTE.textFaint} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      ) : <View style={{ height: SPACE.lg }} />}
+    </View>
+  );
+
+  const empty = loading || paid === null ? (
+    <View accessibilityLabel={hasQuery ? 'Searching the business network…' : 'Loading the directory…'}>
+      <CardSkeletons rows={3} tall />
+    </View>
+  ) : paid === false ? (
+    <CountOnly companies={companyResults.length} products={productResults.length} term={activeQuery} regionLabel={regionLabel} onJoin={goJoin} />
+  ) : (
+    <LiftCard tone="business" style={s.gutter}>
+      <ArtEmptyState tone="business"
+        compact
+        art={hasQuery ? <SearchLens3D tone="business" size={74} /> : <MarketGlobe3D tone="business" size={78} />}
+        title={hasQuery ? 'No matching results' : 'Nothing listed here yet'}
+        message={hasQuery
+          ? `No ${filter === 'companies' ? 'businesses' : filter === 'products' ? 'products' : 'products or businesses'} matching "${activeQuery}" in ${regionLabel}.`
+          : `No companies are listed in ${regionLabel}. Widen the region or search by name.`}
+      />
+    </LiftCard>
+  );
+
+  const data = !loading && paid === true ? companyResults : [];
+
+  return (
+    <BrandFrame tone="business"
+      footer={(
+        <BusinessTabBar
+          active="discover"
+          onPress={(key) => {
+            if (key === 'business') navigation.navigate('BusinessDashboard');
+            else if (key === 'products') navigation.navigate('ProductsServices', {});
+            else if (key === 'analytics') navigation.navigate('Analytics');
+            else if (key === 'settings') navigation.navigate('Settings');
+          }}
+        />
+      )}
+    >
+      <FlatList
+        data={data}
+        keyExtractor={(item, index) => String(item?._id || index)}
+        renderItem={renderItem}
+        extraData={viewMode}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        ListHeaderComponent={header}
+        ListEmptyComponent={empty}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: SPACE.xl }}
+        showsVerticalScrollIndicator={false}
+      />
+    </BrandFrame>
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F7F7FD',
-  },
-  navHeader: {
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    backgroundColor: '#F7F7FD',
-  },
-  emailText: {
-    flex: 1,
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  productRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    padding: 10,
-    marginTop: 10,
-  },
-  productRowMatch: {
-    borderColor: '#7C3AED',
-    backgroundColor: '#FAF5FF',
-  },
-  productRowImage: {
-    width: 52,
-    height: 52,
-    borderRadius: 12,
-    backgroundColor: '#F3E8FF',
-  },
-  productRowImagePlaceholder: {
-    width: 52,
-    height: 52,
-    borderRadius: 12,
-    backgroundColor: '#F3E8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  productRowBody: {
-    flex: 1,
-    marginLeft: 10,
-    marginRight: 8,
-  },
-  productRowName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  productRowMeta: {
-    fontSize: 11,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  productRowDesc: {
-    fontSize: 11,
-    color: '#94A3B8',
-    marginTop: 3,
-  },
-  productRowRight: {
-    alignItems: 'flex-end',
-  },
-  productRowPrice: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#7C3AED',
-  },
-  filterRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 14,
-  },
-  filterPill: {
-    flex: 1,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E9D5FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  filterPillActive: {
-    backgroundColor: '#7C3AED',
-    borderColor: '#7C3AED',
-  },
-  filterPillText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  filterPillTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
+const s = StyleSheet.create({
+  gutter: { marginHorizontal: SPACE.lg },
+  headerGap: { height: SPACE.md },
+  overlap: { marginTop: -PREMIUM_OVERLAP },
+  tooShort: { ...TYPE.caption, marginHorizontal: SPACE.lg, marginTop: SPACE.sm },
 
-  scrollContainer: {
-    flex: 1,
+  regionHead: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs + 2, marginHorizontal: SPACE.lg, marginTop: SPACE.lg, marginBottom: SPACE.sm, minHeight: 28 },
+  regionHeadText: { ...TYPE.eyebrow, flex: 1 },
+  homeBtn: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs, paddingHorizontal: SPACE.md, minHeight: 30, borderRadius: 999, backgroundColor: PALETTE.violetSoft },
+  homeBtnText: { ...TYPE.caption, fontWeight: '700', color: PALETTE.violetDark },
+  regionRow: { flexDirection: 'row', gap: SPACE.xs + 2, paddingHorizontal: SPACE.lg },
+  regionCell: { flex: 1, minWidth: 0 },
+  regionPill: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: SIZE.touch, paddingLeft: SPACE.sm + 2, paddingRight: SPACE.xs, borderRadius: 14 },
+  regionPillIdle: { backgroundColor: PALETTE.white, borderWidth: 1, borderColor: PALETTE.border },
+  regionPillOpen: { borderWidth: 1.5, borderColor: BRAND.violetGlow },
+  regionPillOpenIdle: { borderColor: PALETTE.violet, borderWidth: 1.5 },
+  regionPillText: { flex: 1, minWidth: 0, fontSize: 12, lineHeight: 16, fontWeight: '700', color: PALETTE.textSoft },
+  panel: {
+    marginHorizontal: SPACE.lg, marginTop: SPACE.sm, borderRadius: 16, borderWidth: 1, borderColor: PALETTE.border,
+    backgroundColor: PALETTE.card, overflow: 'hidden',
   },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 90,
-  },
+  panelSearch: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, paddingHorizontal: SPACE.md, borderBottomWidth: 1, borderBottomColor: PALETTE.divider, backgroundColor: PALETTE.fieldBg },
+  panelInput: { flex: 1, minWidth: 0, fontSize: 14, color: PALETTE.text, paddingVertical: SPACE.md, minHeight: SIZE.control },
+  option: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.sm, paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md, minHeight: SIZE.touch + SPACE.xs, borderBottomWidth: 1, borderBottomColor: PALETTE.divider },
+  optionRowOn: { backgroundColor: PALETTE.violetTint },
+  optionText: { ...TYPE.body, flex: 1 },
+  optionOn: { color: PALETTE.violetDark, fontWeight: '700' },
+  panelEmpty: { ...TYPE.caption, padding: SPACE.lg },
+  resultsHead: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginHorizontal: SPACE.lg, marginTop: SPACE.xl, marginBottom: SPACE.md },
+  resultsTitle: { ...TYPE.heading, fontSize: 17, lineHeight: 22, flex: 1 },
+  viewToggle: { flexDirection: 'row', gap: SPACE.xxs, padding: 3, borderRadius: 14, backgroundColor: PALETTE.field },
+  viewBtn: { width: SIZE.controlSm, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  viewBtnOn: { backgroundColor: PALETTE.violet },
 
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    height: 50,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#F3E8FF',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+  listRowWrap: { marginHorizontal: SPACE.lg, marginBottom: SPACE.sm },
+  listRow: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACE.md, paddingHorizontal: SPACE.md, paddingVertical: SPACE.md,
+    minHeight: SIZE.row + SPACE.sm, backgroundColor: PALETTE.card, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(226,232,240,0.9)',
+    shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 2,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: '#1E1B4B',
-  },
+  listName: { ...TYPE.bodyStrong, flexShrink: 1 },
+  listMeta: { ...TYPE.caption, marginTop: SPACE.xxs },
+  listCall: { width: SIZE.controlSm, height: SIZE.controlSm, borderRadius: 999, backgroundColor: PALETTE.violet, alignItems: 'center', justifyContent: 'center' },
 
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#F3E8FF',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  cardHeaderTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  cardSub: {
-    fontSize: 13,
-    color: '#6B7280',
-    lineHeight: 18,
-  },
-
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#1E1B4B',
-    marginBottom: 10,
-    marginTop: 4,
-  },
-
-  loadingBox: {
-    paddingVertical: 40,
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 14,
-    color: '#6B7280',
-  },
-
-  companyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: '#F3E8FF',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  companyHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  companyLogo: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#F3E8FF',
-  },
-  companyLogoPlaceholder: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: '#F3E8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  companyName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  companyType: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#7C3AED',
-    marginTop: 2,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  locationText: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  phoneRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  phoneText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#7C3AED',
-  },
-  companyDesc: {
-    fontSize: 13,
-    color: '#475569',
-    marginTop: 10,
-    lineHeight: 18,
-  },
-
-  productsContainer: {
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F3E8FF',
-  },
-  productsHeaderLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1E1B4B',
-    marginBottom: 8,
-  },
-
-  stockPill: {
-    backgroundColor: '#F3E8FF',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-  },
-  stockPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#7C3AED',
-  },
-
-
-  emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 30,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#F3E8FF',
-  },
-  emptyTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1E1B4B',
-    marginTop: 14,
-  },
-  emptySub: {
-    fontSize: 13,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginTop: 6,
-  },
-
-  bottomNavCard: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    paddingVertical: 10,
-    paddingHorizontal: 6,
-    marginHorizontal: 16,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#F3E8FF',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  navTabItem: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  navTabText: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  navTabActiveText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#7C3AED',
-    marginTop: 2,
-  },
+  cardWrap: { marginHorizontal: SPACE.lg, marginBottom: SPACE.md },
+  cardHead: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.sm },
+  cardHeadMain: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.md },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs },
+  name: { ...TYPE.heading, flexShrink: 1 },
+  memberStar: { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  type: { ...TYPE.caption, fontSize: 13, lineHeight: 18, marginTop: SPACE.xxs },
+  trustLine: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs, marginTop: SPACE.xs },
+  trustLineText: { ...TYPE.caption, fontWeight: '700', color: PALETTE.greenDark },
+  facts: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.xs + 2, marginTop: SPACE.md },
+  factChip: { flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '100%', minHeight: 32, paddingHorizontal: SPACE.sm + 2, borderRadius: 999, backgroundColor: PALETTE.fieldBg, borderWidth: 1, borderColor: PALETTE.divider },
+  factChipLink: { backgroundColor: PALETTE.violetTint, borderColor: PALETTE.violetBorder },
+  factText: { fontSize: 12, lineHeight: 16, color: PALETTE.textSoft, flexShrink: 1 },
+  factLink: { color: PALETTE.violetDark, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  desc: { ...TYPE.body, fontSize: 13, lineHeight: 19, marginTop: SPACE.md },
+  products: { marginTop: SPACE.md, paddingTop: SPACE.md, borderTopWidth: 1, borderTopColor: PALETTE.divider, gap: SPACE.sm },
+  productsLabel: { ...TYPE.eyebrow },
+  product: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, padding: SPACE.sm, borderRadius: 14, backgroundColor: PALETTE.fieldBg, borderWidth: 1, borderColor: PALETTE.divider },
+  productHit: { backgroundColor: PALETTE.violetTint, borderColor: PALETTE.violet },
+  productImg: { width: 46, height: 46, borderRadius: 12, backgroundColor: PALETTE.card },
+  productImgEmpty: { alignItems: 'center', justifyContent: 'center' },
+  productName: { ...TYPE.bodyStrong, fontSize: 13, lineHeight: 18 },
+  productMeta: { ...TYPE.caption, fontSize: 11, lineHeight: 15, marginTop: SPACE.xxs },
+  // Right-aligned, tabular: prices line up down the list.
+  priceCol: { alignItems: 'flex-end', maxWidth: '38%' },
+  productPrice: { ...TYPE.bodyStrong, fontSize: 13, fontWeight: '800', color: PALETTE.violetDark, fontVariant: ['tabular-nums'] },
+  stock: { fontSize: 11, lineHeight: 15, color: PALETTE.textMuted, marginTop: SPACE.xxs, fontVariant: ['tabular-nums'] },
+  moreProducts: { ...TYPE.caption, textAlign: 'center', paddingTop: SPACE.xs },
+  cardFoot: { flexDirection: 'row', gap: SPACE.sm, marginTop: SPACE.lg },
+  ownChip: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACE.xs + 2, minHeight: SIZE.touch, borderRadius: 999, borderWidth: 1, borderColor: PALETTE.border, backgroundColor: PALETTE.fieldBg },
+  ownChipText: { fontSize: 13, lineHeight: 18, fontWeight: '700', color: PALETTE.violetDark, flexShrink: 1 },
 });
 
 export default DiscoverScreen;

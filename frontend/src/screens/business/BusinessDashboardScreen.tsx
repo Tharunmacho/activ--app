@@ -1,34 +1,48 @@
-// Business Dashboard Screen - Business Card (#F3E8FF / #7C3AED) Color System
+// Business Dashboard — the member's business COMMAND CENTRE (premium, business tone: violet).
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  RefreshControl,
-  StatusBar,
-  Image,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { View, Text, StyleSheet, Alert, ScrollView } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import { RootStackParamList } from '../../types';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { RootStackParamList } from '../../types';
 import api, { getUserData } from '../../services/api';
 import { ENDPOINTS, resolveMediaUrl } from '../../config/api.config';
+import {
+  PALETTE,
+  SPACE,
+  TYPE,
+  Skeleton,
+  shortDate,
+  timeAgo,
+  BrandScrollPage,
+  BrandTopBar,
+  BrandHero,
+  PREMIUM_OVERLAP,
+  FadeInUp,
+  GlassIconButton,
+  GradientButton,
+  LiftCard,
+  MetricGrid,
+  MetricTile,
+  CompanyChip,
+  ActivityTimeline,
+  ArtEmptyState,
+  ShopFront3D,
+  Briefcase3D,
+  PressableScale,
+} from '../../ui';
 import {
   useActiveCompany,
   useActiveCompanyStore,
   ActiveCompany,
 } from '../../stores/activeCompanyStore';
+import { BusinessTabBar } from './BusinessTabBar';
+import { BizSectionTitle, CompanyGlassCard, ToolGrid, ToolTile, CHIP } from './businessKit';
 
 type BusinessDashboardProps = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
 };
+
 
 type BusinessProfile = ActiveCompany;
 
@@ -42,8 +56,8 @@ const BusinessDashboardScreen: React.FC<BusinessDashboardProps> = ({ navigation 
 
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showCompanyPicker, setShowCompanyPicker] = useState(false);
-  const [catalogStats, setCatalogStats] = useState({ total: 0, active: 0, featured: 0 });
+  const [, setShowCompanyPicker] = useState(false);
+  const [catalogStats, setCatalogStats] = useState({ total: 0, active: 0, featured: 0, views: 0 });
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
   // Bumped every time the screen regains focus. The data effects below key off
   // it as well as the company id, so returning here after creating, editing or
@@ -67,7 +81,7 @@ const BusinessDashboardScreen: React.FC<BusinessDashboardProps> = ({ navigation 
     if (businessProfile?._id) {
       fetchCompanyData(businessProfile._id);
     } else {
-      setCatalogStats({ total: 0, active: 0, featured: 0 });
+      setCatalogStats({ total: 0, active: 0, featured: 0, views: 0 });
       setRecentActivities([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -146,21 +160,23 @@ const BusinessDashboardScreen: React.FC<BusinessDashboardProps> = ({ navigation 
         total: Number(stats.total || 0),
         active: Number(stats.active || 0),
         featured: Number(stats.featured || 0),
+        views: Number(stats.views || 0),
       });
 
       const activitiesResponse = await api.get(ENDPOINTS.PRODUCTS.ACTIVITIES, {
         params: { companyId, limit: 5 },
       });
 
-      if (activitiesResponse.data && activitiesResponse.data.data) {
-        setRecentActivities(activitiesResponse.data.data);
+      const activityRows = activitiesResponse?.data?.data;
+      if (Array.isArray(activityRows)) {
+        setRecentActivities(activityRows);
       } else {
         setRecentActivities([]);
       }
 
     } catch (error: any) {
       console.error('Error fetching company data:', error);
-      setCatalogStats({ total: 0, active: 0, featured: 0 });
+      setCatalogStats({ total: 0, active: 0, featured: 0, views: 0 });
       setRecentActivities([]);
     }
   };
@@ -236,761 +252,283 @@ const BusinessDashboardScreen: React.FC<BusinessDashboardProps> = ({ navigation 
     );
   };
 
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#7C3AED" />
-      </View>
-    );
-  }
+  // `status` is optional on older company rows — never call string methods on it raw.
+  const status = String(businessProfile?.status || 'pending').trim().toLowerCase() || 'pending';
+
+  const companyId = businessProfile?._id || '';
+  const goProducts = () => {
+    if (companyId) navigation.navigate('ProductsServices', { companyId });
+  };
+
+  const tabBar = (
+    <BusinessTabBar
+      active="business"
+      onPress={(key) => {
+        if (key === 'products') goProducts();
+        else if (key === 'discover') navigation.navigate('Discover');
+        else if (key === 'analytics') navigation.navigate('Analytics');
+        else if (key === 'settings') navigation.navigate('Settings');
+      }}
+    />
+  );
+
+  const location = [businessProfile?.area, businessProfile?.location].filter(Boolean).join(', ');
+  const logoUri = businessProfile?.logo ? resolveMediaUrl(businessProfile.logo) : '';
+  const activities = (recentActivities || []).slice(0, 5);
+  const list = companies || [];
+
+  const header = (
+    <View>
+      <BrandTopBar
+        onBack={handleGoBack}
+        title="Business account"
+        right={<GlassIconButton icon="tune" onPress={() => navigation.navigate('Settings')} accessibilityLabel="Business settings" />}
+      />
+      <BrandHero
+        eyebrow={`Welcome back, ${memberName || 'Member'}`}
+        title="Your command centre"
+        subtitle="Companies, catalogue and reach — in one place."
+        art={<ShopFront3D tone="business" size={96} />}
+      />
+
+      {/* The ACTIVE company, with its real logo — every business screen follows it. */}
+      {!isLoading && businessProfile ? (
+        <FadeInUp delay={200} distance={10} style={styles.headerBlock}>
+          <CompanyGlassCard
+            name={businessProfile.businessName || 'Your company'}
+            type={businessProfile.businessType || undefined}
+            logo={logoUri}
+            status={status}
+            facts={[
+              { icon: 'phone', text: businessProfile.mobileNumber || '' },
+              { icon: 'mail-outline', text: businessProfile.email || '' },
+              { icon: 'place', text: location },
+            ]}
+          />
+        </FadeInUp>
+      ) : isLoading ? (
+        <View style={[styles.headerBlock, styles.glassSkeleton]} accessibilityLabel="Loading company" />
+      ) : null}
+
+      {/* COMPANY SWITCHER — the website's active-company selector, inline chips
+          (no popup — CLAUDE.md RULE 2). Only when there is more than one. */}
+      {!isLoading && companiesCount > 1 ? (
+        <FadeInUp delay={260} distance={8}>
+          <Text style={styles.switchLabel} maxFontSizeMultiplier={1.2}>Switch company · products, stock and analytics follow</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.switchRow}
+            style={styles.switchScroll}
+          >
+            {list.map((c: any, i: number) => (
+              <CompanyChip tone="business"
+                key={String(c?._id || c?.id || `company-${i}`)}
+                name={String(c?.businessName || 'Company')}
+                logo={c?.logo ? resolveMediaUrl(c.logo) : ''}
+                active={String(c?._id || '') === String(companyId)}
+                onPress={() => handleSelectCompany(c)}
+              />
+            ))}
+          </ScrollView>
+        </FadeInUp>
+      ) : null}
+    </View>
+  );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F7F7FD" />
-
-      {/* Top Header Section */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          activeOpacity={0.7}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          onPress={handleGoBack}
-        >
-          <Icon name="arrow-back" size={22} color="#1E1B4B" />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#7C3AED']} />}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Welcome Section */}
-        <View style={styles.welcomeRow}>
-          <Text style={styles.welcomeGreeting} numberOfLines={1}>
-            Welcome back, {memberName || 'Member'} 👋
-          </Text>
-          <Text style={styles.welcomeSubtitle}>
-            Manage your commercial presence
-          </Text>
-        </View>
-
-        <Text style={styles.sectionLabel}>Your Business</Text>
-
-        {/* Card 1: Manage My Companies Bar Card */}
-        <TouchableOpacity
-          style={styles.manageCompaniesCard}
-          activeOpacity={0.85}
-          onPress={() => navigation.navigate('ManageCompanies')}
-        >
-          <View style={styles.manageIconBox}>
-            <Icon name="business-center" size={22} color="#7C3AED" />
-          </View>
-
-          <View style={styles.manageTextContainer}>
-            <Text style={styles.manageTitle}>Manage My Companies</Text>
-            <Text style={styles.manageSub}>Switch or edit existing accounts</Text>
-          </View>
-
-          <View style={styles.countBadge}>
-            <Text style={styles.countBadgeText}>{companiesCount || 1}</Text>
-          </View>
-
-          <Icon name="keyboard-arrow-right" size={22} color="#9CA3AF" />
-        </TouchableOpacity>
-
-        {/* Card 2: Business Account Card matching Business Banner Card (#F3E8FF) */}
-        {businessProfile ? (
-          <View style={styles.businessCardContainer}>
-            <View style={styles.heroTopRow}>
-              <View style={styles.storeLogoBox}>
-                {businessProfile.logo ? (
-                  <Image
-                    source={{ uri: resolveMediaUrl(businessProfile.logo) }}
-                    style={styles.storeLogoImage}
-                  />
-                ) : (
-                  <Icon name="storefront" size={30} color="#7C3AED" />
-                )}
-              </View>
-
-              <View style={styles.heroDetails}>
-                <Text style={styles.heroName} numberOfLines={2}>
-                  {businessProfile.businessName}
-                </Text>
-                <Text style={styles.heroType} numberOfLines={1}>
-                  {businessProfile.businessType || '—'}
-                </Text>
-
-                <View style={styles.heroPhoneRow}>
-                  <Icon name="phone" size={14} color="#7C3AED" />
-                  <Text style={styles.heroPhone} numberOfLines={1}>
-                    {businessProfile.mobileNumber || '-'}
-                  </Text>
-                </View>
-              </View>
-
-              <Image
-                source={require('../../assets/images/briefcase_3d_final-removebg-preview.png')}
-                style={styles.heroBriefcase}
-                resizeMode="contain"
-              />
-            </View>
-
-            <View style={styles.heroDivider} />
-
-            {/* Action Buttons Row */}
-            <View style={styles.heroActionRow}>
-              <TouchableOpacity
-                style={styles.editCardButton}
-                onPress={() =>
-                  businessProfile?._id &&
-                  navigation.navigate('EditCompany', { companyId: businessProfile._id })
-                }
-                activeOpacity={0.85}
-              >
-                <Icon name="edit" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={styles.editCardButtonText}>Edit Company</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.deleteCardButton}
-                onPress={handleDeleteCompany}
-                activeOpacity={0.85}
-              >
-                <Icon
-                  name="delete-outline"
-                  size={18}
-                  color="#EF4444"
-                  style={{ marginRight: 6 }}
+    <BrandScrollPage tone="business"
+      header={header}
+      footer={tabBar}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      waveHeight={60}
+    >
+      {isLoading ? (
+        <DashboardSkeleton />
+      ) : businessProfile ? (
+        <>
+          {/* Company actions, directly under the company they act on. */}
+          <FadeInUp delay={300} style={styles.overlap}>
+            <LiftCard tone="business" style={styles.gutter}>
+              <View style={styles.actionRow}>
+                <GradientButton tone="business"
+                  label="Edit"
+                  icon="edit"
+                  onPress={() => { if (companyId) navigation.navigate('EditCompany', { companyId }); }}
+                  style={styles.actionBtn}
                 />
-                <Text style={styles.deleteCardButtonText}>Delete</Text>
-              </TouchableOpacity>
+                <GradientButton tone="business"
+                  label="Details"
+                  variant="outline"
+                  onPress={() => { if (companyId) navigation.navigate('ViewCompany', { companyId }); }}
+                  style={styles.actionBtn}
+                  accessibilityLabel="Company details"
+                />
+              </View>
+              <PressableScale
+                onPress={handleDeleteCompany}
+                contentStyle={styles.deleteRow}
+                accessibilityRole="button"
+                accessibilityLabel="Delete company"
+              >
+                <Icon name="delete-outline" size={18} color={PALETTE.red} />
+                <Text style={styles.deleteText} maxFontSizeMultiplier={1.3}>Delete this company</Text>
+              </PressableScale>
+            </LiftCard>
+          </FadeInUp>
+
+          {/* Catalog overview — every number here comes from /products/stats. */}
+          <BizSectionTitle title="Catalogue overview" caption="Live figures for the active company" />
+          <MetricGrid>
+            <MetricTile tone="business" icon="visibility" label="Product views" value={catalogStats.views} colors={CHIP.violet} delay={120} />
+            <MetricTile tone="business" icon="inventory-2" label="Products" value={catalogStats.total} colors={CHIP.sky} onPress={companyId ? goProducts : undefined} delay={180} />
+            <MetricTile tone="business" icon="check-circle" label="Live in Discover" value={catalogStats.active} colors={CHIP.green} delay={240} />
+            <MetricTile tone="business" icon="star" label="Featured" value={catalogStats.featured} colors={CHIP.amber} delay={300} />
+          </MetricGrid>
+        </>
+      ) : (
+        <FadeInUp delay={200} style={styles.overlap}>
+          <LiftCard tone="business" style={styles.gutter}>
+            {/* "No company exists" and "none is selected" need different
+                instructions — the website's dashboard makes the same split. */}
+            <ArtEmptyState tone="business"
+              compact
+              art={<ShopFront3D tone="business" size={78} />}
+              title={companiesCount === 0 ? 'No business profile yet' : 'No active company'}
+              message={companiesCount === 0
+                ? 'Create one to start listing products and reaching buyers.'
+                : 'Pick which of your companies this dashboard should describe.'}
+              action={companiesCount === 0 ? 'Create business profile' : 'Select active company'}
+              actionIcon={companiesCount === 0 ? 'add-business' : 'swap-horiz'}
+              onAction={() => navigation.navigate(companiesCount === 0 ? 'AddCompany' : 'ManageCompanies')}
+            />
+          </LiftCard>
+        </FadeInUp>
+      )}
+
+      {!isLoading ? (
+        <>
+          {/* Business tools — every business feature the website has, one tap away. */}
+          <BizSectionTitle title="Business tools" />
+          <ToolGrid>
+            <ToolTile icon="add-box" label="Add product" colors={CHIP.violet}
+              onPress={() => (companyId
+                ? navigation.navigate('AddProduct', { companyId })
+                : navigation.navigate('AddCompany'))} />
+            <ToolTile icon="inventory" label="Stock" colors={CHIP.sky}
+              onPress={() => navigation.navigate('StockCentre')} />
+            <ToolTile icon="travel-explore" label="Discover" colors={CHIP.plum}
+              onPress={() => navigation.navigate('Discover')} />
+            <ToolTile icon="verified-user" label="Trust list" colors={CHIP.green}
+              onPress={() => navigation.navigate('TrustList')} />
+            <ToolTile icon="apartment" label="My companies" colors={CHIP.amber}
+              onPress={() => navigation.navigate('ManageCompanies')} badge={companiesCount > 1 ? String(companiesCount) : undefined} />
+            <ToolTile icon="public" label="Public page" colors={CHIP.gold}
+              onPress={() => (companyId
+                ? navigation.navigate('CompanyPublic', { companyId })
+                : navigation.navigate('AddCompany'))} />
+          </ToolGrid>
+
+          {/* Your companies — the count and the way in to manage them. */}
+          <LiftCard tone="business" style={[styles.gutter, styles.companiesCard]} onPress={() => navigation.navigate('ManageCompanies')} accessibilityLabel={`Manage my companies, ${companiesCount}`}>
+            <View style={styles.companiesRow}>
+              <View style={styles.companiesArt}><Briefcase3D tone="business" size={56} /></View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.companiesTitle} maxFontSizeMultiplier={1.3}>Manage my companies</Text>
+                <Text style={styles.companiesSub} maxFontSizeMultiplier={1.3}>
+                  {companiesCount} {companiesCount === 1 ? 'company' : 'companies'} under your membership
+                </Text>
+              </View>
+              <Icon name="chevron-right" size={24} color={PALETTE.textFaint} />
             </View>
-          </View>
-        ) : (
-          <View style={styles.emptyStateCard}>
-            <Icon name="storefront" size={54} color="#9CA3AF" />
-            <Text style={styles.emptyStateTitle}>No Business Profile Found</Text>
-            <TouchableOpacity
-              style={styles.createButton}
-              onPress={() => navigation.navigate('AddCompany')}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.createButtonText}>Create Business Profile</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          </LiftCard>
 
-        {/* Catalog overview - every number here comes from /products/stats */}
-        <Text style={styles.sectionLabel}>Catalog Overview</Text>
-
-        <View style={styles.statsRow}>
-          <TouchableOpacity
-            style={styles.statCard}
-            activeOpacity={0.85}
-            onPress={() =>
-              businessProfile?._id &&
-              navigation.navigate('ProductsServices', { companyId: businessProfile._id })
-            }
-          >
-            <View style={styles.statIconBoxPurple}>
-              <Icon name="inventory-2" size={18} color="#7C3AED" />
-            </View>
-            <Text style={styles.statValue}>{catalogStats.total}</Text>
-            <Text style={styles.statTitle}>Products</Text>
-          </TouchableOpacity>
-
-          <View style={styles.statCard}>
-            <View style={styles.statIconBoxGreen}>
-              <Icon name="check-circle" size={18} color="#16A34A" />
-            </View>
-            <Text style={styles.statValue}>{catalogStats.active}</Text>
-            <Text style={styles.statTitle}>Live</Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <View style={styles.statIconBoxAmber}>
-              <Icon name="star" size={18} color="#D97706" />
-            </View>
-            <Text style={styles.statValue}>{catalogStats.featured}</Text>
-            <Text style={styles.statTitle}>Featured</Text>
-          </View>
-        </View>
-
-        {/* Card 3: Recent Activity Card */}
-        <View style={styles.activityCard}>
-          <View style={styles.activityHeaderRow}>
-            <View style={styles.activityIconBox}>
-              <Icon name="history" size={20} color="#7C3AED" />
-            </View>
-            <Text style={styles.activityHeaderTitle}>Recent Activity</Text>
-          </View>
-
-          {recentActivities.length > 0 ? (
-            recentActivities.map((activity, index) => (
-              <View key={index} style={styles.activityItemRow}>
-                <View style={styles.activityDot} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.activityLabel}>{activity.label}</Text>
-                  <Text style={styles.activityDesc}>{activity.description}</Text>
+          <BizSectionTitle title="Recent activity" caption={activities.length ? 'Your latest catalogue changes' : undefined} />
+          <LiftCard tone="business" style={styles.gutter}>
+            {activities.length > 0 ? (
+              <ActivityTimeline tone="business"
+                items={activities.map((activity: any, index: number) => ({
+                  key: String(activity?.productId || index),
+                  icon: /updat|edit/i.test(String(activity?.label || '')) ? 'edit' : 'add-box',
+                  title: activity?.label || 'Product created',
+                  subtitle: activity?.description || 'Untitled',
+                  meta: activity?.time ? (timeAgo(activity.time) || shortDate(activity.time)) : undefined,
+                }))}
+              />
+            ) : (
+              <View style={styles.noActivity}>
+                <Icon name="history" size={22} color={PALETTE.textFaint} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.noActivityTitle} maxFontSizeMultiplier={1.3}>No recent activity</Text>
+                  <Text style={styles.noActivitySub} maxFontSizeMultiplier={1.3}>Products you add or update will show up here.</Text>
                 </View>
               </View>
-            ))
-          ) : (
-            <View style={styles.emptyActivityContainer}>
-              <Text style={styles.emptyActivityText}>No recent activity found</Text>
-              <Image
-                source={require('../../assets/images/clipboard_3d_final-removebg-preview.png')}
-                style={styles.emptyActivityGraphic}
-                resizeMode="contain"
-              />
-            </View>
-          )}
-        </View>
-        {/* Bottom Navigation Tab Bar */}
-        <View style={styles.bottomNavCard}>
-          <TouchableOpacity style={styles.navTabItem} activeOpacity={0.7}>
-            <Icon name="storefront" size={24} color="#7C3AED" />
-            <Text style={styles.navTabActiveText}>Business</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.navTabItem}
-            activeOpacity={0.7}
-            onPress={() =>
-              businessProfile?._id &&
-              navigation.navigate('ProductsServices', { companyId: businessProfile._id })
-            }
-          >
-            <Icon name="grid-view" size={24} color="#6B7280" />
-            <Text style={styles.navTabText}>Products</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.navTabItem}
-            activeOpacity={0.7}
-            onPress={() => navigation.navigate('Discover')}
-          >
-            <Icon name="search" size={24} color="#6B7280" />
-            <Text style={styles.navTabText}>Discover</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.navTabItem}
-            activeOpacity={0.7}
-            onPress={() => navigation.navigate('Analytics')}
-          >
-            <Icon name="bar-chart" size={24} color="#6B7280" />
-            <Text style={styles.navTabText}>Analytics</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.navTabItem}
-            activeOpacity={0.7}
-            onPress={() => navigation.navigate('Settings')}
-          >
-            <Icon name="settings" size={24} color="#6B7280" />
-            <Text style={styles.navTabText}>Settings</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+            )}
+          </LiftCard>
+        </>
+      ) : null}
+    </BrandScrollPage>
   );
 };
 
+/* ------------------------------------------------------------------ helpers */
+
+/** First-load placeholder shaped like the body: action card, 2×2 stats, tools. */
+function DashboardSkeleton() {
+  return (
+    <View style={[styles.skeleton, styles.overlap]} accessibilityLabel="Loading">
+      <View style={styles.skCard}>
+        <View style={styles.skeletonRow}>
+          <Skeleton width="48%" height={48} radius={999} />
+          <Skeleton width="48%" height={48} radius={999} />
+        </View>
+      </View>
+      <View style={styles.skeletonRow}>
+        <Skeleton width="48.5%" height={128} radius={20} />
+        <Skeleton width="48.5%" height={128} radius={20} />
+      </View>
+      <View style={styles.skeletonRow}>
+        <Skeleton width="48.5%" height={128} radius={20} />
+        <Skeleton width="48.5%" height={128} radius={20} />
+      </View>
+      <View style={styles.skeletonRow}>
+        <Skeleton width="31.5%" height={108} radius={20} />
+        <Skeleton width="31.5%" height={108} radius={20} />
+        <Skeleton width="31.5%" height={108} radius={20} />
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F7F7FD',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F7F7FD',
-  },
+  overlap: { marginTop: -PREMIUM_OVERLAP },
+  gutter: { marginHorizontal: SPACE.lg },
+  headerBlock: { marginTop: SPACE.lg },
+  glassSkeleton: { height: 132, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
 
-  // Header Section
-  backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: '#E9D5FF',
-  },
-  header: {
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    backgroundColor: '#F7F7FD',
-  },
+  switchLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 12, lineHeight: 16, fontWeight: '700', marginTop: SPACE.lg, marginBottom: SPACE.sm },
+  switchScroll: { marginHorizontal: -SPACE.lg },
+  switchRow: { gap: SPACE.sm, paddingHorizontal: SPACE.lg, paddingBottom: SPACE.xs },
 
-  // Scroll Content
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 20,
-  },
+  actionRow: { flexDirection: 'row', gap: SPACE.md },
+  actionBtn: { flex: 1, minWidth: 0 },
+  deleteRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACE.xs, minHeight: 44, marginTop: SPACE.sm },
+  deleteText: { ...TYPE.label, color: PALETTE.red, fontWeight: '700' },
 
-  // Welcome Section
-  welcomeRow: {
-    marginBottom: 20,
-  },
-  welcomeGreeting: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#1E1B4B',
-    letterSpacing: -0.4,
-  },
-  welcomeSubtitle: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginTop: 4,
-  },
+  companiesCard: { marginTop: SPACE.xs },
+  companiesRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
+  companiesArt: { width: 60, height: 60, borderRadius: 18, backgroundColor: PALETTE.violetDeep, alignItems: 'center', justifyContent: 'center' },
+  companiesTitle: { ...TYPE.heading },
+  companiesSub: { ...TYPE.caption, marginTop: 2 },
 
-  // Card 1: Manage My Companies
-  manageCompaniesCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E9D5FF',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  manageIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#F3E8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 14,
-  },
-  manageTextContainer: {
-    flex: 1,
-  },
-  manageTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  manageSub: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  countBadge: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#7C3AED',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 6,
-  },
-  countBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
+  noActivity: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, paddingVertical: SPACE.xs },
+  noActivityTitle: { ...TYPE.bodyStrong },
+  noActivitySub: { ...TYPE.caption, marginTop: 2 },
 
-  // Card 2: Business Card matching Dashboard (#F3E8FF background)
-  businessCardContainer: {
-    backgroundColor: '#F3E8FF',
-    borderRadius: 24,
-    padding: 18,
-    marginBottom: 18,
-    borderWidth: 1.5,
-    borderColor: '#E9D5FF',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  heroTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  storeLogoBox: {
-    width: 58,
-    height: 58,
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 14,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#E9D5FF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  storeLogoImage: {
-    width: '100%',
-    height: '100%',
-  },
-  heroDetails: {
-    flex: 1,
-  },
-  heroName: {
-    fontSize: 19,
-    fontWeight: '800',
-    color: '#1E1B4B',
-    letterSpacing: -0.3,
-  },
-  heroType: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginTop: 3,
-  },
-  heroPhoneRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  heroPhone: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#7C3AED',
-    marginLeft: 5,
-  },
-  heroBriefcase: {
-    width: 110,
-    height: 100,
-    marginLeft: 4,
-  },
-  heroDivider: {
-    height: 1,
-    backgroundColor: '#E9D5FF',
-    marginVertical: 16,
-  },
-  heroActionRow: {
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'center',
-  },
-  switchCardButton: {
-    flex: 1.3,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#7C3AED',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  switchCardButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#7C3AED',
-  },
-  editCardButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: '#7C3AED',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  editCardButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  deleteCardButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#EF4444',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteCardButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#EF4444',
-  },
-
-  // Stats Row
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 18,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    paddingVertical: 14,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#F3E8FF',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 1,
-  },
-  statIconBoxPurple: {
-    width: 34,
-    height: 34,
-    borderRadius: 11,
-    backgroundColor: '#F3E8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statIconBoxGreen: {
-    width: 34,
-    height: 34,
-    borderRadius: 11,
-    backgroundColor: '#DCFCE7',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statIconBoxAmber: {
-    width: 34,
-    height: 34,
-    borderRadius: 11,
-    backgroundColor: '#FEF3C7',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#1E1B4B',
-    marginTop: 8,
-  },
-  statTitle: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#7C3AED',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginBottom: 10,
-  },
-
-
-  // Recent Activity Card
-  activityCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: '#E9D5FF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  activityHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  activityIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: '#F3E8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  activityHeaderTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  activityItemRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F8FAFC',
-  },
-  activityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#7C3AED',
-    marginTop: 6,
-    marginRight: 10,
-  },
-  activityLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E1B4B',
-  },
-  activityDesc: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  emptyActivityContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-  },
-  emptyActivityText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#6B7280',
-    paddingRight: 8,
-  },
-  emptyActivityGraphic: {
-    width: 72,
-    height: 64,
-  },
-
-  // Empty State
-  emptyStateCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 30,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E9D5FF',
-    marginBottom: 18,
-  },
-  emptyStateTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E1B4B',
-    marginVertical: 14,
-  },
-  createButton: {
-    height: 48,
-    paddingHorizontal: 24,
-    backgroundColor: '#7C3AED',
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  createButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-
-  // Floating Bottom Navigation Tab Bar matching Dashboard
-  bottomNavCard: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    paddingVertical: 12,
-    paddingHorizontal: 6,
-    borderWidth: 1,
-    borderColor: '#E9D5FF',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  navTabItem: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  navTabText: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  navTabActiveText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#7C3AED',
-    marginTop: 2,
-  },
-
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.4)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  modalItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F8FAFC',
-  },
-  modalItemSelected: {
-    backgroundColor: '#F3E8FF',
-    borderRadius: 8,
-  },
-  modalItemTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E1B4B',
-  },
-  modalItemSub: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
+  skeleton: { paddingHorizontal: SPACE.lg, gap: SPACE.md },
+  skCard: { padding: SPACE.lg, borderRadius: 20, backgroundColor: PALETTE.white, borderWidth: 1, borderColor: PALETTE.border },
+  skeletonRow: { flexDirection: 'row', justifyContent: 'space-between' },
 });
 
 export default BusinessDashboardScreen;

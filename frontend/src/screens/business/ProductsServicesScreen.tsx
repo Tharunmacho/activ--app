@@ -1,26 +1,20 @@
-// Products & Services Screen - Isolated Company Catalog System
-// Always shows the ACTIVE company's catalog only. Switching companies is done
-// on the Business dashboard / Manage Companies, never silently from here.
-import React, { useState, useCallback, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet,
-  Alert,
-  StatusBar,
-  Image,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { View, Text, FlatList, StyleSheet, Alert, Image } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp, useRoute, useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '../../types';
 import api from '../../services/api';
 import { ENDPOINTS, resolveMediaUrl } from '../../config/api.config';
 import { useActiveCompany, useActiveCompanyStore } from '../../stores/activeCompanyStore';
+import { BusinessTabBar } from './BusinessTabBar';
+import {
+  Notice, Badge, PALETTE, SPACE, TYPE, money,
+  BrandFrame, BrandHeaderBlock, BrandTopBar, BrandHero, GlassIconButton, GlassFigure, PREMIUM_OVERLAP, FadeInUp,
+  LiftCard, LiftSearchBar, ArtEmptyState, ProductCrate3D, SearchLens3D, PressableScale, premiumTone,
+} from '../../ui';
+import { BUSINESS_TAB_ROUTES, CardSkeletons, CHIP } from './businessKit';
 
 type ProductsServicesScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -53,6 +47,10 @@ const ProductsServicesScreen: React.FC<Props> = ({ navigation }) => {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Website Products.tsx: a search over name + description, and a load failure
+  // that SAYS so rather than rendering as an empty catalogue.
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loadError, setLoadError] = useState('');
 
   // Bumped every time the screen regains focus. The data effects below key off
   // it as well as the company id, so returning here after creating, editing or
@@ -92,6 +90,7 @@ const ProductsServicesScreen: React.FC<Props> = ({ navigation }) => {
       });
 
       const payload = response.data?.data || [];
+      setLoadError('');
       // Belt and braces: the server already scopes by companyId, but never let
       // a stale/mismatched row from another company render here.
       setProducts(
@@ -103,8 +102,17 @@ const ProductsServicesScreen: React.FC<Props> = ({ navigation }) => {
     } catch (error) {
       console.error('Error fetching products:', error);
       setProducts([]);
+      setLoadError('Failed to load products. Pull back and try again.');
     }
   };
+
+  const filteredProducts = useMemo(() => {
+    const q = (searchQuery || '').trim().toLowerCase();
+    const list = products || [];
+    if (!q) return list;
+    return list.filter((p) =>
+      (p?.name || '').toLowerCase().includes(q) || (p?.description || '').toLowerCase().includes(q));
+  }, [products, searchQuery]);
 
   const handleDeleteProduct = (product: Product) => {
     Alert.alert(
@@ -134,664 +142,220 @@ const ProductsServicesScreen: React.FC<Props> = ({ navigation }) => {
     );
   };
 
-  return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F7F7FD" />
 
-      {/* Nav Header */}
-      <View style={styles.navHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-          <Icon name="arrow-back" size={24} color="#1E1B4B" />
-        </TouchableOpacity>
+  const goAdd = () =>
+    selectedCompany?._id
+      ? navigation.navigate('AddProduct', { companyId: selectedCompany._id })
+      : Alert.alert('Notice', 'Please select or create a company profile first.');
 
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Products & Services</Text>
-        </View>
+  const totalViews = (products || []).reduce((n, p: any) => n + Number(p?.views || 0), 0);
+  const hasProducts = (products || []).length > 0;
+  const liveCount = (products || []).filter((p: any) => p?.isActive !== false).length;
 
-        <TouchableOpacity
-          onPress={() =>
-            selectedCompany?._id
-              ? navigation.navigate('AddProduct', { companyId: selectedCompany._id })
-              : Alert.alert('Notice', 'Please select or create a company profile first.')
-          }
-          style={styles.addButtonHeader}
-          activeOpacity={0.7}
+  const header = (
+    <View>
+      <BrandHeaderBlock tone="business">
+        <BrandTopBar
+          onBack={() => navigation.goBack()}
+          title="Products & Services"
+          right={<GlassIconButton icon="add" onPress={goAdd} accessibilityLabel="Add product" />}
+        />
+        <BrandHero
+          eyebrow="Active catalogue"
+          title={selectedCompany?.businessName || 'No company selected'}
+          subtitle="What buyers see in Discover and on your company page."
+          art={<ProductCrate3D tone="business" size={92} />}
+          artSize={92}
         >
-          <Icon name="add" size={24} color="#7C3AED" />
-        </TouchableOpacity>
+          {/* Real views from the products themselves. */}
+          <View style={styles.figures}>
+            <GlassFigure icon="inventory-2" value={String((products || []).length)} label="Products" />
+            <GlassFigure icon="check-circle" value={String(liveCount)} label="Published" />
+            <GlassFigure icon="visibility" value={totalViews.toLocaleString('en-IN')} label="Views" />
+          </View>
+        </BrandHero>
+      </BrandHeaderBlock>
+
+      <View style={styles.overlap}>
+        {hasProducts ? (
+          <LiftSearchBar tone="business"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search by name or description…"
+            style={styles.gutter}
+          />
+        ) : null}
+        <View style={styles.listHead}>
+          <Text style={styles.listTitle} maxFontSizeMultiplier={1.3}>{`Catalogue items (${(products || []).length})`}</Text>
+          <PressableScale onPress={goAdd} contentStyle={styles.addPill} accessibilityRole="button" accessibilityLabel="Add product">
+            <Icon name="add" size={16} color={PALETTE.white} />
+            <Text style={styles.addPillText} maxFontSizeMultiplier={1.2}>Add</Text>
+          </PressableScale>
+        </View>
       </View>
 
-      <ScrollView
-        style={styles.scrollContainer}
-        contentContainerStyle={styles.scrollContent}
+      {loadError && !isLoading ? (
+        <Notice
+          kind="danger"
+          text={loadError}
+          action="Retry"
+          onAction={() => setFocusTick((t) => t + 1)}
+          style={{ marginTop: 0, marginBottom: SPACE.md }}
+        />
+      ) : null}
+    </View>
+  );
+
+  const tips = hasProducts ? (
+    <LiftCard tone="business" style={styles.tips}>
+      <View style={styles.tipsHead}>
+        <LinearGradient colors={CHIP.amber} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.tipsIcon}>
+          <Icon name="lightbulb-outline" size={18} color={PALETTE.white} />
+        </LinearGradient>
+        <Text style={TYPE.heading}>Quick tips</Text>
+      </View>
+      {['Add clear photos and descriptions', 'Set competitive prices', 'Keep your catalog updated'].map((t) => (
+        <View key={t} style={styles.tipRow}>
+          <Icon name="check-circle" size={16} color={PALETTE.green} />
+          <Text style={[TYPE.body, { flex: 1 }]}>{t}</Text>
+        </View>
+      ))}
+    </LiftCard>
+  ) : null;
+
+  const empty = isLoading ? (
+    <CardSkeletons rows={3} tall />
+  ) : hasProducts && filteredProducts.length === 0 ? (
+    <LiftCard tone="business" style={styles.gutter}>
+      <ArtEmptyState tone="business" compact art={<SearchLens3D tone="business" size={74} />} title="No products match your search" message="Try a different name or description." />
+    </LiftCard>
+  ) : (
+    <LiftCard tone="business" style={styles.gutter}>
+      <ArtEmptyState tone="business"
+        compact
+        art={<ProductCrate3D tone="business" size={76} />}
+        title="No products yet"
+        message="Add products to start showcasing your business and reach more customers."
+        action="Add product"
+        actionIcon="add"
+        onAction={goAdd}
+      />
+    </LiftCard>
+  );
+
+  return (
+    <BrandFrame tone="business" footer={<BusinessTabBar active="products" onPress={(key) => navigation.navigate(BUSINESS_TAB_ROUTES[key] as any)} />}>
+      <FlatList
+        data={isLoading ? [] : filteredProducts}
+        keyExtractor={(item, index) => String(item?._id || (item as any)?.id || index)}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-      >
-        {/* Active Company Banner - this catalog belongs to this company only */}
-        <View style={styles.activeCompanyBanner}>
-          {selectedCompany?.logo ? (
-            <Image source={{ uri: resolveMediaUrl(selectedCompany.logo) }} style={styles.activeCompanyLogo} />
-          ) : (
-            <View style={styles.activeCompanyLogoPlaceholder}>
-              <Icon name="storefront" size={20} color="#7C3AED" />
-            </View>
-          )}
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={styles.activeCompanyLabel}>ACTIVE CATALOG</Text>
-            <Text style={styles.activeCompanyName}>
-              {selectedCompany?.businessName || 'No company selected'}
-            </Text>
-          </View>
-        </View>
-
-        {/* Stats Row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <View style={styles.statIconBoxPurple}>
-              <Icon name="inventory-2" size={18} color="#7C3AED" />
-            </View>
-            <Text style={styles.statTitle}>Products</Text>
-            <Text style={styles.statValue}>{(products || []).length}</Text>
-            <Text style={styles.statSub}>Total items</Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <View style={styles.statIconBoxGreen}>
-              <Icon name="visibility" size={18} color="#10B981" />
-            </View>
-            <Text style={styles.statTitle}>Views</Text>
-            <Text style={styles.statValue}>0</Text>
-            <Text style={styles.statSub}>Total views</Text>
-          </View>
-        </View>
-
-        {/* Product Catalog Header */}
-        <View style={styles.catalogHeaderRow}>
-          <Text style={styles.catalogTitle}>
-            Catalog Items ({(products || []).length})
-          </Text>
-        </View>
-
-        {/* Products List */}
-        {isLoading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="large" color="#7C3AED" />
-          </View>
-        ) : products.length > 0 ? (
-          products.map((prod) => (
-            <View key={prod._id} style={styles.productCard}>
-              <View style={styles.cardHeaderRow}>
-                {prod.imageUrl ? (
-                  <Image source={{ uri: resolveMediaUrl(prod.imageUrl) }} style={styles.productThumbImage} />
-                ) : (
-                  <View style={styles.iconBox}>
-                    <Icon name="inventory-2" size={24} color="#7C3AED" />
-                  </View>
-                )}
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.productName}>{prod.name}</Text>
-                  <Text style={styles.productCategory}>{prod.category || 'General'}</Text>
-                  <Text style={styles.productPrice}>₹{prod.price?.toLocaleString('en-IN') || '0'}</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.deleteIconButton}
-                  onPress={() => handleDeleteProduct(prod)}
-                  activeOpacity={0.7}
-                >
-                  <Icon name="delete-outline" size={20} color="#EF4444" />
-                </TouchableOpacity>
-              </View>
-
-              {prod.description ? (
-                <Text style={styles.productDesc} numberOfLines={2}>
-                  {prod.description}
-                </Text>
-              ) : null}
-
-              <View style={styles.badgeRow}>
-                <View style={styles.stockBadge}>
-                  <Icon name="layers" size={14} color="#7C3AED" style={{ marginRight: 4 }} />
-                  <Text style={styles.stockBadgeText}>Stock: {prod.stock || 0}</Text>
-                </View>
-                {prod.sku ? (
-                  <View style={styles.skuBadge}>
-                    <Text style={styles.skuBadgeText}>SKU: {prod.sku}</Text>
-                  </View>
-                ) : null}
-              </View>
-            </View>
-          ))
-        ) : (
-          <View style={styles.emptyCard}>
-            <View style={styles.emptyGraphicBox}>
-              <Icon name="inventory-2" size={48} color="#FFFFFF" />
-            </View>
-            <Text style={styles.emptyTitle}>No Products Yet</Text>
-            <Text style={styles.emptySub}>Add products to start showcasing your business and reach more customers.</Text>
-            <TouchableOpacity
-              style={styles.addBtnPrimary}
-              onPress={() =>
-                selectedCompany?._id
-                  ? navigation.navigate('AddProduct', { companyId: selectedCompany._id })
-                  : Alert.alert('Notice', 'Please select or create a company profile first.')
-              }
-              activeOpacity={0.85}
-            >
-              <Icon name="add" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.addBtnPrimaryText}>Add Product</Text>
-            </TouchableOpacity>
-          </View>
+        ListHeaderComponent={header}
+        ListEmptyComponent={empty}
+        ListFooterComponent={tips}
+        contentContainerStyle={styles.listContent}
+        ItemSeparatorComponent={ItemGap}
+        renderItem={({ item, index }) => (
+          <FadeInUp delay={Math.min(index, 6) * 60} distance={12}>
+            <ProductCard
+              product={item}
+              onOpen={() => navigation.navigate('EditProduct', { productId: item?._id })}
+              onDelete={() => handleDeleteProduct(item)}
+            />
+          </FadeInUp>
         )}
-        {/* Quick Tips */}
-        <View style={styles.quickTipsCard}>
-          <View style={styles.quickTipsHeader}>
-            <Icon name="lightbulb-outline" size={20} color="#7C3AED" />
-            <Text style={styles.quickTipsTitle}>Quick Tips</Text>
-          </View>
-          <View style={styles.quickTipItem}>
-            <View style={styles.quickTipDot} />
-            <Text style={styles.quickTipText}>Add clear photos and descriptions</Text>
-          </View>
-          <View style={styles.quickTipItem}>
-            <View style={styles.quickTipDot} />
-            <Text style={styles.quickTipText}>Set competitive prices</Text>
-          </View>
-          <View style={styles.quickTipItem}>
-            <View style={styles.quickTipDot} />
-            <Text style={styles.quickTipText}>Keep your catalog updated</Text>
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* Floating Bottom Navigation Tab Bar */}
-      <View style={styles.bottomNavCard}>
-        <TouchableOpacity style={styles.navTabItem} activeOpacity={0.7} onPress={() => navigation.navigate('BusinessDashboard')}>
-          <Icon name="storefront" size={24} color="#6B7280" />
-          <Text style={styles.navTabText}>Business</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navTabItem} activeOpacity={0.7}>
-          <Icon name="grid-view" size={24} color="#7C3AED" />
-          <Text style={styles.navTabActiveText}>Products</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navTabItem} activeOpacity={0.7} onPress={() => navigation.navigate('Discover')}>
-          <Icon name="search" size={24} color="#6B7280" />
-          <Text style={styles.navTabText}>Discover</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navTabItem} activeOpacity={0.7} onPress={() => navigation.navigate('Analytics')}>
-          <Icon name="bar-chart" size={24} color="#6B7280" />
-          <Text style={styles.navTabText}>Analytics</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navTabItem} activeOpacity={0.7} onPress={() => navigation.navigate('Settings')}>
-          <Icon name="settings" size={24} color="#6B7280" />
-          <Text style={styles.navTabText}>Settings</Text>
-        </TouchableOpacity>
-      </View>
-
-    </SafeAreaView>
+      />
+    </BrandFrame>
   );
 };
 
+function ItemGap() {
+  return <View style={{ height: SPACE.md }} />;
+}
+
+/** Stock level → the chip's colours (the Stock screen's rule). */
+function stockTone(stock: number, min: number) {
+  if (stock <= 0) return { fg: PALETTE.redDark, bg: PALETTE.redSoft, icon: 'remove-shopping-cart', label: 'Out of stock' };
+  if (min > 0 && stock <= min) return { fg: PALETTE.amberDark, bg: PALETTE.amberSoft, icon: 'trending-down', label: `${stock} left` };
+  return { fg: PALETTE.greenDark, bg: PALETTE.greenSoft, icon: 'layers', label: `${stock} in stock` };
+}
+
+/** One catalogue line: photo, name + category, status, then price and stock chips. */
+function ProductCard({ product, onOpen, onDelete }: { product: Product; onOpen: () => void; onDelete: () => void }) {
+  const p = premiumTone('business');
+  const hidden = (product as any)?.isActive === false;
+  const img = product?.imageUrl ? resolveMediaUrl(product.imageUrl) : '';
+  const stock = Number(product?.stock || 0);
+  const st = stockTone(stock, Number((product as any)?.minStock || 0));
+  return (
+    <LiftCard tone="business" onPress={onOpen} accessibilityLabel={`Edit ${product?.name || 'product'}`} style={styles.productCard}>
+      <View style={styles.productTop}>
+        {img ? (
+          <Image source={{ uri: img }} style={styles.thumb} resizeMode="cover" />
+        ) : (
+          <LinearGradient colors={[PALETTE.violetSoft, PALETTE.violetTint]} style={[styles.thumb, styles.thumbEmpty]}>
+            <Icon name="inventory-2" size={26} color={p.accent} />
+          </LinearGradient>
+        )}
+        <View style={styles.productText}>
+          <Text style={styles.productName} numberOfLines={2} maxFontSizeMultiplier={1.3}>{product?.name || 'Untitled product'}</Text>
+          <Text style={TYPE.caption} numberOfLines={1} maxFontSizeMultiplier={1.3}>
+            {product?.category || 'General'}{product?.sku ? ` · SKU ${product.sku}` : ''}
+          </Text>
+          <Badge label={hidden ? 'Hidden' : 'Published'} status={hidden ? 'pending' : 'published'} size="sm" dot style={{ marginTop: SPACE.xs, alignSelf: 'flex-start' }} />
+        </View>
+        <PressableScale onPress={onDelete} scaleTo={0.9} contentStyle={styles.deleteBtn} accessibilityRole="button" accessibilityLabel={`Delete ${product?.name || 'product'}`} hitSlop={4}>
+          <Icon name="delete-outline" size={20} color={PALETTE.danger} />
+        </PressableScale>
+      </View>
+
+      {product?.description ? (
+        <Text style={styles.productDesc} numberOfLines={2} maxFontSizeMultiplier={1.3}>{product.description}</Text>
+      ) : null}
+
+      <View style={styles.productFoot}>
+        <LinearGradient colors={p.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.priceChip}>
+          <Text style={styles.price} numberOfLines={1} maxFontSizeMultiplier={1.2}>{money(Number(product?.price || 0))}</Text>
+        </LinearGradient>
+        <View style={[styles.stockPill, { backgroundColor: st.bg }]}>
+          <Icon name={st.icon} size={14} color={st.fg} />
+          <Text style={[styles.stockText, { color: st.fg }]} numberOfLines={1} maxFontSizeMultiplier={1.2}>{st.label}</Text>
+        </View>
+      </View>
+    </LiftCard>
+  );
+}
+
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F7F7FD',
-  },
-  navHeader: {
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    backgroundColor: '#F7F7FD',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  addButtonHeader: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  gutter: { marginHorizontal: SPACE.lg },
+  listContent: { paddingBottom: SPACE.xxl },
+  overlap: { marginTop: -PREMIUM_OVERLAP },
+  figures: { flexDirection: 'row', gap: SPACE.sm, marginTop: SPACE.lg, marginBottom: SPACE.sm },
+  listHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.md, marginHorizontal: SPACE.lg, marginTop: SPACE.lg, marginBottom: SPACE.md },
+  listTitle: { ...TYPE.heading, fontSize: 17, lineHeight: 22, flex: 1, minWidth: 0 },
+  addPill: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 36, paddingHorizontal: SPACE.md, borderRadius: 999, backgroundColor: PALETTE.violet },
+  addPillText: { color: PALETTE.white, fontSize: 13, lineHeight: 18, fontWeight: '800' },
 
-  scrollContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 90,
-  },
+  productCard: { marginHorizontal: SPACE.lg },
+  productTop: { flexDirection: 'row', alignItems: 'flex-start' },
+  thumb: { width: 76, height: 76, borderRadius: 16, backgroundColor: PALETTE.field },
+  thumbEmpty: { alignItems: 'center', justifyContent: 'center' },
+  productText: { flex: 1, minWidth: 0, marginLeft: SPACE.md, gap: SPACE.xxs },
+  productName: { ...TYPE.subheading },
+  deleteBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FEF2F2', marginLeft: SPACE.sm },
+  productDesc: { ...TYPE.body, marginTop: SPACE.md },
+  productFoot: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.md, paddingTop: SPACE.md, borderTopWidth: 1, borderTopColor: PALETTE.divider },
+  priceChip: { paddingHorizontal: SPACE.md, paddingVertical: 6, borderRadius: 999, maxWidth: '60%' },
+  price: { color: PALETTE.white, fontSize: 14, lineHeight: 18, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  stockPill: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs, paddingHorizontal: SPACE.sm + 2, paddingVertical: 5, borderRadius: 999, flexShrink: 1 },
+  stockText: { fontSize: 12, lineHeight: 16, fontWeight: '700', fontVariant: ['tabular-nums'], flexShrink: 1 },
 
-  companySelectorCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 14,
-    marginBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#E9D5FF',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  companyLogo: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-  },
-  companyLogoPlaceholder: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#F3E8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectorLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#7C3AED',
-    letterSpacing: 0.5,
-  },
-  companySelectorTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  switchBadgePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3E8FF',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-  },
-  switchBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#7C3AED',
-  },
-
-  activeCompanyBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 14,
-    borderWidth: 1.5,
-    borderColor: '#E9D5FF',
-  },
-  activeCompanyLogo: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-  },
-  activeCompanyLogoPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#F3E8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  activeCompanyLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#7C3AED',
-    letterSpacing: 0.5,
-  },
-  activeCompanyName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#F3E8FF',
-  },
-  statIconBoxPurple: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: '#F3E8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  statIconBoxGreen: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: '#DCFCE7',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  statTitle: {
-    fontSize: 13,
-    color: '#475569',
-  },
-  statValue: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#1E1B4B',
-    marginVertical: 4,
-  },
-  statSub: {
-    fontSize: 11,
-    color: '#6B7280',
-  },
-
-  catalogHeaderRow: {
-    marginBottom: 12,
-  },
-  catalogTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-
-  loadingBox: {
-    paddingVertical: 40,
-    alignItems: 'center',
-  },
-
-  productCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: '#F3E8FF',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#F3E8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  productThumbImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-  },
-  productName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  productCategory: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  productPrice: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#7C3AED',
-    marginTop: 4,
-  },
-  deleteIconButton: {
-    padding: 8,
-  },
-  productDesc: {
-    fontSize: 13,
-    color: '#475569',
-    marginTop: 10,
-    lineHeight: 18,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 12,
-  },
-  stockBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3E8FF',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  stockBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#7C3AED',
-  },
-  skuBadge: {
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  skuBadgeText: {
-    fontSize: 12,
-    color: '#64748B',
-  },
-
-  emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 30,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#F3E8FF',
-  },
-  emptyGraphicBox: {
-    width: 80,
-    height: 64,
-    backgroundColor: '#7C3AED',
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E1B4B',
-    marginBottom: 8,
-  },
-  emptySub: {
-    fontSize: 13,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  addBtnPrimary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#7C3AED',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 14,
-  },
-  addBtnPrimaryText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-
-  quickTipsCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 16,
-    padding: 20,
-    marginTop: 16,
-  },
-  quickTipsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  quickTipsTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1E1B4B',
-    marginLeft: 8,
-  },
-  quickTipItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  quickTipDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#7C3AED',
-    marginRight: 10,
-  },
-  quickTipText: {
-    fontSize: 13,
-    color: '#475569',
-  },
-
-  bottomNavCard: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    paddingVertical: 10,
-    paddingHorizontal: 6,
-    marginHorizontal: 16,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#F3E8FF',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  navTabItem: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  navTabText: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  navTabActiveText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#7C3AED',
-    marginTop: 2,
-  },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    maxHeight: '60%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  modalCompanyItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    marginBottom: 8,
-    backgroundColor: '#F8FAFC',
-  },
-  modalCompanyItemSelected: {
-    backgroundColor: '#F3E8FF',
-    borderWidth: 1,
-    borderColor: '#DDD6FE',
-  },
-  modalCompanyName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  modalCompanyType: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  modalAddCompanyBtn: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderWidth: 1.5,
-    borderColor: '#7C3AED',
-    borderRadius: 14,
-    marginTop: 12,
-  },
-  modalAddCompanyText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#7C3AED',
-  },
+  tips: { marginHorizontal: SPACE.lg, marginTop: SPACE.xl },
+  tipsHead: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md },
+  tipsIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  tipRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginTop: SPACE.xs },
 });
 
 export default ProductsServicesScreen;

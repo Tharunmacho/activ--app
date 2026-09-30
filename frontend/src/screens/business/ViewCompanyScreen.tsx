@@ -1,415 +1,229 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet,
-  Image,
-} from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { RootStackParamList } from '../../types';
-import api from '../../services/api';
+import {
+  InfoRow, KeyValueGrid, ListRow, Divider, PALETTE, SPACE, TYPE, shortDate,
+  BrandScrollPage, BrandTopBar, PREMIUM_OVERLAP, FadeInUp, LiftCard, GradientButton, MetricGrid, MetricTile,
+  GlassIconButton, premiumTone,
+} from '../../ui';
 import { resolveMediaUrl } from '../../config/api.config';
+import { useActiveCompanyStore } from '../../stores/activeCompanyStore';
+import { getCompany, getProductStats, errorMessage, Company } from '../../services/businessApi';
+import api from '../../services/api';
+import { BizSectionTitle, BizStatePage, CoverHero, GlassStatus, GlassTag, CHIP } from './businessKit';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ViewCompany'>;
 
-interface CompanyData {
-  _id: string;
-  businessName: string;
-  description?: string;
-  businessType?: string;
-  mobileNumber?: string;
-  email?: string;
-  location: string;
-  area?: string;
-  logo?: string;
-  status?: string;
-  productsCount?: number;
-  isVerified?: boolean;
-}
+/**
+ * ONE OF MY COMPANIES — the website's /business/companies/:id (CompanyDetails).
+ *
+ *   GET    /business-profiles/:id              owner-scoped details
+ *   GET    /products/stats?companyId=          total / live / featured / views / trustedBy
+ *   DELETE /business-profiles/:id              delete
+ *
+ * "Make active" switches which company every business screen acts as — the
+ * website's switcher, same store.
+ */
+
+interface Stats { total: number; active: number; featured: number; views: number; trustedBy: number }
 
 const ViewCompanyScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { companyId } = route.params || {};
-  const [company, setCompany] = useState<CompanyData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const companyId = route?.params?.companyId || '';
+  const activeId = useActiveCompanyStore((s) => s.activeCompanyId);
+  const setActive = useActiveCompanyStore((s) => s.setActiveCompany);
+  const loadCompanies = useActiveCompanyStore((s) => s.loadCompanies);
 
-  useEffect(() => {
-    loadCompanyData();
-  }, []);
+  const [company, setCompany] = useState<Company | null>(null);
+  const [stats, setStats] = useState<Stats>({ total: 0, active: 0, featured: 0, views: 0, trustedBy: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const loadCompanyData = async () => {
-    if (!companyId) {
-      setIsLoading(false);
-      return;
-    }
-
+  const load = useCallback(async () => {
+    if (!companyId) { setError('No company selected.'); setLoading(false); return; }
+    setLoading(true);
+    setError('');
     try {
-      // TODO: Replace with actual company details endpoint
-      // const response = await api.get(`/api/v1/companies/${companyId}`);
-      
-      // Mock data for now
-      await new Promise<void>(resolve => setTimeout(resolve, 500));
-      setCompany(null);
-    } catch (error: any) {
-      console.error('Error loading company:', error);
+      const c = await getCompany(companyId);
+      if (!c) throw new Error('Company not found.');
+      setCompany(c);
+      try {
+        const d = await getProductStats(companyId);
+        setStats({
+          total: Number(d?.total || 0), active: Number(d?.active || 0), featured: Number(d?.featured || 0),
+          views: Number(d?.views || 0), trustedBy: Number(d?.trustedBy || 0),
+        });
+      } catch (err) {
+        console.warn('Catalog stats safely caught:', err);
+      }
+    } catch (err: any) {
+      setError(err?.response ? errorMessage(err, 'Could not load this company.') : String(err?.message || 'Could not load this company.'));
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
+  }, [companyId]);
+
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const remove = () => {
+    Alert.alert('Delete company', `Delete ${company?.businessName || 'this company'} and its catalogue? This cannot be undone.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.delete(`/business-profiles/${encodeURIComponent(companyId)}`);
+            await loadCompanies({ force: true });
+            navigation.goBack();
+          } catch (err) {
+            Alert.alert('Not deleted', errorMessage(err));
+          }
+        },
+      },
+    ]);
   };
 
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2563EB" />
-      </View>
-    );
-  }
+  if (loading) return <BizStatePage title="Company" eyebrow="Company details" onBack={() => navigation.goBack()} />;
+  if (error || !company) return <BizStatePage title="Company" eyebrow="Company details" onBack={() => navigation.goBack()} error={error} onRetry={load} />;
 
-  if (!company) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Icon name="arrow-back" size={24} color="#FFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Company Profile</Text>
-        </View>
-        <View style={styles.emptyContainer}>
-          <Icon name="business" size={80} color="#BDBDBD" />
-          <Text style={styles.emptyTitle}>Company not found</Text>
-          <Text style={styles.emptySubtitle}>The company you're looking for doesn't exist</Text>
-        </View>
-      </View>
-    );
-  }
+  const p = premiumTone('business');
+  const logo = company?.logo ? resolveMediaUrl(company.logo) : '';
+  const banner = company?.banner ? resolveMediaUrl(company.banner) : '';
+  const isActiveCompany = activeId === company._id;
+  const live = company?.isActive !== false;
+  // The company record's own review status (`pending` on create) — the website's CompanyDetails shows it.
+  const status = String(company?.status || 'pending').trim().toLowerCase();
+  const categories = (company?.productCategories || []).filter((c) => c && c.description);
+
+  const header = (
+    <View style={styles.headerPad}>
+      <BrandTopBar
+        onBack={() => navigation.goBack()}
+        title={isActiveCompany ? 'Active company' : 'Company'}
+        right={<GlassIconButton icon="edit" onPress={() => navigation.navigate('EditCompany', { companyId })} accessibilityLabel="Edit company" />}
+      />
+      <FadeInUp delay={80} distance={12} style={{ marginTop: SPACE.md }}>
+        <CoverHero
+          banner={banner}
+          logo={logo}
+          name={company?.businessName || 'Company'}
+          subtitle={company?.businessType || undefined}
+          badges={(
+            <>
+              <GlassStatus status={status} />
+              {isActiveCompany ? <GlassTag icon="bolt" label="Active" /> : null}
+            </>
+          )}
+        />
+      </FadeInUp>
+      <FadeInUp delay={160} distance={8} style={styles.headTags}>
+        <GlassTag icon={live ? 'travel-explore' : 'visibility-off'} label={live ? 'Listed in Discover' : 'Hidden from Discover'} />
+      </FadeInUp>
+    </View>
+  );
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color="#FFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Company Profile</Text>
-      </View>
-
-      {/* Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.profileCard}>
-          {/* Logo */}
-          <View style={styles.logoContainer}>
-            <View style={styles.logoBox}>
-              {company.logo ? (
-                <Image source={{ uri: resolveMediaUrl(company.logo) }} style={styles.logoImage} />
-              ) : (
-                <Icon name="business" size={48} color="#2563EB" />
-              )}
+    <BrandScrollPage tone="business" header={header}>
+      <FadeInUp delay={200} style={styles.overlap}>
+        {!isActiveCompany ? (
+          <LiftCard tone="business" style={styles.gutter}>
+            <Text style={styles.switchText} maxFontSizeMultiplier={1.3}>Products, stock and analytics follow the company you are working as.</Text>
+            <GradientButton tone="business"
+              label="Make this my active company"
+              icon="swap-horiz"
+              onPress={() => setActive(company._id)}
+              style={{ marginTop: SPACE.md }}
+            />
+          </LiftCard>
+        ) : (
+          <LiftCard tone="business" style={styles.gutter}>
+            <View style={styles.activeRow}>
+              <Icon name="check-circle" size={20} color={PALETTE.green} />
+              <Text style={styles.activeText} maxFontSizeMultiplier={1.3}>You are working as this company everywhere in the business area.</Text>
             </View>
-          </View>
+          </LiftCard>
+        )}
+      </FadeInUp>
 
-          {/* Company Info */}
-          <View style={styles.infoSection}>
-            <View style={styles.titleRow}>
-              <Text style={styles.companyName}>{company.businessName}</Text>
-              {company.isVerified && <Icon name="verified" size={24} color="#2563EB" />}
-            </View>
-            {company.description && (
-              <Text style={styles.description}>{company.description}</Text>
-            )}
-          </View>
+      <BizSectionTitle title="Catalogue" caption="From your products" />
+      <MetricGrid>
+        <MetricTile tone="business" label="Catalogue products" value={stats.total} icon="inventory-2" hint="Total listed" colors={CHIP.violet} delay={100} />
+        <MetricTile tone="business" label="Live products" value={stats.active} icon="check-circle" colors={CHIP.green} hint="Visible in Discover" delay={160} />
+        <MetricTile tone="business" label="Featured" value={stats.featured} icon="star" colors={CHIP.amber} hint="Promoted items" delay={220} />
+        <MetricTile tone="business" label="Product views" value={stats.views} icon="visibility" colors={CHIP.sky} delay={280} />
+      </MetricGrid>
 
-          {/* Details */}
-          <View style={styles.detailsSection}>
-            {company.businessType && (
-              <View style={styles.detailRow}>
-                <View style={styles.detailIcon}>
-                  <Icon name="category" size={20} color="#2563EB" />
-                </View>
-                <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>Business Type</Text>
-                  <Text style={styles.detailValue}>{company.businessType}</Text>
-                </View>
-              </View>
-            )}
+      <BizSectionTitle title="Details" />
+      <LiftCard tone="business" style={styles.gutter}>
+        {company?.description ? <Text style={styles.about} maxFontSizeMultiplier={1.3}>{company.description}</Text> : null}
+        <KeyValueGrid
+          items={[
+            { label: 'Business type', value: company?.businessType },
+            { label: 'Constitution', value: company?.constitutionType },
+            { label: 'Employees', value: company?.numberOfEmployees },
+            { label: 'Trusted by', value: `${stats.trustedBy} ${stats.trustedBy === 1 ? 'member' : 'members'}` },
+            { label: 'Registered', value: shortDate(company?.createdAt) },
+            { label: 'Last updated', value: shortDate(company?.updatedAt) },
+          ]}
+        />
+        <Divider spacing={SPACE.md} />
+        <InfoRow label="Activities" value={company?.businessActivities} icon="work-outline" />
+        <InfoRow label="Phone" value={company?.mobileNumber} icon="phone" />
+        <InfoRow label="Email" value={company?.email} icon="mail-outline" />
+        <InfoRow label="Location" value={[company?.area, company?.location].filter(Boolean).join(', ')} icon="place" last={!company?.memberOfOtherChamber} />
+        {company?.memberOfOtherChamber ? <InfoRow label="Other chamber" value={company?.otherChamber || 'Yes'} icon="groups" last /> : null}
+      </LiftCard>
 
-            {company.mobileNumber && (
-              <View style={styles.detailRow}>
-                <View style={styles.detailIcon}>
-                  <Icon name="phone" size={20} color="#2563EB" />
-                </View>
-                <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>Mobile Number</Text>
-                  <Text style={styles.detailValue}>{company.mobileNumber}</Text>
-                </View>
-              </View>
-            )}
-
-            {company.email && (
-              <View style={styles.detailRow}>
-                <View style={styles.detailIcon}>
-                  <Icon name="email" size={20} color="#2563EB" />
-                </View>
-                <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>Email</Text>
-                  <Text style={styles.detailValue}>{company.email}</Text>
-                </View>
-              </View>
-            )}
-
-            <View style={styles.detailRow}>
-              <View style={styles.detailIcon}>
-                <Icon name="location-on" size={20} color="#2563EB" />
-              </View>
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Location</Text>
-                <Text style={styles.detailValue}>
-                  {company.area ? `${company.area}, ${company.location}` : company.location}
-                </Text>
-              </View>
-            </View>
-
-            {company.status && (
-              <View style={styles.detailRow}>
-                <View style={styles.detailIcon}>
-                  <Icon name="info" size={20} color="#2563EB" />
-                </View>
-                <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>Status</Text>
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      company.status === 'active' && styles.statusActive,
-                      company.status === 'pending' && styles.statusPending,
-                      company.status === 'inactive' && styles.statusInactive,
-                    ]}>
-                    <Text
-                      style={[
-                        styles.statusText,
-                        company.status === 'active' && styles.statusTextActive,
-                        company.status === 'pending' && styles.statusTextPending,
-                        company.status === 'inactive' && styles.statusTextInactive,
-                      ]}>
-                      {company.status.charAt(0).toUpperCase() + company.status.slice(1)}
-                    </Text>
+      {categories.length ? (
+        <>
+          <BizSectionTitle title="Product categories" caption={`${categories.length} ${categories.length === 1 ? 'category' : 'categories'}`} />
+          <LiftCard tone="business" style={styles.gutter}>
+            <View style={styles.cats}>
+              {categories.map((c, i) => (
+                <View key={`${c?.code || 'c'}-${i}`} style={styles.catRow}>
+                  <View style={[styles.catIcon, { backgroundColor: p.accentSoft }]}>
+                    <Icon name={c?.industryType === 'Manufacturing' ? 'precision-manufacturing' : 'category'} size={16} color={p.accent} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.catTitle} maxFontSizeMultiplier={1.3}>{c?.description || ''}</Text>
+                    <Text style={styles.catMeta} maxFontSizeMultiplier={1.3}>{c?.code ? `NIC ${c.code}${c?.industryType ? ` · ${c.industryType}` : ''}` : 'Custom category'}</Text>
                   </View>
                 </View>
-              </View>
-            )}
-          </View>
+              ))}
+            </View>
+          </LiftCard>
+        </>
+      ) : null}
 
-          {/* Stats */}
-          <View style={styles.statsSection}>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{company.productsCount || 0}</Text>
-              <Text style={styles.statLabel}>Products</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>0</Text>
-              <Text style={styles.statLabel}>Reviews</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>0</Text>
-              <Text style={styles.statLabel}>Connections</Text>
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-    </View>
+      <BizSectionTitle title="Manage" />
+      <LiftCard tone="business" style={[styles.gutter, styles.listCard]} padded={false}>
+        <ListRow icon="edit" title="Edit company" subtitle="Details, logo, cover, registrations" onPress={() => navigation.navigate('EditCompany', { companyId })} />
+        <ListRow icon="inventory-2" title="Products & services" subtitle={`${stats.total} listed`} onPress={() => { setActive(company._id); navigation.navigate('ProductsServices', { companyId }); }} />
+        <ListRow icon="public" title="View as other members" subtitle="Your public company page" onPress={() => navigation.navigate('CompanyPublic', { companyId })} />
+        <ListRow icon="delete-outline" title="Delete company" danger onPress={remove} last />
+      </LiftCard>
+    </BrandScrollPage>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#E8E3F5',
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#E8E3F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    backgroundColor: '#1565C0',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 48,
-    paddingBottom: 16,
-  },
-  backButton: {
-    padding: 8,
-    marginRight: 8,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFF',
-    flex: 1,
-    textAlign: 'center',
-    marginRight: 40,
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-  profileCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  logoBox: {
-    width: 128,
-    height: 128,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#F5F5F5',
-    overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  infoSection: {
-    marginBottom: 24,
-    paddingBottom: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  companyName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#212121',
-    flex: 1,
-  },
-  description: {
-    fontSize: 14,
-    color: '#616161',
-    lineHeight: 20,
-  },
-  detailsSection: {
-    gap: 16,
-    marginBottom: 24,
-    paddingBottom: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  detailRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  detailIcon: {
-    width: 40,
-    height: 40,
-    backgroundColor: '#E3F2FD',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  detailContent: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  detailLabel: {
-    fontSize: 12,
-    color: '#757575',
-    marginBottom: 2,
-  },
-  detailValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#212121',
-  },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusActive: {
-    backgroundColor: '#E8F5E9',
-  },
-  statusPending: {
-    backgroundColor: '#FFF3E0',
-  },
-  statusInactive: {
-    backgroundColor: '#FFEBEE',
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  statusTextActive: {
-    color: '#2E7D32',
-  },
-  statusTextPending: {
-    color: '#E65100',
-  },
-  statusTextInactive: {
-    color: '#C62828',
-  },
-  statsSection: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2563EB',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#757575',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#424242',
-    marginTop: 16,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#757575',
-    textAlign: 'center',
-    marginTop: 8,
-  },
+  headerPad: { paddingBottom: SPACE.sm },
+  headTags: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.md, marginBottom: SPACE.sm },
+  overlap: { marginTop: -PREMIUM_OVERLAP },
+  gutter: { marginHorizontal: SPACE.lg },
+  switchText: { ...TYPE.body },
+  activeRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
+  activeText: { ...TYPE.body, flex: 1, minWidth: 0 },
+  about: { ...TYPE.body, lineHeight: 21, marginBottom: SPACE.lg },
+  cats: { gap: SPACE.sm },
+  catRow: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.md, padding: SPACE.md, borderRadius: 14, backgroundColor: PALETTE.violetTint, borderWidth: 1, borderColor: PALETTE.violetBorder },
+  catIcon: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  catTitle: { ...TYPE.bodyStrong },
+  catMeta: { ...TYPE.caption, marginTop: SPACE.xxs },
+  listCard: { paddingHorizontal: SPACE.lg },
 });
 
 export default ViewCompanyScreen;

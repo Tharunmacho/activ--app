@@ -1,25 +1,24 @@
-// Analytics Screen - Business Card Theme Design System
-// Scoped strictly to the ACTIVE company. There is no company switcher here on
-// purpose: switching happens once, on the Business dashboard / Manage Companies.
+// Analytics — scoped strictly to the ACTIVE company (premium, member tone).
+// There is no company switcher here on purpose: switching happens once, on the
+// Business dashboard / Manage Companies.
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  StatusBar,
-  ActivityIndicator,
-  Image,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '../../types';
 import api from '../../services/api';
 import { ENDPOINTS, resolveMediaUrl } from '../../config/api.config';
 import { useActiveCompany, useActiveCompanyStore } from '../../stores/activeCompanyStore';
+import { useMembershipPaid, MembershipLocked } from './MembershipGate';
+import { BusinessTabBar } from './BusinessTabBar';
+import {
+  Skeleton, PALETTE, SPACE, TYPE, BRAND,
+  BrandScrollPage, BrandTopBar, BrandHero, PREMIUM_OVERLAP, LiftCard, MetricGrid, MetricTile, RingGauge, GrowBar,
+  CountUpText, CompanyLogoTile, ArtEmptyState, GrowthChart3D,
+} from '../../ui';
+import { BizSectionTitle, CHIP } from './businessKit';
 
 type AnalyticsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Analytics'>;
 
@@ -32,12 +31,16 @@ const EMPTY_STATS = {
   featuredProducts: 0,
   activeProducts: 0,
   profileViews: 0,
+  trustedBy: 0,
+  topViewed: [] as { name: string; views: number }[],
 };
 
 const AnalyticsScreen: React.FC<Props> = ({ navigation }) => {
   const activeCompany = useActiveCompany();
   const loadCompanies = useActiveCompanyStore((state) => state.loadCompanies);
 
+  // Analytics is a membership benefit (website Analytics.tsx: getPaymentStatus()).
+  const paid = useMembershipPaid();
   const [stats, setStats] = useState(EMPTY_STATS);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -78,6 +81,8 @@ const AnalyticsScreen: React.FC<Props> = ({ navigation }) => {
         featuredProducts: Number(data.featured || 0),
         activeProducts: Number(data.active || 0),
         profileViews: Number(data.views || 0),
+        trustedBy: Number(data.trustedBy || 0),
+        topViewed: Array.isArray(data.topViewed) ? data.topViewed : [],
       });
     } catch (error) {
       console.log('Error fetching analytics stats:', error);
@@ -87,376 +92,206 @@ const AnalyticsScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F7F7FD" />
+  const topViewed = stats.topViewed || [];
+  const maxViews = Math.max(1, ...topViewed.map((r) => Number(r?.views || 0)));
+  const hasViews = topViewed.some((r) => Number(r?.views || 0) > 0);
+  const total = Number(stats.totalProducts || 0);
+  const live = Number(stats.activeProducts || 0);
+  const logo = activeCompany?.logo ? resolveMediaUrl(activeCompany.logo) : '';
 
-      {/* Nav Header */}
-      <View style={styles.navHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-          <Icon name="arrow-back" size={24} color="#1E1B4B" />
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Business Analytics</Text>
-        </View>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Active Company Header - read only, no switcher on this screen */}
+  const header = (
+    <View style={styles.headerPad}>
+      <BrandTopBar onBack={() => navigation.goBack()} title="Business analytics" />
+      <BrandHero
+        eyebrow="Analytics for"
+        title={activeCompany ? (activeCompany.businessName || 'Company') : 'No active company'}
+        subtitle={activeCompany
+          ? `${activeCompany.businessType || '—'}${activeCompany.location ? ` · ${activeCompany.location}` : ''}`
+          : 'Create a company to see its analytics'}
+        art={<GrowthChart3D tone="business" size={92} />}
+        artSize={92}
+      >
+        {/* Active company - read only, no switcher on this screen */}
         {activeCompany ? (
-          <View style={styles.companySelectorCard}>
-            {activeCompany.logo ? (
-              <Image source={{ uri: resolveMediaUrl(activeCompany.logo) }} style={styles.companyLogo} />
+          <View style={styles.companyRow}>
+            <CompanyLogoTile tone="business" uri={logo} name={activeCompany.businessName} size={40} />
+            <Text style={styles.companyNote} numberOfLines={2} maxFontSizeMultiplier={1.2}>Figures for the company you are working as. Switch on the Business tab.</Text>
+          </View>
+        ) : null}
+      </BrandHero>
+    </View>
+  );
+
+  return (
+    <BrandScrollPage tone="business"
+      header={header}
+      footer={(
+        <BusinessTabBar
+          active="analytics"
+          onPress={(key) => {
+            if (key === 'business') navigation.navigate('BusinessDashboard');
+            else if (key === 'products') navigation.navigate('ProductsServices', {});
+            else if (key === 'discover') navigation.navigate('Discover');
+            else if (key === 'settings') navigation.navigate('Settings');
+          }}
+        />
+      )}
+    >
+      {isLoading || paid === null ? (
+        <View style={[styles.skeletonWrap, styles.overlap]} accessibilityLabel="Loading analytics">
+          <View style={styles.skeletonRow}>
+            <SkeletonTile />
+            <SkeletonTile />
+          </View>
+          <View style={[styles.skeletonTile, styles.skeletonWide]}>
+            <Skeleton width="45%" height={16} />
+            <Skeleton height={12} />
+            <Skeleton height={12} />
+            <Skeleton width="80%" height={12} />
+          </View>
+        </View>
+      ) : paid === false ? (
+        <MembershipLocked
+          icon="lock-outline"
+          title="Analytics opens with membership"
+          message="Your products are already being counted. Membership is what lets you read the figures."
+          perks={[
+            { icon: 'visibility', title: 'Who is opening your products', detail: 'Every view, counted when somebody outside your company opens one — and which products they open most.' },
+            { icon: 'verified-user', title: 'Who has kept your company', detail: 'How many members have added you to their trust list.' },
+          ]}
+          onJoin={() => navigation.navigate('MemberMain')}
+          footnote="The counting carries on either way — membership is what opens the figures."
+          style={styles.overlap}
+        />
+      ) : (
+        <>
+          <View style={styles.overlap}>
+            <MetricGrid>
+              <MetricTile tone="business" icon="visibility" label="Product views" value={stats.profileViews} hint="All time" colors={CHIP.violet} delay={80} />
+              <MetricTile tone="business" icon="inventory-2" label="Catalog products" value={total} hint="Total listed" colors={CHIP.green} delay={140} />
+            </MetricGrid>
+          </View>
+
+          {/* Catalogue health — how much of the catalogue is live, and who keeps you. */}
+          <BizSectionTitle title="Catalog breakdown" />
+          <LiftCard tone="business" style={styles.gutter}>
+            <View style={styles.health}>
+              <RingGauge progress={total ? live / total : 0} size={108} stroke={12} label="live" colors={['#5B21B6', '#A78BFA']} delay={150} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <MetricRow icon="check-circle" label="Active catalog items" value={stats.activeProducts} colors={CHIP.green} />
+                <MetricRow icon="star" label="Featured offerings" value={stats.featuredProducts} colors={CHIP.amber} />
+                <MetricRow icon="verified-user" label="Members who trust this company" value={stats.trustedBy} colors={CHIP.violet} last />
+              </View>
+            </View>
+          </LiftCard>
+
+          <BizSectionTitle title="Traffic & engagement" caption={hasViews ? 'Most-opened products' : undefined} />
+          <LiftCard tone="business" style={styles.gutter}>
+            {hasViews ? (
+              <View style={styles.bars}>
+                {topViewed.map((row, i) => (
+                  <BarRow
+                    key={`${row?.name || 'p'}-${i}`}
+                    rank={i + 1}
+                    label={row?.name || 'Untitled product'}
+                    value={Number(row?.views || 0)}
+                    max={maxViews}
+                    delay={120 + i * 90}
+                  />
+                ))}
+              </View>
             ) : (
-              <View style={styles.companyLogoPlaceholder}>
-                <Icon name="storefront" size={22} color="#7C3AED" />
-              </View>
+              <ArtEmptyState tone="business"
+                compact
+                art={<GrowthChart3D tone="business" size={76} />}
+                title="No views yet"
+                message="No product has been opened by another member yet. Views appear here as buyers open your catalogue."
+              />
             )}
-
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.selectorLabel}>ANALYTICS FOR</Text>
-              <Text style={styles.companySelectorTitle}>{activeCompany.businessName || 'Company'}</Text>
-              <Text style={styles.companySelectorSub}>
-                {activeCompany.businessType || '—'}
-                {activeCompany.location ? ` · ${activeCompany.location}` : ''}
-              </Text>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.companySelectorCard}>
-            <View style={styles.companyLogoPlaceholder}>
-              <Icon name="storefront" size={22} color="#7C3AED" />
-            </View>
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.selectorLabel}>ANALYTICS FOR</Text>
-              <Text style={styles.companySelectorTitle}>No active company</Text>
-              <Text style={styles.companySelectorSub}>Create a company to see its analytics</Text>
-            </View>
-          </View>
-        )}
-
-        {isLoading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="large" color="#7C3AED" />
-          </View>
-        ) : (
-          <>
-            {/* Metric Cards Row */}
-            <View style={styles.statsRow}>
-              <View style={styles.statCard}>
-                <View style={styles.statIconBoxPurple}>
-                  <Icon name="visibility" size={20} color="#7C3AED" />
-                </View>
-                <Text style={styles.statTitle}>Profile Views</Text>
-                <Text style={styles.statValue}>{stats.profileViews}</Text>
-                <Text style={styles.statSubText}>This Month</Text>
-              </View>
-
-              <View style={styles.statCard}>
-                <View style={styles.statIconBoxGreen}>
-                  <Icon name="inventory-2" size={20} color="#10B981" />
-                </View>
-                <Text style={styles.statTitle}>Catalog Products</Text>
-                <Text style={styles.statValue}>{stats.totalProducts}</Text>
-                <Text style={styles.statSubText}>Total Listed</Text>
-              </View>
-            </View>
-
-            {/* Additional Performance Card */}
-            <View style={styles.card}>
-              <View style={styles.cardHeaderRow}>
-                <Icon name="bar-chart" size={22} color="#7C3AED" style={{ marginRight: 8 }} />
-                <Text style={styles.cardHeaderTitle}>Catalog Breakdown</Text>
-              </View>
-
-              <View style={styles.metricRow}>
-                <Text style={styles.metricLabel}>Active Catalog Items</Text>
-                <Text style={styles.metricVal}>{stats.activeProducts}</Text>
-              </View>
-              <View style={styles.metricRow}>
-                <Text style={styles.metricLabel}>Featured Offerings</Text>
-                <Text style={styles.metricVal}>{stats.featuredProducts}</Text>
-              </View>
-            </View>
-
-            {/* Overview Chart Card */}
-            <View style={styles.card}>
-              <View style={styles.cardHeaderRow}>
-                <Icon name="trending-up" size={22} color="#7C3AED" style={{ marginRight: 8 }} />
-                <Text style={styles.cardHeaderTitle}>Traffic & Engagement</Text>
-              </View>
-              <View style={styles.chartPlaceholder}>
-                <Icon name="show-chart" size={48} color="#7C3AED" />
-                <Text style={styles.chartText}>Analytics & engagement graphs populate in real-time as buyers visit your catalog.</Text>
-              </View>
-            </View>
-          </>
-        )}
-      </ScrollView>
-
-      {/* Floating Bottom Navigation Tab Bar */}
-      <View style={styles.bottomNavCard}>
-        <TouchableOpacity style={styles.navTabItem} activeOpacity={0.7} onPress={() => navigation.navigate('BusinessDashboard')}>
-          <Icon name="storefront" size={24} color="#6B7280" />
-          <Text style={styles.navTabText}>Business</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navTabItem} activeOpacity={0.7} onPress={() => navigation.navigate('ProductsServices', {})}>
-          <Icon name="grid-view" size={24} color="#6B7280" />
-          <Text style={styles.navTabText}>Products</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navTabItem} activeOpacity={0.7} onPress={() => navigation.navigate('Discover')}>
-          <Icon name="search" size={24} color="#6B7280" />
-          <Text style={styles.navTabText}>Discover</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navTabItem} activeOpacity={0.7}>
-          <Icon name="bar-chart" size={24} color="#7C3AED" />
-          <Text style={styles.navTabActiveText}>Analytics</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navTabItem} activeOpacity={0.7} onPress={() => navigation.navigate('Settings')}>
-          <Icon name="settings" size={24} color="#6B7280" />
-          <Text style={styles.navTabText}>Settings</Text>
-        </TouchableOpacity>
-      </View>
-
-    </SafeAreaView>
+          </LiftCard>
+        </>
+      )}
+    </BrandScrollPage>
   );
 };
 
+/** Placeholder shaped like a MetricTile. */
+function SkeletonTile() {
+  return (
+    <View style={styles.skeletonTile}>
+      <Skeleton width={40} height={40} radius={13} />
+      <Skeleton width="50%" height={24} />
+      <Skeleton width="70%" height={12} />
+    </View>
+  );
+}
+
+/** One labelled figure — gradient chip, label wraps, a counted number on the right. */
+function MetricRow({ icon, label, value, colors, last }: { icon: string; label: string; value: number; colors: string[]; last?: boolean }) {
+  return (
+    <View style={[styles.metricRow, !last && styles.metricDivider]}>
+      <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.metricIcon}>
+        <Icon name={icon} size={15} color={PALETTE.white} />
+      </LinearGradient>
+      <Text style={styles.metricLabel} maxFontSizeMultiplier={1.3}>{label}</Text>
+      <CountUpText value={Number(value || 0)} style={styles.metricValue} />
+    </View>
+  );
+}
+
+/** A ranked horizontal bar: rank, name + value on one line, a growing gradient bar below. */
+function BarRow({ rank, label, value, max, delay }: { rank: number; label: string; value: number; max: number; delay: number }) {
+  const share = Math.max(0.04, Number(value || 0) / Math.max(1, Number(max || 1)));
+  return (
+    <View accessible accessibilityLabel={`${label}: ${value} views`}>
+      <View style={styles.barHead}>
+        <LinearGradient colors={rank === 1 ? CHIP.amber : CHIP.plum} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.rank}>
+          <Text style={styles.rankText} maxFontSizeMultiplier={1}>{rank}</Text>
+        </LinearGradient>
+        <Text style={styles.barLabel} numberOfLines={1} maxFontSizeMultiplier={1.3}>{label}</Text>
+        <Text style={styles.barValue} numberOfLines={1} maxFontSizeMultiplier={1.2}>{Number(value || 0).toLocaleString('en-IN')}</Text>
+      </View>
+      <GrowBar progress={Math.min(1, share)} colors={rank === 1 ? ['#FBBF24', '#D97706'] : ['#A78BFA', '#5B21B6']} height={10} delay={delay} trackColor={PALETTE.violetTint} />
+    </View>
+  );
+}
+
+const NUMBER_COL = 48;
+
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F7F7FD',
-  },
-  navHeader: {
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    backgroundColor: '#F7F7FD',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
+  headerPad: { paddingBottom: SPACE.lg },
+  overlap: { marginTop: -PREMIUM_OVERLAP },
+  gutter: { marginHorizontal: SPACE.lg },
+  companyRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, marginTop: SPACE.lg, padding: SPACE.sm + 2, borderRadius: 18, backgroundColor: BRAND.glass, borderWidth: 1, borderColor: BRAND.glassBorder },
+  companyNote: { flex: 1, minWidth: 0, color: BRAND.onBrandSoft, fontSize: 12, lineHeight: 17 },
+
+  skeletonWrap: { paddingHorizontal: SPACE.lg, gap: SPACE.md },
+  skeletonRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  skeletonTile: {
+    width: '48.5%',
+    minHeight: 128,
+    padding: SPACE.lg,
+    gap: SPACE.sm,
+    backgroundColor: PALETTE.card,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-
-  scrollContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 90,
-  },
-
-  companySelectorCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 14,
-    marginBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#E9D5FF',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  companyLogo: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-  },
-  companyLogoPlaceholder: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#F3E8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectorLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#7C3AED',
-    letterSpacing: 0.5,
-  },
-  companySelectorTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  companySelectorSub: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-
-  loadingBox: {
-    paddingVertical: 50,
-    alignItems: 'center',
-  },
-
-  statsRow: {
-    flexDirection: 'row',
-    gap: 14,
-    marginBottom: 16,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
     borderWidth: 1,
-    borderColor: '#F3E8FF',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 3,
+    borderColor: PALETTE.border,
   },
-  statIconBoxPurple: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#F3E8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  statIconBoxGreen: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#DCFCE7',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  statTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1E1B4B',
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#1E1B4B',
-    marginVertical: 4,
-  },
-  statSubText: {
-    fontSize: 11,
-    color: '#6B7280',
-  },
+  skeletonWide: { width: '100%', minHeight: 0 },
 
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#F3E8FF',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  cardHeaderTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  metricRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F8FAFC',
-  },
-  metricLabel: {
-    fontSize: 14,
-    color: '#475569',
-  },
-  metricVal: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#7C3AED',
-  },
+  health: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
+  metricRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, minHeight: 48, paddingVertical: SPACE.xs },
+  metricDivider: { borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: PALETTE.divider },
+  metricIcon: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  metricLabel: { ...TYPE.caption, color: PALETTE.textSoft, flex: 1, minWidth: 0 },
+  metricValue: { ...TYPE.number, fontSize: 18, lineHeight: 24, minWidth: NUMBER_COL, textAlign: 'right' },
 
-  chartPlaceholder: {
-    alignItems: 'center',
-    paddingVertical: 30,
-    backgroundColor: '#F7F7FD',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#F3E8FF',
-  },
-  chartText: {
-    fontSize: 13,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginTop: 10,
-    paddingHorizontal: 20,
-  },
-
-  bottomNavCard: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    paddingVertical: 10,
-    paddingHorizontal: 6,
-    marginHorizontal: 16,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#F3E8FF',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  navTabItem: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  navTabText: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  navTabActiveText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#7C3AED',
-    marginTop: 2,
-  },
+  bars: { gap: SPACE.lg },
+  barHead: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm },
+  rank: { width: 24, height: 24, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  rankText: { color: PALETTE.white, fontSize: 12, fontWeight: '800' },
+  barLabel: { ...TYPE.bodyStrong, flex: 1, minWidth: 0 },
+  barValue: { ...TYPE.bodyStrong, color: PALETTE.violet, minWidth: NUMBER_COL, textAlign: 'right', fontVariant: ['tabular-nums'] },
 });
 
 export default AnalyticsScreen;

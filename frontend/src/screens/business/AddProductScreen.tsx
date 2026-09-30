@@ -1,666 +1,216 @@
-// Add Product Screen - Business Card Theme Form System
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  StatusBar,
-  Platform,
-  KeyboardAvoidingView,
-  Image,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, Image, Alert } from 'react-native';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RouteProp, useRoute } from '@react-navigation/native';
+import LinearGradient from 'react-native-linear-gradient';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { RootStackParamList } from '../../types';
+import {
+  BottomActionBar, Notice, PALETTE, SPACE, TYPE, money,
+  BrandScrollPage, BrandTopBar, BrandHero, PREMIUM_OVERLAP, FadeInUp, PremiumSection, PremiumInput,
+  GradientButton, ProductCrate3D, premiumTone,
+} from '../../ui';
 import api from '../../services/api';
-import { ENDPOINTS } from '../../config/api.config';
+import { errorMessage } from '../../services/businessApi';
 import { useActiveCompany } from '../../stores/activeCompanyStore';
+import { PhotoWell } from './businessKit';
 
-type AddProductScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AddProduct'>;
-type AddProductScreenRouteProp = RouteProp<RootStackParamList, 'AddProduct'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'AddProduct'>;
 
-interface Props {
-  navigation: AddProductScreenNavigationProp;
-}
+/**
+ * ADD A PRODUCT / SERVICE — the website's /business/add-product, same request:
+ *
+ *   POST /products  (multipart)  companyId, name, description, price, image
+ *
+ * Nothing else. No category (the server falls back to the company's NIC
+ * category), no stock (stock moves through the logged Stock screen), no
+ * invented SKU — all three are edited later on Edit product. `companyId` is
+ * always sent: without it the server files the product under the member's
+ * NEWEST company rather than the one they are working on.
+ */
 
-const CATEGORIES = [
-  'Software',
-  'Services',
-  'Education',
-  'Product',
-  'Hardware',
-  'Electronics',
-  'Clothing',
-  'Food',
-  'Books',
-  'Toys',
-  'Furniture',
-  'Sports',
-  'Beauty',
-  'Other',
-];
+type PickedImage = { uri: string; type: string; name: string } | null;
 
-const AddProductScreen: React.FC<Props> = ({ navigation }) => {
-  const route = useRoute<AddProductScreenRouteProp>();
-  const { companyId: routeCompanyId } = route.params || {};
-
-  // Fall back to the active company so a product can never be filed against
-  // whichever company the server happens to consider "latest".
+const AddProductScreen: React.FC<Props> = ({ navigation, route }) => {
   const activeCompany = useActiveCompany();
-  const companyId = routeCompanyId || activeCompany?._id || '';
+  const companyId = String(route?.params?.companyId || activeCompany?._id || '');
 
-  const [formData, setFormData] = useState({
-    productName: '',
-    description: '',
-    category: '',
-    price: '',
-    stock: '',
-    sku: '',
-  });
+  const [name, setName] = useState('');
+  const [price, setPrice] = useState('');
+  const [description, setDescription] = useState('');
+  const [image, setImage] = useState<PickedImage>(null);
+  const [errors, setErrors] = useState<{ name?: string; price?: string }>({});
+  const [saving, setSaving] = useState(false);
 
-  const [imageAsset, setImageAsset] = useState<any>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [isSaving, setIsSaving] = useState(false);
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: '' }));
-    }
-  };
-
-  const handleImagePicker = () => {
+  const pickImage = () => {
     try {
       if (typeof launchImageLibrary !== 'function') {
         Alert.alert('Unavailable', 'The photo picker is not available on this device.');
         return;
       }
-
       launchImageLibrary(
-        {
-          mediaType: 'photo',
-          // Square-ish source keeps the round preview from cropping oddly.
-          maxWidth: 1000,
-          maxHeight: 1000,
-          quality: 0.9,
-          selectionLimit: 1,
+        { mediaType: 'photo', maxWidth: 1200, maxHeight: 1200, quality: 0.8, selectionLimit: 1 },
+        (res) => {
+          if (res?.didCancel) return;
+          if (res?.errorCode) {
+            Alert.alert('Error', res?.errorMessage || 'Could not open the photo.');
+            return;
+          }
+          const a = (res?.assets || [])[0];
+          if (!a?.uri) return;
+          if (a?.type && !String(a.type).startsWith('image/')) {
+            Alert.alert('Not an image', 'Please choose an image file.');
+            return;
+          }
+          if (Number(a?.fileSize || 0) > 5 * 1024 * 1024) {
+            Alert.alert('Image too large', 'Please choose an image under 5 MB.');
+            return;
+          }
+          setImage({ uri: a.uri, type: a.type || 'image/jpeg', name: a.fileName || `product-${Date.now()}.jpg` });
         },
-        (response) => {
-          if (response.didCancel) return;
-          if (response.errorCode) {
-            Alert.alert('Error', response.errorMessage || 'Failed to select image. Please try again.');
-            return;
-          }
-
-          const asset = (response.assets || [])[0];
-          if (!asset?.uri) {
-            Alert.alert('Error', 'That image could not be read. Please pick another.');
-            return;
-          }
-
-          setImageAsset(asset);
-          setImagePreview(asset.uri);
-        }
       );
     } catch (err) {
       console.warn('Native module call safely caught:', err);
-      Alert.alert('Error', 'Could not open the photo picker.');
     }
   };
 
-  const validate = () => {
-    const newErrors: { [key: string]: string } = {};
+  const save = async () => {
+    if (saving) return;
+    const e: { name?: string; price?: string } = {};
+    if (!(name || '').trim()) e.name = 'Product name is required';
+    const priceNum = parseFloat(price || '');
+    if (!(price || '').trim()) e.price = 'Price is required';
+    else if (!Number.isFinite(priceNum) || priceNum < 0) e.price = 'Please enter a valid price';
+    setErrors(e);
+    if (e.name || e.price) return;
 
-    if (!formData.productName.trim()) newErrors.productName = 'Product name is required';
-    if (!formData.category) newErrors.category = 'Category is required';
-    if (!formData.price.trim()) newErrors.price = 'Price is required';
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSave = async () => {
-    if (!validate()) return;
-
-    setIsSaving(true);
-
+    setSaving(true);
     try {
-      if (imageAsset && imageAsset.uri) {
-        const formDataToSend = new FormData();
-        if (companyId) {
-          formDataToSend.append('companyId', companyId);
-        }
-        formDataToSend.append('name', formData.productName.trim());
-        formDataToSend.append('productName', formData.productName.trim());
-        formDataToSend.append('category', formData.category);
-        formDataToSend.append('price', formData.price.trim());
-        formDataToSend.append('stock', formData.stock.trim() || '0');
-        formDataToSend.append('sku', formData.sku.trim() || `SKU-${Date.now()}`);
+      const form = new FormData();
+      if (companyId) form.append('companyId', companyId);
+      form.append('name', name.trim());
+      form.append('description', (description || '').trim());
+      form.append('price', String(priceNum));
+      if (image?.uri) form.append('image', { uri: image.uri, type: image.type, name: image.name } as any);
 
-        if (formData.description.trim()) {
-          formDataToSend.append('description', formData.description.trim());
-        }
-
-        formDataToSend.append('image', {
-          uri: imageAsset.uri,
-          type: imageAsset.type || 'image/jpeg',
-          name: imageAsset.fileName || `product-${Date.now()}.jpg`,
-        } as any);
-
-        const response = await api.post(ENDPOINTS.PRODUCTS.CREATE, formDataToSend, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
-
-        if (response.data && (response.data.success || response.data.data)) {
-          Alert.alert('Success', 'Product / Service added successfully!', [
-            { text: 'OK', onPress: () => navigation.goBack() },
-          ]);
-        } else {
-          throw new Error(
-            response.data?.message || 'Server did not confirm the product was saved.'
-          );
-        }
-      } else {
-        const payload = {
-          companyId,
-          name: formData.productName.trim(),
-          productName: formData.productName.trim(),
-          category: formData.category,
-          price: parseFloat(formData.price) || 0,
-          stock: parseInt(formData.stock) || 0,
-          sku: formData.sku.trim() || `SKU-${Date.now()}`,
-          description: formData.description.trim(),
-        };
-
-        const response = await api.post(ENDPOINTS.PRODUCTS.CREATE, payload);
-
-        if (response.data && (response.data.success || response.data.data)) {
-          Alert.alert('Success', 'Product / Service added successfully!', [
-            { text: 'OK', onPress: () => navigation.goBack() },
-          ]);
-        } else {
-          throw new Error(
-            response.data?.message || 'Server did not confirm the product was saved.'
-          );
-        }
-      }
-    } catch (error: any) {
-      console.error('Error creating product:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to add product. Please try again.';
-      Alert.alert('Error', errorMessage);
+      const res = await api.post('/products', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (res?.data?.success === false) throw new Error(res?.data?.message || 'Failed to add product');
+      Alert.alert('Product added', `${name.trim()} is in your catalogue.`, [{ text: 'OK', onPress: () => navigation.goBack() }]);
+    } catch (err: any) {
+      Alert.alert('Not saved', err?.response ? errorMessage(err, 'Failed to add product.') : String(err?.message || 'Failed to add product.'));
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   };
+
+  const p = premiumTone('business');
+  const priceNum = parseFloat(price || '');
+  const priceShown = (price || '').trim() && Number.isFinite(priceNum) ? money(priceNum) : '₹ —';
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F7F7FD" />
-
-      {/* Nav Header */}
-      <View style={styles.navHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-          <Icon name="arrow-back" size={24} color="#1E1B4B" />
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Add Product / Service</Text>
+    <BrandScrollPage tone="business"
+      footer={(
+        <BottomActionBar note={!companyId ? 'Select a company before publishing.' : undefined}>
+          <GradientButton tone="business" label="Publish product" icon="check" onPress={save} loading={saving} disabled={!companyId} style={{ flex: 1 }} />
+        </BottomActionBar>
+      )}
+      header={(
+        <View style={styles.headerPad}>
+          <BrandTopBar onBack={() => navigation.goBack()} title="Add product" />
+          <BrandHero
+            eyebrow={activeCompany?.businessName ? `Adding to ${activeCompany.businessName}` : 'New listing'}
+            title="Add product or service"
+            subtitle="A photo, a name and a price — that is all it takes to be found."
+            art={<ProductCrate3D tone="business" size={92} />}
+            artSize={92}
+          />
         </View>
-        <View style={{ width: 40 }} />
-      </View>
+      )}
+    >
+      {!companyId ? (
+        <View style={styles.overlap}>
+          <Notice kind="warning" text="No active company is selected. Create or switch to a company first." style={{ marginTop: 0, marginBottom: SPACE.md }} />
+        </View>
+      ) : null}
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          style={styles.scrollContainer}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Upload Image Section Card */}
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <Icon name="inventory-2" size={22} color="#7C3AED" style={{ marginRight: 8 }} />
-              <Text style={styles.cardHeaderTitle}>Product Media</Text>
-            </View>
+      <FadeInUp delay={200} style={companyId ? styles.overlap : undefined}>
+        <PremiumSection tone="business" icon="photo-camera" title="Photo" subtitle="The first thing a buyer sees">
+          <PhotoWell uri={image?.uri} onPress={pickImage} />
+        </PremiumSection>
+      </FadeInUp>
 
-            <TouchableOpacity
-              style={styles.uploadContainer}
-              onPress={handleImagePicker}
-              activeOpacity={0.8}
-            >
-              {imagePreview ? (
-                <View style={styles.imagePreviewWrapper}>
-                  <View style={styles.avatarFrame}>
-                    <View style={styles.avatarClip}>
-                      <Image
-                        source={{ uri: imagePreview }}
-                        style={styles.uploadImagePreview}
-                        resizeMode="cover"
-                      />
-                    </View>
+      <FadeInUp delay={280}>
+        <PremiumSection tone="business" icon="sell" title="Details" subtitle="What buyers see in Discover and on your company page">
+          <PremiumInput tone="business"
+            label="Product / service name"
+            required
+            value={name}
+            onChangeText={(t) => { setName(t); setErrors((x) => ({ ...x, name: undefined })); }}
+            placeholder="Enter product / service name"
+            error={errors.name}
+            icon="sell"
+          />
+          <PremiumInput tone="business"
+            label="Price (₹)"
+            required
+            value={price}
+            onChangeText={(t) => { setPrice((t || '').replace(/[^0-9.]/g, '')); setErrors((x) => ({ ...x, price: undefined })); }}
+            placeholder="0.00"
+            keyboardType="decimal-pad"
+            error={errors.price}
+            icon="currency-rupee"
+            hint={price && Number.isFinite(parseFloat(price)) ? `Shown as ${money(Number(price))}` : undefined}
+          />
+          <PremiumInput tone="business"
+            label="Description"
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Describe your product features & specifications…"
+            multiline
+            numberOfLines={4}
+            style={{ marginBottom: 0 }}
+          />
+        </PremiumSection>
+      </FadeInUp>
 
-                    <View style={styles.avatarBadge}>
-                      <Icon name="photo-camera" size={18} color="#FFFFFF" />
-                    </View>
-                  </View>
-
-                  <Text style={styles.changeHint}>Tap to change photo</Text>
-                </View>
-              ) : (
-                <>
-                  <View style={styles.uploadIconCircle}>
-                    <Icon name="cloud-upload" size={32} color="#7C3AED" />
-                  </View>
-                  <Text style={styles.uploadTitle}>Upload Product Image</Text>
-                  <Text style={styles.uploadHint}>JPG or PNG formats supported</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          {/* Product Details Card */}
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <Icon name="info" size={22} color="#7C3AED" style={{ marginRight: 8 }} />
-              <Text style={styles.cardHeaderTitle}>Product Details</Text>
-            </View>
-
-            {/* Product Name */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Product Name *</Text>
-              <View style={[styles.inputContainer, errors.productName ? styles.inputError : null]}>
-                <Icon name="shopping-bag" size={20} color="#7C3AED" style={styles.fieldLeftIcon} />
-                <TextInput
-                  style={styles.textInput}
-                  value={formData.productName}
-                  onChangeText={(value) => handleInputChange('productName', value)}
-                  placeholder="Enter product / service name"
-                  placeholderTextColor="#94A3B8"
-                />
-              </View>
-              {errors.productName ? <Text style={styles.errorText}>{errors.productName}</Text> : null}
-            </View>
-
-            {/* Description */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Description</Text>
-              <View style={[styles.inputContainer, styles.textAreaContainer]}>
-                <Icon name="description" size={20} color="#7C3AED" style={styles.fieldLeftIconTop} />
-                <TextInput
-                  style={[styles.textInput, styles.textAreaInput]}
-                  value={formData.description}
-                  onChangeText={(value) => handleInputChange('description', value)}
-                  placeholder="Describe your product features & specifications..."
-                  placeholderTextColor="#94A3B8"
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                />
-              </View>
-            </View>
-
-            {/* Category Pill Grid */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Category *</Text>
-              
-              <View style={styles.pillGrid}>
-                {CATEGORIES.map((cat) => {
-                  const isActive = formData.category === cat;
-                  return (
-                    <TouchableOpacity
-                      key={cat}
-                      style={[styles.pillCard, isActive && styles.pillCardActive]}
-                      onPress={() => handleInputChange('category', cat)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={[styles.pillText, isActive && styles.pillTextActive]}>{cat}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-              {errors.category ? <Text style={styles.errorText}>{errors.category}</Text> : null}
+      {/* How it will look — a live preview of the card buyers see. */}
+      <FadeInUp delay={340}>
+        <PremiumSection tone="business" icon="visibility" title="Preview" subtitle="How it appears to other members">
+          <View style={[styles.preview, { shadowColor: p.shadow }]}>
+            {image?.uri ? <Image source={{ uri: image.uri }} style={styles.previewImg} resizeMode="cover" /> : (
+              <LinearGradient colors={[PALETTE.violetSoft, PALETTE.violetTint]} style={[styles.previewImg, styles.previewEmpty]}>
+                <Icon name="inventory-2" size={26} color={p.accent} />
+              </LinearGradient>
+            )}
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.previewName} numberOfLines={2} maxFontSizeMultiplier={1.3}>{(name || '').trim() || 'Your product name'}</Text>
+              <Text style={styles.previewCo} numberOfLines={1} maxFontSizeMultiplier={1.3}>{activeCompany?.businessName || 'Your company'}</Text>
+              <LinearGradient colors={p.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.previewPrice}>
+                <Text style={styles.previewPriceText} numberOfLines={1} maxFontSizeMultiplier={1.2}>{priceShown}</Text>
+              </LinearGradient>
             </View>
           </View>
+        </PremiumSection>
+      </FadeInUp>
 
-          {/* Pricing & Inventory Card */}
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <Icon name="sell" size={22} color="#7C3AED" style={{ marginRight: 8 }} />
-              <Text style={styles.cardHeaderTitle}>Pricing & Inventory</Text>
-            </View>
-
-            {/* Price */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Price (₹) *</Text>
-              <View style={[styles.inputContainer, errors.price ? styles.inputError : null]}>
-                <Icon name="currency-rupee" size={20} color="#7C3AED" style={styles.fieldLeftIcon} />
-                <TextInput
-                  style={styles.textInput}
-                  value={formData.price}
-                  onChangeText={(value) => handleInputChange('price', value)}
-                  placeholder="0.00"
-                  placeholderTextColor="#94A3B8"
-                  keyboardType="numeric"
-                />
-              </View>
-              {errors.price ? <Text style={styles.errorText}>{errors.price}</Text> : null}
-            </View>
-
-            {/* Stock Quantity */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Stock Quantity</Text>
-              <View style={styles.inputContainer}>
-                <Icon name="layers" size={20} color="#7C3AED" style={styles.fieldLeftIcon} />
-                <TextInput
-                  style={styles.textInput}
-                  value={formData.stock}
-                  onChangeText={(value) => handleInputChange('stock', value)}
-                  placeholder="e.g. 100"
-                  placeholderTextColor="#94A3B8"
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-
-            {/* SKU */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>SKU / Code</Text>
-              <View style={styles.inputContainer}>
-                <Icon name="qr-code" size={20} color="#7C3AED" style={styles.fieldLeftIcon} />
-                <TextInput
-                  style={styles.textInput}
-                  value={formData.sku}
-                  onChangeText={(value) => handleInputChange('sku', value)}
-                  placeholder="e.g. PRD-2024-001"
-                  placeholderTextColor="#94A3B8"
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* Action Button */}
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={styles.publishButton}
-              onPress={handleSave}
-              disabled={isSaving}
-              activeOpacity={0.85}
-            >
-              {isSaving ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={styles.publishButtonText}>Publish Product</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      <Notice kind="info" icon="tips-and-updates" style={{ marginTop: 0 }} text="Category, SKU and low-stock alerts can be set from Edit product. Stock is added on the Stock screen so every movement is logged." />
+    </BrandScrollPage>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F7F7FD',
+  headerPad: { paddingBottom: SPACE.md },
+  overlap: { marginTop: -PREMIUM_OVERLAP },
+  preview: {
+    flexDirection: 'row', gap: SPACE.md, padding: SPACE.md, borderRadius: 18, backgroundColor: PALETTE.white,
+    borderWidth: 1, borderColor: 'rgba(226,232,240,0.9)', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 2,
   },
-  navHeader: {
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    backgroundColor: '#F7F7FD',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#F3E8FF',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  cardHeaderTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E1B4B',
-  },
-
-  uploadContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 24,
-    borderRadius: 14,
-    backgroundColor: '#F3E8FF',
-    borderWidth: 1.5,
-    borderColor: '#DDD6FE',
-    borderStyle: 'dashed',
-    overflow: 'hidden',
-  },
-  uploadIconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  uploadTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#7C3AED',
-  },
-  uploadHint: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  imagePreviewWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarFrame: {
-    width: 132,
-    height: 132,
-    position: 'relative',
-  },
-  avatarClip: {
-    width: 132,
-    height: 132,
-    borderRadius: 66,
-    overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  uploadImagePreview: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarBadge: {
-    position: 'absolute',
-    right: 0,
-    bottom: 4,
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#7C3AED',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#F3E8FF',
-  },
-  changeHint: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#7C3AED',
-    marginTop: 12,
-  },
-
-  fieldGroup: {
-    marginBottom: 16,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1E1B4B',
-    marginBottom: 6,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 48,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 12,
-  },
-  inputError: {
-    borderColor: '#EF4444',
-  },
-  fieldLeftIcon: {
-    marginRight: 10,
-  },
-  fieldLeftIconTop: {
-    marginRight: 10,
-    marginTop: 2,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 14,
-    color: '#1E1B4B',
-  },
-  dropdownValueText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E1B4B',
-  },
-  placeholderText: {
-    color: '#94A3B8',
-    fontWeight: '400',
-  },
-  pillGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 4,
-  },
-  pillCard: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  pillCardActive: {
-    backgroundColor: '#7C3AED',
-    borderColor: '#7C3AED',
-  },
-  pillText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  pillTextActive: {
-    color: '#FFFFFF',
-  },
-  textAreaContainer: {
-    height: 'auto',
-    alignItems: 'flex-start',
-    paddingVertical: 10,
-  },
-  textAreaInput: {
-    minHeight: 60,
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#EF4444',
-    marginTop: 4,
-  },
-
-  buttonRow: {
-    flexDirection: 'row',
-    marginTop: 8,
-  },
-  publishButton: {
-    flex: 1,
-    height: 52,
-    backgroundColor: '#7C3AED',
-    borderRadius: 14,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  publishButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
+  previewImg: { width: 84, height: 84, borderRadius: 14, backgroundColor: PALETTE.field },
+  previewEmpty: { alignItems: 'center', justifyContent: 'center' },
+  previewName: { ...TYPE.subheading },
+  previewCo: { ...TYPE.caption, marginTop: 2 },
+  previewPrice: { alignSelf: 'flex-start', marginTop: SPACE.sm, paddingHorizontal: SPACE.md, paddingVertical: 5, borderRadius: 999 },
+  previewPriceText: { color: PALETTE.white, fontSize: 13, lineHeight: 17, fontWeight: '800', fontVariant: ['tabular-nums'] },
 });
 
 export default AddProductScreen;
