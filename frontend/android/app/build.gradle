@@ -22,6 +22,13 @@ react {
     //   skip the bundling of the JS bundle and the assets. By default is just 'debug'.
     //   If you add flavors like lite, prod, etc. you'll have to list your debuggableVariants.
     // debuggableVariants = ["liteDebug", "prodDebug"]
+    //
+    // Empty: the debug APK ALSO gets a freshly generated JS bundle at build
+    // time (into build/, never src/). With Metro connected the app still loads
+    // live code; when Metro drops (USB replugged, phone slept) it falls back to
+    // the bundle from this build instead of a stale hand-copied one — which is
+    // how testers kept seeing the old UI after coming back to the app.
+    debuggableVariants = []
 
     /* Bundling */
     //   A list containing the node command and its flags. Default is just 'node'.
@@ -128,3 +135,25 @@ dependencies {
 }
 
 apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
+
+/*
+ * GUARD: never ship a hand-copied React Native / Hermes library.
+ *
+ * A stray app/src/main/jniLibs/arm64-v8a/libhermestooling.so (a DEBUG build of
+ * it) once overrode the one inside react-android, so every RELEASE build
+ * paired a debug tooling library with the release Hermes VM and crashed on
+ * launch with "couldn't find DSO to load: libhermestooling.so" on every 64-bit
+ * phone. The engine's libraries come from the react-android / hermes-android
+ * packages, matched to the build type — never from jniLibs.
+ */
+tasks.register('checkNoStrayReactNativeLibs') {
+    doLast {
+        def stray = fileTree('src/main/jniLibs').matching {
+            include '**/libhermes*.so', '**/libreactnative.so', '**/libjsi.so', '**/libfbjni.so'
+        }.files
+        if (!stray.isEmpty()) {
+            throw new GradleException("ACTIV: remove hand-copied React Native libraries from src/main/jniLibs: ${stray*.name}")
+        }
+    }
+}
+preBuild.dependsOn('checkNoStrayReactNativeLibs')

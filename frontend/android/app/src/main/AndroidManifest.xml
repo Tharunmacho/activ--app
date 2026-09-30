@@ -1,6 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Event check-in: the events staff scan attendees' entry-pass QR codes
+         (react-native-vision-camera). Asked for at runtime, only on the
+         scanner screen. required="false" keeps the app installable on
+         devices without a camera; the scanner falls back to manual entry. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
       android:name=".MainApplication"
@@ -21,6 +27,14 @@
         <intent-filter>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+        <!-- activ:// deep links: social sign-in hand-off (activ://auth/social)
+             and password-reset tokens (activ://reset-password). -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="activ" />
         </intent-filter>
       </activity>
     </application>

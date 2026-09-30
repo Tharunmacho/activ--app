@@ -73,3 +73,7 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Generated JS bundle. Gradle writes a fresh one into build/ for release builds; a
+# stale copy here made debug builds silently show an old UI whenever Metro dropped.
+android/app/src/main/assets/index.android.bundle
