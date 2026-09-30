@@ -1,47 +1,55 @@
+/**
+ * LEGACY THEME — kept for the older screens (auth, BrowseMembers,
+ * ApplicantDetail, components/*). Every value here is DERIVED from the design
+ * kit in `src/ui/tokens.ts`, so old and new screens render as one app.
+ * New code imports from `src/ui` instead (PALETTE / SPACE / RADIUS / SHADOW / TYPE).
+ */
+import { PALETTE, RADIUS, SHADOW } from '../ui/tokens';
+
 export const COLORS = {
-  // Primary Colors
-  primary: '#1E88E5',
-  primaryDark: '#1565C0',
-  primaryLight: '#42A5F5',
-  
+  // Primary Colors (ACTIV blue — same as PALETTE.blue)
+  primary: PALETTE.blue,
+  primaryDark: PALETTE.blueDark,
+  primaryLight: '#60A5FA',
+
   // Secondary Colors
-  secondary: '#FF9800',
-  secondaryDark: '#F57C00',
-  secondaryLight: '#FFB74D',
-  
+  secondary: PALETTE.amber,
+  secondaryDark: '#D97706',
+  secondaryLight: '#FCD34D',
+
   // Status Colors
-  success: '#4CAF50',
-  error: '#F44336',
-  warning: '#FFC107',
-  info: '#2196F3',
-  
+  success: PALETTE.green,
+  error: PALETTE.red,
+  warning: PALETTE.amber,
+  info: PALETTE.sky,
+
   // Application Status Colors
-  pending: '#FFC107',
-  approved: '#4CAF50',
-  rejected: '#F44336',
-  active: '#2196F3',
-  
+  pending: PALETTE.amber,
+  approved: PALETTE.green,
+  rejected: PALETTE.red,
+  active: PALETTE.blue,
+
   // Neutral Colors
-  white: '#FFFFFF',
-  black: '#000000',
-  background: '#F5F5F5',
-  surface: '#FFFFFF',
-  
+  white: PALETTE.white,
+  black: PALETTE.black,
+  background: PALETTE.canvas,
+  surface: PALETTE.card,
+
   // Text Colors
-  textPrimary: '#212121',
-  text: '#212121',
-  textSecondary: '#757575',
-  textDisabled: '#BDBDBD',
-  textHint: '#9E9E9E',
-  
+  textPrimary: PALETTE.text,
+  text: PALETTE.text,
+  textSecondary: PALETTE.textMuted,
+  textDisabled: PALETTE.textFaint,
+  textHint: PALETTE.textFaint,
+
   // Border & Divider
-  border: '#E0E0E0',
-  divider: '#EEEEEE',
-  lightGray: '#F5F5F5',
-  
+  border: PALETTE.border,
+  divider: PALETTE.divider,
+  lightGray: PALETTE.field,
+
   // Overlay
-  overlay: 'rgba(0, 0, 0, 0.5)',
-  modalBackground: 'rgba(0, 0, 0, 0.6)',
+  overlay: 'rgba(15, 23, 42, 0.5)',
+  modalBackground: 'rgba(15, 23, 42, 0.6)',
 };
 
 export const FONTS = {
@@ -104,6 +112,7 @@ export const FONTS = {
   },
 };
 
+// Already on the 4-pt grid. SPACING.md (16) == SPACE.lg — the screen gutter.
 export const SPACING = {
   xs: 4,
   sm: 8,
@@ -114,35 +123,17 @@ export const SPACING = {
 };
 
 export const BORDER_RADIUS = {
-  sm: 4,
-  md: 8,
-  lg: 12,
-  xl: 16,
-  round: 999,
+  sm: RADIUS.xs,
+  md: RADIUS.sm,
+  lg: RADIUS.md,
+  xl: RADIUS.lg,
+  round: RADIUS.pill,
 };
 
 export const SHADOWS = {
-  sm: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.18,
-    shadowRadius: 1.0,
-    elevation: 1,
-  },
-  md: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.23,
-    shadowRadius: 2.62,
-    elevation: 4,
-  },
-  lg: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.30,
-    shadowRadius: 4.65,
-    elevation: 8,
-  },
+  sm: SHADOW.card,
+  md: SHADOW.md,
+  lg: SHADOW.lifted,
 };
 
 export const SCREEN_PADDING = SPACING.md;
