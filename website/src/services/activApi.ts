@@ -1694,6 +1694,31 @@ export const previewAdminRemoval = async (id: string) =>
     unwrap<any>(await api.get(ENDPOINTS.ADMIN.SUPER_ADMIN_REMOVAL_PREVIEW(id)), {});
 export const suggestAdminRegions = async (params: Record<string, any> = {}) =>
     unwrap<any>(await api.get(ENDPOINTS.ADMIN.SUPER_ADMIN_REGIONS, { params }), {});
+
+/**
+ * Site-staff accounts (CMS admin, events admin). The Super Admin maintains their
+ * credentials: name, email, phone, active and a new password. Super admin
+ * accounts are never editable here — the server refuses them.
+ */
+export interface StaffAccount {
+    id: string;
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+    role: 'cms_admin' | 'events_admin' | string;
+    roleLabel: string;
+    active: boolean;
+    lastLoginAt: string | null;
+    updatedAt: string | null;
+}
+export const listStaffAccounts = async (): Promise<StaffAccount[]> => {
+    const data = unwrap<any>(await api.get('/admin/super/staff-accounts'), {});
+    return Array.isArray(data?.accounts) ? data.accounts : [];
+};
+export const updateStaffAccount = async (
+    id: string,
+    payload: { fullName?: string; email?: string; phoneNumber?: string; active?: boolean; password?: string },
+) => unwrap<any>(await api.put(`/admin/super/staff-accounts/${encodeURIComponent(id)}`, payload), {});
 /*
  * The six `listTeamAdmins` / `createTeamAdmin` / … calls were here, for a
  * district or state admin staffing the regions beneath them. Admin accounts are

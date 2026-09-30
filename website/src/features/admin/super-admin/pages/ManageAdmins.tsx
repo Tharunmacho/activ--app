@@ -7,6 +7,7 @@ import {
 import { toast } from 'sonner';
 import AdminSidebar from './AdminSidebar';
 import RegionInput from '../components/RegionInput';
+import SiteStaffAccounts from '../components/SiteStaffAccounts';
 import { AdminBackButton, ADMIN_PAGE } from '@/features/admin/components/AdminUI';
 import { PAGE_SUBTITLE, PAGE_TITLE, CARD_TITLE } from '@/components/layout/appTypography';
 import {
@@ -36,6 +37,9 @@ const ROLES: { value: AdminRole; label: string; needs: ('state' | 'district' | '
     { value: 'district_admin', label: 'District Admin', needs: ['state', 'district'] },
     { value: 'block_admin', label: 'Block Admin', needs: ['state', 'district', 'block'] },
 ];
+
+/** Site-staff roles, managed in <SiteStaffAccounts> rather than the tier table. */
+const STAFF_ROLES = ['cms_admin', 'events_admin'];
 
 const BLANK = {
     fullName: '', email: '', phoneNumber: '', password: '', confirmPassword: '',
@@ -86,7 +90,10 @@ export default function ManageAdmins() {
         if (query.trim().length >= 2) params.q = query.trim();
 
         const data = await listAdmins(params);
-        setAdmins(data.admins || []);
+        // The CMS and events accounts have their own section below, with the
+        // credential editor the tier form cannot offer (the tier edit refuses
+        // any role that is not state / district / block).
+        setAdmins((data.admins || []).filter((a: ManagedAdmin) => !STAFF_ROLES.includes(String(a?.role || ''))));
         setCounts(data.counts || counts);
         setLoading(false);
     };
@@ -545,6 +552,9 @@ export default function ManageAdmins() {
                             </div>
                         )}
                     </div>
+
+                    {/* The CMS and events sign-ins: credentials only, no region. */}
+                    <SiteStaffAccounts />
                 </main>
             </div>
 
