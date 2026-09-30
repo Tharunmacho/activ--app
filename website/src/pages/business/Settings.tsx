@@ -267,6 +267,7 @@ const Settings = () => {
                 12px in a 56px row, which made Settings the one screen in the
                 business area a member had to lean in to read.
             */
+<<<<<<< HEAD
             className={`w-full flex items-center gap-3 sm:gap-4 py-3 sm:py-4 px-3 -mx-3 text-left rounded-xl
                         hover:bg-slate-50 transition-colors ${last ? '' : 'border-b border-slate-100'}`}
         >
@@ -275,6 +276,16 @@ const Settings = () => {
             </span>
             <span className="flex-1 min-w-0">
                 <span className="block font-bold text-[1.25rem] text-slate-900 break-words">{title}</span>
+=======
+            className={`w-full flex items-center gap-4 py-4 px-3 -mx-3 text-left rounded-xl
+                        hover:bg-slate-50 transition-colors ${last ? '' : 'border-b border-slate-100'}`}
+        >
+            <span className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                <Icon className="h-5 w-5 text-blue-600" />
+            </span>
+            <span className="flex-1 min-w-0">
+                <span className="block font-bold text-[1.25rem] text-slate-900">{title}</span>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 <span className="block text-[1.1875rem] text-slate-500">{subtitle}</span>
             </span>
         </button>
@@ -289,6 +300,7 @@ const Settings = () => {
                 <Button
                     onClick={handleLogout}
                     variant="outline"
+<<<<<<< HEAD
                     className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 px-3 sm:px-4"
                     aria-label="Log Out"
                 >
@@ -301,15 +313,36 @@ const Settings = () => {
                 {/* Which company every setting below applies to */}
                 <Card className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                     <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+=======
+                    className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Log Out
+                </Button>
+            }
+        >
+            <div className="space-y-6">
+                {/* Which company every setting below applies to */}
+                <Card className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         {activeCompany?.logo ? (
                             <img
                                 src={resolveMediaUrl(activeCompany.logo)}
                                 alt={companyName}
+<<<<<<< HEAD
                                 className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl object-contain bg-white border border-slate-200 shrink-0"
                             />
                         ) : (
                             <span className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
                                 <Store className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600" />
+=======
+                                className="w-14 h-14 rounded-xl object-cover shrink-0"
+                            />
+                        ) : (
+                            <span className="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                                <Store className="h-7 w-7 text-blue-600" />
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             </span>
                         )}
                         <div className="min-w-0">
@@ -340,9 +373,15 @@ const Settings = () => {
                     1440px monitor, where the same content ran well past two
                     viewport heights with empty space on both sides.
                 */}
+<<<<<<< HEAD
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 items-start">
                     <div className="space-y-4 sm:space-y-6">
                         <Card>
+=======
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+                    <div className="space-y-6">
+                        <Card className="p-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             <SectionHeading title="Company Profile" icon={Pencil} />
                             <Row
                                 Icon={Pencil}
@@ -371,6 +410,7 @@ const Settings = () => {
                             />
                         </Card>
 
+<<<<<<< HEAD
                         <Card>
                             <SectionHeading title="Catalog" icon={Package} />
 
@@ -385,6 +425,22 @@ const Settings = () => {
                                 </div>
                                 <div className="text-center">
                                     <p className="text-[1.5rem] sm:text-[1.75rem] font-bold text-slate-900 tabular-nums">{catalogStats.featured}</p>
+=======
+                        <Card className="p-6">
+                            <SectionHeading title="Catalog" icon={Package} />
+
+                            <div className="grid grid-cols-3 rounded-xl bg-slate-50 border border-slate-200 py-4 mb-3">
+                                <div className="text-center border-r border-slate-200">
+                                    <p className="text-[1.75rem] font-bold text-slate-900 tabular-nums">{catalogStats.total}</p>
+                                    <p className="text-[1.0625rem] text-slate-500 uppercase tracking-wider mt-0.5">Items</p>
+                                </div>
+                                <div className="text-center border-r border-slate-200">
+                                    <p className="text-[1.75rem] font-bold text-slate-900 tabular-nums">{catalogStats.active}</p>
+                                    <p className="text-[1.0625rem] text-slate-500 uppercase tracking-wider mt-0.5">Live</p>
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-[1.75rem] font-bold text-slate-900 tabular-nums">{catalogStats.featured}</p>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     <p className="text-[1.0625rem] text-slate-500 uppercase tracking-wider mt-0.5">Featured</p>
                                 </div>
                             </div>
@@ -405,11 +461,19 @@ const Settings = () => {
                         </Card>
                     </div>
 
+<<<<<<< HEAD
                     <div className="space-y-4 sm:space-y-6">
                         <Card>
                             <SectionHeading title="Directory &amp; Reach" icon={Compass} />
 
                             <div className="flex items-center gap-3 sm:gap-4 py-3.5 border-b border-slate-100">
+=======
+                    <div className="space-y-6">
+                        <Card className="p-6">
+                            <SectionHeading title="Directory &amp; Reach" icon={Compass} />
+
+                            <div className="flex items-center gap-4 py-3.5 border-b border-slate-100">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <span className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
                                     <Compass className="h-[1.125rem] w-[1.125rem] text-blue-600" />
                                 </span>
@@ -447,7 +511,11 @@ const Settings = () => {
                             />
                         </Card>
 
+<<<<<<< HEAD
                         <Card>
+=======
+                        <Card className="p-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             <SectionHeading title="Session" icon={LayoutDashboard} />
                             <Row
                                 Icon={LayoutDashboard}
@@ -459,12 +527,20 @@ const Settings = () => {
                         </Card>
 
                         {/* Irreversible actions, kept apart from everything else */}
+<<<<<<< HEAD
                         <Card className="border-red-200">
+=======
+                        <Card className="border-red-200 p-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             <SectionHeading title="Danger Zone" icon={Trash2} />
                             <button
                                 type="button"
                                 onClick={() => requireCompany(() => setConfirmDelete(true))}
+<<<<<<< HEAD
                                 className="w-full flex items-center gap-3 sm:gap-4 py-3.5 px-3 -mx-3 text-left rounded-lg hover:bg-red-50 transition-colors"
+=======
+                                className="w-full flex items-center gap-4 py-3.5 px-3 -mx-3 text-left rounded-lg hover:bg-red-50 transition-colors"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             >
                                 <span className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
                                     <Trash2 className="h-[1.125rem] w-[1.125rem] text-red-500" />
@@ -482,7 +558,11 @@ const Settings = () => {
             </div>
 
             <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+<<<<<<< HEAD
                 <AlertDialogContent className="w-[calc(100vw-2rem)] max-w-lg rounded-2xl">
+=======
+                <AlertDialogContent>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <AlertDialogHeader>
                         <AlertDialogTitle>Delete Company</AlertDialogTitle>
                         <AlertDialogDescription>

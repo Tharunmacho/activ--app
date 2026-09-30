@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 import api from "@/services/api";
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
@@ -73,8 +76,11 @@ const MemberRegister = () => {
     districtName?: string;
     block?: string;
     city?: string;
+<<<<<<< HEAD
     /** Members outside India: where they are, in place of the region. */
     place?: string;
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
   };
 
   const {
@@ -82,6 +88,7 @@ const MemberRegister = () => {
     handleSubmit: handleSubmitStep1,
     setValue: setValueStep1,
     watch: watchStep1,
+<<<<<<< HEAD
     setError: setErrorStep1,
     clearErrors: clearErrorsStep1,
     formState: { errors: errorsStep1 },
@@ -102,6 +109,10 @@ const MemberRegister = () => {
       /* no prefill */
     }
   }, [setValueStep1]);
+=======
+    formState: { errors: errorsStep1 },
+  } = useForm<Step1Form>({ mode: 'onSubmit' });
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
   /** Most people use one number for both — see the note on the field. */
   const [sameWhatsapp, setSameWhatsapp] = useState(true);
@@ -128,6 +139,7 @@ const MemberRegister = () => {
   const whatsappDialHint = countryByIso2(phoneCountry)?.dial || '91';
 
   /*
+<<<<<<< HEAD
    * A MEMBER OUTSIDE INDIA — any phone country but India.
    *
    * They are not asked for a state, district or block: those are India's
@@ -141,6 +153,8 @@ const MemberRegister = () => {
   const abroadCountry = countryByIso2(phoneCountry)?.name || '';
 
   /*
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
    * Keep the mirrored field in step while the box is ticked.
    *
    * Without this, ticking the box copies the number ONCE and then goes stale
@@ -160,7 +174,11 @@ const MemberRegister = () => {
   }, [sameWhatsapp, mobileValue, phoneCountry, setValueStep1]);
   const { register: registerStep2, handleSubmit: handleSubmitStep2, control: controlStep2, watch: watchStep2, setValue: setValueStep2, formState: { errors: errorsStep2 } } = useForm<Step2Form>({
     mode: 'onSubmit',
+<<<<<<< HEAD
     defaultValues: { stateName: '', districtName: '', block: '', city: '', place: '' },
+=======
+    defaultValues: { stateName: '', districtName: '', block: '', city: '' },
+>>>>>>> 8020f5d (Initial commit for website frontend)
   });
 
   // Watch for state and district changes
@@ -230,7 +248,11 @@ const MemberRegister = () => {
     fetchBlocks();
   }, [selectedState, selectedDistrict, setValueStep2]);
 
+<<<<<<< HEAD
   const handleStep1Submit = async (data: Step1Form) => {
+=======
+  const handleStep1Submit = (data: Step1Form) => {
+>>>>>>> 8020f5d (Initial commit for website frontend)
     if (data.confirmPassword && data.password !== data.confirmPassword) {
       toast.error('Passwords do not match');
       return;
@@ -275,6 +297,7 @@ const MemberRegister = () => {
      * has always been, and a foreign one keeps its '+<code>' — which is the
      * only thing that tells the server it is not Indian.
      */
+<<<<<<< HEAD
     /*
      * ONE ACCOUNT PER EMAIL AND PER MOBILE. Asked here, before the region
      * step, so the message lands under the box it is about. A failed check
@@ -301,6 +324,8 @@ const MemberRegister = () => {
       setCheckingStep1(false);
     }
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     setPartialData({ ...data, mobile: phone.stored, whatsapp: whatsapp.stored });
     setStep(2);
   };
@@ -325,6 +350,7 @@ const MemberRegister = () => {
         whatsappNumber: partialData.whatsapp || partialData.mobile || '',
         password: partialData.password,
         confirmPassword: partialData.confirmPassword || partialData.password,
+<<<<<<< HEAD
         state: isAbroad ? '' : (data.stateName || ''),
         district: isAbroad ? '' : (data.districtName || ''),
         block: isAbroad ? '' : (data.block || ''),
@@ -337,6 +363,14 @@ const MemberRegister = () => {
         return;
       }
 
+=======
+        state: data.stateName || '',
+        district: data.districtName || '',
+        block: data.block || '',
+        city: data.city || ''
+      };
+
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
       toast.loading('Registering your account...');
       const response = await registerUser(registrationData);
@@ -357,12 +391,19 @@ const MemberRegister = () => {
           phone: partialData.mobile || '',
           mobile: partialData.mobile || '',
           whatsapp: partialData.whatsapp || partialData.mobile || '',
+<<<<<<< HEAD
           state: registrationData.state,
           district: registrationData.district,
           block: registrationData.block,
           city: registrationData.city,
           place: registrationData.place,
           isInternational: isAbroad,
+=======
+          state: data.stateName || '',
+          district: data.districtName || '',
+          block: data.block || '',
+          city: data.city || '',
+>>>>>>> 8020f5d (Initial commit for website frontend)
           memberId: response.data.user.id,
         };
 
@@ -371,6 +412,7 @@ const MemberRegister = () => {
         localStorage.setItem('memberId', response.data.user.id);
 
         
+<<<<<<< HEAD
         // Signed in on the spot — `register()` stored the session — so straight
         // to the unpaid dashboard, no second sign-in.
         navigate('/member/unpaid-dashboard', { replace: true });
@@ -385,6 +427,16 @@ const MemberRegister = () => {
               ? 'This mobile number is already registered. Please sign in instead.'
               : 'This email is already registered. Please sign in instead.',
           }), 0);
+=======
+        // Navigate to unpaid dashboard
+        setTimeout(() => {
+          navigate('/member/unpaid-dashboard', { replace: true });
+        }, 500);
+      } else {
+        // Show specific error messages
+        if (response.message?.includes('already registered')) {
+          toast.error('This email is already registered. Please login or use a different email.');
+>>>>>>> 8020f5d (Initial commit for website frontend)
         } else {
           toast.error(response.message || 'Registration failed. Please try again.');
         }
@@ -428,10 +480,17 @@ const MemberRegister = () => {
       <div className="mb-5 flex items-start gap-2">
         <UserPlus className="mt-1 h-5 w-5 shrink-0 text-blue-600" />
         <div className="min-w-0">
+<<<<<<< HEAD
           <h2 className="text-xl sm:text-[1.5625rem] font-bold tracking-tight text-slate-900">
             {step === 1 ? 'Account credentials' : 'Profile details'}
           </h2>
           <p className="mt-1 text-[1.1875rem] text-slate-500">
+=======
+          <h2 className="text-[1.5rem] font-bold tracking-tight text-slate-900">
+            {step === 1 ? 'Account credentials' : 'Profile details'}
+          </h2>
+          <p className="mt-1 text-[1.125rem] text-slate-500">
+>>>>>>> 8020f5d (Initial commit for website frontend)
             {step === 1
               ? 'Required — this is what you will sign in with.'
               : 'Optional — you can finish this later from your dashboard.'}
@@ -440,7 +499,11 @@ const MemberRegister = () => {
       </div>
 
       <div
+<<<<<<< HEAD
         className="mb-5 sm:mb-7 h-2 w-full overflow-hidden rounded-full bg-blue-100"
+=======
+        className="mb-7 h-2 w-full overflow-hidden rounded-full bg-blue-100"
+>>>>>>> 8020f5d (Initial commit for website frontend)
         role="progressbar"
         aria-valuenow={step}
         aria-valuemin={1}
@@ -495,7 +558,10 @@ const MemberRegister = () => {
                       country={phoneCountry}
                       onCountryChange={setPhoneCountry}
                     />
+<<<<<<< HEAD
                     {errorsStep1.mobile && <p className="text-[1.1875rem] font-medium text-red-600 mt-1.5">{errorsStep1.mobile.message}</p>}
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                   </div>
 
                   {/*
@@ -526,7 +592,11 @@ const MemberRegister = () => {
                       disabled={sameWhatsapp}
                       {...registerStep1('whatsapp')}
                     />
+<<<<<<< HEAD
                     <label className="mt-2.5 flex items-center gap-2.5 text-[1.1875rem] font-normal text-slate-600 cursor-pointer">
+=======
+                    <label className="mt-2.5 flex items-center gap-2.5 text-[1.125rem] font-normal text-slate-600 cursor-pointer">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                       <input
                         type="checkbox"
                         className="h-4 w-4 rounded border-slate-300 accent-blue-600"
@@ -543,7 +613,11 @@ const MemberRegister = () => {
                       />
                       Same as my phone number
                     </label>
+<<<<<<< HEAD
                     <p className="mt-2 text-[1.1875rem] text-slate-500">
+=======
+                    <p className="mt-2 text-[1.125rem] text-slate-500">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                       Application updates are sent here on WhatsApp.
                     </p>
                   </div>
@@ -568,7 +642,11 @@ const MemberRegister = () => {
                         pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Invalid email' }
                       })}
                     />
+<<<<<<< HEAD
                     {errorsStep1.email && <p className="text-[1.1875rem] font-medium text-red-600 mt-1.5">{errorsStep1.email.message}</p>}
+=======
+                    {errorsStep1.email && <p className="text-[1.125rem] font-medium text-red-600 mt-1.5">{errorsStep1.email.message}</p>}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                   </div>
 
                   <div>
@@ -586,7 +664,11 @@ const MemberRegister = () => {
                         minLength: { value: 6, message: 'At least 6 characters' },
                       })}
                     />
+<<<<<<< HEAD
                     {errorsStep1.password && <p className="text-[1.1875rem] font-medium text-red-600 mt-1.5">{errorsStep1.password.message}</p>}
+=======
+                    {errorsStep1.password && <p className="text-[1.125rem] font-medium text-red-600 mt-1.5">{errorsStep1.password.message}</p>}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                   </div>
 
                   <div>
@@ -600,10 +682,15 @@ const MemberRegister = () => {
                     />
                   </div>
 
+<<<<<<< HEAD
                   <Button type="submit" disabled={checkingStep1} className={`w-full ${BUTTON} bg-blue-600 hover:bg-blue-700 text-white`}>
                     {checkingStep1
                       ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Checking…</>
                       : <>Next <ArrowRight className="ml-2 h-5 w-5" /></>}
+=======
+                  <Button type="submit" className={`w-full ${BUTTON} bg-blue-600 hover:bg-blue-700 text-white`}>
+                    Next <ArrowRight className="ml-2 h-5 w-5" />
+>>>>>>> 8020f5d (Initial commit for website frontend)
                   </Button>
 
                   <p className="text-center text-[1.1875rem] text-slate-500">
@@ -615,6 +702,7 @@ const MemberRegister = () => {
                 </form>
               ) : (
                 <form onSubmit={handleSubmitStep2(handleStep2Submit)} className="space-y-5">
+<<<<<<< HEAD
                   {isAbroad ? (
                     <>
                       {/* Outside India: no region, the place they are in instead. */}
@@ -639,6 +727,8 @@ const MemberRegister = () => {
                     </>
                   ) : (
                     <>
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                   <div>
                     <Label htmlFor="state" className={LABEL}>State</Label>
                     <Controller
@@ -719,11 +809,16 @@ const MemberRegister = () => {
                     />
                   </div>
 
+<<<<<<< HEAD
                     </>
                   )}
 
                   <div className="space-y-3">
                     <div className="flex gap-2 sm:gap-3">
+=======
+                  <div className="space-y-3">
+                    <div className="flex gap-3">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                       <Button
                         type="button"
                         variant="outline"
@@ -737,6 +832,17 @@ const MemberRegister = () => {
                         Complete Registration
                       </Button>
                     </div>
+<<<<<<< HEAD
+=======
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className={`w-full ${BUTTON} font-semibold text-slate-500 hover:text-slate-900`}
+                      onClick={() => handleStep2Submit({ stateName: '', districtName: '', block: '', city: '' })}
+                    >
+                      Skip & Go to Dashboard
+                    </Button>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                   </div>
 
                   <p className="text-center text-[1.1875rem] text-slate-500">

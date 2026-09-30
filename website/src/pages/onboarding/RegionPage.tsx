@@ -6,8 +6,12 @@ import { FooterSection } from '@/components/layout/FooterSection';
 import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
 import { SECTION_HEADING } from '@/components/layout/typography';
 import {
+<<<<<<< HEAD
     getRegionPage, dashboardLabels, ZONE_LABELS, NATIONAL_LABELS,
     type RegionPage as RegionPageData, type RegionLeader,
+=======
+    getRegionPage, type RegionPage as RegionPageData, type RegionLeader,
+>>>>>>> 8020f5d (Initial commit for website frontend)
 } from '@/services/cmsRegionsApi';
 import { LeaderProfileDialog } from './components/RegionUI';
 import type { LeaderContext } from '@/services/cmsLeaderMessagesApi';
@@ -91,7 +95,11 @@ export default function RegionPage() {
             .then((data) => { if (!cancelled) { setPage(data); setLoading(false); } })
             .catch(() => {
                 if (cancelled) return;
+<<<<<<< HEAD
                 setMissing('This zone page has not been published yet.');
+=======
+                setMissing('This region page has not been published yet.');
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 setLoading(false);
             });
 
@@ -103,11 +111,19 @@ export default function RegionPage() {
             <div className="flex flex-col min-h-screen font-sans dot-band">
                 <HeaderSection />
                 <div className={`${SCREEN_CONTAINER} py-10 animate-pulse flex-grow`}>
+<<<<<<< HEAD
                     <div className="h-40 sm:h-56 bg-slate-200 rounded-[1.5rem] mb-6 sm:mb-8" />
                     <div className="h-8 w-64 bg-slate-200 rounded mb-6" />
                     <div className="grid gap-3 sm:gap-5 grid-cols-2 sm:grid-cols-3 xl:grid-cols-5">
                         {[0, 1, 2, 3, 4].map((i) => (
                             <div key={i} className="h-56 sm:h-80 bg-slate-200 rounded-2xl" />
+=======
+                    <div className="h-56 bg-slate-200 rounded-[1.5rem] mb-8" />
+                    <div className="h-8 w-64 bg-slate-200 rounded mb-6" />
+                    <div className="grid gap-5 grid-cols-2 sm:grid-cols-3 xl:grid-cols-5">
+                        {[0, 1, 2, 3, 4].map((i) => (
+                            <div key={i} className="h-80 bg-slate-200 rounded-2xl" />
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         ))}
                     </div>
                 </div>
@@ -120,15 +136,26 @@ export default function RegionPage() {
         return (
             <div className="flex flex-col min-h-screen font-sans dot-band">
                 <HeaderSection />
+<<<<<<< HEAD
                 <div className={`${SCREEN_CONTAINER} py-16 sm:py-24 flex-grow text-center`}>
                     <h1 className={`${SECTION_HEADING} text-brand-800 mb-4`}>Not published yet</h1>
                     <p className="text-[1rem] sm:text-[1.0625rem] font-semibold text-gray-500 mb-8 break-words">
                         {missing || 'This zone page could not be loaded.'}
+=======
+                <div className={`${SCREEN_CONTAINER} py-24 flex-grow text-center`}>
+                    <h1 className={`${SECTION_HEADING} text-brand-800 mb-4`}>Not published yet</h1>
+                    <p className="text-[1.25rem] sm:text-[1.0625rem] font-semibold text-gray-500 mb-8">
+                        {missing || 'This region page could not be loaded.'}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     </p>
                     <Link
                         to="/"
                         className="inline-flex items-center gap-2 bg-brand-800 hover:bg-brand-700 text-white
+<<<<<<< HEAD
                                    px-6 sm:px-8 py-3.5 rounded-full font-bold text-[0.9375rem] sm:text-[1.0625rem] uppercase
+=======
+                                   px-8 py-3.5 rounded-full font-bold text-[1.0625rem] uppercase
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                    tracking-[0.1em] transition-colors"
                     >
                         <ArrowLeft size={15} /> Back to home
@@ -157,12 +184,17 @@ export default function RegionPage() {
     const national = (page.regionKey || page.slug) === 'national';
 
     const regionTitle = (value: string) => (
+<<<<<<< HEAD
         /\b(region|zone)\b/i.test(value || '') ? (value || '') : `${value || ''} Zone`.trim()
+=======
+        /\bregion\b/i.test(value || '') ? (value || '') : `${value || ''} Region`.trim()
+>>>>>>> 8020f5d (Initial commit for website frontend)
     );
     /* "National", not "National Region". The country is not one of them. */
     const label = national ? (page.regionName || 'National') : regionTitle(page.regionName);
 
     /*
+<<<<<<< HEAD
      * THE PAGE'S OWN HEADINGS, from the CMS, with the shipped wording under
      * anything the editor left blank.
      *
@@ -265,6 +297,30 @@ export default function RegionPage() {
 
     /* The BOARDS: a heading over no faces is a heading over nothing. */
     const statePanels = allPanels.filter((row) => (row.leaders || []).length);
+=======
+     * ======================================================================
+     * THE TIER BELOW: THIS PAGE’S OWN BOARDS FIRST
+     * ======================================================================
+     *
+     * `stateRegions` is what an editor typed into THIS page — the states of
+     * a region, the regions of the country — and it is what the page draws
+     * when it has any. Editing the South on the national page and editing
+     * the South’s own page are two different acts on two different records,
+     * which is what the association asked for.
+     *
+     * `statePanels` is the DERIVED list, read off the pages underneath. It
+     * is the fallback and nothing more: without it, adding the owned field
+     * would have blanked every region page in the site until somebody
+     * retyped eight states into each of them.
+     *
+     * Never both. Two boards for one state, one of them stale, is worse
+     * than either alone.
+     */
+    const ownBoards = (page.stateRegions || [])
+        .filter((r) => r && (r.leaders || []).length);
+    const derived = (page.statePanels || []).filter((s) => s && (s.leaders || []).length);
+    const statePanels = ownBoards.length ? ownBoards : derived;
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     /* One entry per PERSON, not one per office — see the state page's note. */
     const regionContacts = contactEntries(page.contacts);
@@ -295,6 +351,7 @@ export default function RegionPage() {
 
     const stateContacts = [
         ...ownGroups,
+<<<<<<< HEAD
         /* The tiers below this page, whichever source they came from — so a
            board with a contact on it is reachable from Get in Touch too, and
            the two halves of the page cannot disagree about which tiers exist. */
@@ -302,6 +359,12 @@ export default function RegionPage() {
            entry here is a telephone number and nothing else is exactly the
            state this list exists for. */
         ...allPanels
+=======
+        /* The boards this page draws, whichever source they came from — so a
+           board with a contact on it is reachable from Get in Touch too, and
+           the two halves of the page cannot disagree about which tiers exist. */
+        ...statePanels
+>>>>>>> 8020f5d (Initial commit for website frontend)
             .map((row) => ({ name: row?.name || '', entries: contactEntries(row?.contacts) }))
             .filter((g) => g.name && g.entries.length),
     ];
@@ -316,6 +379,7 @@ export default function RegionPage() {
                     {/* No back link: a region has no parent page. */}
                     <StateHeroBand
                         hero={page.hero}
+<<<<<<< HEAD
                         /*
                          * "South Zone", as everything else on the site calls
                          * it — not the bare "South" on the record. The band
@@ -325,6 +389,9 @@ export default function RegionPage() {
                          * country "National" rather than "National Zone".
                          */
                         title={label}
+=======
+                        title={page.regionName}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         blurb={page.hero.blurb || page.shortDescription}
                         /*
                          * NO "REGION AT A GLANCE", for the same reason the state
@@ -345,7 +412,11 @@ export default function RegionPage() {
                     {(page.leaders || []).length > 0 && (
                         <section>
                             <SectionHead
+<<<<<<< HEAD
                                 eyebrow={labels.ownTierEyebrow}
+=======
+                                eyebrow={national ? 'National' : 'Region'}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 title={`${label} Leaders`}
                             />
                             <LeaderGrid
@@ -364,8 +435,13 @@ export default function RegionPage() {
                         <section>
                             {/* The tier below: a region’s states, the country’s regions. */}
                             <SectionHead
+<<<<<<< HEAD
                                 eyebrow={labels.tierBelowEyebrow}
                                 title={labels.tierBelowHeading}
+=======
+                                eyebrow={national ? 'Regions' : 'States'}
+                                title={national ? 'Region-wise Leadership' : 'State-wise Leadership'}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             />
                             {/* : with the panels gone there is no
                                 box edge between one group and the next, so the
@@ -396,12 +472,18 @@ export default function RegionPage() {
                         </section>
                     )}
 
+<<<<<<< HEAD
                     {/* ---- contact ----
                         `id="contact"` is where the Contact page's region tiles
                         land (`/states/<slug>#contact`); `scroll-mt` keeps the
                         heading clear of the sticky header. */}
                     <section id="contact" className="scroll-mt-32">
                         <SectionHead eyebrow={labels.contactEyebrow} title={labels.contactHeading} />
+=======
+                    {/* ---- contact ---- */}
+                    <section>
+                        <SectionHead eyebrow="Contact" title="Get in Touch" />
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
                         {/*
                           * THE MAP ON THE LEFT, THE PEOPLE ON THE RIGHT — the
@@ -415,7 +497,11 @@ export default function RegionPage() {
                             landscape shape — the South runs from Kerala to the
                             Andamans — where a state is portrait, and the same
                             column renders it a third of the size. */}
+<<<<<<< HEAD
                         <div className="grid items-start gap-6 sm:gap-8 lg:gap-12
+=======
+                        <div className="grid items-start gap-8 lg:gap-12
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         lg:grid-cols-[minmax(0,27rem)_minmax(0,1fr)]">
                             <div className="lg:sticky lg:top-24">
                                 {/* `mapPanels` where the boards and the map are
@@ -427,7 +513,11 @@ export default function RegionPage() {
                                 />
                             </div>
 
+<<<<<<< HEAD
                             <div className="min-w-0 space-y-8 sm:space-y-10">
+=======
+                            <div className="min-w-0 space-y-10">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <ContactGroup label={label} entries={regionContacts} />
 
                                 {stateContacts.map((group) => (

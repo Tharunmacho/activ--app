@@ -184,6 +184,7 @@ export interface EventRegistration {
     note: string;
     registeredAt: string | null;
     cancelledAt: string | null;
+<<<<<<< HEAD
     /**
      * 'booking' when the seat came from the Book Now form (public site or
      * member area, signed in or as a guest with the member's email). Absent on
@@ -204,6 +205,10 @@ export const registrationHref = (eventId: string, reg: EventRegistration | null 
         ? `/member/events/${encodeURIComponent(eventId)}/book?ref=${encodeURIComponent(reg.bookingRef)}`
         : `/member/events/${encodeURIComponent(eventId)}`;
 
+=======
+}
+
+>>>>>>> 8020f5d (Initial commit for website frontend)
 export interface MemberEvent {
     id: string;
     title: string;
@@ -278,6 +283,7 @@ const EMPTY_EVENTS = { events: [] as MemberEvent[], total: 0 };
 export const listMemberEvents = async (params: Record<string, any> = {}) =>
     unwrap<typeof EMPTY_EVENTS>(await api.get(ENDPOINTS.EVENTS.LIST, { params }), EMPTY_EVENTS);
 
+<<<<<<< HEAD
 /**
  * Sessions written with the DAY editor live on `days[].agenda`, and the member
  * screen only draws the flat `agenda`. With the flat list empty they were
@@ -309,6 +315,10 @@ const withDayAgenda = (event: MemberEvent | null): MemberEvent | null => {
 
 export const getMemberEvent = async (id: string) =>
     withDayAgenda(unwrap<MemberEvent | null>(await api.get(ENDPOINTS.EVENTS.BY_ID(id)), null));
+=======
+export const getMemberEvent = async (id: string) =>
+    unwrap<MemberEvent | null>(await api.get(ENDPOINTS.EVENTS.BY_ID(id)), null);
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
 export const registerForEvent = async (id: string, details: Record<string, any> = {}) =>
     unwrap<EventRegistration & { alreadyRegistered?: boolean }>(

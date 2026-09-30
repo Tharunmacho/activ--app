@@ -1,12 +1,21 @@
 import { useMemo, useState } from 'react';
+<<<<<<< HEAD
 import { Plus, Trash2, Clock, ChevronDown, ChevronUp, Loader2, User, MapPin, Video } from 'lucide-react';
+=======
+import { Plus, Trash2, Users, Clock, ChevronDown, ChevronUp, Loader2, User, MapPin, Video } from 'lucide-react';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 // `RegistrationFormBuilder` itself is no longer rendered — the per-event
 // question builder was removed from the form. The TYPE stays: every saved
 // event still carries `registrationFields`, and dropping it from the shape
 // would silently discard the questions those events already ask.
 import { type RegistrationField } from './RegistrationFormBuilder';
+<<<<<<< HEAD
 import TimeField from './TimeField';
 import { CmsField, CmsInput, CmsTextarea, CmsSection, CmsChoice } from './CmsUI';
+=======
+import { CmsField, CmsInput, CmsTextarea, CmsSection, CmsChoice } from './CmsUI';
+import { listEventRegistrations, type EventRegistration } from '@/services/memberHubApi';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { errorMessage } from '@/services/activApi';
 import type { CmsAgendaItem, CmsSpeaker } from '@/services/cmsApi';
 import { uploadMedia } from '@/services/cmsApi';
@@ -71,9 +80,12 @@ export interface EventDetail {
      */
     memberFee: string;
     registrationNote: string;
+<<<<<<< HEAD
     /** What the event is about, and the language it is held in — printed in the booking messages. */
     topic: string;
     language: string;
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     /** The questions THIS event asks, on top of the four standing ones. */
     registrationFields: RegistrationField[];
     reminderOffsetsHours: number[];
@@ -116,8 +128,11 @@ export const BLANK_DETAIL: EventDetail = {
     // Blank: a new event charges one price until somebody sets a member rate.
     memberFee: '',
     registrationNote: '',
+<<<<<<< HEAD
     topic: '',
     language: '',
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     registrationFields: [],
     reminderOffsetsHours: [],
 };
@@ -232,6 +247,7 @@ function SpeakerPhoto({ url, onChange }: { url: string; onChange: (url: string) 
     };
 
     return (
+<<<<<<< HEAD
         /*
          * 7rem, not 5rem — the editor has to be able to SEE the portrait.
          *
@@ -244,16 +260,28 @@ function SpeakerPhoto({ url, onChange }: { url: string; onChange: (url: string) 
         <div className="shrink-0 w-24 sm:w-28">
             <label className="block cursor-pointer">
                 <span className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border border-slate-200
+=======
+        <div className="shrink-0 w-20">
+            <label className="block cursor-pointer">
+                <span className="w-20 h-20 rounded-full overflow-hidden border border-slate-200
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                  dark:border-[#2a2a2a] bg-slate-50 dark:bg-[#141414] flex items-center
                                  justify-center text-neutral-400 hover:border-blue-300 transition-colors">
                     {busy ? <Loader2 className="w-5 h-5 animate-spin" />
                         : url ? (
+<<<<<<< HEAD
                             /* `object-top`, like the public card: a portrait
                                centred in a circle crops to a chest. */
                             <img
                                 src={resolveMediaUrl(url)}
                                 alt=""
                                 className="w-full h-full object-cover object-top"
+=======
+                            <img
+                                src={resolveMediaUrl(url)}
+                                alt=""
+                                className="w-full h-full object-cover"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             />
                         ) : <User className="w-6 h-6" />}
                 </span>
@@ -287,12 +315,16 @@ export default function EventDetailFields({
     value,
     onChange,
     eventId,
+<<<<<<< HEAD
     multiDay = false,
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 }: {
     value: EventDetail;
     onChange: (detail: EventDetail) => void;
     /** Present only when editing — there are no registrations for a draft row. */
     eventId?: string | null;
+<<<<<<< HEAD
     /**
      * Does this event run over more than one day?
      *
@@ -303,6 +335,8 @@ export default function EventDetailFields({
      * list nobody reads. Reported exactly that way.
      */
     multiDay?: boolean;
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 }) {
     /*
      * OPEN BY DEFAULT.
@@ -369,6 +403,7 @@ export default function EventDetailFields({
                       * the control is gone.
                       */}
 
+<<<<<<< HEAD
                     {/* ---------------------------------------------- agenda
 
                         ONE PROGRAMME EDITOR, NOT TWO.
@@ -410,6 +445,9 @@ export default function EventDetailFields({
                             </div>
                         </CmsSection>
                     ) : (
+=======
+                    {/* ---------------------------------------------- agenda */}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <CmsSection
                         title="Agenda"
 
@@ -437,6 +475,7 @@ export default function EventDetailFields({
                                         className="rounded-lg border border-slate-200 dark:border-[#2a2a2a] p-3"
                                     >
                                         <div className="flex items-start gap-2">
+<<<<<<< HEAD
                                             <Clock className="hidden sm:block w-4 h-4 text-neutral-400 mt-2.5 shrink-0" />
 
                                             <div className="grid gap-3 sm:grid-cols-2 flex-1 min-w-0">
@@ -454,6 +493,23 @@ export default function EventDetailFields({
                                                         label="Session end"
                                                         value={row.endTime}
                                                         onChange={(endTime) => updateAgenda(index, { endTime })}
+=======
+                                            <Clock className="w-4 h-4 text-neutral-400 mt-2.5 shrink-0" />
+
+                                            <div className="grid gap-3 sm:grid-cols-4 flex-1 min-w-0">
+                                                <CmsField label="Starts">
+                                                    <CmsInput
+                                                        type="time"
+                                                        value={row.startTime}
+                                                        onChange={(e) => updateAgenda(index, { startTime: e.target.value })}
+                                                    />
+                                                </CmsField>
+                                                <CmsField label="Ends">
+                                                    <CmsInput
+                                                        type="time"
+                                                        value={row.endTime}
+                                                        onChange={(e) => updateAgenda(index, { endTime: e.target.value })}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                     />
                                                 </CmsField>
                                                 <div className="sm:col-span-2">
@@ -496,7 +552,11 @@ export default function EventDetailFields({
                                                 type="button"
                                                 aria-label="Remove session"
                                                 onClick={() => set({ agenda: value.agenda.filter((_, i) => i !== index) })}
+<<<<<<< HEAD
                                                 className="p-2.5 -mr-1 sm:mr-0 sm:p-1.5 mt-1 sm:mt-2 rounded text-red-500 hover:bg-red-500/10 shrink-0"
+=======
+                                                className="p-1.5 mt-2 rounded text-red-500 hover:bg-red-500/10 shrink-0"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
@@ -506,7 +566,10 @@ export default function EventDetailFields({
                             </div>
                         )}
                     </CmsSection>
+<<<<<<< HEAD
                     )}
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
                     {/* -------------------------------------------- speakers */}
                     {/*
@@ -548,14 +611,22 @@ export default function EventDetailFields({
                                         key={index}
                                         className="rounded-lg border border-slate-200 dark:border-[#2a2a2a] p-3"
                                     >
+<<<<<<< HEAD
                                         {/* Phone: photo and delete share the top line, the fields run full width below. */}
                                         <div className="flex flex-wrap items-start gap-3 sm:flex-nowrap">
+=======
+                                        <div className="flex items-start gap-3">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             <SpeakerPhoto
                                                 url={row.photoUrl}
                                                 onChange={(photoUrl) => updateSpeaker(index, { photoUrl })}
                                             />
 
+<<<<<<< HEAD
                                             <div className="order-3 basis-full sm:order-none sm:basis-auto grid gap-3 sm:grid-cols-2 flex-1 min-w-0">
+=======
+                                            <div className="grid gap-3 sm:grid-cols-2 flex-1 min-w-0">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                 <CmsField label="Name">
                                                     <CmsInput
                                                         value={row.name}
@@ -596,7 +667,11 @@ export default function EventDetailFields({
                                                 onClick={() => set({
                                                     speakers: value.speakers.filter((_, i) => i !== index),
                                                 })}
+<<<<<<< HEAD
                                                 className="order-2 ml-auto sm:order-none sm:ml-0 p-2.5 sm:p-1.5 mt-0 sm:mt-2 rounded text-red-500 hover:bg-red-500/10 shrink-0"
+=======
+                                                className="p-1.5 mt-2 rounded text-red-500 hover:bg-red-500/10 shrink-0"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
@@ -644,6 +719,7 @@ export default function EventDetailFields({
                         </div>
                     </CmsSection>
 
+<<<<<<< HEAD
                     {/* ------------------------------------------- the attendee note
                       *
                       * `registrationNote` has always been on the event, and the
@@ -669,6 +745,8 @@ export default function EventDetailFields({
                         </CmsField>
                     </CmsSection>
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     {/* ---------------------------------------------- registration */}
                     <CmsSection
                         title="Registration"
@@ -805,11 +883,15 @@ export default function EventDetailFields({
                             </p>
                         )}
 
+<<<<<<< HEAD
                         {/* The attendee list lives on Events -> Bookings. The old
                             "Show who has registered" panel read the legacy
                             registration collection (answering "Insufficient
                             permissions" in the CMS) and showed nobody who booked
                             through Book Now. */}
+=======
+                        {eventId ? <RegistrationList eventId={eventId} /> : null}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     </CmsSection>
                 </div>
             ) : null}
@@ -837,3 +919,166 @@ function summarise(detail: EventDetail): string {
 
     return parts.join(' · ');
 }
+<<<<<<< HEAD
+=======
+
+
+// ---------------------------------------------------------------- attendees
+
+/**
+ * Who has registered.
+ *
+ * Loaded on demand rather than with the form. An attendee list is the one thing
+ * on this screen that can be thousands of rows, and an editor changing a
+ * session's start time has no reason to download it.
+ */
+function RegistrationList({ eventId }: { eventId: string }) {
+    const [rows, setRows] = useState<EventRegistration[]>([]);
+    const [counts, setCounts] = useState<Record<string, number>>({});
+
+    /**
+     * One column per question anyone has actually answered.
+     *
+     * Derived from the ANSWERS, not from the event's current form. The organiser
+     * can add, rename or delete a question after people have registered, and
+     * every one of those cases breaks a table whose headings come from the live
+     * form: a deleted question silently drops a column of real data, and a
+     * renamed one relabels answers that were given under the old wording.
+     *
+     * Each answer carries the label it was captured under (see `responses` in
+     * the registration model), so the first row to mention a key names the
+     * column — and a question renamed halfway through keeps both spellings
+     * visible rather than pretending everyone answered the new one.
+     */
+    const answerColumns = useMemo(() => {
+        const seen = new Map<string, string>();
+
+        (rows || []).forEach((row) => {
+            (row.responses || []).forEach((answer) => {
+                if (answer.key && !seen.has(answer.key)) seen.set(answer.key, answer.label || answer.key);
+            });
+        });
+
+        return [...seen].map(([key, label]) => ({ key, label }));
+    }, [rows]);
+    const [loaded, setLoaded] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const load = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const data = await listEventRegistrations(eventId);
+            setRows(data?.registrations || []);
+            setCounts(data?.counts || {});
+            setLoaded(true);
+        } catch (err) {
+            setError(errorMessage(err, 'Could not load the attendee list'));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="mt-5 pt-4 border-t border-slate-200 dark:border-[#1f1f1f]">
+            {!loaded ? (
+                <button
+                    type="button"
+                    onClick={load}
+                    disabled={loading}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[1.1875rem] font-medium
+                               text-slate-700 dark:text-neutral-200 border border-slate-200
+                               dark:border-[#2a2a2a] hover:bg-slate-100 dark:hover:bg-[#161616]
+                               disabled:opacity-60"
+                >
+                    {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Users className="w-3.5 h-3.5" />}
+                    Show who has registered
+                </button>
+            ) : (
+                <>
+                    <p className="text-[1.1875rem] text-neutral-500 dark:text-neutral-400 mb-3">
+                        {counts.registered || 0} registered
+                        {counts.waitlist ? ` · ${counts.waitlist} waiting` : ''}
+                        {counts.cancelled ? ` · ${counts.cancelled} cancelled` : ''}
+                    </p>
+
+                    {rows.length === 0 ? (
+                        <p className="text-[1.25rem] text-neutral-500 dark:text-neutral-400">Nobody yet.</p>
+                    ) : (
+                        <div className="max-h-72 overflow-y-auto">
+                            <table className="w-full text-[1.1875rem]">
+                                <thead>
+                                    <tr className="text-left text-neutral-500 border-b border-slate-200 dark:border-[#1f1f1f]">
+                                        <th className="pb-2 pr-3 font-medium">Name</th>
+                                        <th className="pb-2 pr-3 font-medium">Phone</th>
+                                        <th className="pb-2 pr-3 font-medium">Region</th>
+                                        {/*
+                                          One column per question, from the
+                                          ANSWERS rather than from the current
+                                          form. The organiser can delete a
+                                          question after people have answered it,
+                                          and those answers still have to appear
+                                          — reading the headings from the live
+                                          form would silently drop a column of
+                                          data that exists.
+                                        */}
+                                        {answerColumns.map((column) => (
+                                            <th key={column.key} className="pb-2 pr-3 font-medium">
+                                                {column.label}
+                                            </th>
+                                        ))}
+                                        <th className="pb-2 pr-3 font-medium">Paid</th>
+                                        <th className="pb-2 font-medium">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {rows.map((row) => (
+                                        <tr key={row.id} className="border-b border-slate-100 dark:border-[#161616]">
+                                            <td className="py-2 pr-3 text-slate-800 dark:text-neutral-200">
+                                                {row.memberName || '—'}
+                                            </td>
+                                            <td className="py-2 pr-3 text-neutral-500">{row.phone || '—'}</td>
+                                            <td className="py-2 pr-3 text-neutral-500">
+                                                {[row.block, row.district].filter(Boolean).join(', ') || '—'}
+                                            </td>
+
+                                            {answerColumns.map((column) => (
+                                                <td key={column.key} className="py-2 pr-3 text-neutral-500">
+                                                    {(row.responses || [])
+                                                        .find((r) => r.key === column.key)?.value || '—'}
+                                                </td>
+                                            ))}
+
+                                            {/*
+                                              A seat can be held and unpaid, and
+                                              on the day that is the difference
+                                              between letting someone in and not.
+                                            */}
+                                            <td className="py-2 pr-3">
+                                                {row.payment?.status === 'paid' ? (
+                                                    <span className="text-emerald-600 font-medium">
+                                                        ₹{row.payment.amount}
+                                                    </span>
+                                                ) : row.payment?.status === 'pending' ? (
+                                                    <span className="text-amber-600 font-medium">Unpaid</span>
+                                                ) : (
+                                                    <span className="text-neutral-400">Free</span>
+                                                )}
+                                            </td>
+
+                                            <td className="py-2 text-neutral-500 capitalize">{row.status}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </>
+            )}
+
+            {error ? <p className="text-[1.1875rem] text-red-500 mt-2">{error}</p> : null}
+        </div>
+    );
+}
+>>>>>>> 8020f5d (Initial commit for website frontend)

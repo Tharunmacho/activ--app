@@ -49,6 +49,7 @@ const WEBSITE = 'activ.org.in';
 export const ASSOCIATION_NAME =
     'Adidravidar Confederation of Trade and Industrial Vision';
 
+<<<<<<< HEAD
 /**
  * WHO SIGNS, and why the name is allowed to be blank.
  *
@@ -247,6 +248,8 @@ export function CertificateSignature({ compact = false }: { compact?: boolean })
     );
 }
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 /* ------------------------------------------------------------- the ornament */
 
 /**
@@ -297,12 +300,16 @@ function CornerBracket({ className }: { className: string }) {
 export function CertificateSeal({
     line,
     year,
+<<<<<<< HEAD
     compact = false,
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 }: {
     /** The short line across the middle — "Tax Exemption", "Membership". */
     line: string;
     /** The year under it, so the impression is dated as a real one would be. */
     year?: string;
+<<<<<<< HEAD
     /**
      * Two thirds the size, for the A5 tax certificate.
      *
@@ -313,6 +320,8 @@ export function CertificateSeal({
      * re-size but the box.
      */
     compact?: boolean;
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 }) {
     const uid = useId().replace(/:/g, '');
     const top = `seal-top-${uid}`;
@@ -342,9 +351,14 @@ export function CertificateSeal({
             /* Taller than it is wide: the ribbon hangs below the medallion, and
                a square box would clip its tails. */
             viewBox="0 0 200 252"
+<<<<<<< HEAD
             className={`-rotate-[6deg] text-brand-800 opacity-95 ${
                 compact ? 'h-[6.5rem] w-[5.15rem]' : 'h-[10rem] w-[7.9rem]'
             }`}
+=======
+            className="h-[10rem] w-[7.9rem] -rotate-[6deg] text-brand-800 opacity-95
+                       sm:h-[11.5rem] sm:w-[9.1rem] print:h-[7rem] print:w-[5.55rem]"
+>>>>>>> 8020f5d (Initial commit for website frontend)
             aria-label={`Seal of the ${ASSOCIATION_NAME}`}
             role="img"
         >
@@ -455,11 +469,14 @@ export function CertificateSheet({
     associationPan = 'AAITA2239D',
     registration80G = 'AAITA2239DF20210',
     decorated = false,
+<<<<<<< HEAD
     bleed = false,
     onePage = false,
     size = 'a4',
     letterhead = true,
     registrations = true,
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     footNote = 'Computer-generated receipt — does not require a signature',
 }: {
     children: ReactNode;
@@ -467,6 +484,7 @@ export function CertificateSheet({
     registration80G?: string;
     /** The engraved border, the corner ornaments and the watermark. */
     decorated?: boolean;
+<<<<<<< HEAD
     /**
      * Run the content to the paper edge — no body padding at all.
      *
@@ -525,6 +543,21 @@ export function CertificateSheet({
         >
             <PaperRule size={size} bleed={bleed} fixedHeight={onePage} />
             {framed ? (
+=======
+    /** The grey line above the registrations. */
+    footNote?: ReactNode;
+}) {
+    return (
+        <article
+            className={`relative mx-auto w-full max-w-[210mm] overflow-hidden bg-white text-brand-900
+                        shadow-[0_1px_2px_rgba(16,24,40,0.04),0_24px_60px_-30px_rgba(28,46,104,0.45)]
+                        print:max-w-none print:shadow-none ${
+                decorated ? 'border border-brand-800/40' : ''
+            }`}
+            style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}
+        >
+            {decorated ? (
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 /*
                   THE DECORATION IS BEHIND EVERYTHING AND CATCHES NOTHING.
 
@@ -532,7 +565,11 @@ export function CertificateSheet({
                   stretched across the middle of the sheet would otherwise sit on
                   top of the text and swallow every selection and every click.
                 */
+<<<<<<< HEAD
                 <div className="activ-frame pointer-events-none absolute inset-0 select-none" aria-hidden="true">
+=======
+                <div className="pointer-events-none absolute inset-0 select-none" aria-hidden="true">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     {/* The palest possible wash, top and bottom, so the sheet is
                         not a flat white rectangle on a white page. */}
                     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(28,46,104,0.05)_0%,rgba(255,255,255,0)_22%,rgba(255,255,255,0)_78%,rgba(28,46,104,0.05)_100%)]" />
@@ -564,8 +601,12 @@ export function CertificateSheet({
                                 />
                             </pattern>
                         </defs>
+<<<<<<< HEAD
                         <rect width="100%" height="100%" fill="url(#activ-guilloche)"
                               opacity={0.09} />
+=======
+                        <rect width="100%" height="100%" fill="url(#activ-guilloche)" opacity="0.09" />
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     </svg>
 
                     {/*
@@ -635,9 +676,14 @@ export function CertificateSheet({
                 </div>
             ) : null}
 
+<<<<<<< HEAD
             <div className="relative flex flex-1 flex-col">
                 {/* ------------------------------------------------ letterhead */}
                 {letterhead ? (
+=======
+            <div className="relative">
+                {/* ------------------------------------------------ letterhead */}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 <header
                     className={`px-10 pb-6 pt-10 text-center sm:px-14 print:pb-2.5 print:pt-4 ${
                         decorated ? 'border-b-2 border-brand-800/25' : 'border-b-4 border-brand-800'
@@ -684,6 +730,7 @@ export function CertificateSheet({
                         <span>Website: {WEBSITE}</span>
                     </p>
                 </header>
+<<<<<<< HEAD
                 ) : null}
 
                 {/*
@@ -703,6 +750,12 @@ export function CertificateSheet({
 
                 {/* ------------------------------------------------------ foot */}
                 {registrations || footNote ? (
+=======
+
+                <div className="px-10 py-9 sm:px-14 print:py-4">{children}</div>
+
+                {/* ------------------------------------------------------ foot */}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 <footer
                     className={`px-10 pb-10 pt-5 text-center sm:px-14 print:pb-4 print:pt-2.5 ${
                         decorated ? 'border-t border-brand-800/20' : 'border-t border-gray-200'
@@ -710,6 +763,7 @@ export function CertificateSheet({
                 >
                     {/* Tighter tracking and a `balance` wrap: at 0.12em this broke
                         after "a", leaving "SIGNATURE" alone on the second line. */}
+<<<<<<< HEAD
                     {footNote ? (
                         <p className="text-[1.0625rem] font-semibold uppercase tracking-[0.06em]
                                       text-gray-400 print:text-[0.875rem]"
@@ -717,6 +771,13 @@ export function CertificateSheet({
                             {footNote}
                         </p>
                     ) : null}
+=======
+                    <p className="text-[1.0625rem] font-semibold uppercase tracking-[0.06em]
+                                  text-gray-400 print:text-[0.875rem]"
+                       style={{ textWrap: 'balance' }}>
+                        {footNote}
+                    </p>
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
                     {/*
                       THE TWO NUMBERS THAT MAKE IT A TAX DOCUMENT.
@@ -726,7 +787,10 @@ export function CertificateSheet({
                       band, spaced and labelled, rather than as two more sentences
                       in the same grey run as everything else.
                     */}
+<<<<<<< HEAD
                     {registrations ? (
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <dl className="mt-4 grid gap-x-8 gap-y-2 rounded-lg bg-gray-50 px-5 py-4 text-left
                                    sm:grid-cols-2 print:mt-2 print:py-2">
                         <div>
@@ -749,9 +813,13 @@ export function CertificateSheet({
                             </dd>
                         </div>
                     </dl>
+<<<<<<< HEAD
                     ) : null}
                 </footer>
                 ) : null}
+=======
+                </footer>
+>>>>>>> 8020f5d (Initial commit for website frontend)
             </div>
         </article>
     );

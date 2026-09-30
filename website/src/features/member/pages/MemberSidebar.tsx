@@ -6,7 +6,10 @@ import { Button } from '@/components/ui/button';
 
 import { Badge } from '@/components/ui/badge';
 import { useProfile } from '@/contexts/ProfileContext';
+<<<<<<< HEAD
 import { MemberAvatar } from '@/features/member/memberPhoto';
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { apiFetch, getPaymentStatus, getMyApplication } from "@/services/activApi";
 import {
     NO_ACCESS,
@@ -563,7 +566,11 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
                             */}
                             <div className={`mb-2 flex items-center gap-2 ${collapsed ? 'px-0 justify-center' : 'px-3.5'}`}>
                                 {!collapsed && (
+<<<<<<< HEAD
                                     <p className="flex-1 min-w-0 text-[1.0625rem] font-bold uppercase
+=======
+                                    <p className="flex-1 min-w-0 text-[1rem] font-bold uppercase
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                   tracking-[0.06em] text-slate-900 truncate">
                                         {group.label}
                                     </p>
@@ -683,6 +690,7 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
             */}
             <div className={`pt-3 pb-8 bg-white border-t border-slate-200 flex-shrink-0 ${collapsed ? 'px-2' : 'px-3'}`}>
               <div className="relative">
+<<<<<<< HEAD
                 {/*
                   THE AVATAR IS ITS OWN BUTTON: tapping it opens the photo full
                   size (and "Change photo"). It used to render the stored
@@ -696,6 +704,8 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
                     name={userName || 'Member'}
                     className={`!absolute top-1/2 -translate-y-1/2 z-10 h-11 w-11 rounded-xl ${collapsed ? 'left-1/2 -translate-x-1/2' : 'left-3.5'}`}
                 />
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 <Link
                     to="/member/profile-view"
                     onClick={onClose}
@@ -705,11 +715,30 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
                     className={`flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 transition-colors
                                hover:border-slate-300 hover:bg-slate-100 ${collapsed ? 'p-2 justify-center' : 'p-3.5 pr-14'}`}
                 >
+<<<<<<< HEAD
                     {/* Space held for the avatar button laid over this card. */}
                     <span aria-hidden="true" className="w-11 h-11 shrink-0" />
                     {!collapsed && (
                     <span className="min-w-0 flex-1">
                         <span className="block text-[1.1875rem] font-semibold text-slate-900 truncate">
+=======
+                    {profilePhoto ? (
+                        <img
+                            src={profilePhoto}
+                            alt=""
+                            className="w-11 h-11 rounded-xl object-cover shrink-0"
+                        />
+                    ) : (
+                        <span className="w-11 h-11 rounded-xl shrink-0 bg-blue-600 text-white
+                                         flex items-center justify-center text-[1.1875rem] font-bold">
+                            {(userName || 'M').split(' ').filter(Boolean).slice(0, 2)
+                                .map(n => n[0]).join('').toUpperCase()}
+                        </span>
+                    )}
+                    {!collapsed && (
+                    <span className="min-w-0 flex-1">
+                        <span className="block text-[1.125rem] font-semibold text-slate-900 truncate">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             {userName || 'Member'}
                         </span>
                         {/*
@@ -723,7 +752,11 @@ export default function MemberSidebar({ isOpen, onClose }: Props) {
                           Falls back to the role when no address is stored, so the
                           second line is never empty.
                         */}
+<<<<<<< HEAD
                         <span className="block text-[1.0625rem] text-slate-500 truncate">
+=======
+                        <span className="block text-[1rem] text-slate-500 truncate">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             {userEmail || (paymentStatus === 'completed' ? 'Member' : 'Applicant')}
                         </span>
                     </span>

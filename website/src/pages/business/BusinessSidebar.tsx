@@ -107,11 +107,16 @@ export default function BusinessSidebar({
      * Read defensively: a private window throws on `localStorage`, and the rail
      * must still render.
      */
+<<<<<<< HEAD
     const [collapsedPref, setCollapsed] = useState<boolean>(() => {
+=======
+    const [collapsed, setCollapsed] = useState<boolean>(() => {
+>>>>>>> 8020f5d (Initial commit for website frontend)
         try { return localStorage.getItem('activ:railCollapsed') === '1'; } catch { return false; }
     });
 
     useEffect(() => {
+<<<<<<< HEAD
         try { localStorage.setItem('activ:railCollapsed', collapsedPref ? '1' : '0'); } catch { /* storage unavailable */ }
     }, [collapsedPref]);
 
@@ -133,6 +138,10 @@ export default function BusinessSidebar({
         return () => { try { mq?.removeEventListener?.('change', onChange); } catch { /* ignore */ } };
     }, []);
     const collapsed = collapsedPref && isDesktop;
+=======
+        try { localStorage.setItem('activ:railCollapsed', collapsed ? '1' : '0'); } catch { /* storage unavailable */ }
+    }, [collapsed]);
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     /**
      * The page behind the open drawer does not scroll.
@@ -215,7 +224,11 @@ export default function BusinessSidebar({
             )}
 
             <aside
+<<<<<<< HEAD
                 className={`fixed lg:sticky lg:top-0 inset-y-0 left-0 z-40 lg:h-screen w-72 max-w-[85vw] lg:max-w-none shrink-0
+=======
+                className={`fixed lg:sticky lg:top-0 inset-y-0 left-0 z-40 lg:h-screen w-72 shrink-0
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             bg-white border-r border-slate-200 flex flex-col
                             transition-transform duration-200 transition-[width]
                             ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
@@ -229,7 +242,11 @@ export default function BusinessSidebar({
                   button: in the flow, an invisible 40px button on one side
                   pushes the logo 20px off centre on desktop.
                 */}
+<<<<<<< HEAD
                 <div className={`relative h-16 sm:h-[5.5rem] bg-white border-b border-slate-200 flex-shrink-0
+=======
+                <div className={`relative h-[5.5rem] bg-white border-b border-slate-200 flex-shrink-0
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 flex items-center justify-center ${collapsed ? 'px-2' : 'px-6'}`}>
                     <Link
                         to="/business/dashboard"
@@ -247,7 +264,11 @@ export default function BusinessSidebar({
                         variant="ghost"
                         size="icon"
                         onClick={onClose}
+<<<<<<< HEAD
                         className="lg:hidden absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 text-slate-500"
+=======
+                        className="lg:hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     >
                         <X className="h-5 w-5" />
                     </Button>

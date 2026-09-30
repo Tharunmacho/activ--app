@@ -72,6 +72,7 @@ function Stat({ label, value, caption, icon: Icon, to, dark, tone = 'plain' }: {
     return (
         <Link
             to={to}
+<<<<<<< HEAD
             className={`group min-w-0 rounded-2xl border p-4 sm:p-5 transition-colors ${card}
                         ${tone === 'alert' ? 'border-l-[3px] border-l-[#F59E0B]' : ''}`}
         >
@@ -80,12 +81,26 @@ function Stat({ label, value, caption, icon: Icon, to, dark, tone = 'plain' }: {
                     <Icon className="w-[1.125rem] h-[1.125rem]" />
                 </span>
                 <p className={`min-w-0 text-[1.0625rem] leading-tight font-bold uppercase tracking-[0.1em]
+=======
+            className={`group rounded-2xl border p-5 transition-colors ${card}
+                        ${tone === 'alert' ? 'border-l-[3px] border-l-[#F59E0B]' : ''}`}
+        >
+            <div className="flex items-center gap-3">
+                <span className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${chip}`}>
+                    <Icon className="w-[1.125rem] h-[1.125rem]" />
+                </span>
+                <p className={`text-[0.9375rem] font-bold uppercase tracking-[0.1em]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                ${dark ? 'text-[#A1A1AA]' : 'text-slate-500'}`}>
                     {label}
                 </p>
             </div>
 
+<<<<<<< HEAD
             <p className={`font-display text-[2.25rem] sm:text-[3.125rem] leading-none font-bold tabular-nums mt-3 sm:mt-4
+=======
+            <p className={`font-display text-[3.125rem] leading-none font-bold tabular-nums mt-4
+>>>>>>> 8020f5d (Initial commit for website frontend)
                            ${dark ? 'text-white' : 'text-slate-900'}`}>
                 {value}
             </p>
@@ -103,12 +118,20 @@ function SectionRow({ label, to, ready, detail, icon: Icon, dark }: {
     return (
         <Link
             to={to}
+<<<<<<< HEAD
             className={`flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3.5 sm:py-4 border-t first:border-t-0 transition-colors
+=======
+            className={`flex items-center gap-4 px-5 py-4 border-t first:border-t-0 transition-colors
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         ${dark
                     ? 'border-[#1F1F1F] hover:bg-[#121212]'
                     : 'border-slate-200 hover:bg-slate-50'}`}
         >
+<<<<<<< HEAD
             <span className={`hidden sm:flex w-10 h-10 rounded-xl border items-center justify-center shrink-0
+=======
+            <span className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0
+>>>>>>> 8020f5d (Initial commit for website frontend)
                               ${dark ? 'border-[#262626] text-[#A1A1AA]' : 'border-slate-200 text-slate-500'}`}>
                 <Icon className="w-[1.125rem] h-[1.125rem]" />
             </span>
@@ -122,7 +145,11 @@ function SectionRow({ label, to, ready, detail, icon: Icon, dark }: {
                 </span>
             </span>
 
+<<<<<<< HEAD
             <span className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[1.0625rem]
+=======
+            <span className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[0.9375rem]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                               font-bold shrink-0 ${ready
                     ? 'bg-[#16A34A]/12 text-[#4ADE80]'
                     : 'bg-[#F59E0B]/12 text-[#FBBF24]'}`}>
@@ -130,7 +157,11 @@ function SectionRow({ label, to, ready, detail, icon: Icon, dark }: {
                 {ready ? 'Ready' : 'Not set up'}
             </span>
 
+<<<<<<< HEAD
             <ArrowRight className={`hidden sm:block w-4 h-4 shrink-0 ${dark ? 'text-[#3F3F46]' : 'text-slate-300'}`} />
+=======
+            <ArrowRight className={`w-4 h-4 shrink-0 ${dark ? 'text-[#3F3F46]' : 'text-slate-300'}`} />
+>>>>>>> 8020f5d (Initial commit for website frontend)
         </Link>
     );
 }
@@ -196,6 +227,7 @@ export default function CmsDashboard() {
                 + (d.gallery?.hidden ? ` · ${d.gallery.hidden} hidden` : ''),
         },
         {
+<<<<<<< HEAD
             label: 'News', to: '/cms/news', icon: Newspaper,
             ready: !!d.newsPage?.configured,
             detail: `${d.newsPage?.articles || 0} articles`,
@@ -207,6 +239,14 @@ export default function CmsDashboard() {
         },
         {
             label: 'Zones & States', to: '/cms/regions', icon: MapPin,
+=======
+            label: 'News & Schemes', to: '/cms/news', icon: Newspaper,
+            ready: !!d.newsPage?.configured,
+            detail: `${d.newsPage?.articles || 0} articles · ${d.newsPage?.schemes || 0} schemes`,
+        },
+        {
+            label: 'Regions & States', to: '/cms/regions', icon: MapPin,
+>>>>>>> 8020f5d (Initial commit for website frontend)
             ready: !!d.regions?.configured,
             detail: `${d.regions?.regionPages || 0} region pages · ${d.regions?.statePages || 0} state pages`,
         },
@@ -225,17 +265,29 @@ export default function CmsDashboard() {
     const notReady = sections.filter(s => !s.ready).length;
 
     return (
+<<<<<<< HEAD
         <div className="w-full max-w-[100rem] mx-auto space-y-6 sm:space-y-8">
+=======
+        <div className="w-full max-w-[100rem] mx-auto space-y-8">
+>>>>>>> 8020f5d (Initial commit for website frontend)
             <CmsError message={error} onRetry={load} />
 
             {/* An eyebrow above the title, as the reference lays it out — it says
                 which part of the console you are in before the title says what. */}
             <header>
+<<<<<<< HEAD
                 <p className={`text-[1.0625rem] font-bold uppercase tracking-[0.14em] mb-2
                                ${dark ? 'text-[#52525B]' : 'text-slate-400'}`}>
                     Workspace
                 </p>
                 <h1 className={`font-display text-[2.25rem] sm:text-[2.8125rem] leading-[1.1] font-bold tracking-tight
+=======
+                <p className={`text-[0.9375rem] font-bold uppercase tracking-[0.14em] mb-2
+                               ${dark ? 'text-[#52525B]' : 'text-slate-400'}`}>
+                    Workspace
+                </p>
+                <h1 className={`font-display text-[2.8125rem] leading-[1.1] font-bold tracking-tight
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 ${dark ? 'text-white' : 'text-slate-900'}`}>
                     Overview
                 </h1>
@@ -246,7 +298,11 @@ export default function CmsDashboard() {
                 </p>
             </header>
 
+<<<<<<< HEAD
             <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
+=======
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 <Stat
                     label="Events" value={events.total || 0} icon={PartyPopper} to="/cms/events" dark={dark}
                     caption={events.total ? 'Published and draft, all tiers' : 'Nothing scheduled yet'}
@@ -277,12 +333,21 @@ export default function CmsDashboard() {
 
             <section className={`rounded-2xl border overflow-hidden
                                  ${dark ? 'bg-[#0A0A0A] border-[#1F1F1F]' : 'bg-white border-slate-200'}`}>
+<<<<<<< HEAD
                 <header className={`px-4 sm:px-5 py-4 sm:py-5 border-b ${dark ? 'border-[#1F1F1F]' : 'border-slate-200'}`}>
                     <h2 className={`font-display text-[1.375rem] sm:text-[1.5625rem] font-bold tracking-tight
                                     ${dark ? 'text-white' : 'text-slate-900'}`}>
                         Site content
                     </h2>
                     <p className={`text-[1.1875rem] mt-1.5 ${dark ? 'text-[#A1A1AA]' : 'text-slate-500'}`}>
+=======
+                <header className={`px-5 py-5 border-b ${dark ? 'border-[#1F1F1F]' : 'border-slate-200'}`}>
+                    <h2 className={`font-display text-[1.5625rem] font-bold tracking-tight
+                                    ${dark ? 'text-white' : 'text-slate-900'}`}>
+                        Site content
+                    </h2>
+                    <p className={`text-[1.125rem] mt-1.5 ${dark ? 'text-[#A1A1AA]' : 'text-slate-500'}`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         What each public page is reading, and whether it has anything to read.
                     </p>
                 </header>

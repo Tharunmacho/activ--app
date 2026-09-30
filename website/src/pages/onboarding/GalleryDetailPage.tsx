@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { publicUrl, shareLink } from '@/lib/share';
 import { setShareMeta } from '@/lib/shareMeta';
 import { resolveMediaUrl, sizedMediaUrl } from '@/config/api.config';
@@ -7,6 +8,11 @@ import { Link, useParams } from 'react-router-dom';
 import {
     ArrowLeft, ArrowRight, Calendar, MapPin, Check, Share2,
 } from 'lucide-react';
+=======
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, Calendar, MapPin, Check } from 'lucide-react';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import {
     getGalleryItem, getGallery, getGallerySettings,
     type GalleryItem, type GallerySettings,
@@ -14,8 +20,11 @@ import {
 import { HeaderSection } from '../../components/layout/HeaderSection';
 import { FooterSection } from '../../components/layout/FooterSection';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
+<<<<<<< HEAD
 import { CmsIcon } from '@/components/shared/CmsIcon';
 import { SectionFields } from '@/components/shared/SectionFields';
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
 import { isNotFound } from '@/services/api';
 import { SECTION_HEADING, SECTION_LEDE, EYEBROW, CARD_BODY, MICRO_LABEL } from '@/components/layout/typography';
@@ -99,6 +108,7 @@ export default function GalleryDetailPage() {
         return () => { cancelled = true; };
     }, [id, reloadKey]);
 
+<<<<<<< HEAD
     /*
      * ONE ADDRESS PER ITEM: opened by its old id link, the address bar becomes
      * the readable one (`/gallery/<slug>`) without a reload — only when the
@@ -124,6 +134,8 @@ export default function GalleryDetailPage() {
         });
     }, [item]);
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     const copy = settings?.detail;
     const backLabel = copy?.backLabel || 'Back to Gallery';
 
@@ -161,7 +173,11 @@ export default function GalleryDetailPage() {
                             type="button"
                             onClick={() => setReloadKey((n) => n + 1)}
                             className="inline-flex items-center gap-2 bg-brand-800 hover:bg-brand-700 text-white
+<<<<<<< HEAD
                                        px-6 sm:px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase
+=======
+                                       px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                        tracking-[0.1em] transition-colors"
                         >
                             Try again
@@ -169,7 +185,11 @@ export default function GalleryDetailPage() {
                         <Link
                             to="/gallery"
                             className="inline-flex items-center gap-2 border border-brand-200 text-brand-700
+<<<<<<< HEAD
                                        px-6 sm:px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase
+=======
+                                       px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                        tracking-[0.1em] transition-colors hover:bg-brand-50"
                         >
                             <ArrowLeft size={15} /> {backLabel}
@@ -193,7 +213,11 @@ export default function GalleryDetailPage() {
                     <Link
                         to="/gallery"
                         className="inline-flex items-center gap-2 bg-brand-800 hover:bg-brand-700 text-white
+<<<<<<< HEAD
                                    px-6 sm:px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase tracking-[0.1em]
+=======
+                                   px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase tracking-[0.1em]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                    transition-colors"
                     >
                         <ArrowLeft size={15} /> {backLabel}
@@ -208,6 +232,7 @@ export default function GalleryDetailPage() {
 
     const highlights = (item.highlights || []).filter(Boolean);
     const photos = (item.photos || []).filter(p => p && p.url);
+<<<<<<< HEAD
     /*
      * WHERE EACH PHOTOGRAPH SITS IN THE ALBUM.
      *
@@ -222,10 +247,13 @@ export default function GalleryDetailPage() {
      * page of its own now — so all that survives of it is the offset.
      */
     const coverOffset = item.media?.url ? 1 : 0;
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     const description = (item.description || '').trim();
     /*
      * The side card: what this schema knows, then what the editor named.
      *
+<<<<<<< HEAD
      * The editor's own CARD fields sit in the same list as the built-in two,
      * because to a reader "Chief Guest" is exactly the same kind of fact as
      * "Location" — the difference is only which of them this codebase happened
@@ -239,11 +267,21 @@ export default function GalleryDetailPage() {
      *
      * A field the editor marked `content` is NOT here. It is a section of the
      * write-up; see `sections` below.
+=======
+     * The editor's own fields sit in the same list rather than a section of
+     * their own, because to a reader "Chief Guest" is exactly the same kind of
+     * fact as "Location" — the difference is only which of them this codebase
+     * happened to anticipate. They carry no icon: the two built-in ones are
+     * illustrated because there are exactly two of them and their meaning is
+     * fixed, and guessing a glyph for a label somebody typed a moment ago gets
+     * it wrong more often than not.
+>>>>>>> 8020f5d (Initial commit for website frontend)
      */
     const custom = (item.customFields || []).filter(f => f && (f.label || f.value));
     const facts = [
         item.eventDate ? { icon: <Calendar size={16} />, label: 'Date', value: item.eventDate } : null,
         item.location ? { icon: <MapPin size={16} />, label: 'Location', value: item.location } : null,
+<<<<<<< HEAD
         ...custom
             .filter(f => f.placement !== 'content')
             .map(f => ({
@@ -257,6 +295,11 @@ export default function GalleryDetailPage() {
        than in the card. Their label is the heading, their value is the prose. */
     const sections = custom.filter(f => f.placement === 'content' && String(f.value || '').trim());
 
+=======
+        ...custom.map(f => ({ icon: null as React.ReactNode, label: f.label || '—', value: f.value })),
+    ].filter(Boolean) as { icon: React.ReactNode; label: string; value: string }[];
+
+>>>>>>> 8020f5d (Initial commit for website frontend)
     /* Same category first, then anything else — and never this item itself. */
     const others = (related || []).filter(r => r._id !== item._id);
     const sameCategory = item.category ? others.filter(r => r.category === item.category) : [];
@@ -267,12 +310,17 @@ export default function GalleryDetailPage() {
             <HeaderSection />
 
             <main className="flex-grow">
+<<<<<<< HEAD
                 <section className="w-full pt-6 pb-12 sm:pt-10 sm:pb-16 md:pt-14 md:pb-24 relative overflow-hidden">
+=======
+                <section className="w-full pt-10 pb-16 md:pt-14 md:pb-24 relative overflow-hidden">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <div className="absolute top-0 right-0 w-96 h-96 bg-brand-50/60 rounded-full blur-3xl transform-gpu
                                     -z-10 translate-x-1/3 -translate-y-1/3 transform-gpu pointer-events-none" />
 
                     <div className={`${SCREEN_CONTAINER} relative z-10`}>
 
+<<<<<<< HEAD
                         {/* Back on the left, Share on the right — the two things
                             a visitor does on arriving from a shared link. */}
                         <div className="mb-6 sm:mb-8 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
@@ -321,10 +369,22 @@ export default function GalleryDetailPage() {
                           * stored as `contain` is shown whole here and the plate
                           * behind fills what it pads.
                           */}
+=======
+                        <Link
+                            to="/gallery"
+                            className="inline-flex items-center gap-2 text-gray-500 hover:text-brand-700
+                                       font-bold text-[1rem] uppercase tracking-[0.1em] transition-colors mb-8"
+                        >
+                            <ArrowLeft size={15} /> {backLabel}
+                        </Link>
+
+                        {/* ---- the poster ---- */}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         <Reveal>
                             <div className="rounded-[1.75rem] overflow-hidden border border-brand-100/70 bg-gray-50
                                             shadow-[0_18px_60px_-24px_rgb(28_46_104/0.35)]">
                                 {/*
+<<<<<<< HEAD
                                   * The cover is photograph 0, and pressing it goes
                                   * to its page like every other photograph in the
                                   * album. One rule for the whole album rather than
@@ -352,14 +412,29 @@ export default function GalleryDetailPage() {
                                         className="relative !object-contain !bg-transparent"
                                     />
                                 </Link>
+=======
+                                  A tall frame, because this is the one place the
+                                  whole poster has to be readable. The fit is the
+                                  editor's — `CmsMediaFrame` honours what they set
+                                  — so an item stored as `contain` is shown whole
+                                  here and the plate behind fills what it pads.
+                                */}
+                                <div className="w-full h-[22rem] sm:h-[28rem] lg:h-[34rem]">
+                                    <CmsMediaFrame media={item.media} priority width={1100} />
+                                </div>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             </div>
                         </Reveal>
 
                         {/* ---- title and facts ---- */}
+<<<<<<< HEAD
                         {/* `minmax(0, …)`: a bare `1.6fr` cannot shrink below
                             its own min-content — see the note on the same grid in
                             `GalleryPhotoPage`, where it collapsed the side card. */}
                         <div className="mt-6 sm:mt-10 grid gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] items-start">
+=======
+                        <div className="mt-10 grid gap-10 lg:grid-cols-[1.6fr_1fr] items-start">
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
                             <div>
                                 {item.category && (
@@ -415,7 +490,11 @@ export default function GalleryDetailPage() {
 
                             {/* ---- the side card ---- */}
                             {(facts.length > 0 || (copy?.ctaLabel && copy?.ctaHref)) && (
+<<<<<<< HEAD
                                 <aside className="rounded-[1.5rem] border border-brand-100/70 bg-[#fafbfc] p-4 sm:p-8
+=======
+                                <aside className="rounded-[1.5rem] border border-brand-100/70 bg-[#fafbfc] p-6 sm:p-8
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                   shadow-[0_10px_36px_-18px_rgb(28_46_104/0.25)] lg:sticky lg:top-28">
                                     {facts.map((fact, i) => (
                                         /* Keyed by position: two of the editor's
@@ -470,6 +549,7 @@ export default function GalleryDetailPage() {
                             )}
                         </div>
 
+<<<<<<< HEAD
                         {/*
                           * THE EDITOR'S OWN SECTIONS, under their own headings.
                           *
@@ -584,6 +664,21 @@ export default function GalleryDetailPage() {
                                                     </p>
                                                 )}
                                             </Link>
+=======
+                        {/* ---- the rest of the photographs ---- */}
+                        {photos.length > 0 && (
+                            <div className="mt-16">
+                                {copy?.photosHeading && (
+                                    <h2 className="text-[1.5625rem] font-black text-brand-800 mb-6">{copy.photosHeading}</h2>
+                                )}
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+                                    {photos.map((photo, i) => (
+                                        <Reveal key={i} delay={Math.min(i % 3, 2) * 80}>
+                                            <div className="rounded-2xl overflow-hidden border border-brand-100/70 bg-gray-50
+                                                            h-44 sm:h-56 shadow-[0_10px_30px_-16px_rgb(28_46_104/0.3)]">
+                                                <CmsMediaFrame media={photo} width={420} />
+                                            </div>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         </Reveal>
                                     ))}
                                 </div>
@@ -595,29 +690,49 @@ export default function GalleryDetailPage() {
                             column is then a title and nothing else, and the full
                             spacing leaves a band of empty page under it. */}
                         {moreFromGallery.length > 0 && (
+<<<<<<< HEAD
                             <div className={`${description || highlights.length || photos.length ? 'mt-12 pt-8 sm:mt-20 sm:pt-12' : 'mt-8 pt-6 sm:mt-10 sm:pt-10'}
+=======
+                            <div className={`${description || highlights.length || photos.length ? 'mt-20 pt-12' : 'mt-10 pt-10'}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                              border-t border-gray-100`}>
                                 {copy?.relatedHeading && (
                                     <h2 className="text-[1.5625rem] font-black text-brand-800 mb-6">{copy.relatedHeading}</h2>
                                 )}
+<<<<<<< HEAD
                                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
                                     {moreFromGallery.map(other => (
                                         <Link
                                             key={other._id}
                                             to={galleryPath(other)}
+=======
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                                    {moreFromGallery.map(other => (
+                                        <Link
+                                            key={other._id}
+                                            to={`/gallery/${other._id}`}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             className="group block rounded-2xl overflow-hidden bg-white border border-brand-100/70
                                                        shadow-[0_10px_30px_-16px_rgb(28_46_104/0.25)]
                                                        hover:shadow-[0_22px_48px_-20px_rgb(28_46_104/0.4)]
                                                        transition-shadow duration-500"
                                         >
+<<<<<<< HEAD
                                             <div className="w-full h-32 sm:h-40 overflow-hidden bg-gray-50">
+=======
+                                            <div className="w-full h-40 overflow-hidden bg-gray-50">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                 <CmsMediaFrame
                                                     media={other.media}
                                                     width={340}
                                                     className="group-hover:scale-105 transition-transform duration-700 transform-gpu"
                                                 />
                                             </div>
+<<<<<<< HEAD
                                             <div className="p-3 sm:p-4">
+=======
+                                            <div className="p-4">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                 <p className="text-[1rem] font-extrabold text-brand-800 line-clamp-2
                                                               group-hover:text-brand-600 transition-colors">
                                                     {other.title || 'Untitled'}

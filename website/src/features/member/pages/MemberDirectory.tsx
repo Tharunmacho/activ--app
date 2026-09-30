@@ -294,7 +294,11 @@ export default function MemberDirectory() {
                         <button
                             type="button"
                             onClick={() => setShowFilters((open) => !open)}
+<<<<<<< HEAD
                             className={`shrink-0 h-11 px-3.5 rounded-xl border text-[1.0625rem] font-semibold
+=======
+                            className={`shrink-0 h-11 px-3.5 rounded-xl border text-[1rem] font-semibold
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         inline-flex items-center gap-1.5 transition-colors ${
                                 activeCount > 0
                                     ? 'border-blue-400 bg-blue-50 text-blue-700'
@@ -304,7 +308,11 @@ export default function MemberDirectory() {
                             <SlidersHorizontal className="w-4 h-4" />
                             <span className="hidden sm:inline">Filters</span>
                             {activeCount > 0 ? (
+<<<<<<< HEAD
                                 <span className="bg-blue-600 text-white text-[1.0625rem] font-bold w-4 h-4
+=======
+                                <span className="bg-blue-600 text-white text-[0.8125rem] font-bold w-4 h-4
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                  rounded-full flex items-center justify-center">
                                     {activeCount}
                                 </span>
@@ -355,7 +363,11 @@ export default function MemberDirectory() {
                                 <button
                                     type="button"
                                     onClick={clearAll}
+<<<<<<< HEAD
                                     className="inline-flex items-center gap-1 text-[1.0625rem] font-semibold
+=======
+                                    className="inline-flex items-center gap-1 text-[1rem] font-semibold
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                text-slate-500 hover:text-slate-700"
                                 >
                                     <X className="w-3.5 h-3.5" /> Clear all filters
@@ -396,7 +408,11 @@ export default function MemberDirectory() {
                           * than three clicks into the filter panel.
                           */}
                         <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+<<<<<<< HEAD
                             <p className="text-[1.0625rem] text-slate-500">
+=======
+                            <p className="text-[1rem] text-slate-500">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 {total} {total === 1 ? 'member' : 'members'}
                                 {activeCount > 0 || term ? ' matching' : ''}
                                 {onHomeRegion && homeLabel ? (
@@ -408,7 +424,11 @@ export default function MemberDirectory() {
                                 <button
                                     type="button"
                                     onClick={() => set({ state: '', district: '', block: '' })}
+<<<<<<< HEAD
                                     className="text-[1.0625rem] font-semibold text-blue-600 hover:underline"
+=======
+                                    className="text-[1rem] font-semibold text-blue-600 hover:underline"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 >
                                     Search the whole association
                                 </button>
@@ -416,7 +436,11 @@ export default function MemberDirectory() {
                                 <button
                                     type="button"
                                     onClick={() => set(homeRegion)}
+<<<<<<< HEAD
                                     className="text-[1.0625rem] font-semibold text-blue-600 hover:underline"
+=======
+                                    className="text-[1rem] font-semibold text-blue-600 hover:underline"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 >
                                     Back to {homeLabel}
                                 </button>
@@ -440,14 +464,22 @@ export default function MemberDirectory() {
                                     type="button"
                                     disabled={page <= 1}
                                     onClick={() => setPage((current) => Math.max(1, current - 1))}
+<<<<<<< HEAD
                                     className="h-10 px-4 rounded-xl border border-slate-200 text-[1.0625rem]
+=======
+                                    className="h-10 px-4 rounded-xl border border-slate-200 text-[1rem]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                font-semibold text-slate-600 hover:bg-slate-50
                                                disabled:opacity-40 disabled:hover:bg-transparent"
                                 >
                                     Previous
                                 </button>
 
+<<<<<<< HEAD
                                 <span className="text-[1.0625rem] text-slate-500 tabular-nums">
+=======
+                                <span className="text-[1rem] text-slate-500 tabular-nums">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     Page {page} of {pages}
                                 </span>
 
@@ -455,7 +487,11 @@ export default function MemberDirectory() {
                                     type="button"
                                     disabled={page >= pages}
                                     onClick={() => setPage((current) => current + 1)}
+<<<<<<< HEAD
                                     className="h-10 px-4 rounded-xl border border-slate-200 text-[1.0625rem]
+=======
+                                    className="h-10 px-4 rounded-xl border border-slate-200 text-[1rem]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                font-semibold text-slate-600 hover:bg-slate-50
                                                disabled:opacity-40 disabled:hover:bg-transparent"
                                 >
@@ -505,7 +541,11 @@ function Fact({
     muted?: boolean;
 }) {
     return (
+<<<<<<< HEAD
         <span className={`flex min-w-0 items-center gap-2.5 text-[1.1875rem] ${
+=======
+        <span className={`flex min-w-0 items-center gap-2.5 text-[1.125rem] ${
+>>>>>>> 8020f5d (Initial commit for website frontend)
             muted ? 'text-slate-400' : 'text-slate-600'
         }`}>
             <Icon className={`h-4 w-4 shrink-0 ${muted ? 'text-slate-300' : 'text-blue-600'}`} />
@@ -542,7 +582,11 @@ function DirectoryRow({ member }: { member: DirectoryEntry }) {
                        bg-white shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]
                        transition-all hover:border-blue-400 hover:shadow-md"
         >
+<<<<<<< HEAD
             <div className="flex min-w-0 flex-1 flex-col p-4 sm:p-5">
+=======
+            <div className="flex min-w-0 flex-1 flex-col p-5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
                 {/* ---------------------------------------- who they are */}
                 <div className="flex min-w-0 items-center gap-3.5">
@@ -662,7 +706,11 @@ function ProductTile({ name, imageUrl }: { name: string; imageUrl: string }) {
                     <ImageOff className="w-4 h-4 text-slate-300" />
                 )}
             </div>
+<<<<<<< HEAD
             <p className="text-[1.0625rem] text-slate-600 mt-1 leading-tight line-clamp-2" title={name}>
+=======
+            <p className="text-[0.75rem] text-slate-600 mt-1 leading-tight line-clamp-2" title={name}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 {name}
             </p>
         </div>
@@ -688,7 +736,11 @@ function Select({
 }) {
     return (
         <label className="block min-w-0">
+<<<<<<< HEAD
             <span className="block text-[1.0625rem] font-semibold uppercase tracking-wide text-slate-500 mb-1">
+=======
+            <span className="block text-[0.8125rem] font-semibold uppercase tracking-wide text-slate-500 mb-1">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 {label}
             </span>
             <select

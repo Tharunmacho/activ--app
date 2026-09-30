@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { MapPin, Phone, Mail, Clock, Loader2, MessageSquare, User, FileText, Send, Navigation, ExternalLink, Building2 } from 'lucide-react';
@@ -15,6 +16,19 @@ import { Reveal } from '@/components/shared/Reveal';
 import { sectionHidden, sectionFields } from '@/components/shared/cmsSections';
 import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
 import { SectionFields } from '@/components/shared/SectionFields';
+=======
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { MapPin, Phone, Mail, Clock, Loader2, MessageSquare, User, FileText, Send } from 'lucide-react';
+import { getContactInfo, sendContactMessage, errorMessage, type ContactInfo } from '@/services/cmsApi';
+import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
+import { CmsIcon } from '@/components/shared/CmsIcon';
+import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
+import { SECTION_HEADING, SECTION_LEDE, EYEBROW } from '@/components/layout/typography';
+import { Reveal } from '@/components/shared/Reveal';
+import { sectionHidden, sectionFields } from '@/components/shared/cmsSections';
+import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * The contact page.
@@ -45,6 +59,7 @@ export function ContactFormSection() {
     /* Each card on the Contact screen can be removed — see `cmsSections`. */
     const removed = (key: string) => sectionHidden(info?.sections, key);
 
+<<<<<<< HEAD
     /*
      * STATE-WISE OFFICES. The head office is first and selected by default; the
      * switcher changes every detail and the map below. `?state=Kerala` opens
@@ -114,6 +129,13 @@ export function ContactFormSection() {
         }
         return () => { added.forEach((l) => l.remove()); };
     }, []);
+=======
+    const addressLines = removed('contact.info') ? [] : (info?.addressLines || []);
+    const workingHours = removed('contact.info') ? [] : (info?.workingHours || []);
+    const heroMedia = removed('contact.header') ? [] : (info?.heroMedia || []);
+    const phone = removed('contact.info') ? '' : (info?.phone || '');
+    const email = removed('contact.info') ? '' : (info?.email || '');
+>>>>>>> 8020f5d (Initial commit for website frontend)
     const formCard = info?.formCard;
     const infoCard = removed('contact.info') ? undefined : info?.infoCard;
     const banner = removed('contact.banner') ? undefined : info?.banner;
@@ -158,7 +180,11 @@ export function ContactFormSection() {
         if (!show) return null;
         return (
             <>
+<<<<<<< HEAD
                 <div className="flex gap-3 sm:gap-5 group">
+=======
+                <div className="flex gap-5 group">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <div className="w-10 h-10 bg-brand-50 rounded-full flex items-center justify-center shrink-0
                                     text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors">
                         {icon}
@@ -182,10 +208,17 @@ export function ContactFormSection() {
     const hasIntro = !removed('contact.header')
         && !!(info?.badgeText || info?.heading || info?.description || headerFields.length);
     const hasInfoCard = !!(addressLines.length || phone || email || workingHours.length
+<<<<<<< HEAD
         || infoCard?.title || infoFields.length || offices.length);
 
     return (
         <section className="w-full py-10 sm:py-20 dot-band relative font-sans overflow-hidden">
+=======
+        || infoCard?.title || infoFields.length);
+
+    return (
+        <section className="w-full py-20 dot-band relative font-sans overflow-hidden">
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
             {/* Decorative only — not authored. */}
             <div className="absolute top-0 right-0 w-1/3 h-full -z-10 opacity-30 pointer-events-none">
@@ -204,7 +237,11 @@ export function ContactFormSection() {
 
                 {/* ---- heading and collage ---- */}
                 {(hasIntro || heroMedia.length > 0) && (
+<<<<<<< HEAD
                     <div className="flex flex-col lg:flex-row items-center gap-8 sm:gap-10 lg:gap-8 mb-10 sm:mb-20 relative">
+=======
+                    <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-8 mb-20 relative">
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
                         {hasIntro && (
                             <div className={`w-full ${heroMedia.length ? 'lg:w-5/12' : ''} z-10`}>
@@ -217,7 +254,11 @@ export function ContactFormSection() {
                                 )}
 
                                 {(info?.heading || info?.headingHighlight) && (
+<<<<<<< HEAD
                                     <h2 className={`${SECTION_HEADING} text-[#111827] mb-4 sm:mb-6 break-words`}>
+=======
+                                    <h2 className={`${SECTION_HEADING} text-[#111827] mb-6`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         {info.heading}
                                         {info.headingHighlight && (
                                             <> <span className="text-brand-600">{info.headingHighlight}</span></>
@@ -226,15 +267,23 @@ export function ContactFormSection() {
                                 )}
 
                                 {info?.description && (
+<<<<<<< HEAD
                                     <p className={`${SECTION_LEDE} font-medium text-gray-600 ${BAND_MEASURE}`}>
+=======
+                                    <p className={`${SECTION_LEDE} font-medium text-gray-600 max-w-xl`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         {info.description}
                                     </p>
                                 )}
 
                                 {/* The editor's own rows on this card. */}
+<<<<<<< HEAD
                                 <div className={`${SECTION_LEDE} font-medium text-gray-600`}>
                                     <CmsExtraFields fields={headerFields} className="mt-8" />
                                 </div>
+=======
+                                <CmsExtraFields fields={headerFields} className="mt-8" />
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             </div>
                         )}
 
@@ -250,6 +299,7 @@ export function ContactFormSection() {
 
                         {heroMedia.length > 0 && (
                             <div className={`w-full ${hasIntro ? 'lg:w-7/12' : ''} relative mt-8 lg:mt-0`}>
+<<<<<<< HEAD
                                 {/* Phones: the first photograph alone, at its own shape and
                                     whole — the overlapping collage crops people at 360px. */}
                                 <div className="relative h-auto sm:h-[18.75rem] md:h-[25rem] w-full max-w-2xl ml-auto">
@@ -265,6 +315,14 @@ export function ContactFormSection() {
                                                     width={560}
                                                     className="max-sm:!h-auto max-sm:max-h-[70vh] max-sm:!object-contain"
                                                 />
+=======
+                                <div className="relative h-[18.75rem] md:h-[25rem] w-full max-w-2xl ml-auto">
+                                    {heroMedia[0] && (
+                                        <div className="absolute top-0 right-10 w-[70%] h-full z-10">
+                                            <div className="w-full h-full rounded-3xl overflow-hidden border-[6px]
+                                                            border-white shadow-xl bg-gray-100">
+                                                <CmsMediaFrame media={heroMedia[0]} priority width={560} />
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             </div>
                                         </div>
                                     )}
@@ -273,7 +331,11 @@ export function ContactFormSection() {
                                         of it fell off the side and the photograph was sliced down
                                         its right edge. */}
                                     {heroMedia[1] && (
+<<<<<<< HEAD
                                         <div className="hidden sm:block absolute top-1/2 -translate-y-1/2 right-0 mr-0 sm:-mr-6
+=======
+                                        <div className="absolute top-1/2 -translate-y-1/2 right-0 mr-0 sm:-mr-6
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                         w-[45%] h-[55%]
                                                         z-20 rotate-3 shadow-2xl rounded-2xl bg-white p-1">
                                             <div className="w-full h-full rounded-[14px] overflow-hidden relative">
@@ -289,7 +351,11 @@ export function ContactFormSection() {
                 )}
 
                 {/* ---- the two cards ---- */}
+<<<<<<< HEAD
                 <div className={`grid grid-cols-1 ${hasInfoCard ? 'lg:grid-cols-2' : ''} gap-5 sm:gap-8 mb-8 sm:mb-10`}>
+=======
+                <div className={`grid grid-cols-1 ${hasInfoCard ? 'lg:grid-cols-2' : ''} gap-8 mb-10`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
                     {/* Form. Revealed but never tilted: a panel that shifts under the
                         pointer while somebody is filling in a field is an obstacle,
@@ -298,18 +364,30 @@ export function ContactFormSection() {
                         variant="left"
                         className="bg-white rounded-[2rem] border border-brand-100/70
                                    shadow-[0_14px_46px_-16px_rgb(28_46_104/0.22)]
+<<<<<<< HEAD
                                    p-4 sm:p-8 md:p-10 flex flex-col lg:self-start lg:sticky lg:top-28"
                     >
 
                         {(formCard?.title || formCard?.subtitle) && (
                             <div className="flex items-start gap-3 sm:gap-4 mb-6 sm:mb-8">
+=======
+                                   p-8 md:p-10 flex flex-col"
+                    >
+
+                        {(formCard?.title || formCard?.subtitle) && (
+                            <div className="flex items-start gap-4 mb-8">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <div className="w-12 h-12 bg-brand-50 text-brand-600 rounded-xl flex items-center
                                                 justify-center shrink-0">
                                     <CmsIcon name={formCard.icon} size={24} fallback="send" />
                                 </div>
                                 <div>
                                     {formCard.title && (
+<<<<<<< HEAD
                                         <h3 className="text-[1.375rem] sm:text-[1.5625rem] font-extrabold tracking-tight text-[#111827]">
+=======
+                                        <h3 className="text-2xl font-extrabold tracking-tight text-[#111827]">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             {formCard.title}
                                         </h3>
                                     )}
@@ -322,10 +400,14 @@ export function ContactFormSection() {
                             </div>
                         )}
 
+<<<<<<< HEAD
                         {/* Natural height: the form no longer stretches to the office card's
                             height (that left a tall empty message box), and stays in view
                             beside it while the office details scroll. */}
                         <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:gap-5">
+=======
+                        <form onSubmit={handleSubmit} className="flex flex-col gap-5 flex-grow">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -374,22 +456,37 @@ export function ContactFormSection() {
                                 </div>
                             </div>
 
+<<<<<<< HEAD
                             <div className="relative">
+=======
+                            <div className="relative flex-grow">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <div className="absolute top-4 left-4 flex items-start pointer-events-none">
                                     <MessageSquare size={18} className="text-gray-400" />
                                 </div>
                                 <textarea
+<<<<<<< HEAD
                                     placeholder={formCard?.messagePlaceholder || 'Your Message'} rows={6} value={form.message}
                                     onChange={e => setForm({ ...form, message: e.target.value })}
                                     className={`${inputClass} resize-y min-h-[10rem]`}
+=======
+                                    placeholder={formCard?.messagePlaceholder || 'Your Message'} rows={5} value={form.message}
+                                    onChange={e => setForm({ ...form, message: e.target.value })}
+                                    className={`${inputClass} resize-none h-full min-h-[8.75rem]`}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 />
                             </div>
 
                             <div className="pt-2">
                                 <button
                                     type="submit" disabled={sending}
+<<<<<<< HEAD
                                     className="bg-brand-900 hover:bg-brand-900 text-white px-6 sm:px-9 py-3.5 sm:py-4 rounded-xl text-[1.25rem]
                                                font-semibold transition-all inline-flex w-full sm:w-auto justify-center items-center gap-2 shadow-lg
+=======
+                                    className="bg-brand-900 hover:bg-brand-900 text-white px-9 py-4 rounded-xl text-[1.25rem]
+                                               font-semibold transition-all inline-flex items-center gap-2 shadow-lg
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                shadow-brand-900/20 disabled:opacity-70"
                                 >
                                     {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
@@ -404,11 +501,16 @@ export function ContactFormSection() {
                                 </p>
                             )}
 
+<<<<<<< HEAD
                             {/* The editor's own rows on the form card, in the
                                 form's own type. */}
                             <div className="text-[1.0625rem] font-medium leading-relaxed text-gray-600">
                                 <CmsExtraFields fields={formFields} variant="list" className="pt-2" />
                             </div>
+=======
+                            {/* The editor's own rows on the form card. */}
+                            <CmsExtraFields fields={formFields} variant="list" className="pt-2" />
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         </form>
                     </Reveal>
 
@@ -419,18 +521,30 @@ export function ContactFormSection() {
                             delay={120}
                             className="bg-white rounded-[2rem] border border-brand-100/70
                                        shadow-[0_14px_46px_-16px_rgb(28_46_104/0.22)]
+<<<<<<< HEAD
                                        p-4 sm:p-8 md:p-10 flex flex-col"
                         >
 
                             {(infoCard?.title || infoCard?.subtitle) && (
                                 <div className="flex items-start gap-3 sm:gap-4 mb-6 sm:mb-10">
+=======
+                                       p-8 md:p-10 flex flex-col"
+                        >
+
+                            {(infoCard?.title || infoCard?.subtitle) && (
+                                <div className="flex items-start gap-4 mb-10">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     <div className="w-12 h-12 bg-brand-50 text-brand-600 rounded-xl flex items-center
                                                     justify-center shrink-0">
                                         <CmsIcon name={infoCard.icon} size={24} fallback="users" />
                                     </div>
                                     <div>
                                         {infoCard.title && (
+<<<<<<< HEAD
                                             <h3 className="text-[1.375rem] sm:text-[1.5625rem] font-extrabold tracking-tight text-[#111827]">
+=======
+                                            <h3 className="text-2xl font-extrabold tracking-tight text-[#111827]">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                 {infoCard.title}
                                             </h3>
                                         )}
@@ -443,6 +557,7 @@ export function ContactFormSection() {
                                 </div>
                             )}
 
+<<<<<<< HEAD
                             {offices.length > 1 && (
                                 <div className="mb-6 sm:mb-8">
                                     {/* Phones: a select — seven pills do not fit 360px. */}
@@ -488,6 +603,11 @@ export function ContactFormSection() {
                             <div className="space-y-6 sm:space-y-8 pl-1">
                                 {detail(
                                     offices.length > 1 && office ? officeName(office) : (infoCard?.addressLabel || ''),
+=======
+                            <div className="space-y-8 pl-1">
+                                {detail(
+                                    infoCard?.addressLabel || '',
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     <MapPin size={18} />,
                                     <p className="text-[1.25rem] font-semibold text-gray-700 leading-relaxed
                                                   max-w-md">
@@ -505,7 +625,11 @@ export function ContactFormSection() {
                                     infoCard?.phoneLabel || '',
                                     <Phone size={18} />,
                                     <div className="text-[1.125rem] font-semibold text-gray-700 space-y-1">
+<<<<<<< HEAD
                                         {[phone, alternatePhone].filter(Boolean).map((p, i) => (
+=======
+                                        {[phone, info?.alternatePhone].filter(Boolean).map((p, i) => (
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             <p key={i}>
                                                 <a
                                                     href={`tel:${(p || '').replace(/\s+/g, '')}`}
@@ -524,7 +648,11 @@ export function ContactFormSection() {
                                     <Mail size={18} />,
                                     <a
                                         href={`mailto:${email}`}
+<<<<<<< HEAD
                                         className="block py-3 -my-1.5 text-[1.125rem] font-semibold text-gray-700 break-all
+=======
+                                        className="block py-3 -my-1.5 text-[1.125rem] font-semibold text-gray-700
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                    hover:text-brand-600 transition-colors"
                                     >
                                         {email}
@@ -533,6 +661,7 @@ export function ContactFormSection() {
                                 )}
 
                                 {detail(
+<<<<<<< HEAD
                                     'WhatsApp',
                                     <FaWhatsapp size={18} />,
                                     <a
@@ -547,6 +676,8 @@ export function ContactFormSection() {
                                 )}
 
                                 {detail(
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     infoCard?.hoursLabel || '',
                                     <Clock size={18} />,
                                     <div className="text-[1.125rem] font-semibold text-gray-700 space-y-1">
@@ -560,12 +691,15 @@ export function ContactFormSection() {
                                     number, a registration desk, whatever this
                                     association needs that the four above do not
                                     cover. Nothing is drawn when none are set. */}
+<<<<<<< HEAD
                                 {/* The Banner and Social cards each offered the
                                     control and had nothing drawing the answer —
                                     a field added to either was saved and never
                                     seen. Both are parts of this column. */}
                                 <SectionFields proseClass={INFO_PROSE} sections={info?.sections} sectionKey="contact.banner" />
                                 <SectionFields proseClass={INFO_PROSE} sections={info?.sections} sectionKey="contact.social" />
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <CmsExtraFields
                                     fields={[...infoFields, ...(info?.extraFields || [])]}
                                     variant="list"
@@ -573,6 +707,7 @@ export function ContactFormSection() {
                                 />
                             </div>
 
+<<<<<<< HEAD
                             {/*
                               THE MAP — the chosen office's. `mapEmbedUrl` is always a
                               frameable Google URL (the server turns a pasted share link,
@@ -663,12 +798,26 @@ export function ContactFormSection() {
                             <div className="mt-8 border-t border-dashed border-gray-200 pt-6 empty:hidden">
                                 <SocialLinks />
                             </div>
+=======
+                            {info?.mapEmbedUrl && (
+                                <div className="mt-8 rounded-2xl overflow-hidden border border-gray-100 h-56">
+                                    <iframe
+                                        src={info.mapEmbedUrl}
+                                        title="Head office location"
+                                        className="w-full h-full border-0"
+                                        loading="lazy"
+                                        referrerPolicy="no-referrer-when-downgrade"
+                                    />
+                                </div>
+                            )}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         </Reveal>
                     )}
                 </div>
 
                 {/* ---- the strip at the foot ---- */}
                 {banner?.enabled && (banner.title || banner.ctaLabel) && (
+<<<<<<< HEAD
                     /* A real card: the pale-grey strip sat on a pale-grey page and read as
                        faded. The brand navy -> blue gradient, like the site's other calls to action. */
                     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0b1f5c] via-[#1e3a8a] to-[#2563eb]
@@ -678,15 +827,28 @@ export function ContactFormSection() {
                         <div aria-hidden="true" className="pointer-events-none absolute -bottom-20 left-1/3 h-48 w-48 rounded-full bg-blue-400/20 blur-3xl" />
                         <div className="relative flex items-center gap-3 sm:gap-5 min-w-0">
                             <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/15 text-white ring-1 ring-white/25 rounded-2xl flex items-center
+=======
+                    <div className="bg-[#f8fafc] rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center
+                                    justify-between gap-6 border border-gray-100">
+                        <div className="flex items-center gap-5">
+                            <div className="w-14 h-14 bg-brand-100 text-brand-600 rounded-2xl flex items-center
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             justify-center shrink-0">
                                 <CmsIcon name={banner.icon} size={28} fallback="users" />
                             </div>
                             <div>
                                 {banner.title && (
+<<<<<<< HEAD
                                     <h3 className="text-[1.375rem] md:text-[1.75rem] font-bold text-white">{banner.title}</h3>
                                 )}
                                 {banner.subtitle && (
                                     <p className="text-[1.125rem] font-medium text-blue-100 mt-1">
+=======
+                                    <h3 className="text-[1.375rem] md:text-[1.5625rem] font-bold text-[#111827]">{banner.title}</h3>
+                                )}
+                                {banner.subtitle && (
+                                    <p className="text-[1.125rem] font-medium text-gray-600 mt-1">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         {banner.subtitle}
                                     </p>
                                 )}
@@ -698,16 +860,26 @@ export function ContactFormSection() {
                                 ? (
                                     <Link
                                         to={banner.ctaHref}
+<<<<<<< HEAD
                                         className="relative bg-white text-brand-900 hover:bg-blue-50 px-7 py-3.5 rounded-xl text-[1.25rem] text-center
                                                    font-bold transition-all hover:-translate-y-0.5 sm:whitespace-nowrap shrink-0 shadow-lg"
+=======
+                                        className="bg-brand-900 hover:bg-brand-900 text-white px-7 py-3.5 rounded-xl text-[1.25rem]
+                                                   font-semibold transition-all whitespace-nowrap shrink-0 shadow-md"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     >
                                         {banner.ctaLabel}
                                     </Link>
                                 ) : (
                                     <a
                                         href={banner.ctaHref || '#'}
+<<<<<<< HEAD
                                         className="relative bg-white text-brand-900 hover:bg-blue-50 px-7 py-3.5 rounded-xl text-[1.25rem] text-center
                                                    font-bold transition-all hover:-translate-y-0.5 sm:whitespace-nowrap shrink-0 shadow-lg"
+=======
+                                        className="bg-brand-900 hover:bg-brand-900 text-white px-7 py-3.5 rounded-xl text-[1.25rem]
+                                                   font-semibold transition-all whitespace-nowrap shrink-0 shadow-md"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     >
                                         {banner.ctaLabel}
                                     </a>

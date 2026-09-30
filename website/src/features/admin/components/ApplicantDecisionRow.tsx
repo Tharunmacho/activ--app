@@ -161,9 +161,15 @@ export default function ApplicantDecisionRow({ applicant, busy, onDecide, onView
             {/* The status as a colour, down the edge of the row. */}
             <span className={`absolute left-0 top-0 bottom-0 w-1 ${edge}`} aria-hidden="true" />
 
+<<<<<<< HEAD
             <div className="pl-4 pr-3 sm:pl-5 sm:pr-5 py-3.5 sm:py-4">
                 <div className="flex items-center justify-between gap-x-4 gap-y-2.5 flex-wrap">
                     <div className="min-w-0 flex-1 basis-full sm:basis-auto">
+=======
+            <div className="pl-5 pr-5 py-4">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div className="min-w-0">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         <p className="font-semibold text-slate-900 truncate">
                             {applicant.fullName || applicant.email || 'Applicant'}
                         </p>
@@ -172,7 +178,11 @@ export default function ApplicantDecisionRow({ applicant, busy, onDecide, onView
                         </p>
                     </div>
 
+<<<<<<< HEAD
                     <div className="flex items-center gap-2 max-w-full flex-wrap justify-start sm:justify-end">
+=======
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         <span
                             className={`inline-flex items-center gap-1.5 text-[1.1875rem] font-semibold px-2.5 py-1
                                         rounded-full ${pill}`}
@@ -180,7 +190,11 @@ export default function ApplicantDecisionRow({ applicant, busy, onDecide, onView
                                verdict, the title is the application's own state. */
                             title={applicant.status || ''}
                         >
+<<<<<<< HEAD
                             <Icon className="w-3.5 h-3.5 shrink-0" />
+=======
+                            <Icon className="w-3.5 h-3.5" />
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             {verdict.label}
                         </span>
 
@@ -217,7 +231,11 @@ export default function ApplicantDecisionRow({ applicant, busy, onDecide, onView
                           Admin clears it or somebody is appointed.
                         */}
                         {!applicant.canAct && applicant.waitingOn && stage === 'pending' && (
+<<<<<<< HEAD
                             <span className="inline-flex items-center gap-1 text-[1.1875rem] text-slate-500 sm:whitespace-nowrap">
+=======
+                            <span className="inline-flex items-center gap-1 text-[1.1875rem] text-slate-500 whitespace-nowrap">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <ArrowRight className="w-3.5 h-3.5" />
                                 No admin in this region — with the Super Admin
                             </span>
@@ -235,7 +253,11 @@ export default function ApplicantDecisionRow({ applicant, busy, onDecide, onView
                             <button
                                 type="button"
                                 onClick={() => onView(applicant)}
+<<<<<<< HEAD
                                 className="inline-flex items-center gap-1.5 h-10 sm:h-auto px-3.5 py-1.5 rounded-lg border
+=======
+                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                            border-slate-300 text-slate-700 text-[1.1875rem] font-semibold
                                            hover:bg-slate-50 transition-colors"
                             >
@@ -248,7 +270,11 @@ export default function ApplicantDecisionRow({ applicant, busy, onDecide, onView
                                 <button
                                     disabled={busy}
                                     onClick={() => onDecide(id, true)}
+<<<<<<< HEAD
                                     className="inline-flex items-center gap-1.5 h-10 sm:h-auto px-3.5 py-1.5 rounded-lg bg-green-600
+=======
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-green-600
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                text-white text-[1.1875rem] font-semibold hover:bg-green-700
                                                disabled:opacity-50 transition-colors"
                                 >
@@ -257,7 +283,11 @@ export default function ApplicantDecisionRow({ applicant, busy, onDecide, onView
                                 <button
                                     disabled={busy}
                                     onClick={() => { setRejecting(v => !v); setReason(''); }}
+<<<<<<< HEAD
                                     className="inline-flex items-center gap-1.5 h-10 sm:h-auto px-3.5 py-1.5 rounded-lg border
+=======
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                border-red-200 text-red-600 text-[1.1875rem] font-semibold hover:bg-red-50
                                                disabled:opacity-50 transition-colors"
                                 >
@@ -294,20 +324,32 @@ export default function ApplicantDecisionRow({ applicant, busy, onDecide, onView
                             value={reason}
                             onChange={(e) => setReason(e.target.value)}
                             placeholder="Why is this being rejected?"
+<<<<<<< HEAD
                             className="flex-1 min-w-0 h-11 sm:h-auto px-3 py-2 border border-slate-200 rounded-xl text-[1.25rem]
+=======
+                            className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-[1.25rem]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                        focus:outline-none focus:ring-2 focus:ring-red-500"
                         />
                         <button
                             disabled={busy}
                             onClick={async () => { await onDecide(id, false, reason); setRejecting(false); setReason(''); }}
+<<<<<<< HEAD
                             className="h-10 sm:h-auto px-4 py-2 rounded-lg bg-red-600 text-white text-[1.25rem] font-medium
+=======
+                            className="px-4 py-2 rounded-lg bg-red-600 text-white text-[1.25rem] font-medium
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                        hover:bg-red-700 disabled:opacity-50"
                         >
                             Confirm rejection
                         </button>
                         <button
                             onClick={() => { setRejecting(false); setReason(''); }}
+<<<<<<< HEAD
                             className="h-10 sm:h-auto px-4 py-2 rounded-lg border border-slate-200 text-slate-700 text-[1.25rem] hover:bg-slate-50"
+=======
+                            className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 text-[1.25rem] hover:bg-slate-50"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         >
                             Cancel
                         </button>

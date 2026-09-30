@@ -67,7 +67,11 @@ export function UploadField({ url, onChange, label, hint, aspect = 'aspect-[16/9
     return (
         <div className="block">
             {label && (
+<<<<<<< HEAD
                 <span className="block text-[1.1875rem] font-semibold text-slate-800 dark:text-neutral-100 mb-1.5">
+=======
+                <span className="block text-[1.125rem] font-semibold text-slate-800 dark:text-neutral-100 mb-1.5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     {label}
                 </span>
             )}
@@ -103,14 +107,22 @@ export function UploadField({ url, onChange, label, hint, aspect = 'aspect-[16/9
                     )}
                 </div>
 
+<<<<<<< HEAD
                 <div className="flex min-w-0 flex-1 basis-[14rem] flex-col items-start gap-2">
+=======
+                <div className="flex flex-col gap-2">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <button
                         type="button"
                         onClick={() => fileRef.current?.click()}
                         disabled={busy}
                         className="inline-flex items-center gap-2 rounded-lg border border-blue-200
                                    dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 px-4 py-2.5
+<<<<<<< HEAD
                                    text-[1.1875rem] font-semibold text-blue-700 dark:text-blue-300
+=======
+                                   text-[1.125rem] font-semibold text-blue-700 dark:text-blue-300
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                    transition-colors hover:bg-blue-100 disabled:opacity-50"
                     >
                         <Upload size={15} /> {url ? 'Choose a different picture' : 'Upload a picture'}
@@ -128,7 +140,11 @@ export function UploadField({ url, onChange, label, hint, aspect = 'aspect-[16/9
                         </button>
                     )}
 
+<<<<<<< HEAD
                     <span className="text-[1.0625rem] font-medium text-slate-500 dark:text-neutral-400">
+=======
+                    <span className="text-[1rem] font-medium text-slate-500 dark:text-neutral-400">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         {hint || 'JPG or PNG. It is uploaded and used straight away.'}
                     </span>
 
@@ -141,7 +157,11 @@ export function UploadField({ url, onChange, label, hint, aspect = 'aspect-[16/9
                       * wanted elsewhere. Read-only, small, and selectable.
                       */}
                     {url && (
+<<<<<<< HEAD
                         <span className="text-[1.0625rem] font-semibold uppercase tracking-wide
+=======
+                        <span className="text-[0.9375rem] font-semibold uppercase tracking-wide
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                          text-slate-400 dark:text-neutral-500">
                             Picture address, saved with the page
                         </span>
@@ -149,8 +169,13 @@ export function UploadField({ url, onChange, label, hint, aspect = 'aspect-[16/9
                     {url && (
                         <code
                             title={url}
+<<<<<<< HEAD
                             className="block max-w-full sm:max-w-md truncate rounded bg-slate-100 dark:bg-[#141414]
                                        px-2 py-1 text-[1.0625rem] font-mono text-slate-500
+=======
+                            className="block max-w-md truncate rounded bg-slate-100 dark:bg-[#141414]
+                                       px-2 py-1 text-[0.9375rem] font-mono text-slate-500
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                        dark:text-neutral-400 select-all"
                         >
                             {url}

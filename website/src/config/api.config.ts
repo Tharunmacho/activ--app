@@ -82,6 +82,7 @@ export type UserRole =
      * by different people. One account doing both means whoever writes the
      * marketing copy can also unstaff a region.
      */
+<<<<<<< HEAD
     | 'cms_admin'
     /**
      * Events only — the programme, its categories and its bookings. A separate
@@ -89,6 +90,9 @@ export type UserRole =
      * screens and nothing else of the platform.
      */
     | 'events_admin';
+=======
+    | 'cms_admin';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * Where each role lands after signing in.
@@ -110,7 +114,10 @@ export const HOME_FOR_ROLE: Record<UserRole, string> = {
      */
     super_admin: '/super-admin/dashboard',
     cms_admin: '/cms',
+<<<<<<< HEAD
     events_admin: '/events-admin/dashboard',
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 };
 
 /** The admin dashboard endpoint that belongs to each admin role. */
@@ -138,6 +145,7 @@ export const resolveMediaUrl = (value?: string | null): string => {
     // Local picker results and inline data are already displayable.
     if (raw.startsWith('data:') || raw.startsWith('blob:')) return raw;
 
+<<<<<<< HEAD
     /*
      * ======================================================================
      * RE-ANCHOR A STALE HOST, NOT A WORKING ONE
@@ -188,6 +196,12 @@ export const resolveMediaUrl = (value?: string | null): string => {
 
         return unreachableElsewhere ? `${API_ORIGIN}${raw.slice(uploadIndex)}` : raw;
     }
+=======
+    // Anything the backend stores lands under /uploads — profile photos, event
+    // banners, CMS media. Those and only those belong to the API origin.
+    const uploadIndex = raw.indexOf('/uploads/');
+    if (uploadIndex !== -1) return `${API_ORIGIN}${raw.slice(uploadIndex)}`;
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     // A genuine remote asset (S3, Cloudinary, an avatar service) is left alone.
     if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
@@ -218,6 +232,7 @@ const RESIZABLE_MEDIA_HOSTS = [
 ];
 
 /**
+<<<<<<< HEAD
  * An image on OUR OWN `/uploads` — which now DOES answer `?w=` with a resized
  * WebP (backend `core/storage/imageVariants.js`). Before that existed, every
  * banner and poster downloaded the full 200–350 KB original to be painted 390px
@@ -235,6 +250,8 @@ export const isResizableUpload = (url: URL): boolean => {
 };
 
 /**
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
  * The same address, at the size it is actually drawn.
  *
  * A seeded photograph is an original camera file — 7442px wide in one case —
@@ -256,12 +273,17 @@ export const sizedMediaUrl = (value?: string | null, width = 900): string => {
             resolved,
             typeof window === 'undefined' ? 'http://localhost' : window.location.origin,
         );
+<<<<<<< HEAD
         if (url.searchParams.has('w')) return resolved;
         if (isResizableUpload(url)) {
             url.searchParams.set('w', String(Math.round(width)));
             return url.toString();
         }
         if (!RESIZABLE_MEDIA_HOSTS.includes(url.hostname)) return resolved;
+=======
+        if (!RESIZABLE_MEDIA_HOSTS.includes(url.hostname)) return resolved;
+        if (url.searchParams.has('w')) return resolved;
+>>>>>>> 8020f5d (Initial commit for website frontend)
         url.searchParams.set('w', String(Math.round(width)));
         /* 75 is the quality these services default to for a resized rendition
            and is indistinguishable at these sizes; the seeded URLs ask for 80. */
@@ -280,6 +302,7 @@ export const sizedMediaUrl = (value?: string | null, width = 900): string => {
 export const ENDPOINTS = {
     HEALTH: '/health',
 
+<<<<<<< HEAD
     /* Donations — public giving (no account) and the Super Admin's donor book. */
     DONATIONS: {
         CREATE: '/donations',
@@ -294,6 +317,8 @@ export const ENDPOINTS = {
         ADMIN_RESEND: (id: string) => `/admin/super/donations/${encodeURIComponent(id)}/resend`,
     },
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     AUTH: {
         REGISTER: '/auth/register',
         LOGIN: '/auth/login',
@@ -304,9 +329,12 @@ export const ENDPOINTS = {
         FORGOT_PASSWORD: '/auth/forgot-password',
         RESET_PASSWORD: '/auth/reset-password',
         VERIFY_RESET_TOKEN: '/auth/reset-password/verify',
+<<<<<<< HEAD
         OAUTH_PROVIDERS: '/auth/oauth/providers',
         OAUTH_START: (provider: string) => `/auth/oauth/${encodeURIComponent(provider)}/start`,
         OAUTH_EXCHANGE: '/auth/oauth/exchange',
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     },
 
     // Public — the registration screens call these before a token exists.
@@ -566,6 +594,7 @@ export const ENDPOINTS = {
     },
 
     PAYMENT: {
+<<<<<<< HEAD
         /** Which checkout is live — mock, or a hosted gateway. */
         CONFIG: '/payment/config',
         /** Start a hosted (Instamojo) payment. Returns the URL to send them to. */
@@ -573,6 +602,10 @@ export const ENDPOINTS = {
         STATUS: (id: string) => `/payment/status/${id}`,
         /** Public: where Instamojo sends the buyer back to. Confirms a paid booking. */
         RETURN: (orderId: string) => `/payment/return/${encodeURIComponent(orderId)}`,
+=======
+        CREATE_REQUEST: '/payment/create-request',
+        STATUS: (id: string) => `/payment/status/${id}`,
+>>>>>>> 8020f5d (Initial commit for website frontend)
         RENEW: '/payment/renew',
         /** The plans and prices, as the server holds them. */
         PLANS: '/payment/plans',

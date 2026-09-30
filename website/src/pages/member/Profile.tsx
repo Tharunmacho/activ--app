@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
+<<<<<<< HEAD
 import { PlatinumNotice } from '@/components/shared/Platinum';
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { resizeCompanyNames, toCount } from "@/lib/sisterConcerns";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
@@ -74,8 +77,11 @@ type ProfileData = {
    */
   doingBusiness?: string;
   businessYear?: string;
+<<<<<<< HEAD
   /** When not doing business: 'aspirant' or 'student' — separate plans. */
   nonBusinessKind?: string;
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
   // Step 3: Declaration
   sisterConcerns?: string;
@@ -98,7 +104,10 @@ const defaultProfile: ProfileData = {
   gender: "",
   doingBusiness: "",
   businessYear: "",
+<<<<<<< HEAD
   nonBusinessKind: "",
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
   sisterConcerns: "",
   declarationAccepted: false,
 };
@@ -182,14 +191,22 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
+<<<<<<< HEAD
     <section className="p-4 sm:p-5 lg:p-6">
+=======
+    <section className="p-5 lg:p-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
       <div className="flex items-start gap-3 pb-4 mb-5 border-b border-[#F1F5F9]">
         <span className="w-10 h-10 rounded-xl bg-[#EEF3FE] flex items-center justify-center shrink-0">
           <Icon className="w-[1.125rem] h-[1.125rem] text-[#1E50E6]" />
         </span>
         <div className="min-w-0">
           <h3 className={`${CARD_TITLE} text-[#0F172A]`}>{title}</h3>
+<<<<<<< HEAD
           {subtitle ? <p className="text-[1.0625rem] text-[#64748B] mt-1 leading-snug">{subtitle}</p> : null}
+=======
+          {subtitle ? <p className="text-[1rem] text-[#64748B] mt-1 leading-snug">{subtitle}</p> : null}
+>>>>>>> 8020f5d (Initial commit for website frontend)
         </div>
       </div>
       {children}
@@ -593,10 +610,14 @@ export default function Profile() {
 
           Object.assign(merged, {
             doingBusiness: yesNo(d.doingBusiness),
+<<<<<<< HEAD
             businessYear: String(d.businessCommencementYear || d.businessYear || ""),
             nonBusinessKind: String(d.registrationType || "").toLowerCase() === "student"
               ? "student"
               : (d.doingBusiness === false || d.doingBusiness === "no") ? "aspirant" : "",
+=======
+            businessYear: String(d.businessCommencementYear || d.businessYear || "")
+>>>>>>> 8020f5d (Initial commit for website frontend)
           });
         }
 
@@ -746,6 +767,7 @@ export default function Profile() {
     setCurrentStep(step);
   };
 
+<<<<<<< HEAD
   /*
    * EVERY STEP OPENS AT ITS TOP.
    *
@@ -762,6 +784,8 @@ export default function Profile() {
     } catch { /* nothing to scroll */ }
   }, [currentStep]);
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
   const saveCurrentStepData = (data: ProfileData) => {
     const currentData = JSON.parse(localStorage.getItem("userProfile") || "{}");
     const updatedData = { ...currentData, ...data };
@@ -873,7 +897,11 @@ export default function Profile() {
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
+<<<<<<< HEAD
             oldPassword: data.currentPassword, // the name the server reads
+=======
+            currentPassword: data.currentPassword,
+>>>>>>> 8020f5d (Initial commit for website frontend)
             newPassword: data.password
           })
         });
@@ -952,12 +980,15 @@ export default function Profile() {
       }
 
       const isAspirant = data.doingBusiness === "no";
+<<<<<<< HEAD
       const kind = data.nonBusinessKind === "student" ? "student" : data.nonBusinessKind === "aspirant" ? "aspirant" : "";
 
       if (isAspirant && !kind) {
         toast.error("Please choose whether you are an aspirant or a student");
         return;
       }
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
       if (!isAspirant && !data.businessYear) {
         toast.error("Please select the year your business commenced");
@@ -987,7 +1018,11 @@ export default function Profile() {
          */
         const businessData: Record<string, unknown> = {
           doingBusiness: data.doingBusiness,
+<<<<<<< HEAD
           registrationType: isAspirant ? kind : "business",
+=======
+          registrationType: isAspirant ? "aspirant" : "business",
+>>>>>>> 8020f5d (Initial commit for website frontend)
         };
         if (!isAspirant) businessData.businessCommencementYear = data.businessYear;
 
@@ -1155,6 +1190,7 @@ export default function Profile() {
         return false;
       }
 
+<<<<<<< HEAD
       const isStudent = String(business?.registrationType || "").toLowerCase() === "student";
       const isAspirant =
         business?.doingBusiness === false ||
@@ -1163,6 +1199,12 @@ export default function Profile() {
         isStudent;
       // Business, aspirant or student — each is its own plan and price.
       const applicantKind = isStudent ? "student" : isAspirant ? "aspirant" : "business";
+=======
+      const isAspirant =
+        business?.doingBusiness === false ||
+        business?.doingBusiness === "no" ||
+        business?.registrationType === "aspirant";
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
       /*
        * ALREADY A MEMBER: save and stop.
@@ -1190,8 +1232,13 @@ export default function Profile() {
         state: profile.state,
         district: profile.district,
         block: profile.block,
+<<<<<<< HEAD
         registrationType: applicantKind,
         memberType: applicantKind,
+=======
+        registrationType: isAspirant ? "aspirant" : "business",
+        memberType: isAspirant ? "aspirant" : "business",
+>>>>>>> 8020f5d (Initial commit for website frontend)
         data: {
           personalDetails: {
             fullName: profile.fullName || "",
@@ -1266,7 +1313,11 @@ export default function Profile() {
   if (loadingProfile) {
     return (
       <MemberPageShell title="Profile Completion" subtitle="Loading your details…" width="wide">
+<<<<<<< HEAD
         <div className="grid gap-4 sm:gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">
+=======
+        <div className="grid gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">
+>>>>>>> 8020f5d (Initial commit for website frontend)
           <div className="h-[22rem] animate-pulse rounded-2xl bg-slate-200/70" />
           <div className="space-y-4">
             {[0, 1, 2, 3, 4].map((i) => (
@@ -1283,14 +1334,23 @@ export default function Profile() {
   if (loadFailed) {
     return (
       <MemberPageShell title="Profile Completion" subtitle="Your details could not be loaded" width="wide">
+<<<<<<< HEAD
         <div className="mx-auto max-w-xl rounded-2xl border border-amber-200 bg-amber-50 p-5 sm:p-8 text-center">
           <p className="text-xl sm:text-[1.5625rem] font-extrabold tracking-tight text-amber-900">
+=======
+        <div className="mx-auto max-w-xl rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center">
+          <p className="text-[1.625rem] font-extrabold tracking-tight text-amber-900">
+>>>>>>> 8020f5d (Initial commit for website frontend)
             We could not load your profile
           </p>
           {/* The form is deliberately NOT rendered behind this. Empty boxes a
               member fills in and saves would overwrite the record that failed
               to load — the one outcome worse than showing nothing. */}
+<<<<<<< HEAD
           <p className="mt-2 text-[1.1875rem] font-semibold text-amber-800">
+=======
+          <p className="mt-2 text-[1.125rem] font-semibold text-amber-800">
+>>>>>>> 8020f5d (Initial commit for website frontend)
             Nothing is shown here rather than an empty form, which you could
             save over the details you already have.
           </p>
@@ -1298,7 +1358,11 @@ export default function Profile() {
             type="button"
             onClick={() => setLoadAttempt((n) => n + 1)}
             className="mt-6 inline-flex items-center gap-2 rounded-xl bg-amber-600 px-6 py-3.5
+<<<<<<< HEAD
                        text-[1.1875rem] font-bold text-white transition-colors hover:bg-amber-700"
+=======
+                       text-[1.125rem] font-bold text-white transition-colors hover:bg-amber-700"
+>>>>>>> 8020f5d (Initial commit for website frontend)
           >
             Try again
           </button>
@@ -1370,9 +1434,15 @@ export default function Profile() {
           landed level with the middle of the first form card. Nothing was
           mis-set — they were being measured from different starting points.
         */}
+<<<<<<< HEAD
         <p className="text-[1.1875rem] text-[#64748B] mb-4 sm:mb-6 max-w-[68ch]">{heading.blurb}</p>
 
         <div className="grid gap-4 sm:gap-6 lg:gap-7 lg:grid-cols-[23rem_minmax(0,1fr)] items-start">
+=======
+        <p className="text-[1.1875rem] text-[#64748B] mb-6 max-w-[68ch]">{heading.blurb}</p>
+
+        <div className="grid gap-6 lg:gap-7 lg:grid-cols-[23rem_minmax(0,1fr)] items-start">
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
           {/* ======================================================= left rail
               THE CARD RUNS TO THE BOTTOM OF THE VIEW.
@@ -1407,8 +1477,13 @@ export default function Profile() {
 
               {/* Brand and progress, in one block, so "how far am I" is answered
                   before the eye reaches the steps. */}
+<<<<<<< HEAD
               <div className="shrink-0 bg-blue-600 text-white p-4 sm:p-5 lg:p-6">
                 <p className="text-[1.0625rem] font-bold uppercase tracking-[0.14em] text-white/70">
+=======
+              <div className="shrink-0 bg-blue-600 text-white p-5 lg:p-6">
+                <p className="text-[0.75rem] font-bold uppercase tracking-[0.14em] text-white/70">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                   Membership application
                 </p>
                 <h2 className={`${CARD_TITLE} mt-1.5`}>
@@ -1423,20 +1498,32 @@ export default function Profile() {
                   `RAIL.length` means the sentence cannot disagree with the
                   list underneath it again.
                 */}
+<<<<<<< HEAD
                 <p className="text-[1.0625rem] text-white/80 mt-1 leading-snug">
+=======
+                <p className="text-[1rem] text-white/80 mt-1 leading-snug">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                   {alreadyApplied
                     ? 'Your membership record. Everything saves as you go.'
                     : `${STEP_WORDS[RAIL.length] || RAIL.length} steps. Everything saves as you go.`}
                 </p>
 
+<<<<<<< HEAD
                 <div className="flex items-center gap-3 mt-4 sm:mt-5">
+=======
+                <div className="flex items-center gap-3 mt-5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                   <div className="h-1.5 flex-1 rounded-full bg-white/25 overflow-hidden">
                     <div
                       className="h-full rounded-full bg-white transition-all duration-500 ease-out"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
+<<<<<<< HEAD
                   <span className="font-display text-[1.0625rem] font-extrabold tabular shrink-0">
+=======
+                  <span className="font-display text-[1rem] font-extrabold tabular shrink-0">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     {progress}%
                   </span>
                 </div>
@@ -1474,7 +1561,11 @@ export default function Profile() {
                       onClick={() => reachable && setCurrentStep(s.n)}
                       disabled={!reachable}
                       aria-current={active ? 'step' : undefined}
+<<<<<<< HEAD
                       className={`group w-full flex-1 min-h-[3rem] sm:min-h-[3.5rem] flex gap-3 text-left pl-3
+=======
+                      className={`group w-full flex-1 min-h-[3.5rem] flex gap-3 text-left pl-3
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                   rounded-xl focus-visible:outline focus-visible:outline-2
                                   focus-visible:outline-offset-2 focus-visible:outline-[#1E50E6]
                                   ${reachable ? '' : 'cursor-default'}`}
@@ -1506,7 +1597,11 @@ export default function Profile() {
                           }`}>
                           {s.name}
                         </span>
+<<<<<<< HEAD
                         <span className={`hidden sm:block text-[1.0625rem] mt-0.5 leading-snug ${active ? 'text-[#475569]' : 'text-[#94A3B8]'
+=======
+                        <span className={`block text-[1.0625rem] mt-0.5 leading-snug ${active ? 'text-[#475569]' : 'text-[#94A3B8]'
+>>>>>>> 8020f5d (Initial commit for website frontend)
                           }`}>
                           {s.hint}
                         </span>
@@ -1516,15 +1611,24 @@ export default function Profile() {
                 })}
               </nav>
 
+<<<<<<< HEAD
               <div className="hidden sm:block shrink-0 px-5 py-4 border-t border-[#F1F5F9] bg-slate-50/70">
                 <p className="text-[1.0625rem] font-bold uppercase tracking-[0.08em] text-[#64748B]">
+=======
+              <div className="shrink-0 px-5 py-4 border-t border-[#F1F5F9] bg-slate-50/70">
+                <p className="text-[0.75rem] font-bold uppercase tracking-[0.08em] text-[#64748B]">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                   Need help?
                 </p>
                 <a
                   href="https://activ.org.in"
                   target="_blank"
                   rel="noreferrer"
+<<<<<<< HEAD
                   className="text-[1.0625rem] font-semibold text-[#1E50E6] hover:underline"
+=======
+                  className="text-[1rem] font-semibold text-[#1E50E6] hover:underline"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 >
                   activ.org.in
                 </a>
@@ -1558,11 +1662,19 @@ export default function Profile() {
               empty form it can neither fill from nor save to.
             */}
             {noMemberRecord && (
+<<<<<<< HEAD
               <div className="rounded-2xl border border-[#FDE68A] bg-[#FFFBEB] p-4 sm:p-5">
                 <h3 className={`${CARD_TITLE} text-[#92400E] mb-1`}>
                   This account has no member profile
                 </h3>
                 <p className="text-[1.0625rem] text-[#B45309] leading-relaxed">
+=======
+              <div className="rounded-2xl border border-[#FDE68A] bg-[#FFFBEB] p-5">
+                <h3 className={`${CARD_TITLE} text-[#92400E] mb-1`}>
+                  This account has no member profile
+                </h3>
+                <p className="text-[1rem] text-[#B45309] leading-relaxed">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                   You are signed in with an administrator account, which is stored
                   separately from member records — so there are no personal details to
                   load here, and saving this form would not work. Use an admin dashboard
@@ -1915,13 +2027,22 @@ export default function Profile() {
                   block opens.
                 */}
                 <div className="rounded-2xl bg-white border border-[#E8EEF6] shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]
+<<<<<<< HEAD
                                 px-4 sm:px-5 py-3 sm:py-4 flex items-center gap-3">
                   <p className="text-[1.0625rem] text-[#64748B] hidden sm:block">Step 1 of 3</p>
+=======
+                                px-5 py-4 flex items-center gap-3">
+                  <p className="text-[1rem] text-[#64748B] hidden sm:block">Step 1 of 3</p>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                   <Button
                     type="button"
                     onClick={handleNext}
                     disabled={isLocked}
+<<<<<<< HEAD
                     className="ml-auto w-full sm:w-auto bg-[#1E50E6] hover:bg-[#1a45c9] font-bold h-11 sm:min-w-[9rem]"
+=======
+                    className="ml-auto bg-[#1E50E6] hover:bg-[#1a45c9] font-bold h-11 min-w-[9rem]"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                   >
                     {isLocked ? (
                       <>
@@ -1952,7 +2073,11 @@ export default function Profile() {
                       <Label className="text-[1.1875rem] font-medium">
                         Are you currently doing business? <span className="text-red-500">*</span>
                       </Label>
+<<<<<<< HEAD
                       <div className="flex flex-wrap gap-x-6 gap-y-2 mt-2">
+=======
+                      <div className="flex gap-6 mt-2">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         <label className="flex items-center gap-2">
                           <input
                             type="radio"
@@ -2018,6 +2143,7 @@ export default function Profile() {
                     )}
 
                     {watch("doingBusiness") === "no" && (
+<<<<<<< HEAD
                       <div>
                         <Label className="text-[1.1875rem] font-medium">
                           Which describes you? <span className="text-red-500">*</span>
@@ -2036,6 +2162,8 @@ export default function Profile() {
                     )}
 
                     {watch("doingBusiness") === "no" && !!watch("nonBusinessKind") && (
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                       <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
                         <div className="flex items-start gap-3">
                           <div className="text-blue-600 mt-1">
@@ -2044,9 +2172,13 @@ export default function Profile() {
                             </svg>
                           </div>
                           <div>
+<<<<<<< HEAD
                             <h4 className="font-semibold text-blue-900 mb-1">
                               Registering as {watch("nonBusinessKind") === "student" ? "a Student" : "an Aspirant"}
                             </h4>
+=======
+                            <h4 className="font-semibold text-blue-900 mb-1">Registering as Aspirant</h4>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             {/*
                               No declaration checkbox here any more.
 
@@ -2058,11 +2190,17 @@ export default function Profile() {
                               and sign the same thing.
                             */}
                             <p className="text-[1.1875rem] text-blue-800">
+<<<<<<< HEAD
                               {watch("nonBusinessKind") === "student"
                                 ? "You will be offered the Student membership."
                                 : "You will be offered the Aspirant membership."}{" "}
                               There is nothing further to fill in here — continue to the
                               declaration to submit your application.
+=======
+                              You are registering as an Aspirant (student or non-business
+                              member). There is nothing further to fill in here — continue
+                              to the declaration to submit your application.
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             </p>
                           </div>
                         </div>
@@ -2073,14 +2211,24 @@ export default function Profile() {
                 </SectionGroup>
 
                 <div className="rounded-2xl bg-white border border-[#E8EEF6] shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]
+<<<<<<< HEAD
                                 px-4 sm:px-5 py-3 sm:py-4 flex items-center gap-3">
                   <p className="text-[1.0625rem] text-[#64748B] hidden sm:block">Step 2 of 3</p>
                   <div className="ml-auto flex w-full sm:w-auto items-center gap-2 sm:gap-3">
+=======
+                                px-5 py-4 flex items-center gap-3">
+                  <p className="text-[1rem] text-[#64748B] hidden sm:block">Step 2 of 3</p>
+                  <div className="ml-auto flex items-center gap-3">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() => setCurrentStep(1)}
+<<<<<<< HEAD
                       className="flex-1 sm:flex-none font-semibold h-11"
+=======
+                      className="font-semibold h-11"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     >
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       Previous
@@ -2088,19 +2236,26 @@ export default function Profile() {
                     <Button
                       type="button"
                       onClick={handleNext}
+<<<<<<< HEAD
                       className="flex-1 sm:flex-none bg-[#1E50E6] hover:bg-[#1a45c9] font-bold h-11 sm:min-w-[9rem]"
+=======
+                      className="bg-[#1E50E6] hover:bg-[#1a45c9] font-bold h-11 min-w-[9rem]"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     >
                       Next
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   </div>
                 </div>
+<<<<<<< HEAD
 
                 {/* Platinum, for anyone joining as a business — at the foot of the
                     step, below its buttons, never inside the business card. */}
                 {watch("doingBusiness") !== "no" && (
                   <div className="pt-3 sm:pt-5"><PlatinumNotice /></div>
                 )}
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
               </div>
             )}
 
@@ -2214,7 +2369,11 @@ export default function Profile() {
                 )}
 
                 <Section icon={ScrollText} title="The undertaking" subtitle="Read this before you submit — it is the agreement your application is reviewed under.">
+<<<<<<< HEAD
                   <div className="rounded-xl bg-[#FFFBEB] border border-[#FDE68A] p-4 sm:p-5">
+=======
+                  <div className="rounded-xl bg-[#FFFBEB] border border-[#FDE68A] p-5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <p className="text-[1.1875rem] text-[#92400E] leading-relaxed">
                       This application is under the Verification and Screening Process. We have every
                       right to ACCEPT or REJECT this application according to our membership policy.
@@ -2238,16 +2397,28 @@ export default function Profile() {
                 </SectionGroup>
 
                 <div className="rounded-2xl bg-white border border-[#E8EEF6] shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]
+<<<<<<< HEAD
                                 px-4 sm:px-5 py-3 sm:py-4 flex items-center gap-3">
                   <p className="text-[1.0625rem] text-[#64748B] hidden sm:block">
                     {alreadyApplied ? 'Save your changes' : 'Last step'}
                   </p>
                   <div className="ml-auto flex w-full sm:w-auto items-center gap-2 sm:gap-3">
+=======
+                                px-5 py-4 flex items-center gap-3">
+                  <p className="text-[1rem] text-[#64748B] hidden sm:block">
+                    {alreadyApplied ? 'Save your changes' : 'Last step'}
+                  </p>
+                  <div className="ml-auto flex items-center gap-3">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() => setCurrentStep(2)}
+<<<<<<< HEAD
                       className="flex-1 sm:flex-none font-semibold h-11"
+=======
+                      className="font-semibold h-11"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     >
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       Previous
@@ -2255,7 +2426,11 @@ export default function Profile() {
                     <Button
                       type="button"
                       onClick={handleFinalSubmit}
+<<<<<<< HEAD
                       className="flex-[1.4] sm:flex-none bg-[#1E50E6] hover:bg-[#1a45c9] font-bold h-11 sm:min-w-[11rem]"
+=======
+                      className="bg-[#1E50E6] hover:bg-[#1a45c9] font-bold h-11 min-w-[11rem]"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     >
                       <FileText className="w-4 h-4 mr-2" />
                       {alreadyApplied ? 'Save changes' : 'Submit Application'}

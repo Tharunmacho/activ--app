@@ -1,5 +1,9 @@
 import api, { unwrap } from './api';
+<<<<<<< HEAD
 import { cached, invalidateCmsCache, type CmsExtraField } from './cmsApi';
+=======
+import { cached, invalidateCmsCache } from './cmsApi';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * The Regions & States section of the public site.
@@ -230,6 +234,7 @@ export interface CustomSection {
     displayOrder: number;
 }
 
+<<<<<<< HEAD
 /**
  * ==========================================================================
  * THE DASHBOARD'S OWN HEADINGS
@@ -320,12 +325,17 @@ export const dashboardLabels = (
     return out;
 };
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 export interface RegionPage {
     id: string;
     regionKey: string;
     regionName: string;
+<<<<<<< HEAD
     /** See `DashboardLabels`. Blank fields fall back to the shipped wording. */
     labels: DashboardLabels;
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     slug: string;
     shortDescription: string;
     fullDescription: string;
@@ -388,7 +398,11 @@ export interface RegionPage {
      * On the record and served by the API since the schema was written;
      * nothing in the CMS could set one until now.
      */
+<<<<<<< HEAD
     extraFields: CmsExtraField[];
+=======
+    extraFields: { label: string; value: string }[];
+>>>>>>> 8020f5d (Initial commit for website frontend)
     status: 'draft' | 'published';
     updatedAt: string | null;
     focusStates: FocusState[];
@@ -403,6 +417,7 @@ export interface RegionPage {
     /**
      * The tier below as DERIVED from the pages under this one.
      *
+<<<<<<< HEAD
      * ADDED to `stateRegions`, never chosen between — see the note in
      * `RegionPage.tsx`. It was read as a fallback for an empty
      * `stateRegions`, which meant the first board typed onto a zone page
@@ -420,6 +435,14 @@ export interface RegionPage {
      */
     tierOrder: string[];
     /**
+=======
+     * Used only when `stateRegions` is empty, so a region nobody has filled
+     * in still shows its states rather than going blank the day this field
+     * was added.
+     */
+    statePanels: StatePanel[];
+    /**
+>>>>>>> 8020f5d (Initial commit for website frontend)
      * What the MAP is drawn from, when that is a different list.
      *
      * On a region page the two are the same — the map draws the states and
@@ -516,8 +539,11 @@ export interface RegionPanel {
 export interface StatePage {
     id: string;
     stateName: string;
+<<<<<<< HEAD
     /** See `DashboardLabels`. Blank fields fall back to the shipped wording. */
     labels: DashboardLabels;
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     slug: string;
     regionKey: string;
     regionName: string;
@@ -580,7 +606,11 @@ export interface StatePage {
      * On the record and served by the API since the schema was written;
      * nothing in the CMS could set one until now.
      */
+<<<<<<< HEAD
     extraFields: CmsExtraField[];
+=======
+    extraFields: { label: string; value: string }[];
+>>>>>>> 8020f5d (Initial commit for website frontend)
     status: 'draft' | 'published';
     updatedAt: string | null;
     region: { key: string; slug: string; label: string } | null;
@@ -613,8 +643,11 @@ export interface RegionMapEntry {
 
 export interface GalleryPhoto {
     id: string;
+<<<<<<< HEAD
     /** The readable public address; see lib/eventPath `galleryPath`. */
     slug?: string;
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     title: string;
     caption: string;
     category: string;
@@ -662,6 +695,7 @@ export interface GalleryPhoto {
  * `cacheKeysFor` is the one list of what a page write invalidates, so a new
  * read here cannot be given a key that nothing clears.
  */
+<<<<<<< HEAD
 /**
  * A zone's name as the site prints it: "South" -> "South Zone".
  *
@@ -677,6 +711,8 @@ export const zoneName = (label?: string | null, national = false) => {
     return `${name} Zone`;
 };
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 export const getRegionMap = async (): Promise<RegionMapEntry[]> => cached(
     'regions:map',
     async () => {

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
+<<<<<<< HEAD
 import { CARD_SUBTITLE } from '@/components/layout/appTypography';
 
 /**
@@ -9,6 +10,9 @@ import { CARD_SUBTITLE } from '@/components/layout/appTypography';
  * the shared size exactly.
  */
 export const CARD_TITLE = 'text-[1.5rem] sm:text-[2.1875rem] font-bold tracking-tight leading-snug';
+=======
+import { CARD_SUBTITLE, CARD_TITLE } from '@/components/layout/appTypography';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 /**
  * The business area's shared surface primitives.
  *
@@ -62,7 +66,11 @@ export function Card({
     return (
         <section
             id={id}
+<<<<<<< HEAD
             className={`bg-white border border-slate-200 rounded-2xl scroll-mt-6 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)] ${padded ? 'p-4 sm:p-6' : ''} ${className}`}
+=======
+            className={`bg-white border border-slate-200 rounded-2xl scroll-mt-6 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)] ${padded ? 'p-6' : ''} ${className}`}
+>>>>>>> 8020f5d (Initial commit for website frontend)
         >
             {children}
         </section>
@@ -81,9 +89,15 @@ export function SectionHeading({
     actions?: ReactNode;
 }) {
     return (
+<<<<<<< HEAD
         <div className="flex items-start justify-between gap-3 sm:gap-4 mb-4 sm:mb-5">
             <div className="min-w-0">
                 <h2 className={`${CARD_TITLE} text-slate-900 flex items-center gap-2 break-words`}>
+=======
+        <div className="flex items-start justify-between gap-4 mb-5">
+            <div className="min-w-0">
+                <h2 className={`${CARD_TITLE} text-slate-900 flex items-center gap-2`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     {Icon ? <Icon className="w-5 h-5 text-blue-600 shrink-0" /> : null}
                     {title}
                 </h2>
@@ -131,8 +145,13 @@ export function StatTile({
          * `min-w-0` and `break-words` on the label: at ~170px "Products Listed"
          * is two lines, and without them it pushes the card's own border out.
          */
+<<<<<<< HEAD
         <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 min-w-0 transition-colors hover:border-slate-300 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
             <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3">
+=======
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 min-w-0 transition-colors hover:border-slate-300 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
+            <div className="flex items-start justify-between gap-2 mb-3">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 <span className="text-[1.1875rem] sm:text-[1.25rem] font-semibold text-slate-500 leading-snug break-words min-w-0">
                     {label}
                 </span>
@@ -142,7 +161,11 @@ export function StatTile({
                     </span>
                 ) : null}
             </div>
+<<<<<<< HEAD
             <div className="text-[1.875rem] sm:text-[2.5625rem] font-extrabold tracking-tight text-slate-900 tabular-nums leading-tight truncate">{value}</div>
+=======
+            <div className="text-[2.125rem] sm:text-[2.5625rem] font-extrabold tracking-tight text-slate-900 tabular-nums">{value}</div>
+>>>>>>> 8020f5d (Initial commit for website frontend)
             {unit ? (
                 <p className="text-[1rem] sm:text-[1.1875rem] text-slate-500 font-bold mt-1.5 uppercase tracking-wider
                               leading-snug break-words">{unit}</p>
@@ -159,7 +182,11 @@ export function StatTile({
  * want the whole row (a description textarea, a file picker).
  */
 export function FieldGrid({ children, className = '' }: { children: ReactNode; className?: string }) {
+<<<<<<< HEAD
     return <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 ${className}`}>{children}</div>;
+=======
+    return <div className={`grid grid-cols-1 md:grid-cols-2 gap-5 ${className}`}>{children}</div>;
+>>>>>>> 8020f5d (Initial commit for website frontend)
 }
 
 export function Field({
@@ -199,6 +226,7 @@ export function EmptyState({
     action?: ReactNode;
 }) {
     return (
+<<<<<<< HEAD
         <div className="flex flex-col items-center justify-center text-center py-10 sm:py-16 px-4">
             <span className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-blue-50 flex items-center justify-center mb-3 sm:mb-4">
                 <Icon className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
@@ -206,13 +234,26 @@ export function EmptyState({
             <p className="text-[1.375rem] sm:text-[1.5625rem] font-extrabold tracking-tight text-slate-900 mb-1.5 break-words">{title}</p>
             {hint ? <p className="text-[1.25rem] text-slate-500 max-w-md break-words">{hint}</p> : null}
             {action ? <div className="mt-4 sm:mt-5 flex flex-wrap justify-center gap-2">{action}</div> : null}
+=======
+        <div className="flex flex-col items-center justify-center text-center py-16 px-4">
+            <span className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-4">
+                <Icon className="w-8 h-8 text-blue-600" />
+            </span>
+            <p className="text-[1.5625rem] font-extrabold tracking-tight text-slate-900 mb-1.5">{title}</p>
+            {hint ? <p className="text-[1.25rem] text-slate-500 max-w-md">{hint}</p> : null}
+            {action ? <div className="mt-5">{action}</div> : null}
+>>>>>>> 8020f5d (Initial commit for website frontend)
         </div>
     );
 }
 
 export function Loading({ label = 'Loading…' }: { label?: string }) {
     return (
+<<<<<<< HEAD
         <div className="flex flex-col items-center justify-center py-12 sm:py-20">
+=======
+        <div className="flex flex-col items-center justify-center py-20">
+>>>>>>> 8020f5d (Initial commit for website frontend)
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4" />
             <p className="text-[1.25rem] font-medium text-slate-500">{label}</p>
         </div>

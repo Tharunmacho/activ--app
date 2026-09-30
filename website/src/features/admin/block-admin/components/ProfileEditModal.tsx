@@ -307,10 +307,17 @@ const ProfileEditModal = ({ open, onClose, adminData, onProfileUpdate }: Profile
 
     return (
         <Dialog open={open} onOpenChange={handleClose}>
+<<<<<<< HEAD
             <DialogContent className="w-[calc(100%-2rem)] sm:max-w-3xl lg:max-w-5xl max-h-[90vh] overflow-y-auto rounded-2xl p-4 sm:p-8">
                 <DialogHeader>
                     <DialogTitle className="text-[1.5rem] sm:text-[1.75rem] font-bold flex items-center gap-2 pr-6">
                         <Lock className="w-6 h-6 shrink-0 text-blue-600" />
+=======
+            <DialogContent className="sm:max-w-[37.5rem] max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle className="text-[1.75rem] font-bold flex items-center gap-2">
+                        <Lock className="w-6 h-6 text-blue-600" />
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         Update Profile
                     </DialogTitle>
                     <DialogDescription>
@@ -318,11 +325,19 @@ const ProfileEditModal = ({ open, onClose, adminData, onProfileUpdate }: Profile
                     </DialogDescription>
                 </DialogHeader>
 
+<<<<<<< HEAD
                 <div className="space-y-5 sm:space-y-6 mt-3 sm:mt-4">
                     {/* Avatar Section */}
                     <div className="flex flex-col items-center gap-3">
                         <div className="relative">
                             <Avatar className="w-20 h-20 sm:w-24 sm:h-24 ring-4 ring-blue-100 cursor-pointer" onClick={handleAvatarClick}>
+=======
+                <div className="space-y-6 mt-4">
+                    {/* Avatar Section */}
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="relative">
+                            <Avatar className="w-24 h-24 ring-4 ring-blue-100 cursor-pointer" onClick={handleAvatarClick}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 {avatarPreview ? (
                                     <AvatarImage src={avatarPreview} className="object-cover" />
                                 ) : (
@@ -359,9 +374,14 @@ const ProfileEditModal = ({ open, onClose, adminData, onProfileUpdate }: Profile
                             Profile Information
                         </h3>
                         
+<<<<<<< HEAD
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         {/* Full Name */}
                         <div className="space-y-2 min-w-0">
+=======
+                        {/* Full Name */}
+                        <div className="space-y-2">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             <Label htmlFor="fullName" className="flex items-center gap-2">
                                 <User className="w-4 h-4" />
                                 Full Name
@@ -431,12 +451,19 @@ const ProfileEditModal = ({ open, onClose, adminData, onProfileUpdate }: Profile
                             </div>
                         )}
 
+<<<<<<< HEAD
                         </div>
 
                         <Button
                             type="button"
                             onClick={handleUpdateProfile}
                             className="w-full sm:w-auto sm:min-w-[14rem] bg-blue-600 hover:bg-blue-700"
+=======
+                        <Button
+                            type="button"
+                            onClick={handleUpdateProfile}
+                            className="w-full bg-blue-600 hover:bg-blue-700"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             disabled={loading}
                         >
                             {loading ? "Updating Profile..." : "Update Profile"}
@@ -450,9 +477,14 @@ const ProfileEditModal = ({ open, onClose, adminData, onProfileUpdate }: Profile
                             Change Password
                         </h3>
 
+<<<<<<< HEAD
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {/* Current Password */}
                         <div className="space-y-2 min-w-0">
+=======
+                        {/* Current Password */}
+                        <div className="space-y-2">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             <Label htmlFor="currentPassword" className="flex items-center gap-2">
                                 <Lock className="w-4 h-4" />
                                 Current Password
@@ -500,12 +532,19 @@ const ProfileEditModal = ({ open, onClose, adminData, onProfileUpdate }: Profile
                             />
                         </div>
 
+<<<<<<< HEAD
                         </div>
 
                         <Button
                             type="button"
                             onClick={handleUpdatePassword}
                             className="w-full sm:w-auto sm:min-w-[14rem] bg-blue-600 hover:bg-blue-700"
+=======
+                        <Button
+                            type="button"
+                            onClick={handleUpdatePassword}
+                            className="w-full bg-blue-600 hover:bg-blue-700"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             disabled={loading}
                         >
                             {loading ? "Updating Password..." : "Update Password"}
@@ -513,12 +552,20 @@ const ProfileEditModal = ({ open, onClose, adminData, onProfileUpdate }: Profile
                     </div>
 
                     {/* Action Buttons */}
+<<<<<<< HEAD
                     <div className="flex justify-end gap-3 pt-4 border-t">
+=======
+                    <div className="flex gap-3 pt-4 border-t">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         <Button
                             type="button"
                             variant="outline"
                             onClick={handleClose}
+<<<<<<< HEAD
                             className="w-full sm:w-auto sm:min-w-[10rem]"
+=======
+                            className="flex-1"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             disabled={loading}
                         >
                             Close

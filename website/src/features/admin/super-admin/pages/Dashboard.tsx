@@ -145,11 +145,19 @@ const AdminDashboard = () => {
         {/* Main scrollable content */}
         <div className="flex-1 flex flex-col overflow-auto">
           {/* TOP SECTION - White Header with Shadow */}
+<<<<<<< HEAD
           <div className="p-4 sm:p-6 max-w-[90rem] space-y-6">
             <div className="max-w-[90rem]">
 
               {/* Header Section */}
               <div className="mb-6 sm:mb-8">
+=======
+          <div className="p-6 max-w-[90rem] space-y-6">
+            <div className="max-w-[90rem]">
+
+              {/* Header Section */}
+              <div className="mb-8">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-4 text-center md:text-left">
                   <Avatar className="w-16 h-16 ring-4 ring-blue-100">
                     <AvatarImage src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=96&h=96&fit=crop&crop=face" className="object-cover" />
@@ -167,6 +175,7 @@ const AdminDashboard = () => {
               {/* Statistics Section */}
               <div>
                 <h2 className={`${CARD_TITLE} mb-4 text-slate-900`}>Overview Statistics</h2>
+<<<<<<< HEAD
                 <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
                   <div className="bg-blue-600 rounded-2xl p-4 sm:p-6 shadow-[0_10px_28px_-6px_rgba(37,99,235,0.55)]">
                     <p className="text-blue-100 text-[1.25rem] mb-1 font-medium">Total Members</p>
@@ -183,6 +192,24 @@ const AdminDashboard = () => {
                   <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                     <p className="text-indigo-100 text-[1.25rem] mb-1 font-medium">Rejected</p>
                     <p className="text-[2rem] sm:text-[2.5625rem] font-bold tracking-tight tabular-nums text-white">{stats.rejected}</p>
+=======
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="bg-blue-600 rounded-2xl p-6 shadow-[0_10px_28px_-6px_rgba(37,99,235,0.55)]">
+                    <p className="text-blue-100 text-[1.25rem] mb-1 font-medium">Total Members</p>
+                    <p className="text-[2.5625rem] font-bold tracking-tight tabular-nums text-white">{stats.totalMembers}</p>
+                  </div>
+                  <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+                    <p className="text-purple-100 text-[1.25rem] mb-1 font-medium">Pending</p>
+                    <p className="text-[2.5625rem] font-bold tracking-tight tabular-nums text-white">{stats.pending}</p>
+                  </div>
+                  <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+                    <p className="text-cyan-100 text-[1.25rem] mb-1 font-medium">Approved</p>
+                    <p className="text-[2.5625rem] font-bold tracking-tight tabular-nums text-white">{stats.approved}</p>
+                  </div>
+                  <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+                    <p className="text-indigo-100 text-[1.25rem] mb-1 font-medium">Rejected</p>
+                    <p className="text-[2.5625rem] font-bold tracking-tight tabular-nums text-white">{stats.rejected}</p>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                   </div>
                 </div>
               </div>
@@ -190,7 +217,11 @@ const AdminDashboard = () => {
           </div>
 
           {/* MAIN CONTENT - Light Background */}
+<<<<<<< HEAD
           <div className="px-4 sm:px-6 pb-6 max-w-[90rem]">
+=======
+          <div className="px-6 pb-6 max-w-[90rem]">
+>>>>>>> 8020f5d (Initial commit for website frontend)
             <div className="max-w-[90rem] space-y-6">
               {/* Header */}
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
@@ -206,7 +237,11 @@ const AdminDashboard = () => {
               </div>
 
               {/* Applications Table/List */}
+<<<<<<< HEAD
               <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+=======
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 <div className="hidden md:grid grid-cols-4 gap-4 px-5 py-4 text-[1.25rem] font-semibold text-slate-700 border-b border-slate-200 mb-4">
                   <div>Name</div>
                   <div>Status</div>
@@ -218,7 +253,11 @@ const AdminDashboard = () => {
                   {recentApplications.map((app) => (
                     <div
                       key={app.id}
+<<<<<<< HEAD
                       className="grid grid-cols-1 md:grid-cols-4 gap-2 md:gap-5 items-center p-3 sm:p-4 rounded-xl bg-white hover:bg-slate-50 transition-colors duration-200 border border-slate-200"
+=======
+                      className="grid grid-cols-1 md:grid-cols-4 gap-5 items-center p-4 rounded-xl bg-white hover:bg-slate-50 transition-colors duration-200 border border-slate-200"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     >
                       <div className="flex items-center gap-3">
                         <Avatar className="w-10 h-10 ring-2 ring-blue-200">

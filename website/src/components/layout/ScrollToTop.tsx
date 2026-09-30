@@ -21,6 +21,7 @@ import { useLocation, useNavigationType } from 'react-router-dom';
  * reading, not the top of it. Forcing the top on a POP is the other half of
  * this bug, so this stays out of the way for those.
  *
+<<<<<<< HEAD
  * A hash is watched too, for the case below.
  */
 /*
@@ -90,6 +91,22 @@ export function ScrollToTop() {
             window.removeEventListener('keydown', stop);
         };
     }, [pathname, hash, navigationType]);
+=======
+ * A hash change alone does not fire it either — `pathname` is what it watches —
+ * so an in-page anchor still works.
+ */
+export function ScrollToTop() {
+    const { pathname } = useLocation();
+    const navigationType = useNavigationType();
+
+    useEffect(() => {
+        if (navigationType === 'POP') return;
+        /* `auto`, never `smooth`: a smooth scroll on a route change animates
+           the new page rushing past under the reader, and on a long page it is
+           still travelling when they start to read. */
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }, [pathname, navigationType]);
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     return null;
 }

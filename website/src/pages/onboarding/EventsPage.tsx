@@ -57,10 +57,17 @@ export default function EventsPage() {
                    lifted onto its edge — so the page does not jump when it
                    arrives. */
                 <>
+<<<<<<< HEAD
                     <div className="h-72 sm:h-[26rem] w-full animate-pulse bg-brand-900" />
                     <div className={SCREEN_CONTAINER}>
                         <div className="-mt-10 h-20 animate-pulse rounded-2xl bg-white shadow-lg ring-1 ring-brand-100" />
                         <div className="mt-8 sm:mt-10 grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+=======
+                    <div className="h-[26rem] w-full animate-pulse bg-brand-900" />
+                    <div className={SCREEN_CONTAINER}>
+                        <div className="-mt-10 h-20 animate-pulse rounded-2xl bg-white shadow-lg ring-1 ring-brand-100" />
+                        <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             {[1, 2, 3, 4, 5].map((i) => (
                                 <div key={i} className="h-80 animate-pulse rounded-2xl bg-slate-100" />
                             ))}

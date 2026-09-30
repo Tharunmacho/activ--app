@@ -187,7 +187,11 @@ export function KeyAchievements({ items, title = 'Key Achievements' }: {
                             <CmsIcon name={row.icon} size={19} fallback="award" />
                         </span>
                         <div className="min-w-0">
+<<<<<<< HEAD
                             <p className="text-[1.5625rem] font-black tracking-tight text-brand-800 leading-none">
+=======
+                            <p className="text-2xl font-black tracking-tight text-brand-800 leading-none">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 {row.title}
                             </p>
                             {row.summary && (

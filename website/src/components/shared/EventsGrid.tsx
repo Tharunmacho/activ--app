@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { PosterFrame } from '@/components/shared/PosterFrame';
 import { eventPath } from '@/lib/eventPath';
 import { useEffect, useState } from 'react';
@@ -5,6 +6,13 @@ import { MapPin, ArrowRight, Video } from 'lucide-react';
 import { eventWhere } from '@/lib/eventWhere';
 import { Link } from 'react-router-dom';
 import { getCmsEvents, getEventsSettings, type CmsEvent, type EventsSettings } from '@/services/cmsApi';
+=======
+import { useEffect, useState } from 'react';
+import { MapPin, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { getCmsEvents, getEventsSettings, type CmsEvent, type EventsSettings } from '@/services/cmsApi';
+import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { Reveal } from '@/components/shared/Reveal';
 import { Tilt3D } from '@/components/shared/Tilt3D';
 import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
@@ -68,6 +76,7 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
 
     if (isLoading) {
         return (
+<<<<<<< HEAD
             <section className="w-full py-14 sm:py-24 dot-band">
                 <div className={`${SCREEN_CONTAINER} animate-pulse`}>
                     <div className="flex flex-col items-center text-center mb-10 sm:mb-16 space-y-6">
@@ -79,6 +88,19 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                             <div key={i} className="bg-white rounded-[2rem] flex flex-col shadow-sm h-96 overflow-hidden">
                                 <div className="w-full h-48 bg-slate-200"></div>
                                 <div className="p-5 sm:p-8 flex flex-col flex-grow space-y-4">
+=======
+            <section className="w-full py-24 dot-band">
+                <div className={`${SCREEN_CONTAINER} animate-pulse`}>
+                    <div className="flex flex-col items-center text-center mb-16 space-y-6">
+                        <div className="h-6 bg-slate-200 rounded w-24"></div>
+                        <div className="h-10 bg-slate-200 rounded w-1/2"></div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+                        {[1, 2, 3].map((i) => (
+                            <div key={i} className="bg-white rounded-[2rem] flex flex-col shadow-sm h-96 overflow-hidden">
+                                <div className="w-full h-48 bg-slate-200"></div>
+                                <div className="p-8 flex flex-col flex-grow space-y-4">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     <div className="h-4 bg-slate-200 rounded w-1/4"></div>
                                     <div className="h-6 bg-slate-200 rounded w-3/4"></div>
                                     <div className="h-4 bg-slate-200 rounded w-full mt-auto"></div>
@@ -97,6 +119,7 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
 
     /*
      * ======================================================================
+<<<<<<< HEAD
      * THE SAME EVENTS AS /events — NO SWITCH, NO SEPARATE LIST
      * ======================================================================
      *
@@ -119,6 +142,40 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
         const start = finish ? new Date(finish).getTime() : NaN;
         return Number.isNaN(start) || start >= now;
     });
+=======
+     * WHICH EVENTS, NOT JUST HOW MANY
+     * ======================================================================
+     *
+     * The strip shows three out of however many are published, and which
+     * three used to be decided entirely by the sort — soonest first. That
+     * is the wrong default for the most-read band on the site: the next
+     * event by date is often a small district meeting, and the one worth a
+     * first-time visitor's attention is the conclave in six weeks.
+     *
+     * `showOnHome` is the editor's answer, set per event from either the
+     * Home screen or the Events screen. `!== false` rather than `=== true`:
+     * the field postdates every event in the collection, and an event saved
+     * before it existed belongs on the home page exactly as it did before.
+     */
+    /*
+     * ======================================================================
+     * THE SWITCH DECIDES. NOTHING ELSE DOES.
+     * ======================================================================
+     *
+     * Not a cap, and not the date either. This briefly dropped past events
+     * as well, which meant an editor could switch one on, watch the CMS
+     * report it as off, and have no way to tell that a rule they could not
+     * see was overruling them. Two events in the database were in exactly
+     * that state.
+     *
+     * Whether something already held belongs under this band's heading is
+     * the association's call — the heading is theirs to edit — so the CMS
+     * says which events have been held and lets them choose. `/events` is
+     * a different surface and still shows upcoming only; that page has no
+     * per-event switch to contradict.
+     */
+    const forHome = events.filter((e) => e?.showOnHome !== false);
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     /*
      * EVERY ONE THAT IS SWITCHED ON, however many that is.
@@ -155,6 +212,7 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
     if (!visible.length && !heading && !headingHighlight && !settings?.emptyText) return null;
 
     return (
+<<<<<<< HEAD
         <section className="w-full py-14 sm:py-24 dot-band">
             <div className={SCREEN_CONTAINER}>
 
@@ -163,12 +221,26 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                         {badge && (
                             <div className="inline-flex items-center space-x-2 bg-brand-50 border border-brand-100
                                             rounded-full px-4 py-1.5 mb-4 sm:mb-6">
+=======
+        <section className="w-full py-24 dot-band">
+            <div className={SCREEN_CONTAINER}>
+
+                {(badge || heading || headingHighlight || subtitle) && (
+                    <Reveal className="flex flex-col items-center text-center mb-16">
+                        {badge && (
+                            <div className="inline-flex items-center space-x-2 bg-brand-50 border border-brand-100
+                                            rounded-full px-4 py-1.5 mb-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <span className={`${EYEBROW} text-brand-600`}>{badge}</span>
                             </div>
                         )}
 
                         {(heading || headingHighlight) && (
+<<<<<<< HEAD
                             <h2 className={`${SECTION_HEADING} text-brand-800 mb-4 sm:mb-6 break-words`}>
+=======
+                            <h2 className={`${SECTION_HEADING} text-brand-800 mb-6`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 {heading}
                                 {heading && headingHighlight && ' '}
                                 {headingHighlight && <span className="text-brand-600">{headingHighlight}</span>}
@@ -176,12 +248,21 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                         )}
 
                         {subtitle && (
+<<<<<<< HEAD
                             <div className="flex items-center space-x-3 sm:space-x-4 max-w-full">
                                 <div className="h-px w-6 sm:w-10 shrink-0 bg-brand-300" />
                                 <span className="min-w-0 text-[1.0625rem] sm:text-[1.25rem] font-semibold text-gray-500 lowercase tracking-wider">
                                     {subtitle}
                                 </span>
                                 <div className="h-px w-6 sm:w-10 shrink-0 bg-brand-300" />
+=======
+                            <div className="flex items-center space-x-4">
+                                <div className="h-px w-10 bg-brand-300" />
+                                <span className="text-[1.25rem] font-semibold text-gray-500 lowercase tracking-wider">
+                                    {subtitle}
+                                </span>
+                                <div className="h-px w-10 bg-brand-300" />
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             </div>
                         )}
                     </Reveal>
@@ -190,13 +271,18 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                 {visible.length === 0 ? (
                     <p className="text-center text-gray-500 py-8">{settings?.emptyText}</p>
                 ) : (
+<<<<<<< HEAD
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-8 mb-10 sm:mb-16">
+=======
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         {visible.map((event, i) => (
                             /* Staggered so the row assembles left to right rather than
                                all at once. Capped: past ~360ms the last card in a long
                                list reads as having failed to load. */
                             <Reveal key={event.id} delay={Math.min(i, 4) * 90} className="h-full">
                                 <Tilt3D className="h-full" intensity={7} lift={1.02} glare={false}>
+<<<<<<< HEAD
                                     {/* THE WHOLE CARD opens the event. Only the small
                                         arrow in its corner used to, so a visitor
                                         clicking the banner or the title — which is
@@ -207,11 +293,16 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                                     <article
                                         className="group/card relative bg-white rounded-3xl sm:rounded-[2rem] flex flex-col h-full overflow-hidden
                                                    focus-within:ring-4 focus-within:ring-brand-300
+=======
+                                    <div
+                                        className="bg-white rounded-[2rem] flex flex-col h-full overflow-hidden
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                    border border-brand-100/70
                                                    shadow-[0_10px_40px_-14px_rgb(28_46_104/0.18)]
                                                    transition-shadow duration-500
                                                    hover:shadow-[0_30px_64px_-20px_rgb(28_46_104/0.38)]"
                                     >
+<<<<<<< HEAD
                                 <Link
                                     to={eventPath(event)}
                                     aria-label={`More about ${event.title || 'this event'}`}
@@ -228,6 +319,22 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                                 )}
 
                                 <div className="p-5 sm:p-8 flex flex-col flex-grow">
+=======
+                                {/* No image is a valid event; a broken frame is not. */}
+                                {event.media?.url && (
+                                    <div className="w-full h-56 overflow-hidden">
+                                        {/* Honours the fit and focal point set in the CMS, so a
+                                            portrait upload is not cropped to a strip here. */}
+                                        <CmsMediaFrame
+                                            media={event.media}
+                                            width={420}
+                                            className="hover:scale-105 transition-transform duration-700"
+                                        />
+                                    </div>
+                                )}
+
+                                <div className="p-8 flex flex-col flex-grow">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     {/*
                                       * ALWAYS DRAWN, even with no date on the
                                       * event.
@@ -242,26 +349,41 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                                       * leaving a corner missing, which reads as
                                       * a render fault.
                                       */}
+<<<<<<< HEAD
                                     <p className={`${MICRO_LABEL} text-brand-500 mb-3 sm:mb-4`}>
+=======
+                                    <p className={`${MICRO_LABEL} text-brand-500 mb-4`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         {formatDate(event.startAt) || 'Date to be confirmed'}
                                     </p>
 
                                     <h3 className={`${CARD_TITLE} text-balance line-clamp-2 min-h-[2.4em]
                                                     text-brand-800 ${
+<<<<<<< HEAD
                                         event.description ? 'mb-3' : 'mb-5 sm:mb-8 flex-grow'
                                     }`}>
                                         {event.title || 'Untitled event'}
+=======
+                                        event.description ? 'mb-3' : 'mb-8 flex-grow'
+                                    }`}>
+                                        {event.title}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     </h3>
 
                                     {/* Was captured in the CMS and rendered nowhere, which made it
                                         a field that quietly did nothing. */}
                                     {event.description && (
+<<<<<<< HEAD
                                         <p className={`${CARD_BODY} text-gray-500 mb-5 sm:mb-8 flex-grow line-clamp-3
+=======
+                                        <p className={`${CARD_BODY} text-gray-500 mb-8 flex-grow line-clamp-3
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                        min-h-[4.9em]`}>
                                             {event.description}
                                         </p>
                                     )}
 
+<<<<<<< HEAD
                                     <div className="flex items-center justify-between pt-4 sm:pt-6 border-t border-gray-100 mt-auto">
                                         {(() => {
                                             /* Never "Location —": falls through online → venue →
@@ -295,6 +417,34 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                                     </div>
                                     </div>
                                 </article>
+=======
+                                    <div className="flex items-center justify-between pt-6 border-t border-gray-100 mt-auto">
+                                        <div className="flex items-center space-x-3 w-3/4">
+                                            <div className="w-10 h-10 rounded-full bg-brand-50 flex items-center
+                                                            justify-center shrink-0">
+                                                <MapPin size={18} className="text-brand-600" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-[1rem] font-bold text-brand-800 truncate pr-2">Location</p>
+                                                <p className={`${MICRO_LABEL} text-gray-500 truncate pr-2`}>
+                                                    {event.location || '—'}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Its own page, not the list it is already on. */}
+                                        <Link
+                                            to={`/events/${event.id}`}
+                                            aria-label={`More about ${event.title}`}
+                                            className="w-11 h-11 rounded-full bg-gray-50 hover:bg-brand-800 hover:text-white
+                                                       flex items-center justify-center transition-colors shrink-0 group"
+                                        >
+                                            <ArrowRight size={18} className="text-gray-400 group-hover:text-white transition-colors" />
+                                        </Link>
+                                    </div>
+                                    </div>
+                                </div>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 </Tilt3D>
                             </Reveal>
                         ))}
@@ -307,7 +457,11 @@ export function EventsGrid({ limit, showViewAll = false }: Props) {
                         <Link
                             to={settings.viewAllHref || '/events'}
                             className="border-2 border-gray-200 hover:border-brand-800 text-gray-600 hover:text-brand-800
+<<<<<<< HEAD
                                        px-6 sm:px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase tracking-[0.1em] transition-colors"
+=======
+                                       px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase tracking-[0.1em] transition-colors"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         >
                             {settings.viewAllLabel}
                         </Link>

@@ -209,7 +209,11 @@ export default function MembershipCard({
             className={`overflow-hidden ${BIZ_CARD}`}
         >
             {/* ----------------------------------------------------- band */}
+<<<<<<< HEAD
             <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3
+=======
+            <div className="flex items-center justify-between gap-3 px-5 sm:px-6 py-3
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             border-b border-blue-100 bg-blue-50">
                 <p className={`truncate ${BIZ_DETAIL_LABEL} text-blue-700`}>
                     ACTIV Membership
@@ -222,9 +226,15 @@ export default function MembershipCard({
                 </span>
             </div>
 
+<<<<<<< HEAD
             <div className="px-4 sm:px-6 py-4 sm:py-5">
                 {/* ------------------------------------------------ holder */}
                 <div className="flex items-center gap-3 sm:gap-4">
+=======
+            <div className="px-5 sm:px-6 py-5">
+                {/* ------------------------------------------------ holder */}
+                <div className="flex items-center gap-4">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     {/*
                       The photograph, or the initials in its place. A fixed
                       square either way, so the name beside it starts at the same
@@ -236,7 +246,11 @@ export default function MembershipCard({
                       rather than painted on it — the same relationship the icon
                       plates have with the white cards below.
                     */}
+<<<<<<< HEAD
                     <span className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-blue-600
+=======
+                    <span className="shrink-0 w-16 h-16 rounded-xl overflow-hidden bg-blue-600
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                      flex items-center justify-center">
                         {photoUrl ? (
                             <img
@@ -248,7 +262,11 @@ export default function MembershipCard({
                                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                             />
                         ) : (
+<<<<<<< HEAD
                             <span className="text-[1.3125rem] sm:text-[1.5625rem] font-extrabold text-white">{initials}</span>
+=======
+                            <span className="text-[1.5625rem] font-extrabold text-white">{initials}</span>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         )}
                     </span>
 
@@ -263,15 +281,24 @@ export default function MembershipCard({
                             {name}
                         </h2>
                         {subtitle && (
+<<<<<<< HEAD
                             <p className="mt-1 text-[1.1875rem] font-bold text-blue-600">{subtitle}</p>
+=======
+                            <p className="mt-1 text-[1.125rem] font-bold text-blue-600">{subtitle}</p>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         )}
                     </div>
                 </div>
 
                 {/* ------------------------------------------------ fields */}
                 {hasFields && (
+<<<<<<< HEAD
                     <div className="mt-4 sm:mt-5 pt-4 sm:pt-5 border-t border-slate-200
                                     grid gap-x-4 sm:gap-x-8 gap-y-4 sm:gap-y-5 grid-cols-2 sm:grid-cols-3">
+=======
+                    <div className="mt-5 pt-5 border-t border-slate-200
+                                    grid gap-x-8 gap-y-5 grid-cols-2 sm:grid-cols-3">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         <Field
                             icon={<IdCard className="w-3.5 h-3.5" />}
                             label="Member ID"
@@ -320,7 +347,11 @@ export default function MembershipCard({
                  * different heights. Full width each, stacked, is the honest
                  * answer at that size.
                  */
+<<<<<<< HEAD
                 <div className="flex flex-col sm:flex-row gap-2.5 px-4 sm:px-6 py-4
+=======
+                <div className="flex flex-col sm:flex-row gap-2.5 px-5 sm:px-6 py-4
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 border-t border-slate-200 bg-slate-50">
                     {onCertificate && (
                         <button

@@ -252,12 +252,20 @@ export default function SiteSettingsManager() {
 
                             {/* What the two colours actually produce, at a glance. */}
                             <div
+<<<<<<< HEAD
                                 className="mt-5 rounded-lg border border-slate-200 dark:border-[#1f1f1f] px-3 sm:px-4 py-3
+=======
+                                className="mt-5 rounded-lg border border-slate-200 dark:border-[#1f1f1f] px-4 py-3
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                            flex items-center justify-between gap-4 overflow-x-auto"
                                 style={{ backgroundColor: site.header.background || '#ffffff' }}
                             >
                                 <span
+<<<<<<< HEAD
                                     className="text-[1.0625rem] font-bold uppercase tracking-wider whitespace-nowrap"
+=======
+                                    className="text-[0.75rem] font-bold uppercase tracking-wider whitespace-nowrap"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     style={{ color: site.header.textColor || '#1c2e68' }}
                                 >
                                     {site.brand.fullName || 'Your organisation'}
@@ -319,7 +327,11 @@ export default function SiteSettingsManager() {
                               * see everything the header contains on the screen called
                               * Header & Footer.
                               */}
+<<<<<<< HEAD
                             <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border
+=======
+                            <div className="mt-3 flex items-center gap-3 rounded-xl border
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             border-slate-200 bg-slate-50/70 p-3.5 dark:border-[#2a2a2a]
                                             dark:bg-[#0f0f0f]">
                                 <span className="flex h-9 w-9 shrink-0 items-center justify-center
@@ -328,6 +340,7 @@ export default function SiteSettingsManager() {
                                     <Lock className="h-4 w-4" />
                                 </span>
 
+<<<<<<< HEAD
                                 <div className="min-w-0 flex-1 basis-[12rem]">
                                     <p className="text-[1.25rem] font-bold text-slate-900 dark:text-white">
                                         Zones
@@ -337,17 +350,36 @@ export default function SiteSettingsManager() {
                                     </p>
                                     <p className="text-[1.0625rem] text-slate-500 dark:text-neutral-400">
                                         A menu of the national page, the five zones and their states —
+=======
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[1.25rem] font-bold text-slate-900 dark:text-white">
+                                        Regions
+                                        <span className="ml-2 text-[1rem] font-semibold text-slate-400">
+                                            always last
+                                        </span>
+                                    </p>
+                                    <p className="text-[1rem] text-slate-500 dark:text-neutral-400">
+                                        A menu of the national page, the five regions and their states —
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         built from the pages themselves, so publishing one adds it here.
                                     </p>
                                 </div>
 
                                 <a
                                     href="/cms/regions"
+<<<<<<< HEAD
                                     className="shrink-0 rounded-lg px-3 py-1.5 text-[1.0625rem] font-semibold
                                                text-blue-700 transition-colors hover:bg-blue-50
                                                dark:text-blue-400 dark:hover:bg-blue-950/40"
                                 >
                                     Edit in Zones &amp; States
+=======
+                                    className="shrink-0 rounded-lg px-3 py-1.5 text-[1rem] font-semibold
+                                               text-blue-700 transition-colors hover:bg-blue-50
+                                               dark:text-blue-400 dark:hover:bg-blue-950/40"
+                                >
+                                    Edit in Regions &amp; States
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 </a>
                             </div>
                         </CmsStep>
@@ -389,6 +421,7 @@ export default function SiteSettingsManager() {
                     />
                     <CmsSteps>
                         <CmsStep
+<<<<<<< HEAD
                             /*
                              * `card` only, on all six footer columns.
                              *
@@ -401,11 +434,18 @@ export default function SiteSettingsManager() {
                              */
                             sectionKey="footer.brand"
                             fieldMode="card"
+=======
+                            sectionKey="footer.brand"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             step="Footer 1"
                             title="Logo and name"
                             hint="The same mark and name the header uses. Change them in the Header card above."
                         >
+<<<<<<< HEAD
                             <div className="flex flex-wrap items-center gap-3 sm:gap-4 rounded-lg border border-slate-200
+=======
+                            <div className="flex items-center gap-4 rounded-lg border border-slate-200
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             dark:border-[#1f1f1f] bg-slate-50 dark:bg-black/40 px-4 py-3">
                                 {site.brand.logo?.url ? (
                                     <img
@@ -416,7 +456,11 @@ export default function SiteSettingsManager() {
                                 ) : (
                                     <span className="text-[1.0625rem] text-neutral-400 shrink-0">No logo set</span>
                                 )}
+<<<<<<< HEAD
                                 <span className="text-[1.0625rem] text-slate-600 dark:text-neutral-300 min-w-0 break-words">
+=======
+                                <span className="text-[1.0625rem] text-slate-600 dark:text-neutral-300 min-w-0">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     {site.brand.fullName || 'No name set'}
                                 </span>
                             </div>
@@ -432,8 +476,12 @@ export default function SiteSettingsManager() {
                             </div>
                         </CmsStep>
 
+<<<<<<< HEAD
                         <CmsStep sectionKey="footer.address"
                             fieldMode="card" step="Footer 2" title="Address" hint="One line per line.">
+=======
+                        <CmsStep sectionKey="footer.address" step="Footer 2" title="Address" hint="One line per line.">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             <LineList
                                 value={site.footer.addressLines}
                                 onChange={addressLines => patch('footer', { addressLines })}
@@ -443,7 +491,10 @@ export default function SiteSettingsManager() {
 
                         <CmsStep
                             sectionKey="footer.linkColumns"
+<<<<<<< HEAD
                             fieldMode="card"
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             step="Footer 3"
                             title="Link columns"
                             hint="Each column renders side by side. Leave a heading blank for an unlabelled column."
@@ -476,8 +527,12 @@ export default function SiteSettingsManager() {
                             />
                         </CmsStep>
 
+<<<<<<< HEAD
                         <CmsStep sectionKey="footer.contact"
                             fieldMode="card" step="Footer 4" title="Contact">
+=======
+                        <CmsStep sectionKey="footer.contact" step="Footer 4" title="Contact">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <CmsField label="Heading">
                                     <CmsInput
@@ -509,7 +564,10 @@ export default function SiteSettingsManager() {
 
                         <CmsStep
                             sectionKey="footer.socials"
+<<<<<<< HEAD
                             fieldMode="card"
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             step="Footer 5"
                             title="Social buttons"
                             hint="A button with no link at all is removed when you save. Leave # as a placeholder while an account is being set up."
@@ -537,8 +595,12 @@ export default function SiteSettingsManager() {
                             />
                         </CmsStep>
 
+<<<<<<< HEAD
                         <CmsStep sectionKey="footer.bottomBar"
                             fieldMode="card" step="Footer 6" title="Bottom bar">
+=======
+                        <CmsStep sectionKey="footer.bottomBar" step="Footer 6" title="Bottom bar">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             <CmsField
                                 label="Copyright line"
                                 hint="Write {year} where the current year should appear — it then never needs updating."
@@ -574,12 +636,17 @@ export default function SiteSettingsManager() {
                                 {policies.length > 0 && (
                                     <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5
                                                     dark:border-[#2a2a2a] dark:bg-[#0f0f0f]">
+<<<<<<< HEAD
                                         <div className="mb-2.5 flex flex-wrap items-start gap-3">
+=======
+                                        <div className="mb-2.5 flex items-start gap-3">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             <span className="flex h-9 w-9 shrink-0 items-center justify-center
                                                              rounded-lg bg-slate-200/70 text-slate-500
                                                              dark:bg-[#161616] dark:text-neutral-400">
                                                 <Lock className="h-4 w-4" />
                                             </span>
+<<<<<<< HEAD
                                             <div className="min-w-0 flex-1 basis-[12rem]">
                                                 <p className="text-[1.25rem] font-bold text-slate-900 dark:text-white">
                                                     Your published policies
@@ -588,13 +655,27 @@ export default function SiteSettingsManager() {
                                                     </span>
                                                 </p>
                                                 <p className="text-[1.0625rem] text-slate-500 dark:text-neutral-400">
+=======
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-[1.25rem] font-bold text-slate-900 dark:text-white">
+                                                    Your published policies
+                                                    <span className="ml-2 text-[1rem] font-semibold text-slate-400">
+                                                        always shown
+                                                    </span>
+                                                </p>
+                                                <p className="text-[1rem] text-slate-500 dark:text-neutral-400">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                     One row per published policy. Publishing another adds it
                                                     to the footer on its own.
                                                 </p>
                                             </div>
                                             <a
                                                 href="/cms/legal"
+<<<<<<< HEAD
                                                 className="shrink-0 rounded-lg px-3 py-1.5 text-[1.0625rem] font-semibold
+=======
+                                                className="shrink-0 rounded-lg px-3 py-1.5 text-[1rem] font-semibold
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                            text-blue-700 transition-colors hover:bg-blue-50
                                                            dark:text-blue-400 dark:hover:bg-blue-950/40"
                                             >
@@ -609,8 +690,13 @@ export default function SiteSettingsManager() {
                                                         href={p.href}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
+<<<<<<< HEAD
                                                         className="inline-flex max-w-full items-center gap-1.5 rounded-lg border
                                                                    border-slate-200 bg-white px-3 py-2 sm:py-1.5 text-[1.0625rem]
+=======
+                                                        className="inline-flex items-center gap-1.5 rounded-lg border
+                                                                   border-slate-200 bg-white px-3 py-1.5 text-[1rem]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                                    font-semibold text-slate-700 transition-colors
                                                                    hover:bg-slate-100 dark:border-[#2a2a2a]
                                                                    dark:bg-[#111] dark:text-neutral-300"
@@ -624,7 +710,11 @@ export default function SiteSettingsManager() {
                                     </div>
                                 )}
 
+<<<<<<< HEAD
                                 <p className="mb-2 text-[1.0625rem] font-medium text-slate-500 dark:text-neutral-400">
+=======
+                                <p className="mb-2 text-[1rem] font-medium text-slate-500 dark:text-neutral-400">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     Anything else for that row — a regulator, a parent body. These are
                                     yours to type; the policies above look after themselves.
                                 </p>
@@ -644,7 +734,11 @@ export default function SiteSettingsManager() {
                                     (l) => !l.href || l.href.trim() === '#' || l.href.trim().startsWith('#'),
                                 ) && (
                                     <p className="mt-2.5 flex items-start gap-2 rounded-lg border border-amber-200
+<<<<<<< HEAD
                                                   bg-amber-50 px-3 py-2 text-[1.0625rem] font-medium text-amber-900
+=======
+                                                  bg-amber-50 px-3 py-2 text-[1rem] font-medium text-amber-900
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                   dark:border-amber-900/60 dark:bg-amber-950/30
                                                   dark:text-amber-300">
                                         <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />

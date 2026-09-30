@@ -1,14 +1,22 @@
 import { useEffect, useState } from 'react';
 import {
+<<<<<<< HEAD
     Loader2, ExternalLink, Images, CalendarDays, Eye, EyeOff, Pencil, Type, Check, X,
+=======
+    Loader2, ExternalLink, Images, CalendarDays, Eye, EyeOff, Pencil,
+>>>>>>> 8020f5d (Initial commit for website frontend)
 } from 'lucide-react';
 import {
     getGallery, updateGalleryItem, invalidateCmsCache, errorMessage,
     type GalleryItem,
 } from '@/services/cmsApi';
+<<<<<<< HEAD
 import { CmsEmpty, CmsError, cmsSaved, cmsFailed } from './CmsUI';
 import BannerWordsFields, { type BannerWords } from './BannerWordsFields';
 import { resolveMediaUrl } from '@/config/api.config';
+=======
+import { CmsEmpty, CmsError, cmsSaved } from './CmsUI';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
 
 /**
@@ -72,6 +80,7 @@ export function HomeGalleryPicker({ onChanged }: {
     const [error, setError] = useState('');
     const [busy, setBusy] = useState<string | null>(null);
 
+<<<<<<< HEAD
     /*
      * THE WORDS OVER EACH POSTER, EDITED RIGHT HERE.
      *
@@ -134,6 +143,8 @@ export function HomeGalleryPicker({ onChanged }: {
         }
     };
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     const load = async () => {
         setError('');
         try {
@@ -232,13 +243,21 @@ export function HomeGalleryPicker({ onChanged }: {
                             return (
                                 <li
                                     key={item._id}
+<<<<<<< HEAD
                                     className={`rounded-xl border p-3 transition-colors
+=======
+                                    className={`flex items-center gap-3 rounded-xl border p-3 transition-colors
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                 ${live
                                             ? 'border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20'
                                             : 'border-slate-200 bg-white dark:border-[#232323] dark:bg-[#0d0d0d]'}`}
                                 >
+<<<<<<< HEAD
                                   <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                                     <span className="h-12 w-16 sm:h-14 sm:w-20 shrink-0 overflow-hidden rounded-lg
+=======
+                                    <span className="h-14 w-20 shrink-0 overflow-hidden rounded-lg
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                      bg-slate-100 dark:bg-[#161616]">
                                         {item.media?.url ? (
                                             <CmsMediaFrame media={item.media} width={160} />
@@ -250,12 +269,21 @@ export function HomeGalleryPicker({ onChanged }: {
                                         )}
                                     </span>
 
+<<<<<<< HEAD
                                     <div className="min-w-0 flex-1 basis-[10rem]">
                                         <p className="truncate text-[1.1875rem] font-bold text-slate-900 dark:text-white">
                                             {item.title || 'Untitled image'}
                                         </p>
                                         <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5
                                                       text-[1.0625rem] font-medium text-slate-500 dark:text-neutral-400">
+=======
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-[1.125rem] font-bold text-slate-900 dark:text-white">
+                                            {item.title || 'Untitled image'}
+                                        </p>
+                                        <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5
+                                                      text-[1rem] font-medium text-slate-500 dark:text-neutral-400">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             {item.eventDate && (
                                                 <span className="inline-flex items-center gap-1">
                                                     <CalendarDays className="h-3.5 w-3.5 shrink-0" />
@@ -278,6 +306,7 @@ export function HomeGalleryPicker({ onChanged }: {
                                                     in the banner now
                                                 </span>
                                             )}
+<<<<<<< HEAD
                                             {/* What this poster says over itself in the banner. */}
                                             {live && (item.bannerHeadline || item.bannerHighlight || item.bannerSubheadline ? (
                                                 <span className="font-semibold text-emerald-700 dark:text-emerald-400">
@@ -305,11 +334,20 @@ export function HomeGalleryPicker({ onChanged }: {
                                         <Type className="h-3.5 w-3.5" /> Banner words
                                     </button>
 
+=======
+                                        </p>
+                                    </div>
+
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     <a
                                         href="/cms/gallery"
                                         title="Open the Gallery screen to change the picture or its details"
                                         className="hidden shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5
+<<<<<<< HEAD
                                                    text-[1.0625rem] font-semibold text-blue-700 transition-colors
+=======
+                                                   text-[1rem] font-semibold text-blue-700 transition-colors
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                    hover:bg-blue-50 sm:inline-flex
                                                    dark:text-blue-400 dark:hover:bg-blue-950/40"
                                     >
@@ -325,7 +363,11 @@ export function HomeGalleryPicker({ onChanged }: {
                                             ? 'Hidden from the gallery, so it cannot be in the banner'
                                             : on ? 'Take it out of the banner' : 'Allow it in the banner'}
                                         className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border
+<<<<<<< HEAD
                                                     px-3 py-2 sm:py-1.5 text-[1.0625rem] font-bold transition-colors
+=======
+                                                    px-3 py-1.5 text-[1rem] font-bold transition-colors
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                     disabled:opacity-40 ${on
                                                 ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
                                                     + ' dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300'
@@ -337,6 +379,7 @@ export function HomeGalleryPicker({ onChanged }: {
                                             : on ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                                         {on ? 'On' : 'Off'}
                                     </button>
+<<<<<<< HEAD
                                   </div>
 
                                   {/* Inline, not a dialog — see CLAUDE.md on native modals. */}
@@ -377,6 +420,9 @@ export function HomeGalleryPicker({ onChanged }: {
                                           </div>
                                       </div>
                                   )}
+=======
+
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 </li>
                             );
                         })}
@@ -390,7 +436,11 @@ export function HomeGalleryPicker({ onChanged }: {
                       * different job, on the Gallery screen, which the Edit link
                       * on every row already reaches.
                       */}
+<<<<<<< HEAD
                     <p className="mt-4 text-[1.0625rem] font-medium text-slate-400">
+=======
+                    <p className="mt-4 text-[1rem] font-medium text-slate-400">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         {ordered.length > Math.max(eligible.length + 4, 12)
                             ? `Showing the switched-on images and a few more, of ${items.length}. `
                             : ''}

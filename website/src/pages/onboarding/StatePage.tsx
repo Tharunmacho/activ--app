@@ -6,8 +6,12 @@ import { FooterSection } from '@/components/layout/FooterSection';
 import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
 import { SECTION_HEADING } from '@/components/layout/typography';
 import {
+<<<<<<< HEAD
     getStatePage, dashboardLabels, STATE_LABELS,
     type StatePage as StatePageData, type RegionLeader,
+=======
+    getStatePage, type StatePage as StatePageData, type RegionLeader,
+>>>>>>> 8020f5d (Initial commit for website frontend)
 } from '@/services/cmsRegionsApi';
 import { LeaderProfileDialog } from './components/RegionUI';
 import type { LeaderContext } from '@/services/cmsLeaderMessagesApi';
@@ -135,11 +139,19 @@ export default function StatePage() {
             <div className="flex flex-col min-h-screen font-sans dot-band">
                 <HeaderSection />
                 <div className={`${SCREEN_CONTAINER} py-10 animate-pulse flex-grow`}>
+<<<<<<< HEAD
                     <div className="h-40 sm:h-56 bg-slate-200 rounded-[1.5rem] mb-6 sm:mb-8" />
                     <div className="h-8 w-64 bg-slate-200 rounded mb-6" />
                     <div className="grid gap-3 sm:gap-5 grid-cols-2 sm:grid-cols-3 xl:grid-cols-5">
                         {[0, 1, 2, 3, 4].map((i) => (
                             <div key={i} className="h-56 sm:h-80 bg-slate-200 rounded-2xl" />
+=======
+                    <div className="h-56 bg-slate-200 rounded-[1.5rem] mb-8" />
+                    <div className="h-8 w-64 bg-slate-200 rounded mb-6" />
+                    <div className="grid gap-5 grid-cols-2 sm:grid-cols-3 xl:grid-cols-5">
+                        {[0, 1, 2, 3, 4].map((i) => (
+                            <div key={i} className="h-80 bg-slate-200 rounded-2xl" />
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         ))}
                     </div>
                 </div>
@@ -152,15 +164,25 @@ export default function StatePage() {
         return (
             <div className="flex flex-col min-h-screen font-sans dot-band">
                 <HeaderSection />
+<<<<<<< HEAD
                 <div className={`${SCREEN_CONTAINER} py-16 sm:py-24 flex-grow text-center`}>
                     <h1 className={`${SECTION_HEADING} text-brand-800 mb-4`}>Not published yet</h1>
                     <p className="text-[1rem] sm:text-[1.0625rem] font-semibold text-gray-500 mb-8 break-words">
+=======
+                <div className={`${SCREEN_CONTAINER} py-24 flex-grow text-center`}>
+                    <h1 className={`${SECTION_HEADING} text-brand-800 mb-4`}>Not published yet</h1>
+                    <p className="text-[1.25rem] sm:text-[1.0625rem] font-semibold text-gray-500 mb-8">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         {missing || 'This state page could not be loaded.'}
                     </p>
                     <Link
                         to="/"
                         className="inline-flex items-center gap-2 bg-brand-800 hover:bg-brand-700 text-white
+<<<<<<< HEAD
                                    px-6 sm:px-8 py-3.5 rounded-full font-bold text-[0.9375rem] sm:text-[1.0625rem] uppercase
+=======
+                                   px-8 py-3.5 rounded-full font-bold text-[1.0625rem] uppercase
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                    tracking-[0.1em] transition-colors"
                     >
                         <ArrowLeft size={15} /> Back to home
@@ -214,10 +236,13 @@ export default function StatePage() {
      * from the pill at the top of the band; this tier is the state's own, and
      * is edited on this state's CMS page.
      */
+<<<<<<< HEAD
     /* The page's own headings, from the CMS, with the shipped wording under
        anything left blank — see `dashboardLabels`. */
     const labels = dashboardLabels(page.labels, STATE_LABELS);
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     const stateRegions = (page.stateRegions || []).filter((r) => r && (r.leaders || []).length);
     const districts = (page.districts || []).filter((d) => d && (d.leaders || []).length);
 
@@ -296,7 +321,11 @@ export default function StatePage() {
                         hero={page.hero}
                         title={page.stateName}
                         blurb={page.hero.blurb || page.shortDescription}
+<<<<<<< HEAD
                         backLabel={page.region ? `${page.region.label} Zone` : 'Zones'}
+=======
+                        backLabel={page.region ? `${page.region.label} Region` : 'Regions'}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         backHref={page.region ? `/regions/${page.region.slug}` : undefined}
                         showGlance={false}
                     />
@@ -306,11 +335,15 @@ export default function StatePage() {
                     {(page.leaders || []).length > 0 && (
                         <section>
                             <SectionHead
+<<<<<<< HEAD
                                 /* The heading keeps the state's NAME, which is
                                    why only the eyebrow is authored: a stored
                                    title would freeze one state's name onto
                                    every other state's page. */
                                 eyebrow={labels.ownTierEyebrow}
+=======
+                                eyebrow="State"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 title={`${page.stateName} Leaders`}
                             />
                             <LeaderGrid
@@ -325,8 +358,13 @@ export default function StatePage() {
                     {stateRegions.length > 0 && (
                         <section>
                             <SectionHead
+<<<<<<< HEAD
                                 eyebrow={`${labels.tierBelowEyebrow} of ${page.stateName}`}
                                 title={labels.tierBelowHeading}
+=======
+                                eyebrow={`Regions of ${page.stateName}`}
+                                title="Region-wise Leadership"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             />
                             <div className="space-y-10 sm:space-y-12">
                                 {stateRegions.map((region) => (
@@ -355,8 +393,13 @@ export default function StatePage() {
                     {districts.length > 0 && (
                         <section>
                             <SectionHead
+<<<<<<< HEAD
                                 eyebrow={labels.districtsEyebrow}
                                 title={labels.districtsHeading}
+=======
+                                eyebrow="Districts"
+                                title="District-wise Leadership"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             />
                             {/* `space-y-10`: with the panels gone there is no
                                 box edge between one group and the next, so the
@@ -385,12 +428,18 @@ export default function StatePage() {
                         </section>
                     )}
 
+<<<<<<< HEAD
                     {/* ---- contact ----
                         `id="contact"` is where the Contact page's region tiles
                         land (`/states/<slug>#contact`); `scroll-mt` keeps the
                         heading clear of the sticky header. */}
                     <section id="contact" className="scroll-mt-32">
                         <SectionHead eyebrow={labels.contactEyebrow} title={labels.contactHeading} />
+=======
+                    {/* ---- contact ---- */}
+                    <section>
+                        <SectionHead eyebrow="Contact" title="Get in Touch" />
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
                         {/*
                           * THE MAP ON THE LEFT, THE PEOPLE ON THE RIGHT.
@@ -407,7 +456,11 @@ export default function StatePage() {
                           * sticky take effect at all — a stretched grid item
                           * has no room to move within.
                           */}
+<<<<<<< HEAD
                         <div className="grid items-start gap-6 sm:gap-8 lg:gap-12
+=======
+                        <div className="grid items-start gap-8 lg:gap-12
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
                             <div className="lg:sticky lg:top-24">
                                 <StateDistrictMap
@@ -427,7 +480,11 @@ export default function StatePage() {
                                 />
                             </div>
 
+<<<<<<< HEAD
                             <div className="min-w-0 space-y-8 sm:space-y-10">
+=======
+                            <div className="min-w-0 space-y-10">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <ContactGroup
                                     label={`${page.stateName} State Council`}
                                     entries={stateContacts}

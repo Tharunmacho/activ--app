@@ -26,12 +26,19 @@ import {
     cmsFailed,
 } from './components/CmsUI';
 import { RepeatableList, StatList, BulletList, IconPicker , ExtraFieldsEditor } from './components/CmsEditors';
+<<<<<<< HEAD
 import { HomeGalleryPicker } from './components/HomeGalleryPicker';
 import { HomeEventBannerPicker } from './components/HomeEventBannerPicker';
 import { HomeRegionsPicker } from './components/HomeRegionsPicker';
 import MediaPicker from './components/MediaPicker';
 import BannerWordsFields from './components/BannerWordsFields';
 import { resolveMediaUrl } from '@/config/api.config';
+=======
+import { HomeEventsPicker } from './components/HomeEventsPicker';
+import { HomeGalleryPicker } from './components/HomeGalleryPicker';
+import { HomeRegionsPicker } from './components/HomeRegionsPicker';
+import MediaPicker from './components/MediaPicker';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import RichTextEditor from './components/RichTextEditor';
 
 /**
@@ -115,9 +122,12 @@ export default function HomeManager() {
      */
     const [dirty, setDirty] = useState({ carousel: false, about: false });
 
+<<<<<<< HEAD
     /* Bumped after a successful banner save: the open slide folds shut. */
     const [slidesSaved, setSlidesSaved] = useState(0);
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     /** Save one block. The server leaves the other untouched. */
     const saveBlock = async (key: BlockKey) => {
         if (!home) return;
@@ -128,6 +138,7 @@ export default function HomeManager() {
             // Take the server's copy back: it drops empty slides and unknown
             // icons, and the editor should show what was actually stored.
             // `sections` rides along with either block — see `setSections`.
+<<<<<<< HEAD
             const stored = await updateHome({
                 [key]: home[key],
                 sections: home.sections,
@@ -165,6 +176,13 @@ export default function HomeManager() {
             setHome(stored);
             setDirty((d) => ({ ...d, [key]: false }));
             if (key === 'carousel') setSlidesSaved((n) => n + 1);
+=======
+            setHome(await updateHome({
+                [key]: home[key],
+                sections: home.sections,
+            } as Partial<HomeContent>));
+            setDirty((d) => ({ ...d, [key]: false }));
+>>>>>>> 8020f5d (Initial commit for website frontend)
             setSavedBlock(key);
             cmsSaved(key === 'carousel' ? 'Banner' : 'About block');
             setTimeout(() => setSavedBlock(null), 2500);
@@ -311,6 +329,7 @@ export default function HomeManager() {
                 />
                 <CmsSteps>
 
+<<<<<<< HEAD
                     {/*
                       * `content` only: this band is white words over a
                       * photograph and has NO details card, so "a labelled fact
@@ -325,6 +344,9 @@ export default function HomeManager() {
                         title="Shared headline"
                         hint="Shown over any image that has no heading of its own. Give each slide (Banner 3) and each gallery image its own heading, subheading and Left / Right position."
                     >
+=======
+                    <CmsStep sectionKey="carousel.headline" step="Banner 1" title="Headline" hint="The words over the banner.">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         <div className="grid gap-4 sm:grid-cols-2">
                             <CmsField label="Headline">
                                 <CmsInput
@@ -356,7 +378,11 @@ export default function HomeManager() {
 
                     <CmsStep sectionKey="carousel.buttons" ownFields={false} step="Banner 2" title="Buttons" hint="Leave a label blank to hide that button.">
                         <div className="grid gap-4 md:grid-cols-2">
+<<<<<<< HEAD
                             <div className="space-y-3 border border-slate-200 dark:border-[#2a2a2a] rounded-lg p-3 sm:p-4">
+=======
+                            <div className="space-y-3 border border-slate-200 dark:border-[#2a2a2a] rounded-lg p-4">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <p className="text-[1.0625rem] font-semibold uppercase tracking-wider text-neutral-400">Primary</p>
                                 <CmsField label="Label" hint="Leave blank to hide this button.">
                                     <CmsInput
@@ -375,7 +401,11 @@ export default function HomeManager() {
                                 <IconPicker value={carousel.ctaIcon} onChange={ctaIcon => setCarousel({ ctaIcon })} />
                             </div>
 
+<<<<<<< HEAD
                             <div className="space-y-3 border border-slate-200 dark:border-[#2a2a2a] rounded-lg p-3 sm:p-4">
+=======
+                            <div className="space-y-3 border border-slate-200 dark:border-[#2a2a2a] rounded-lg p-4">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <p className="text-[1.0625rem] font-semibold uppercase tracking-wider text-neutral-400">Secondary</p>
                                 <CmsField label="Label" hint="Leave blank to hide this button.">
                                     <CmsInput
@@ -406,7 +436,10 @@ export default function HomeManager() {
                             <RepeatableList<HeroSlide>
                                 items={carousel.slides}
                                 onChange={slides => setCarousel({ slides })}
+<<<<<<< HEAD
                                 collapseSignal={slidesSaved}
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 noun="slide"
                                 /* The caption is what the slide says; the file name is
                                    how an editor tells two untitled ones apart. */
@@ -415,6 +448,7 @@ export default function HomeManager() {
                                    name is how an editor tells two untitled ones
                                    apart when neither has a caption yet. */
                                 summary={(slide) => ({
+<<<<<<< HEAD
                                     title: slide.headline || slide.caption,
                                     subtitle: (slide.media?.url || '').split('/').pop(),
                                     thumb: slide.media?.url,
@@ -423,6 +457,13 @@ export default function HomeManager() {
                                     media: { ...EMPTY_MEDIA }, caption: '',
                                     headline: '', headlineHighlight: '', subheadline: '', align: 'left',
                                 })}
+=======
+                                    title: slide.caption,
+                                    subtitle: (slide.media?.url || '').split('/').pop(),
+                                    thumb: slide.media?.url,
+                                })}
+                                blank={() => ({ media: { ...EMPTY_MEDIA }, caption: '' })}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 row={(slide, update) => (
                                     <div className="space-y-3">
                                         {/* 21/9 — the real shape of the banner on the page. */}
@@ -432,6 +473,7 @@ export default function HomeManager() {
                                             value={slide.media}
                                             onChange={media => update({ media })}
                                         />
+<<<<<<< HEAD
                                         {/* This slide's own heading, subheading and
                                             side — the banner shows these while this
                                             picture is on screen. */}
@@ -451,6 +493,9 @@ export default function HomeManager() {
                                             preview={slide.media?.url ? resolveMediaUrl(slide.media.url) : ''}
                                         />
                                         <CmsField label="Caption" hint="Optional small line near the bottom of this slide.">
+=======
+                                        <CmsField label="Caption" hint="Optional text shown over this slide.">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             <CmsInput
                                                 value={slide.caption}
                                                 onChange={e => update({ caption: e.target.value })}
@@ -509,6 +554,7 @@ export default function HomeManager() {
                             <HomeGalleryPicker />
                         </div>
 
+<<<<<<< HEAD
                         {/* The same switch for EVENTS — whoever posted them. An
                             event's banner switch is `showInBanner`, its own
                             field; the events strip lower down is `showOnHome`. */}
@@ -519,6 +565,8 @@ export default function HomeManager() {
                             <HomeEventBannerPicker />
                         </div>
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         {/* “How many posters” used to lead this row and is gone:
                             the switches above decide. Where they SIT is a layout
                             choice and stays. */}
@@ -544,6 +592,7 @@ export default function HomeManager() {
 
                     <CmsStep
                         sectionKey="carousel.highlightCard"
+<<<<<<< HEAD
                         /*
                          * `card` only: this IS a card — a shallow plate of
                          * figures overlapping the banner's bottom edge. A
@@ -552,6 +601,8 @@ export default function HomeManager() {
                          * stop it reading as a row of figures at all.
                          */
                         fieldMode="card"
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         step="Banner 5"
                         title="Highlight card"
                         hint="Overlaps the bottom edge of the banner."
@@ -770,7 +821,11 @@ export default function HomeManager() {
                             actions={
                                 <a
                                     href="/cms/events"
+<<<<<<< HEAD
                                     className="shrink-0 rounded-lg px-3 py-1.5 text-[1.0625rem] font-semibold
+=======
+                                    className="shrink-0 rounded-lg px-3 py-1.5 text-[1rem] font-semibold
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                text-blue-700 transition-colors hover:bg-blue-50
                                                dark:text-blue-400 dark:hover:bg-blue-950/40"
                                 >
@@ -780,6 +835,7 @@ export default function HomeManager() {
                         >
                             <div className="space-y-0">
 
+<<<<<<< HEAD
                                 {/* ---- which events ----
                                     Nothing to choose: the home page carries exactly
                                     the events on /events. See `EventsGrid`. */}
@@ -792,6 +848,19 @@ export default function HomeManager() {
                                                   font-semibold text-blue-700 transition-colors hover:bg-blue-50 dark:border-[#2a2a2a] dark:text-blue-400">
                                         Open the Events screen
                                     </a>
+=======
+                                {/* ---- which events ---- */}
+                                {/*
+                                  * FIRST, because it is what an editor opens this
+                                  * card to do. The wording changes once a year; which
+                                  * events are on the landing page changes weekly.
+                                  */}
+                                <CmsSection
+                                    title="Which events appear here"
+                                    hint="Every event switched on appears, however many that is. A switch saves straight away — it writes the event itself."
+                                >
+                                    <HomeEventsPicker />
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 </CmsSection>
 
                                 {/* ---- the wording ---- */}

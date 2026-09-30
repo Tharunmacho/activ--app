@@ -1,9 +1,16 @@
+<<<<<<< HEAD
 import { MenuTile } from '@/components/shared/MenuTile';
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+<<<<<<< HEAD
 import { Search, UserPlus, Building2, Package } from "lucide-react";
+=======
+import { Search, Menu, UserPlus, Building2, Package } from "lucide-react";
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { useState, useEffect } from "react";
 import MemberSidebar from "@/pages/member/MemberSidebar";
 import { toast } from "sonner";
@@ -106,17 +113,37 @@ const Explore = () => {
             rail was still a drawer, so between 768px and 1023px the screen had
             no title and no way to open the navigation. */}
         <div className="lg:hidden flex items-center gap-2 p-4 bg-white border-b">
+<<<<<<< HEAD
           <MenuTile onClick={() => setSidebarOpen(true)} />
+=======
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
+            className="p-2 shrink-0"
+          >
+            <Menu className="h-6 w-6" />
+          </Button>
+>>>>>>> 8020f5d (Initial commit for website frontend)
           <h1 className={`${PAGE_TITLE} flex-1 min-w-0 truncate`}>Explore Members</h1>
         </div>
 
         {/* Page content */}
+<<<<<<< HEAD
         <div className="flex-1 p-4 md:p-6 overflow-auto">
+=======
+        <div className="flex-1 p-3 md:p-6 overflow-auto">
+>>>>>>> 8020f5d (Initial commit for website frontend)
           <div className="w-full max-w-[110rem] mx-auto">
             <h1 className={`${PAGE_TITLE} mb-6 hidden lg:block text-slate-800`}>Explore Members</h1>
 
             {/* Search Bar */}
+<<<<<<< HEAD
             <div className="relative mb-4 sm:mb-6">
+=======
+            <div className="relative mb-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
               <Input
                 placeholder="Search members, businesses, or products..."
@@ -143,22 +170,38 @@ const Explore = () => {
             )}
 
             {!loading && filteredMembers.length > 0 && (
+<<<<<<< HEAD
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+=======
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 {filteredMembers.map((member) => (
                   <Card key={member.userId} className="overflow-hidden hover:shadow-2xl transition-all duration-300 rounded-2xl border-0">
                     <CardContent className="p-0">
                       {/* Member Header */}
+<<<<<<< HEAD
                       <div className="bg-blue-600 p-4 sm:p-6 text-white">
                         <div className="flex items-center gap-4 mb-4">
                           <Avatar className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 border-4 border-white shadow-lg">
+=======
+                      <div className="bg-blue-600 p-6 text-white">
+                        <div className="flex items-center gap-4 mb-4">
+                          <Avatar className="w-16 h-16 border-4 border-white shadow-lg">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             <AvatarImage src={member.profilePicture || "/placeholder.svg"} />
                             <AvatarFallback className="bg-white text-blue-600 text-[1.5625rem] font-bold">
                               {member.fullName ? member.fullName.charAt(0).toUpperCase() : 'M'}
                             </AvatarFallback>
                           </Avatar>
+<<<<<<< HEAD
                           <div className="flex-1 min-w-0">
                             <h3 className={`${CARD_TITLE} break-words`}>{member.fullName || 'Member'}</h3>
                             <p className="text-[1.1875rem] text-blue-100 break-all">{member.email || ''}</p>
+=======
+                          <div className="flex-1">
+                            <h3 className={CARD_TITLE}>{member.fullName || 'Member'}</h3>
+                            <p className="text-[1.1875rem] text-blue-100">{member.email || ''}</p>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                           </div>
                         </div>
                         <Button

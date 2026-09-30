@@ -81,7 +81,11 @@ export default function EventCard({
                     ) : (
                         <div className="flex h-full w-full flex-col items-center justify-center
                                         bg-gradient-to-br from-blue-50 via-slate-50 to-slate-100">
+<<<<<<< HEAD
                             <p className="text-[2.5rem] sm:text-[3.25rem] font-extrabold leading-none tabular-nums text-blue-600/80">
+=======
+                            <p className="text-[3.25rem] font-extrabold leading-none tabular-nums text-blue-600/80">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 {tile.day}
                             </p>
                             <p className="mt-1 text-[1.25rem] font-bold uppercase tracking-[0.2em] text-blue-700/60">
@@ -95,7 +99,11 @@ export default function EventCard({
                         membership buys. */}
                     {event.audience === 'paid' ? (
                         <span className="absolute top-3 left-3 inline-flex items-center gap-1 bg-blue-600
+<<<<<<< HEAD
                                          text-white text-[1.0625rem] font-bold uppercase tracking-wide
+=======
+                                         text-white text-[0.8125rem] font-bold uppercase tracking-wide
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                          px-3 py-1.5 rounded-full shadow-sm">
                             <Lock className="w-3 h-3" /> Members only
                         </span>
@@ -106,7 +114,11 @@ export default function EventCard({
                         // badge reading "Payment due" says two opposite things at
                         // once, and the colour is what gets read at card size.
                         <span className={`absolute top-3 right-3 inline-flex items-center gap-1
+<<<<<<< HEAD
                                           text-white text-[1.0625rem] font-bold uppercase
+=======
+                                          text-white text-[0.8125rem] font-bold uppercase
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                           tracking-wide px-3 py-1.5 rounded-full shadow-sm ${
                             awaitingPayment ? 'bg-amber-500' : 'bg-emerald-600'
                         }`}>
@@ -117,12 +129,21 @@ export default function EventCard({
                 </div>
             ) : null}
 
+<<<<<<< HEAD
             <div className="flex flex-1 gap-3 sm:gap-4 p-4 lg:p-5">
                 {/* The date, as a calendar leaf. Kept even on the poster variant:
                     a poster rarely repeats the date in a form the eye can scan. */}
                 <div className="shrink-0 w-14 sm:w-16 rounded-xl bg-blue-50 text-blue-700 text-center py-2.5">
                     <p className="text-[1.375rem] font-bold leading-none tabular-nums">{tile.day}</p>
                     <p className="text-[1.0625rem] font-bold tracking-wider mt-0.5">{tile.month}</p>
+=======
+            <div className="flex flex-1 gap-4 p-4 lg:p-5">
+                {/* The date, as a calendar leaf. Kept even on the poster variant:
+                    a poster rarely repeats the date in a form the eye can scan. */}
+                <div className="shrink-0 w-16 rounded-xl bg-blue-50 text-blue-700 text-center py-2.5">
+                    <p className="text-[1.375rem] font-bold leading-none tabular-nums">{tile.day}</p>
+                    <p className="text-[0.75rem] font-bold tracking-wider mt-0.5">{tile.month}</p>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 </div>
 
                 <div className="flex min-w-0 flex-1 flex-col">
@@ -149,13 +170,21 @@ export default function EventCard({
                         {event.title || 'Untitled event'}
                     </h3>
 
+<<<<<<< HEAD
                     <p className="text-[1.0625rem] text-slate-500 mt-1 flex items-center gap-1.5">
+=======
+                    <p className="text-[1rem] text-slate-500 mt-1 flex items-center gap-1.5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         <Clock className="w-4 h-4 shrink-0" />
                         <span className="truncate">{formatWhen(event)}</span>
                     </p>
 
                     {event.venue ? (
+<<<<<<< HEAD
                         <p className="text-[1.0625rem] text-slate-500 mt-0.5 flex items-center gap-1.5">
+=======
+                        <p className="text-[1rem] text-slate-500 mt-0.5 flex items-center gap-1.5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             <MapPin className="w-4 h-4 shrink-0" />
                             <span className="truncate">{event.venue}</span>
                         </p>
@@ -171,7 +200,11 @@ export default function EventCard({
                       * only "₹600" would be quoted a price they cannot have.
                       */}
                     {event.registrationEnabled ? (
+<<<<<<< HEAD
                         <p className="text-[1.0625rem] mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+=======
+                        <p className="text-[1rem] mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             <span className="inline-flex items-center gap-1 font-semibold text-slate-700">
                                 <IndianRupee className="w-4 h-4 shrink-0" />
                                 {event.registrationFee > 0
@@ -193,14 +226,22 @@ export default function EventCard({
                         than wherever each title happened to end. */}
                     <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-2.5">
                         {compact && event.audience === 'paid' ? (
+<<<<<<< HEAD
                             <span className="inline-flex items-center gap-1 text-[1.0625rem] font-semibold
+=======
+                            <span className="inline-flex items-center gap-1 text-[0.8125rem] font-semibold
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                              text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full">
                                 <Lock className="w-3 h-3" /> Members only
                             </span>
                         ) : null}
 
                         {compact && registered ? (
+<<<<<<< HEAD
                             <span className={`inline-flex items-center gap-1 text-[1.0625rem] font-semibold
+=======
+                            <span className={`inline-flex items-center gap-1 text-[0.8125rem] font-semibold
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                               px-2.5 py-1 rounded-full ${
                                 awaitingPayment
                                     ? 'text-amber-700 bg-amber-50'
@@ -214,7 +255,11 @@ export default function EventCard({
                         ) : null}
 
                         {event.agenda.length > 0 ? (
+<<<<<<< HEAD
                             <span className="inline-flex items-center gap-1 text-[1.0625rem] text-slate-500">
+=======
+                            <span className="inline-flex items-center gap-1 text-[0.8125rem] text-slate-500">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <CalendarDays className="w-3 h-3" />
                                 {event.agenda.length} sessions
                             </span>
@@ -227,7 +272,11 @@ export default function EventCard({
                           * second would otherwise print a confident "0 left".
                           */}
                         {!past && left !== null ? (
+<<<<<<< HEAD
                             <span className={`inline-flex items-center gap-1 text-[1.0625rem] font-semibold
+=======
+                            <span className={`inline-flex items-center gap-1 text-[0.8125rem] font-semibold
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                               ${left === 0 ? 'text-amber-600' : 'text-slate-500'}`}>
                                 <Users className="w-3 h-3" />
                                 {left === 0 ? 'Full — waiting list' : `${left} seats left`}
@@ -235,10 +284,17 @@ export default function EventCard({
                         ) : null}
 
                         {!past && gate.open && !registered ? (
+<<<<<<< HEAD
                             <span className="text-[1.0625rem] font-bold text-blue-600">Registration open</span>
                         ) : null}
 
                         {past ? <span className="text-[1.0625rem] font-semibold text-slate-400">Past event</span> : null}
+=======
+                            <span className="text-[0.8125rem] font-bold text-blue-600">Registration open</span>
+                        ) : null}
+
+                        {past ? <span className="text-[0.8125rem] font-semibold text-slate-400">Past event</span> : null}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     </div>
                 </div>
             </div>

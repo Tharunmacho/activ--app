@@ -63,8 +63,12 @@ const DeclarationForm = () => {
       setIsBusinessApplicant(
         !(business?.doingBusiness === false
           || business?.doingBusiness === "no"
+<<<<<<< HEAD
           || business?.registrationType === "aspirant"
           || business?.registrationType === "student"),
+=======
+          || business?.registrationType === "aspirant"),
+>>>>>>> 8020f5d (Initial commit for website frontend)
       );
 
       if (saved && Object.keys(saved).length > 0) {
@@ -170,6 +174,7 @@ const DeclarationForm = () => {
         return;
       }
 
+<<<<<<< HEAD
       const isStudent = String(business?.registrationType || "").toLowerCase() === "student";
       const isAspirant =
         business?.doingBusiness === false ||
@@ -178,6 +183,12 @@ const DeclarationForm = () => {
         isStudent;
       // Business, aspirant or student — each is its own plan and price.
       const applicantKind = isStudent ? "student" : isAspirant ? "aspirant" : "business";
+=======
+      const isAspirant =
+        business?.doingBusiness === false ||
+        business?.doingBusiness === "no" ||
+        business?.registrationType === "aspirant";
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
       const application = await submitApplication({
         applicationType: "membership",
@@ -187,8 +198,13 @@ const DeclarationForm = () => {
         state: profile.state,
         district: profile.district,
         block: profile.block,
+<<<<<<< HEAD
         registrationType: applicantKind,
         memberType: applicantKind,
+=======
+        registrationType: isAspirant ? "aspirant" : "business",
+        memberType: isAspirant ? "aspirant" : "business",
+>>>>>>> 8020f5d (Initial commit for website frontend)
         data: {
           personalDetails: {
             fullName: profile.fullName || "",

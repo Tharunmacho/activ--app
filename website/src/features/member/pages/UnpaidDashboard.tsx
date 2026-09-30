@@ -1,13 +1,20 @@
+<<<<<<< HEAD
 import { MenuTile } from '@/components/shared/MenuTile';
 import { useRenewal } from '@/features/member/useRenewal';
 import RenewalBanner from '@/features/member/components/RenewalBanner';
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
+<<<<<<< HEAD
     CheckCircle, Clock, FileText, ArrowRight, TrendingUp, ShieldCheck, Sparkles,
+=======
+    Menu, CheckCircle, Clock, FileText, ArrowRight, TrendingUp, ShieldCheck, Sparkles,
+>>>>>>> 8020f5d (Initial commit for website frontend)
     Search, Bell, CreditCard, BadgeCheck, BarChart3,
     CalendarDays, MapPin, Info, AlertTriangle, Users, Mail, Phone, LifeBuoy, Copy, Check,
     Megaphone, MessageSquare, FileBadge, Handshake, Store, Circle,
@@ -214,12 +221,16 @@ const UnpaidDashboard = () => {
 
     const [loading, setLoading] = useState(true);
     const [application, setApplication] = useState<any>(null);
+<<<<<<< HEAD
     /* A member outside India — the server's answer, from their phone number. */
     const [abroad, setAbroad] = useState<{ on: boolean; place: string; country: string }>({ on: false, place: '', country: '' });
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     const [activity, setActivity] = useState<MemberActivity[]>([]);
     const [contact, setContact] = useState<any>(null);
     // Seeded from storage so a returning member sees their name before the
     // profile call lands; replaced by the database answer either way.
+<<<<<<< HEAD
     // Only a MEMBER session's name: an admin's `userName` left in this browser
     // once greeted a brand-new member as "Hi, CMS".
     const [memberName, setMemberName] = useState(() => {
@@ -227,6 +238,9 @@ const UnpaidDashboard = () => {
             return localStorage.getItem('role') === 'member' ? (localStorage.getItem('userName') || '') : '';
         } catch { return ''; }
     });
+=======
+    const [memberName, setMemberName] = useState(() => localStorage.getItem('userName') || '');
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     /** The greeting takes the first name only — see the note on the header. */
     const firstName = (memberName || '').split(' ').filter(Boolean)[0] || '';
@@ -263,11 +277,14 @@ const UnpaidDashboard = () => {
          * still read that key, so one fetch serves all of them.
          */
         const profile: any = profileRes.status === 'fulfilled' ? profileRes.value : null;
+<<<<<<< HEAD
         setAbroad({
             on: profile?.isInternational === true,
             place: String(profile?.place || profile?.city || ''),
             country: String(profile?.country || ''),
         });
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
         const name = profile?.fullName || '';
         if (name) {
             setMemberName(name);
@@ -321,8 +338,12 @@ const UnpaidDashboard = () => {
      * offered "Activate membership" while their application is still in review
      * — that button leads to a payment screen which would refuse them.
      */
+<<<<<<< HEAD
     const renewal = useRenewal();
     const cta = useMemo(() => membershipCta(access, renewal), [access, renewal]);
+=======
+    const cta = useMemo(() => membershipCta(access), [access]);
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     /**
      * The identifier a member can quote to support.
@@ -359,6 +380,7 @@ const UnpaidDashboard = () => {
      * even though it grants nothing — which is the honest picture of progress,
      * and the reason the applicant is shown three rows rather than one.
      */
+<<<<<<< HEAD
     /*
      * WHO REVIEWS THIS APPLICATION.
      *
@@ -380,6 +402,15 @@ const UnpaidDashboard = () => {
     }, [application, access.membershipActive, tiers]);
 
     const TOTAL_STAGES = tiers.length + 1;
+=======
+    const stagesDone = useMemo(() => {
+        if (!application) return 0;
+        const reviewed = TIERS.filter(t => timelineStageStatus(t.key, application) === 'approved').length;
+        return reviewed + (access.membershipActive ? 1 : 0);
+    }, [application, access.membershipActive]);
+
+    const TOTAL_STAGES = TIERS.length + 1;
+>>>>>>> 8020f5d (Initial commit for website frontend)
     const overallPercent = useMemo(
         () => Math.round((stagesDone / TOTAL_STAGES) * 100),
         [stagesDone, TOTAL_STAGES],
@@ -403,14 +434,22 @@ const UnpaidDashboard = () => {
         if (flags.isRejected) return 'Your application was returned. See the reviewer note below.';
         if (flags.isApproved) return 'Approved by your State Admin. You can now complete the membership payment.';
 
+<<<<<<< HEAD
         const waiting = tiers
+=======
+        const waiting = TIERS
+>>>>>>> 8020f5d (Initial commit for website frontend)
             .filter(t => timelineStageStatus(t.key, application) !== 'approved')
             .map(t => t.label);
 
         if (!waiting.length) return 'All three admins have reviewed your application.';
         return `With your ${waiting.join(', ').replace(/, ([^,]*)$/, ' and $1')}. `
             + 'Your State Admin\u2019s approval is what grants the membership.';
+<<<<<<< HEAD
     }, [application, flags, access.membershipActive, tiers]);
+=======
+    }, [application, flags, access.membershipActive]);
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     const milestone = nextMilestone(access);
 
@@ -455,7 +494,11 @@ const UnpaidDashboard = () => {
          * "approved" without implying the process is over, because the row
          * beneath them is still open.
          */
+<<<<<<< HEAD
         tiers.forEach((tier) => {
+=======
+        TIERS.forEach((tier) => {
+>>>>>>> 8020f5d (Initial commit for website frontend)
             const state = timelineStageStatus(tier.key, application);
             rows.push({
                 title: state === 'approved'
@@ -479,7 +522,11 @@ const UnpaidDashboard = () => {
         });
 
         return rows;
+<<<<<<< HEAD
     }, [application, flags, memberName, access.membershipActive, tiers]);
+=======
+    }, [application, flags, memberName, access.membershipActive]);
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     /**
      * What happens next, in the member's own terms.
@@ -553,7 +600,17 @@ const UnpaidDashboard = () => {
               * two places to look for the same two facts.
               */}
             <div className="flex-1 min-h-0 overflow-y-auto">
+<<<<<<< HEAD
                 <MenuTile onClick={() => setSidebarOpen(true)} className="fixed top-6 left-4 z-40" />
+=======
+                <button
+                    className="lg:hidden fixed top-3 left-3 z-40 p-2 rounded-xl bg-white border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]"
+                    onClick={() => setSidebarOpen(true)}
+                    aria-label="Open menu"
+                >
+                    <Menu className="h-5 w-5" />
+                </button>
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
                 {/*
                   THE GREETING IS THE PAGE HEADER, in the white bar every other
@@ -600,9 +657,13 @@ const UnpaidDashboard = () => {
                             </span>
                         </h1>
                         <p className={`${PAGE_SUBTITLE} text-slate-500 mt-0.5 truncate`}>
+<<<<<<< HEAD
                             {renewal?.state === 'expired'
                                 ? 'Your membership has ended — renew to continue'
                                 : milestone ? "Let's complete your membership journey" : "You're all set."}
+=======
+                            {milestone ? "Let's complete your membership journey" : "You're all set."}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         </p>
                     </div>
 
@@ -637,10 +698,17 @@ const UnpaidDashboard = () => {
                             <span className="w-px h-10 bg-slate-200" aria-hidden />
                             <HeaderFact
                                 icon={<BadgeCheck className="h-3.5 w-3.5" />}
+<<<<<<< HEAD
                                 tone="text-sky-600 bg-sky-50"
                                 label="Member Type"
                                 value={resolvedMemberType}
                                 valueTone="text-sky-700"
+=======
+                                tone="text-purple-600 bg-purple-50"
+                                label="Member Type"
+                                value={resolvedMemberType}
+                                valueTone="text-purple-700"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             />
                             <span className="w-px h-10 bg-slate-200" aria-hidden />
                         </div>
@@ -651,7 +719,11 @@ const UnpaidDashboard = () => {
                     </div>
                 </header>
 
+<<<<<<< HEAD
                 <div className="w-full max-w-[110rem] mx-auto p-4 sm:p-6 lg:px-8 space-y-4 sm:space-y-6">
+=======
+                <div className="w-full max-w-[110rem] mx-auto p-4 sm:p-6 lg:px-8 space-y-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
                     {/* ---------- identity tiles, below `xl` only ----------
                         The same two facts the header carries from `xl` up. Not a
@@ -669,7 +741,11 @@ const UnpaidDashboard = () => {
                           * before either question had been put.
                           */}
                         {access.applicationSubmitted && (
+<<<<<<< HEAD
                             <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-4 w-full lg:w-[28.75rem] lg:shrink-0">
+=======
+                            <div className="grid grid-cols-2 gap-4 w-full lg:w-[28.75rem] lg:shrink-0">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <IdentityTile
                                     icon={<FileText className="h-3.5 w-3.5" />}
                                     tone="text-blue-600 bg-blue-50"
@@ -680,20 +756,32 @@ const UnpaidDashboard = () => {
                                 />
                                 <IdentityTile
                                     icon={<BadgeCheck className="h-3.5 w-3.5" />}
+<<<<<<< HEAD
                                     tone="text-sky-600 bg-sky-50"
                                     label="Member Type"
                                     value={resolvedMemberType}
                                     valueTone="text-sky-700"
+=======
+                                    tone="text-purple-600 bg-purple-50"
+                                    label="Member Type"
+                                    value={resolvedMemberType}
+                                    valueTone="text-purple-700"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 />
                             </div>
                         )}
                     </div>
 
+<<<<<<< HEAD
                     {/* An EXPIRED member lands here: renewal first, above everything. */}
                     <RenewalBanner renewal={renewal} />
 
                     {/* ---------- the two action cards ---------- */}
                     <div className="grid gap-4 sm:gap-6 lg:grid-cols-2 items-stretch">
+=======
+                    {/* ---------- the two action cards ---------- */}
+                    <div className="grid gap-6 lg:grid-cols-2 items-stretch">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         {/*
                           * Blue while there is still work to do, green once the
                           * application is in.
@@ -705,9 +793,15 @@ const UnpaidDashboard = () => {
                           * the one thing that is now happening.
                           */}
                         <Card className={`text-white overflow-hidden h-full rounded-2xl border-0 shadow-[0_10px_28px_-6px_rgba(16,24,40,0.25)] ${
+<<<<<<< HEAD
                             access.applicationSubmitted ? 'bg-emerald-600' : 'bg-gradient-to-br from-[#1e3a8a] to-[#2563eb]'
                         }`}>
                             <CardContent className="p-4 sm:p-5 h-full flex items-start justify-between gap-3">
+=======
+                            access.applicationSubmitted ? 'bg-emerald-600' : 'bg-blue-600'
+                        }`}>
+                            <CardContent className="p-5 h-full flex items-start justify-between gap-4">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <div className="flex-1 min-w-0">
                                     <h2 className={`${CARD_TITLE} mb-3`}>
                                         {access.applicationSubmitted ? 'Profile Complete' : 'Complete Your Profile'}
@@ -731,12 +825,17 @@ const UnpaidDashboard = () => {
                                       * forms done" beside "100% completed" read as
                                       * a contradiction the member could not act on.
                                       */}
+<<<<<<< HEAD
                                     <p className={`${CARD_BODY} text-white/85 mb-4`}>
                                         {renewal?.state === 'expired'
                                             ? 'Your details are on file — renewing needs no new application.'
                                             : access.applicationSubmitted && access.applicationApproved
                                             ? 'Your application is approved. One payment activates your membership.'
                                             : access.applicationSubmitted
+=======
+                                    <p className={`${CARD_BODY} text-white/85 mb-6`}>
+                                        {access.applicationSubmitted
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             ? 'Your application is submitted and under review.'
                                             : profileCompletion >= 100
                                                 ? 'Your profile is complete. Submit to start the review.'
@@ -827,7 +926,11 @@ const UnpaidDashboard = () => {
                                       percentage is computed from, so the ticks
                                       and the figure above them cannot disagree.
                                     */}
+<<<<<<< HEAD
                                     <ul className="mt-4 space-y-1.5">
+=======
+                                    <ul className="mt-5 space-y-2">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         {PROFILE_FORMS
                                             .map((form) => {
                                                 const done = access.applicationSubmitted
@@ -856,33 +959,54 @@ const UnpaidDashboard = () => {
                                 <img
                                     src="/clipboard_3d.png"
                                     alt=""
+<<<<<<< HEAD
                                     className="hidden sm:block w-32 md:w-36 lg:w-40 xl:w-48 shrink-0 self-center scale-[1.4] origin-[25%_50%]
+=======
+                                    className="hidden sm:block w-40 md:w-48 lg:w-56 xl:w-64 shrink-0 self-center
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                object-contain drop-shadow-2xl"
                                 />
                             </CardContent>
                         </Card>
 
+<<<<<<< HEAD
                         <Card className="bg-gradient-to-br from-[#4c1d95] via-[#6d28d9] to-[#8b5cf6] text-white overflow-hidden h-full rounded-2xl border-0 shadow-[0_10px_28px_-6px_rgba(16,24,40,0.25)]">
                             <CardContent className="p-4 sm:p-5 h-full flex items-start justify-between gap-3">
+=======
+                        <Card className="bg-violet-600 text-white overflow-hidden h-full rounded-2xl border-0 shadow-[0_10px_28px_-6px_rgba(16,24,40,0.25)]">
+                            <CardContent className="p-5 h-full flex items-start justify-between gap-4">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <div className="flex-1 min-w-0">
                                     <h2 className={`${CARD_TITLE} mb-2`}>Your Business Account</h2>
                                     <span className={`inline-block ${CHIP_TEXT} bg-white/25 rounded px-2.5 py-1 mb-4`}>
                                         Draft Mode
                                     </span>
+<<<<<<< HEAD
                                     <p className={`${CARD_BODY} text-white/80 mb-4`}>
+=======
+                                    <p className={`${CARD_BODY} text-white/80 mb-5`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         Start building your business profile, catalogue and manage products
                                         before approval.
                                     </p>
                                     <Button
                                         onClick={() => navigate('/business/create-profile')}
                                         size="lg"
+<<<<<<< HEAD
                                         className={`w-full sm:w-auto h-auto min-h-10 whitespace-nowrap px-4 py-2.5 bg-white text-violet-700 hover:bg-violet-50 ${ACTION_TEXT}`}
+=======
+                                        className={`bg-white text-purple-700 hover:bg-purple-50 ${ACTION_TEXT}`}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     >
                                         Manage Business Account
                                         <ArrowRight className="ml-1.5 h-4 w-4" />
                                     </Button>
 
+<<<<<<< HEAD
                                     <div className="mt-4 space-y-2.5">
+=======
+                                    <div className="mt-6 space-y-3">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         {BUSINESS_BENEFITS.map(({ icon: Icon, title, detail }) => (
                                             <div key={title} className="flex items-start gap-3">
                                                 <div className="w-8 h-8 rounded bg-white/20 flex items-center
@@ -900,7 +1024,11 @@ const UnpaidDashboard = () => {
                                 <img
                                     src="/briefcase_3d.png"
                                     alt=""
+<<<<<<< HEAD
                                     className="hidden sm:block w-32 md:w-36 lg:w-40 xl:w-48 shrink-0 self-center scale-[1.4] origin-[25%_50%]
+=======
+                                    className="hidden sm:block w-40 md:w-48 lg:w-56 xl:w-64 shrink-0 self-center
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                object-contain drop-shadow-2xl"
                                 />
                             </CardContent>
@@ -962,7 +1090,11 @@ const UnpaidDashboard = () => {
                               elsewhere is to tell cards apart at a glance rather
                               than to decorate every one of them.
                             */}
+<<<<<<< HEAD
                             <div className="flex flex-wrap items-start gap-3 p-4 sm:p-6 pb-4 sm:pb-5 border-b border-slate-100">
+=======
+                            <div className="flex flex-wrap items-start gap-3 p-6 pb-5 border-b border-slate-100">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <div className="min-w-0 flex-1">
                                     <h3 className={`${CARD_TITLE} text-slate-900`}>
                                         Application Status &amp; Progress
@@ -983,7 +1115,11 @@ const UnpaidDashboard = () => {
                                 <Button
                                     variant="outline"
                                     size="sm"
+<<<<<<< HEAD
                                     className="shrink-0 gap-1.5 text-[1.1875rem] font-semibold rounded-xl"
+=======
+                                    className="shrink-0 gap-1.5 text-[1.125rem] font-semibold rounded-xl"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         navigate('/member/application-status');
@@ -994,13 +1130,21 @@ const UnpaidDashboard = () => {
                                 </Button>
                             </div>
 
+<<<<<<< HEAD
                             <CardContent className="p-4 sm:p-6 space-y-5 sm:space-y-6">
+=======
+                            <CardContent className="p-6 space-y-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
                                 {/* ---- top: overall progress + the four nodes ----
                                      Tinted rather than outlined: it sits directly under
                                      the header rule now, and a border here would draw a
                                      second line a few pixels below the first. */}
+<<<<<<< HEAD
                                 <div className="rounded-xl bg-slate-50 p-4 sm:p-5">
+=======
+                                <div className="rounded-xl bg-slate-50 p-5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     <div className="flex items-start justify-between gap-3 mb-2">
                                         <div>
                                             <p className={`${SECTION_TITLE} text-slate-800`}>Overall Progress</p>
@@ -1008,13 +1152,21 @@ const UnpaidDashboard = () => {
                                                 {stagesDone} of {TOTAL_STAGES} stages completed
                                             </p>
                                         </div>
+<<<<<<< HEAD
                                         <span className="font-display text-[1.5625rem] font-bold text-white bg-blue-600
+=======
+                                        <span className="font-display text-[1.625rem] font-bold text-white bg-blue-600
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                          rounded-lg px-4 py-2 shrink-0 tabular">
                                             {overallPercent}%
                                         </span>
                                     </div>
 
+<<<<<<< HEAD
                                     <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden mb-6 sm:mb-8 mt-4">
+=======
+                                    <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden mb-8 mt-4">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         <div
                                             className="h-full bg-blue-600 rounded-full transition-all duration-500"
                                             style={{ width: `${overallPercent}%` }}
@@ -1024,10 +1176,17 @@ const UnpaidDashboard = () => {
                                     <div className="relative">
                                         {/* The joining line spans an eighth in from each end, which is
                                             where the outer node centres land in a four-column grid. */}
+<<<<<<< HEAD
                                         <div className={`hidden sm:block absolute top-5 h-px border-t border-dashed border-slate-300 ${
                                             isAbroad ? 'left-[25%] right-[25%]' : 'left-[12.5%] right-[12.5%]'}`} />
                                         <div className={`relative grid grid-cols-2 gap-y-6 gap-x-2 ${isAbroad ? '' : 'sm:grid-cols-4'}`}>
                                             {tiers.map(tier => (
+=======
+                                        <div className="hidden sm:block absolute left-[12.5%] right-[12.5%] top-5 h-px
+                                                        border-t border-dashed border-slate-300" />
+                                        <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-y-6 gap-x-2">
+                                            {TIERS.map(tier => (
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                 <StageNode
                                                     key={tier.key}
                                                     label={tier.label}
@@ -1053,7 +1212,11 @@ const UnpaidDashboard = () => {
                                 </div>
 
                                 {/* ---- bottom: timeline | current status + corrections ---- */}
+<<<<<<< HEAD
                                 <div className="grid gap-4 sm:gap-6 lg:grid-cols-2 items-start">
+=======
+                                <div className="grid gap-6 lg:grid-cols-2 items-start">
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
                                     <div>
                                         <p className={`${SECTION_TITLE} text-slate-800 mb-3`}>Timeline</p>
@@ -1079,7 +1242,11 @@ const UnpaidDashboard = () => {
                                                             )}
                                                         </span>
                                                         <span className="flex-1 min-w-0">
+<<<<<<< HEAD
                                                             <span className={`block text-[1.25rem] leading-tight ${
+=======
+                                                            <span className={`block text-[1.3125rem] leading-tight ${
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                                 row.state === 'pending'
                                                                     ? 'font-normal text-slate-400'
                                                                     : 'font-semibold text-slate-800'
@@ -1112,7 +1279,11 @@ const UnpaidDashboard = () => {
                                     </div>
 
                                     <div className="space-y-4">
+<<<<<<< HEAD
                                         <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+=======
+                                        <div className="rounded-xl border border-slate-200 bg-white p-5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             <div className="flex items-center justify-between gap-2 mb-2">
                                                 <p className={`${SECTION_TITLE} text-slate-800`}>Current Status</p>
                                                 <span className={`${CHIP_TEXT} rounded-full px-3 py-1.5 shrink-0 ${
@@ -1138,9 +1309,13 @@ const UnpaidDashboard = () => {
                                                 <DetailRow
                                                     icon={<MapPin className="h-3.5 w-3.5" />}
                                                     label="Location"
+<<<<<<< HEAD
                                                     value={(isAbroad
                                                         ? [application?.place || abroad.place, application?.country || abroad.country]
                                                         : [application?.block, application?.district, application?.state])
+=======
+                                                    value={[application?.block, application?.district, application?.state]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                         .filter(Boolean).join(', ') || '—'}
                                                 />
                                                 <DetailRow
@@ -1178,14 +1353,24 @@ const UnpaidDashboard = () => {
                       * of one column collapsing under the other inside a shared
                       * border.
                       */}
+<<<<<<< HEAD
                     <div className="grid gap-4 sm:gap-6 lg:grid-cols-2 items-start">
                         <Card className="h-full rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                             <CardContent className="p-4 sm:p-6">
+=======
+                    <div className="grid gap-6 lg:grid-cols-2 items-start">
+                        <Card className="h-full rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+                            <CardContent className="p-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <div>
                                     <h3 className={`${CARD_TITLE} text-slate-900 mb-4`}>What&apos;s Next?</h3>
                                     <ul className="space-y-4">
                                         {WHATS_NEXT.map(({ icon: Icon, title, detail, active }) => (
+<<<<<<< HEAD
                                             <li key={title} className="flex items-start gap-3 sm:gap-4">
+=======
+                                            <li key={title} className="flex items-start gap-4">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                 <div className={`w-10 h-10 rounded-full flex items-center
                                                                  justify-center shrink-0 ${
                                                     active ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-500'
@@ -1221,7 +1406,11 @@ const UnpaidDashboard = () => {
                           * to be connected to the people already in it.
                           */}
                         <Card className="h-full rounded-2xl border border-blue-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+<<<<<<< HEAD
                             <CardContent className="p-4 sm:p-6">
+=======
+                            <CardContent className="p-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <div>
                                     <span className={`inline-flex items-center gap-1.5 ${EYEBROW} text-blue-700 bg-blue-50
                                                      rounded-full px-2.5 py-1 mb-3`}>
@@ -1237,7 +1426,11 @@ const UnpaidDashboard = () => {
                                         business in front of them.
                                     </p>
 
+<<<<<<< HEAD
                                     <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-x-4 sm:gap-x-5 gap-y-4 sm:gap-y-5">
+=======
+                                    <div className="grid grid-cols-2 gap-x-5 gap-y-5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         {MEMBERSHIP_BENEFITS.map(({ icon: Icon, tone, title, detail }) => (
                                             <div key={title} className="flex items-start gap-3 min-w-0">
                                                 <div className={`w-9 h-9 rounded-lg ${tone} flex items-center
@@ -1285,9 +1478,15 @@ const UnpaidDashboard = () => {
                     </div>
 
                     {/* ---------- recent updates + support ---------- */}
+<<<<<<< HEAD
                     <div className="grid gap-4 sm:gap-6 lg:grid-cols-2 items-start">
                         <Card className="h-full rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                             <CardContent className="p-4 sm:p-6">
+=======
+                    <div className="grid gap-6 lg:grid-cols-2 items-start">
+                        <Card className="h-full rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+                            <CardContent className="p-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <div className="flex items-center justify-between gap-2 mb-4">
                                     <h3 className={`${CARD_TITLE} text-slate-900`}>Recent Updates</h3>
                                     <button
@@ -1337,7 +1536,11 @@ const UnpaidDashboard = () => {
                           * when the CMS has not been given that value.
                           */}
                         <Card className="h-full rounded-2xl bg-blue-50/60 border border-blue-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+<<<<<<< HEAD
                             <CardContent className="p-4 sm:p-6">
+=======
+                            <CardContent className="p-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <div className="flex items-center gap-2 mb-2">
                                     <LifeBuoy className="h-5 w-5 text-blue-600" />
                                     <h3 className={`${CARD_TITLE} text-slate-900`}>Need Help?</h3>
@@ -1410,7 +1613,11 @@ const UnpaidDashboard = () => {
 
                     {/* ---------- the single call to action ---------- */}
                     <Card className="rounded-2xl bg-blue-50/70 border border-blue-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+<<<<<<< HEAD
                         <CardContent className="p-4 sm:p-6 flex flex-col md:flex-row items-start md:items-center gap-5">
+=======
+                        <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center gap-5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             <img
                                 src="/clipboard_3d.png"
                                 alt=""
@@ -1432,7 +1639,11 @@ const UnpaidDashboard = () => {
                                 onClick={() => navigate(
                                     access.applicationApproved ? '/member/payment' : '/member/profile?step=1',
                                 )}
+<<<<<<< HEAD
                                 className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 shrink-0"
+=======
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 shrink-0"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             >
                                 {access.applicationApproved ? 'Activate Membership' : 'Continue Your Journey'}
                                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -1491,7 +1702,11 @@ const HeaderFact = ({ icon, tone, label, value, valueTone, fullValue }: {
                 </p>
                 <div className="flex items-center gap-1.5 mt-1.5 min-w-0">
                     <p title={fullValue || value}
+<<<<<<< HEAD
                        className={`font-display font-semibold text-[1.25rem] leading-none truncate ${valueTone}`}>
+=======
+                       className={`font-display font-semibold text-[1.3125rem] leading-none truncate ${valueTone}`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         {value}
                     </p>
                     {fullValue ? (
@@ -1530,7 +1745,11 @@ const IdentityTile = ({ icon, tone, label, value, valueTone, fullValue }: {
     };
 
     return (
+<<<<<<< HEAD
         <div className="rounded-xl border border-slate-200 bg-white px-4 sm:px-5 py-3 sm:py-4">
+=======
+        <div className="rounded-xl border border-slate-200 bg-white px-5 py-4">
+>>>>>>> 8020f5d (Initial commit for website frontend)
             <div className="flex items-center gap-2 mb-1">
                 <span className={`w-8 h-8 rounded-full ${tone} flex items-center justify-center shrink-0`}>
                     {icon}
@@ -1538,7 +1757,11 @@ const IdentityTile = ({ icon, tone, label, value, valueTone, fullValue }: {
                 <span className={`${EYEBROW} text-slate-500`}>{label}</span>
             </div>
             <div className="flex items-center gap-2 min-w-0 mt-1">
+<<<<<<< HEAD
                 <p title={fullValue || value} className={`font-display font-semibold text-[1.375rem] sm:text-[1.75rem] truncate ${valueTone}`}>
+=======
+                <p title={fullValue || value} className={`font-display font-semibold text-[1.75rem] truncate ${valueTone}`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     {value}
                 </p>
                 {fullValue ? (

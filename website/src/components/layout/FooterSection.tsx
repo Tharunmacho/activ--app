@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Phone, Mail, MapPin } from 'lucide-react';
+<<<<<<< HEAD
 import { sectionHidden } from '@/components/shared/cmsSections';
 import { SectionFields } from '@/components/shared/SectionFields';
 import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
@@ -9,6 +10,15 @@ import { zoneName, getRegionMap } from '@/services/cmsRegionsApi';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
 import { SCREEN_CONTAINER } from './pageContainer';
 import { useSocialLinks, SocialButtons } from '@/components/shared/SocialLinks';
+=======
+import { sectionHidden, sectionFields } from '@/components/shared/cmsSections';
+import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
+import { getSiteSettings, getLegalLinks, type SiteSettings } from '@/services/cmsApi';
+import { getRegionMap } from '@/services/cmsRegionsApi';
+import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
+import { CmsIcon } from '@/components/shared/CmsIcon';
+import { SCREEN_CONTAINER } from './pageContainer';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * The public site's footer — the brand mark centred on the navy, contact on one
@@ -52,7 +62,11 @@ export function FooterSection() {
             .catch(() => { if (!cancelled) setSite(null); });
 
         getLegalLinks()
+<<<<<<< HEAD
             .then((rows) => { if (!cancelled) setPolicyLinks(Array.isArray(rows) ? rows : []); })
+=======
+            .then((rows) => { if (!cancelled) setPolicyLinks(rows || []); })
+>>>>>>> 8020f5d (Initial commit for website frontend)
             .catch(() => { if (!cancelled) setPolicyLinks([]); });
 
         return () => { cancelled = true; };
@@ -87,10 +101,16 @@ export function FooterSection() {
 
     const addressLines = removed('footer.address') ? [] : (footer?.addressLines || []);
     const phones = removed('footer.contact') ? [] : (footer?.phones || []);
+<<<<<<< HEAD
     /* CMS → Contact → Social media (plus any older footer rows), every link
        made absolute — see SocialLinks. Removing the Socials card still hides them. */
     const liveSocials = useSocialLinks();
     const socials = removed('footer.socials') ? [] : liveSocials;
+=======
+    const socials = removed('footer.socials')
+        ? []
+        : (footer?.socials || []).filter((s) => isLive(s?.href));
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     /**
      * The legal row — the association's actual policy documents, live.
@@ -148,7 +168,11 @@ export function FooterSection() {
                 if (cancelled) return;
                 setRegionLinks((rows || [])
                     .filter((r) => r.hasPage)
+<<<<<<< HEAD
                     .map((r) => ({ label: zoneName(r.label, r.national), href: `/regions/${r.slug}` })));
+=======
+                    .map((r) => ({ label: r.label, href: `/regions/${r.slug}` })));
+>>>>>>> 8020f5d (Initial commit for website frontend)
             })
             /* Silent: a footer must render with or without this. */
             .catch(() => { /* the row is simply not drawn */ });
@@ -171,6 +195,7 @@ export function FooterSection() {
      * labelled line dropped into the middle of a link column would read as
      * a link that lost its href.
      */
+<<<<<<< HEAD
     /*
      * Each card's rows are drawn IN THAT COLUMN now — see `SectionFields`.
      *
@@ -197,6 +222,17 @@ export function FooterSection() {
             className="mt-7"
         />
     );
+=======
+    const ownRows = [
+        ...sectionFields(site?.sections, 'footer.brand'),
+        ...(removed('footer.address') ? [] : sectionFields(site?.sections, 'footer.address')),
+        ...(removed('footer.linkColumns') ? [] : sectionFields(site?.sections, 'footer.linkColumns')),
+        ...(removed('footer.contact') ? [] : sectionFields(site?.sections, 'footer.contact')),
+        ...(removed('footer.socials') ? [] : sectionFields(site?.sections, 'footer.socials')),
+        ...(removed('footer.bottomBar') ? [] : sectionFields(site?.sections, 'footer.bottomBar')),
+        ...(site?.extraFields || []),
+    ];
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     const hasContact = !!(phones.length || email || socials.length);
     const hasBottomBar = !!(copyright || legalLinks.length || note);
@@ -209,7 +245,11 @@ export function FooterSection() {
                 key={key}
                 href={href}
                 target={href.startsWith('http') ? '_blank' : undefined}
+<<<<<<< HEAD
                 rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
+=======
+                rel={href.startsWith('http') ? 'noreferrer' : undefined}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 className={className}
               >{label}</a>
     );
@@ -237,9 +277,15 @@ export function FooterSection() {
               as a different page stitched on at the bottom. One column, one
               left edge, all the way down.
             */}
+<<<<<<< HEAD
             <div className={`${SCREEN_CONTAINER} relative z-10 pt-10 pb-6 sm:pt-16 sm:pb-8`}>
 
                 <div className="grid grid-cols-1 gap-9 sm:gap-12 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-10 lg:items-start">
+=======
+            <div className={`${SCREEN_CONTAINER} relative z-10 pt-16 pb-8`}>
+
+                <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1fr_auto_1fr] lg:gap-10 lg:items-start">
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
                     {/* ------------------------------------------- contact */}
                     {hasContact ? (
@@ -286,6 +332,7 @@ export function FooterSection() {
                                 )}
                             </div>
 
+<<<<<<< HEAD
                             {columnFields('footer.contact')}
 
                             <SocialButtons links={socials} tone="dark" size="sm" className="mt-7 !gap-2" />
@@ -296,6 +343,32 @@ export function FooterSection() {
 
                     {/* --------------------------------------------- brand */}
                     <div className="min-w-0 text-center order-first lg:order-none lg:px-10 lg:max-w-md">
+=======
+                            {socials.length > 0 && (
+                                <div className="flex flex-wrap gap-2.5 mt-7">
+                                    {socials.map((s, i) => (
+                                        <a
+                                            key={i}
+                                            href={s.href}
+                                            target={s.href?.startsWith('http') ? '_blank' : undefined}
+                                            rel="noreferrer"
+                                            aria-label={s.icon}
+                                            className="w-11 h-11 rounded-full bg-white/10 ring-1 ring-white/15
+                                                       flex items-center justify-center text-white
+                                                       hover:bg-white hover:text-brand-800 hover:-translate-y-0.5
+                                                       transition-all duration-300"
+                                        >
+                                            <CmsIcon name={s.icon} size={16} fallback="globe" />
+                                        </a>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ) : <div />}
+
+                    {/* --------------------------------------------- brand */}
+                    <div className="min-w-0 text-center lg:px-10 lg:max-w-md">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         {brand?.logo?.url && (
                             /*
                              * `brightness-0 invert` paints the mark white.
@@ -307,7 +380,11 @@ export function FooterSection() {
                              * and works because the mark is a single flat
                              * colour on transparency.
                              */
+<<<<<<< HEAD
                             <span className="mx-auto block h-12 sm:h-16 w-auto max-w-[12rem] sm:max-w-[15rem]">
+=======
+                            <span className="mx-auto block h-16 w-auto max-w-[15rem]">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <CmsMediaFrame
                                     media={brand.logo}
                                     /*
@@ -340,8 +417,11 @@ export function FooterSection() {
                                 {brand.fullName}
                             </p>
                         )}
+<<<<<<< HEAD
 
                         {columnFields('footer.brand')}
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     </div>
 
                     {/* ------------------------------------------- address */}
@@ -357,22 +437,35 @@ export function FooterSection() {
                                     ))}
                                 </address>
                             </div>
+<<<<<<< HEAD
 
                             {columnFields('footer.address')}
                         </div>
                     ) : <div aria-hidden="true" className="hidden lg:block" />}
+=======
+                        </div>
+                    ) : <div />}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 </div>
 
                 {/* ----------------------------------------- navigation rule */}
                 {navLinks.length > 0 && (
+<<<<<<< HEAD
                     <nav className="mt-9 sm:mt-12 border-t border-white/15 pt-5 sm:pt-6">
+=======
+                    <nav className="mt-12 border-t border-white/15 pt-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         <ul className="flex flex-wrap items-center justify-center gap-y-3">
                             {navLinks.map((item, i) => (
                                 <li key={i} className="flex items-center">
                                     {renderLink(
                                         item.label,
                                         item.href,
+<<<<<<< HEAD
                                         'px-3 sm:px-5 py-2.5 text-[1.0625rem] sm:text-[1.125rem] font-medium text-white/80 '
+=======
+                                        'px-5 py-2.5 text-[1.125rem] font-medium text-white/80 '
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         + 'hover:text-white transition-colors',
                                         `nav-${i}`,
                                     )}
@@ -394,9 +487,12 @@ export function FooterSection() {
                     </nav>
                 )}
 
+<<<<<<< HEAD
                 {/* The navigation card's own rows, under the row it is about. */}
                 {columnFields('footer.linkColumns')}
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 {/*
                   * ------------------------------------------------------------
                   * THE REGIONS, AS A SECOND ROW
@@ -419,10 +515,17 @@ export function FooterSection() {
                   */}
                 {regionLinks.length > 0 && (
                     <nav
+<<<<<<< HEAD
                         aria-label="Zones"
                         className={navLinks.length > 0
                             ? 'mt-1'
                             : 'mt-9 sm:mt-12 border-t border-white/15 pt-5 sm:pt-6'}
+=======
+                        aria-label="Regions"
+                        className={navLinks.length > 0
+                            ? 'mt-1'
+                            : 'mt-12 border-t border-white/15 pt-6'}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     >
                         <ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
                             {regionLinks.map((item) => (
@@ -430,7 +533,11 @@ export function FooterSection() {
                                     {renderLink(
                                         item.label,
                                         item.href,
+<<<<<<< HEAD
                                         'inline-block py-1.5 text-[1.0625rem] font-semibold text-white/55 '
+=======
+                                        'text-[1.0625rem] font-semibold text-white/55 '
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         + 'hover:text-white transition-colors',
                                         `region-${item.href}`,
                                     )}
@@ -440,6 +547,7 @@ export function FooterSection() {
                     </nav>
                 )}
 
+<<<<<<< HEAD
                 {/* The bottom bar's own rows, with the bottom bar. */}
                 {columnFields('footer.bottomBar')}
 
@@ -456,11 +564,17 @@ export function FooterSection() {
                 {ownRows.length > 0 && (
                     <div className="mt-8 border-t border-white/10 pt-6
                                     text-[1.125rem] font-medium leading-relaxed">
+=======
+                {/* The editor's own rows — see `ownRows`. */}
+                {ownRows.length > 0 && (
+                    <div className="mt-8 border-t border-white/10 pt-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         <CmsExtraFields fields={ownRows} tone="dark" />
                     </div>
                 )}
 
                 {hasBottomBar && (
+<<<<<<< HEAD
                     /*
                       ONE LINE, TWO HALVES. The notice ("All rights reserved.")
                       used to ride at the end of the legal links, in a bare span
@@ -494,6 +608,24 @@ export function FooterSection() {
                                     </li>
                                 ))}
                             </ul>
+=======
+                    <div className="mt-6 border-t border-white/10 pt-5 flex flex-col md:flex-row
+                                    md:justify-between md:items-center gap-3 text-[1.0625rem] text-white/55">
+                        {copyright && <p className="text-center md:text-left">{copyright}</p>}
+
+                        {(legalLinks.length > 0 || note) && (
+                            <div className="flex flex-wrap justify-center md:justify-end gap-x-6 gap-y-2">
+                                {legalLinks.map((item, i) =>
+                                    renderLink(
+                                        item.label,
+                                        item.href,
+                                        'hover:text-white transition-colors',
+                                        `legal-${i}`,
+                                    ),
+                                )}
+                                {note && <span>{note}</span>}
+                            </div>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         )}
                     </div>
                 )}

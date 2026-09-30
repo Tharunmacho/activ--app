@@ -160,7 +160,11 @@ const Pill = ({
     type="button"
     onClick={onClick}
     aria-pressed={selected}
+<<<<<<< HEAD
     className={`px-4 sm:px-5 py-2.5 sm:py-3 min-h-10 max-w-full break-words text-left rounded-xl text-[1.25rem] font-bold border transition-colors ${selected
+=======
+    className={`px-5 py-3 rounded-xl text-[1.25rem] font-bold border transition-colors ${selected
+>>>>>>> 8020f5d (Initial commit for website frontend)
       ? 'bg-blue-600 text-white border-blue-600'
       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
       }`}
@@ -204,7 +208,11 @@ const CheckCard = ({
   lockedNote?: string;
 }) => (
   <label
+<<<<<<< HEAD
     className={`flex items-start gap-3 sm:gap-3.5 rounded-xl border p-4 sm:p-5 min-w-0 transition-colors ${lockedNote ? 'cursor-default' : 'cursor-pointer'} ${checked
+=======
+    className={`flex items-start gap-3.5 rounded-xl border p-5 transition-colors ${lockedNote ? 'cursor-default' : 'cursor-pointer'} ${checked
+>>>>>>> 8020f5d (Initial commit for website frontend)
       ? 'border-blue-500 bg-blue-50/60'
       : 'border-slate-200 bg-white hover:bg-slate-50'
       }`}
@@ -218,8 +226,13 @@ const CheckCard = ({
                  disabled:cursor-not-allowed"
     />
     <span className="min-w-0">
+<<<<<<< HEAD
       <span className="block text-[1.25rem] font-bold text-slate-800 break-words">{label}</span>
       <span className="block text-[1.1875rem] text-slate-500 mt-1 break-words">{description}</span>
+=======
+      <span className="block text-[1.25rem] font-bold text-slate-800">{label}</span>
+      <span className="block text-[1.1875rem] text-slate-500 mt-1">{description}</span>
+>>>>>>> 8020f5d (Initial commit for website frontend)
       {lockedNote ? (
         <span className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-blue-100/70 px-2 py-1
                          text-[1rem] font-semibold text-blue-800">
@@ -235,7 +248,11 @@ const CheckCard = ({
 const Subsection = ({
   title, hint, children,
 }: { title: string; hint?: string; children: React.ReactNode }) => (
+<<<<<<< HEAD
   <div className="pt-4 mt-4 sm:pt-5 sm:mt-5 border-t border-slate-100 first:pt-0 first:mt-0 first:border-t-0">
+=======
+  <div className="pt-5 mt-5 border-t border-slate-100 first:pt-0 first:mt-0 first:border-t-0">
+>>>>>>> 8020f5d (Initial commit for website frontend)
     <p className="text-[1.375rem] font-extrabold tracking-tight text-slate-900">{title}</p>
     {hint ? <p className="text-[1.1875rem] text-slate-500 mt-1 mb-3.5">{hint}</p> : <div className="mb-3.5" />}
     {children}
@@ -776,12 +793,21 @@ const CompanyForm = ({
           Every row collapses to one column below `lg`, in this same order.
       */}
       <form id="company-form" onSubmit={handleSubmit}>
+<<<<<<< HEAD
                 <div className="space-y-4 sm:space-y-6">
 
           {/* Identity, and what the company trades in. */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             <div className="lg:col-span-1 h-full">
             <Card id="identity" padded={false} className="p-4 sm:p-6 h-full !border !border-slate-200 !shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
+=======
+                <div className="space-y-6">
+
+          {/* Identity, and what the company trades in. */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1 h-full">
+            <Card id="identity" padded={false} className="p-6 h-full !border !border-slate-200 !shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
+>>>>>>> 8020f5d (Initial commit for website frontend)
               <SectionHeading
                 title="Company Identity &amp; Contact"
                 description="Your mark, and how members reach you"
@@ -796,7 +822,11 @@ const CompanyForm = ({
               */}
               <label
                 htmlFor="company-banner"
+<<<<<<< HEAD
                 className="block mb-4 sm:mb-5 rounded-2xl border-2 border-dashed border-slate-300
+=======
+                className="block mb-5 rounded-2xl border-2 border-dashed border-slate-300
+>>>>>>> 8020f5d (Initial commit for website frontend)
                            hover:border-blue-500 hover:bg-slate-100 transition-colors
                            cursor-pointer overflow-hidden bg-slate-50"
               >
@@ -841,10 +871,17 @@ const CompanyForm = ({
                   <img
                     src={resolveMediaUrl(logoPreview)}
                     alt="Logo preview"
+<<<<<<< HEAD
                     className="w-full h-32 sm:h-36 object-contain bg-white p-2"
                   />
                 ) : (
                   <div className="flex flex-col items-center justify-center h-32 sm:h-36 px-4 text-center">
+=======
+                    className="w-full h-36 object-cover"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-36 px-4 text-center">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <Upload className="h-9 w-9 text-slate-400 mb-3" />
                     <p className="text-[1.25rem] font-bold text-slate-700">Upload Company Logo</p>
                     <p className="text-[1.1875rem] text-slate-500 mt-1">JPG or PNG, max 2MB &middot; optional</p>
@@ -920,7 +957,11 @@ const CompanyForm = ({
             </Card>
             </div>
             <div className="lg:col-span-2 h-full">
+<<<<<<< HEAD
             <Card id="details" padded={false} className="p-4 sm:p-6 h-full !border !border-slate-200 !shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
+=======
+            <Card id="details" padded={false} className="p-6 h-full !border !border-slate-200 !shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
+>>>>>>> 8020f5d (Initial commit for website frontend)
               <SectionHeading
                 title="Business Details"
                 description="What the company is and what it does"
@@ -1013,8 +1054,13 @@ const CompanyForm = ({
           </div>
 
           {/* Two short sections, side by side. */}
+<<<<<<< HEAD
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             <Card id="products" padded={false} className="p-4 sm:p-6 h-full !border !border-slate-200 !shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
+=======
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card id="products" padded={false} className="p-6 h-full !border !border-slate-200 !shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
+>>>>>>> 8020f5d (Initial commit for website frontend)
               <SectionHeading
                 title="Product Category"
                 description="What this company makes or does, classified against NIC"
@@ -1030,7 +1076,11 @@ const CompanyForm = ({
                 />
               </Field>
             </Card>
+<<<<<<< HEAD
             <Card id="affiliations" padded={false} className="p-4 sm:p-6 h-full !border !border-slate-200 !shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
+=======
+            <Card id="affiliations" padded={false} className="p-6 h-full !border !border-slate-200 !shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
+>>>>>>> 8020f5d (Initial commit for website frontend)
               <SectionHeading
                 title="Memberships &amp; Affiliations"
                 description="Other chambers this company belongs to"
@@ -1060,8 +1110,13 @@ const CompanyForm = ({
           </div>
 
           {/* The two paperwork sections, likewise. */}
+<<<<<<< HEAD
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             <Card id="financial" padded={false} className="p-4 sm:p-6 h-full !border !border-slate-200 !shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
+=======
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card id="financial" padded={false} className="p-6 h-full !border !border-slate-200 !shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
+>>>>>>> 8020f5d (Initial commit for website frontend)
               <SectionHeading
                 title="Financial Information"
                 description="Registration numbers, filing history and scale"
@@ -1183,7 +1238,11 @@ const CompanyForm = ({
                 ) : null}
               </Subsection>
             </Card>
+<<<<<<< HEAD
             <Card id="government" padded={false} className="p-4 sm:p-6 h-full !border !border-slate-200 !shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
+=======
+            <Card id="government" padded={false} className="p-6 h-full !border !border-slate-200 !shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
+>>>>>>> 8020f5d (Initial commit for website frontend)
               <SectionHeading
                 title="Government Registrations"
                 description="Bodies this company is registered with, and schemes it has availed"
@@ -1349,12 +1408,20 @@ const CompanyForm = ({
 
             {/* Actions repeat at the foot of a long form, right-aligned rather
                 than two full-bleed buttons filling the card. */}
+<<<<<<< HEAD
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
+=======
+            <div className="flex justify-end gap-3">
+>>>>>>> 8020f5d (Initial commit for website frontend)
               <Button
                 type="button"
                 variant="outline"
                 size="lg"
+<<<<<<< HEAD
                 className="w-full sm:w-auto border-slate-200 text-slate-700 hover:bg-slate-50 text-[1.25rem] font-bold h-12"
+=======
+                className="border-slate-200 text-slate-700 hover:bg-slate-50 text-[1.25rem] font-bold h-12"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 onClick={() => navigate(cancelTo || returnTo)}
               >
                 Cancel
@@ -1362,7 +1429,11 @@ const CompanyForm = ({
               <Button
                 type="submit"
                 size="lg"
+<<<<<<< HEAD
                 className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-[1.25rem] font-bold h-12"
+=======
+                className="bg-blue-600 hover:bg-blue-700 text-[1.25rem] font-bold h-12"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 disabled={loading}
               >
                 <Save className="h-4 w-4 mr-2" />

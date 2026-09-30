@@ -11,7 +11,10 @@ node_modules
 dist
 dist-ssr
 *.local
+<<<<<<< HEAD
 .vite
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
 # Editor directories and files
 .vscode/*

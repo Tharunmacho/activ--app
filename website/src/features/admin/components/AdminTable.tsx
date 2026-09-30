@@ -157,7 +157,11 @@ function HeadCell({ children, sortable, direction, onSort, width, align = 'left'
      * capitals is the smallest size that still reads as a heading beside the
      * business area's 16px labels, which is the scale this table now sits in.
      */
+<<<<<<< HEAD
     const base = `px-5 py-4 text-[1.0625rem] font-semibold uppercase tracking-wider
+=======
+    const base = `px-5 py-4 text-[1.0625rem] sm:text-[1rem] font-semibold uppercase tracking-wider
+>>>>>>> 8020f5d (Initial commit for website frontend)
                   text-slate-500 whitespace-nowrap ${ALIGN[align]} ${width || ''}
                   ${hideOnMobile ? 'hidden sm:table-cell' : ''}
                   ${sticky === 'right' ? STICKY_RIGHT + ' bg-slate-50' : ''}`;
@@ -350,6 +354,7 @@ export function AdminTable<T>({
                         </div>
                     )}
 
+<<<<<<< HEAD
                     {toolbar && <div className="flex flex-wrap gap-2 shrink-0 min-w-0">{toolbar}</div>}
                 </div>
             )}
@@ -425,6 +430,14 @@ export function AdminTable<T>({
 
             {/* -------------------------------------------------------- table */}
             <div className="hidden sm:block overflow-x-auto">
+=======
+                    {toolbar && <div className="flex flex-wrap gap-2 shrink-0">{toolbar}</div>}
+                </div>
+            )}
+
+            {/* -------------------------------------------------------- table */}
+            <div className="overflow-x-auto">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 <table
                     className="w-full text-left border-collapse"
                     style={minWidth ? { minWidth } : undefined}
@@ -528,8 +541,13 @@ export function AdminTable<T>({
             {/* -------------------------------------------------------- pager */}
             {showPager && !loading && (
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3
+<<<<<<< HEAD
                                 px-4 sm:px-5 py-3 sm:py-4 border-t border-slate-100 bg-slate-50/60">
                     <p className="text-[1.0625rem] sm:text-[1.25rem] text-slate-500">
+=======
+                                px-5 py-4 border-t border-slate-100 bg-slate-50/60">
+                    <p className="text-[1.25rem] text-slate-500">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         Showing <span className="font-semibold text-slate-800">{from}</span> to{' '}
                         <span className="font-semibold text-slate-800">{to}</span> of{' '}
                         <span className="font-semibold text-slate-800">{total}</span>{' '}
@@ -537,9 +555,15 @@ export function AdminTable<T>({
                     </p>
 
                     {pages > 1 && (
+<<<<<<< HEAD
                         <div className="flex flex-wrap items-center gap-1">
                             <PagerButton onClick={() => goTo(current - 1)} disabled={current <= 1}>
                                 ←<span className="hidden sm:inline"> Previous</span>
+=======
+                        <div className="flex items-center gap-1">
+                            <PagerButton onClick={() => goTo(current - 1)} disabled={current <= 1}>
+                                ← Previous
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             </PagerButton>
 
                             {pageNumbers(current, pages).map((n, i) =>
@@ -551,7 +575,11 @@ export function AdminTable<T>({
                                         type="button"
                                         onClick={() => goTo(n as number)}
                                         aria-current={n === current ? 'page' : undefined}
+<<<<<<< HEAD
                                         className={`h-10 min-w-10 px-2.5 sm:h-11 sm:min-w-11 sm:px-3.5 rounded-xl text-[1.1875rem] sm:text-[1.25rem] font-semibold
+=======
+                                        className={`h-11 min-w-11 px-3.5 rounded-xl text-[1.25rem] font-semibold
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                     transition-colors ${n === current
                                                 ? 'bg-blue-600 text-white shadow-sm'
                                                 : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
@@ -561,7 +589,11 @@ export function AdminTable<T>({
                                 ))}
 
                             <PagerButton onClick={() => goTo(current + 1)} disabled={current >= pages}>
+<<<<<<< HEAD
                                 <span className="hidden sm:inline">Next </span>→
+=======
+                                Next →
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             </PagerButton>
                         </div>
                     )}
@@ -579,7 +611,11 @@ function PagerButton({ children, onClick, disabled }: {
             type="button"
             onClick={onClick}
             disabled={disabled}
+<<<<<<< HEAD
             className="h-10 sm:h-11 px-3 sm:px-4 rounded-xl border border-slate-200 bg-white text-[1.1875rem] sm:text-[1.25rem] font-semibold
+=======
+            className="h-11 px-4 rounded-xl border border-slate-200 bg-white text-[1.25rem] font-semibold
+>>>>>>> 8020f5d (Initial commit for website frontend)
                        text-slate-600 transition-colors hover:bg-slate-50
                        disabled:opacity-40 disabled:hover:bg-white"
         >

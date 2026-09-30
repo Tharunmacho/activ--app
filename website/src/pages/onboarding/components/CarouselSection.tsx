@@ -1,17 +1,27 @@
+<<<<<<< HEAD
 import { galleryPath } from '@/lib/eventPath';
 import { eventPath } from '@/lib/eventPath';
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
 import { ChevronLeft, ChevronRight, ArrowRight, Calendar, MapPin } from 'lucide-react';
 import {
+<<<<<<< HEAD
     getHome, getHomeGallery, getCmsEvents, peekCmsCache,
     type HomeCarousel, type HomeContent, type CmsMedia, type GalleryItem, type CmsSectionOverride, type CmsEvent,
 } from '@/services/cmsApi';
 import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
 import { SectionFields } from '@/components/shared/SectionFields';
 
+=======
+    getHome, getHomeGallery,
+    type HomeCarousel, type CmsMedia, type GalleryItem, type CmsSectionOverride,
+} from '@/services/cmsApi';
+import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { sectionHidden, sectionFields } from '@/components/shared/cmsSections';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
 import { CmsIcon } from '@/components/shared/CmsIcon';
@@ -23,6 +33,7 @@ import {
 } from '@/components/layout/typography';
 
 /**
+<<<<<<< HEAD
  * What the banner's own added fields are set in — the SUB-HEADLINE's type.
  *
  * `HERO_LEDE` itself, not an approximation of it. A field added to the
@@ -40,6 +51,8 @@ const BANNER_PROSE = 'text-[1em] leading-relaxed font-semibold text-gray-200';
 const CARD_PROSE = 'text-[1.0625rem] font-semibold leading-snug';
 
 /**
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
  * The landing banner.
  *
  * Slides, headline, both buttons and the card overlapping the bottom edge are
@@ -75,6 +88,7 @@ const CARD_PROSE = 'text-[1.0625rem] font-semibold leading-snug';
 interface BannerSlide {
     media: CmsMedia;
     caption: string;
+<<<<<<< HEAD
     /*
      * The words shown while THIS picture is on screen, and their side. Blank
      * headline and subheadline fall back to the banner's shared ones — the
@@ -84,6 +98,8 @@ interface BannerSlide {
     highlight: string;
     subheadline: string;
     align: 'left' | 'right';
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     /** Set only on a gallery poster: where clicking it goes. */
     href?: string;
     title?: string;
@@ -92,6 +108,7 @@ interface BannerSlide {
     category?: string;
 }
 
+<<<<<<< HEAD
 /* `=== true`, not `!== false`: the server ALWAYS sends the switch (On by
    default, see the event model). A missing value means a backend too old to
    know it, and an event the CMS cannot account for must not ride the banner. */
@@ -131,12 +148,27 @@ export function CarouselSection() {
         return () => { emblaApi.off('select', onSelect); emblaApi.off('reInit', onSelect); };
     }, [emblaApi]);
 
+=======
+export function CarouselSection() {
+    const [carousel, setCarousel] = useState<HomeCarousel | null>(null);
+    /* Which of this banner's cards the editor removed, and what they added to each — see `cmsSections`. */
+    const [sections, setSections] = useState<CmsSectionOverride[]>([]);
+    const [posters, setPosters] = useState<GalleryItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const [emblaRef, emblaApi] = useEmblaCarousel(
+        { loop: true, duration: 40 },
+        [Autoplay({ delay: 3000, stopOnInteraction: false })],
+    );
+
+>>>>>>> 8020f5d (Initial commit for website frontend)
     const scrollPrev = useCallback(() => { if (emblaApi) emblaApi.scrollPrev(); }, [emblaApi]);
     const scrollNext = useCallback(() => { if (emblaApi) emblaApi.scrollNext(); }, [emblaApi]);
 
     useEffect(() => {
         let cancelled = false;
 
+<<<<<<< HEAD
         /*
          * ALL THREE IN FLIGHT TOGETHER, AND EACH LANDS ON ITS OWN.
          *
@@ -166,6 +198,20 @@ export function CarouselSection() {
         getCmsEvents()
             .then((events) => { if (!cancelled) setBannerEvents(inBanner(events)); })
             .catch(() => null);
+=======
+        // Both in flight together. The banner cannot paint without the home
+        // document, and waiting for it before asking for the posters would put
+        // two round trips in front of the first thing on the page.
+        Promise.all([getHome(), getHomeGallery()])
+            .then(([home, gallery]) => {
+                if (cancelled) return;
+                setCarousel(home.carousel);
+                setSections(home.sections || []);
+                setPosters(gallery || []);
+                setIsLoading(false);
+            })
+            .catch(() => { if (!cancelled) { setCarousel(null); setSections([]); setIsLoading(false); } });
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
         return () => { cancelled = true; };
     }, []);
@@ -182,6 +228,7 @@ export function CarouselSection() {
         // nothing but recent events is a reasonable thing to ask for.
         const authored: BannerSlide[] = sectionHidden(sections, 'carousel.slides')
             ? []
+<<<<<<< HEAD
             : (carousel?.slides || []).map(s => ({
                 media: s.media,
                 caption: s.caption || '',
@@ -238,6 +285,13 @@ export function CarouselSection() {
 
         if (!config || config.enabled === false) return place(fromEvents);
         if (sectionHidden(sections, 'carousel.galleryPosters')) return place(fromEvents);
+=======
+            : (carousel?.slides || []).map(s => ({ media: s.media, caption: s.caption || '' }));
+
+        const config = carousel?.galleryPosters;
+        if (!config || config.enabled === false) return authored;
+        if (sectionHidden(sections, 'carousel.galleryPosters')) return authored;
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
         /*
          * EVERY poster switched on, however many that is.
@@ -253,6 +307,7 @@ export function CarouselSection() {
             .map(item => ({
                 media: item.media,
                 caption: item.caption || '',
+<<<<<<< HEAD
                 /*
                  * A GALLERY PHOTO HAS CONTENT OF ITS OWN — its album title and
                  * caption — so that is what it says, LARGE, when no banner words
@@ -277,14 +332,24 @@ export function CarouselSection() {
                     }),
                 align: item.bannerAlign === 'right' ? 'right' as const : 'left' as const,
                 href: galleryPath(item),
+=======
+                href: `/gallery/${item._id}`,
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 title: item.title || '',
                 eventDate: item.eventDate || '',
                 location: item.location || '',
                 category: item.category || '',
             }));
 
+<<<<<<< HEAD
         return place([...fromEvents, ...fromGallery]);
     }, [carousel, posters, bannerEvents, sections]);
+=======
+        return config.position === 'before'
+            ? [...fromGallery, ...authored]
+            : [...authored, ...fromGallery];
+    }, [carousel, posters, sections]);
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     // Embla caches slide measurements; without this the arrows do nothing on a
     // list that arrived after mount.
@@ -300,7 +365,11 @@ export function CarouselSection() {
     if (isLoading) {
         return (
             <div className="w-full mb-12">
+<<<<<<< HEAD
                 <div className="relative w-full min-h-[85vh] bg-slate-200 animate-pulse" />
+=======
+                <div className="relative w-full h-[85vh] min-h-[37.5rem] bg-slate-200 animate-pulse" />
+>>>>>>> 8020f5d (Initial commit for website frontend)
             </div>
         );
     }
@@ -322,6 +391,7 @@ export function CarouselSection() {
         ? sectionFields(sections, 'carousel.headline')
         : [];
 
+<<<<<<< HEAD
     /*
      * ==========================================================================
      * THE WORDS COMPRESS AS THE CONTENT GROWS
@@ -387,6 +457,10 @@ export function CarouselSection() {
     const hasOverlay = overlayFields.length > 0
         || (showHeadline && !!(carousel.headline || carousel.subheadline))
         || (showHeadline && slides.some(sl => sl.headline || sl.highlight || sl.subheadline))
+=======
+    const hasOverlay = overlayFields.length > 0
+        || (showHeadline && !!(carousel.headline || carousel.subheadline))
+>>>>>>> 8020f5d (Initial commit for website frontend)
         || !!carousel.ctaLabel;
 
     /**
@@ -422,6 +496,7 @@ export function CarouselSection() {
     };
 
     return (
+<<<<<<< HEAD
         <div className="relative w-full mb-12">
             {/*
               * ==================================================================
@@ -445,11 +520,16 @@ export function CarouselSection() {
               */}
             <div className="relative w-full min-h-[60vh] md:min-h-0 md:h-[min(56.25vw,88vh)] bg-slate-900 overflow-hidden
                             flex flex-col justify-center md:flex-row md:items-center">
+=======
+        <div className={`w-full ${showCard ? 'mb-32' : 'mb-12'}`}>
+            <div className="relative w-full h-[85vh] min-h-[37.5rem] bg-slate-900 overflow-visible">
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
                 {slides.length > 0 && (
                     <div className="absolute inset-0 overflow-hidden" ref={emblaRef}>
                         <div className="flex h-full">
                             {slides.map((slide, i) => {
+<<<<<<< HEAD
                                 const picture = (
                                     <>
                                         <div aria-hidden="true" className="md:hidden absolute inset-0 overflow-hidden">
@@ -459,10 +539,22 @@ export function CarouselSection() {
                                                 className="scale-125 blur-2xl opacity-70"
                                             />
                                         </div>
+=======
+                                /* The picture and the shade over it. On a poster
+                                   this whole block becomes the link, so that the
+                                   thing a visitor points at is the thing that
+                                   takes them somewhere. */
+                                const picture = (
+                                    <>
+                                        {/* The frame honours the fit and focal point chosen in the
+                                            CMS, so a portrait upload is not cropped to a sliver in a
+                                            banner this wide, and a video renders as a video. */}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         <div className="absolute inset-0">
                                             <CmsMediaFrame
                                                 media={slide.media}
                                                 priority={i === 0}
+<<<<<<< HEAD
                                                 width={1920}
                                                 sizes="100vw"
                                                 transparent
@@ -486,14 +578,36 @@ export function CarouselSection() {
                                         <div className={`absolute inset-0 ${slide.href ? 'hidden' : ''} ${slide.align === 'right'
                                             ? 'bg-gradient-to-l' : 'bg-gradient-to-r'} from-black/80 via-black/50
                                                         to-transparent z-10 pointer-events-none`} />
+=======
+                                                width={1600}
+                                                className={slide.href
+                                                    ? 'group-hover:scale-[1.03] transition-transform duration-[1200ms] transform-gpu'
+                                                    : ''}
+                                            />
+                                        </div>
+
+                                        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50
+                                                        to-transparent z-10 pointer-events-none" />
+
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     </>
                                 );
 
                                 return (
                                     <div key={slide.href || i} className="flex-[0_0_100%] min-w-0 h-full relative">
                                         {slide.href ? (
+<<<<<<< HEAD
                                             /* Embla swallows the click that ends a drag,
                                                so a swipe on a phone does not navigate. */
+=======
+                                            /*
+                                              Embla registers its own capture-phase
+                                              click handler and swallows the click
+                                              that ends a drag, so swiping the
+                                              banner on a phone does not navigate.
+                                              Nothing extra is needed here.
+                                            */
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             <Link
                                                 to={slide.href}
                                                 aria-label={slide.title ? `View details of ${slide.title}` : 'View gallery item'}
@@ -512,6 +626,7 @@ export function CarouselSection() {
                                         )}
 
                                         {/*
+<<<<<<< HEAD
                                           A poster says what it is, on its own
                                           translucent panel (legible over any
                                           photograph): high on a phone, bottom
@@ -527,6 +642,91 @@ export function CarouselSection() {
                                                              text-[0.75rem] sm:text-[0.8125rem] font-extrabold uppercase tracking-widest">
                                                 View details <ArrowRight size={13} />
                                             </span>
+=======
+                                          A poster says what it is, and says that it
+                                          can be opened.
+
+                                          ITS OWN PANEL, not text on the photograph.
+                                          The banner's shade runs left to right, for
+                                          the headline, so the far side of the frame
+                                          is at full brightness — and a lit hall or a
+                                          white marquee leaves white text there
+                                          unreadable. A translucent plate is legible
+                                          over anything, at any width.
+
+                                          IT MOVES. On a phone the bottom of this
+                                          banner belongs to the two buttons and to
+                                          the statistics card that crosses its
+                                          bottom edge, so a block pinned there
+                                          collides with both — it sits high instead,
+                                          under the header. From `lg`, where the
+                                          headline occupies the left half and the
+                                          card is clear of the corner, it takes the
+                                          bottom right.
+
+                                          `pointer-events-none` throughout: it must
+                                          never intercept the click meant for the
+                                          link underneath it.
+                                        */}
+                                        {slide.href && (slide.title || slide.eventDate || slide.location) && (
+                                            <div className="absolute right-3 sm:right-4 lg:right-8
+                                                            top-6 sm:top-8 lg:top-auto lg:bottom-24 z-20
+                                                            max-w-[min(20rem,72%)] text-right pointer-events-none
+                                                            /* No `backdrop-blur`: this sits over a
+                                                               full-bleed photograph, so the compositor
+                                                               re-blurs the whole image on every frame of
+                                                               a scroll. Measured at 167ms frames on the
+                                                               home page. A solid translucent fill looks
+                                                               the same at this opacity. */
+                                                            bg-black/55 border border-white/15
+                                                            rounded-2xl px-4 py-3 sm:px-5 sm:py-4">
+                                                {slide.category && (
+                                                    <span className="inline-block bg-white/95 text-brand-700 text-[0.75rem] font-bold
+                                                                     px-3 py-1 rounded-full uppercase tracking-wider mb-2">
+                                                        {slide.category}
+                                                    </span>
+                                                )}
+
+                                                {slide.title && (
+                                                    <p className="text-white text-[1.25rem] sm:text-[1.375rem] lg:text-2xl font-extrabold
+                                                                  leading-snug line-clamp-2">
+                                                        {slide.title}
+                                                    </p>
+                                                )}
+
+                                                {(slide.eventDate || slide.location) && (
+                                                    <div className="mt-2 flex flex-wrap items-center justify-end gap-x-3 gap-y-1
+                                                                    text-white/90">
+                                                        {slide.eventDate && (
+                                                            <span className={`${MICRO_LABEL} flex items-center gap-1.5`}>
+                                                                <Calendar size={12} /> {slide.eventDate}
+                                                            </span>
+                                                        )}
+                                                        {slide.location && (
+                                                            <span className={`${MICRO_LABEL} hidden sm:flex items-center gap-1.5 min-w-0`}>
+                                                                <MapPin size={12} className="shrink-0" />
+                                                                <span className="truncate">{slide.location}</span>
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/*
+                                                  Desktop only. On a phone this
+                                                  panel sits over the headline's
+                                                  first line if it runs to four
+                                                  rows — and the affordance is
+                                                  redundant there anyway: the whole
+                                                  image is the tap target, and a
+                                                  phone has no hover to reveal it.
+                                                */}
+                                                <span className="mt-3 hidden lg:inline-flex items-center gap-1.5 border border-white/40
+                                                                 text-white text-[0.8125rem] font-extrabold uppercase
+                                                                 tracking-widest px-3.5 py-1.5 rounded-full">
+                                                    View details <ArrowRight size={13} />
+                                                </span>
+                                            </div>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         )}
                                     </div>
                                 );
@@ -535,11 +735,27 @@ export function CarouselSection() {
                     </div>
                 )}
 
+<<<<<<< HEAD
                 {slides.length > 1 && (
                     <>
                         {/* From `sm`: a disc on each side of the banner. */}
                         <button
                             type="button"
+=======
+                {/*
+                  Arrows are pointless with one slide and misleading with none.
+                  Below `sm` they are pointless for a second reason: the overlay
+                  headline is centred in the banner and wraps to three or four
+                  lines on a 390px screen, so a pair of 48px discs pinned at 40%
+                  of the height land ON the words — "Better Future" was sitting
+                  behind the left arrow. The carousel is a swipe on a touch
+                  screen, so nothing is lost by taking them off it; from `sm`
+                  there is width for them beside the text and they come back.
+                */}
+                {slides.length > 1 && (
+                    <>
+                        <button
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             onClick={scrollPrev}
                             aria-label="Previous slide"
                             className="hidden sm:flex absolute left-4 md:left-8 top-[40%] -translate-y-1/2 w-12 h-12 items-center
@@ -549,7 +765,10 @@ export function CarouselSection() {
                             <ChevronLeft size={28} />
                         </button>
                         <button
+<<<<<<< HEAD
                             type="button"
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             onClick={scrollNext}
                             aria-label="Next slide"
                             className="hidden sm:flex absolute right-4 md:right-8 top-[40%] -translate-y-1/2 w-12 h-12 items-center
@@ -558,6 +777,7 @@ export function CarouselSection() {
                         >
                             <ChevronRight size={28} />
                         </button>
+<<<<<<< HEAD
 
                         {/*
                           * ON A PHONE: arrows and dots together at the foot of the
@@ -616,10 +836,36 @@ export function CarouselSection() {
                                         {words.headline}
                                         {words.highlight && (
                                             <> <span className="text-brand-300">{words.highlight}</span></>
+=======
+                    </>
+                )}
+
+                {/* Headline and buttons */}
+                {/*
+                  `pb-28` on a phone, none from `sm`. The overlay centres its
+                  content in the banner's full height, but the statistics card is
+                  absolutely positioned across the bottom edge of it — so on a
+                  390px screen, where the two buttons wrap onto separate lines,
+                  the second one landed underneath the card and could not be
+                  tapped at all. Padding the flex container shifts the centre up
+                  by the height of the overlap.
+                */}
+                {hasOverlay && (
+                    <div className={`absolute inset-0 z-20 flex items-center pointer-events-none
+                                     ${hasButtons ? 'pb-28 sm:pb-32 lg:pb-0' : 'pb-20 sm:pb-24 lg:pb-0'}`}>
+                        <div className={SCREEN_CONTAINER}>
+                            <div className="max-w-3xl text-white pointer-events-auto">
+                                {showHeadline && (carousel.headline || carousel.headlineHighlight) && (
+                                    <h1 className={`${HERO_HEADING} mb-6`}>
+                                        {carousel.headline}
+                                        {carousel.headlineHighlight && (
+                                            <> <span className="text-brand-300">{carousel.headlineHighlight}</span></>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         )}
                                     </h1>
                                 )}
 
+<<<<<<< HEAD
                                 {showHeadline && words.subheadline && (
                                     <p className={`text-[1em] leading-relaxed font-semibold text-gray-200 max-w-2xl lg:max-w-3xl xl:max-w-4xl
                                                    ${align === 'right' ? 'ml-auto' : ''}
@@ -631,11 +877,27 @@ export function CarouselSection() {
 
                                 {hasButtons && (
                                     <div className={`flex flex-wrap items-center gap-4 ${align === 'right' ? 'justify-end' : ''}`}>
+=======
+                                {showHeadline && carousel.subheadline && (
+                                    <p className={`${HERO_LEDE} text-gray-200 max-w-2xl
+                                                   ${hasButtons ? 'mb-10' : 'mb-0'}`}>
+                                        {carousel.subheadline}
+                                    </p>
+                                )}
+
+                                {/* Not rendered at all when both labels are blank —
+                                    an empty flex row still occupies the gap above
+                                    it, which reads as a button that failed to
+                                    paint rather than as one that is not there. */}
+                                {hasButtons && (
+                                    <div className="flex flex-wrap items-center gap-4">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         {button(carousel.ctaLabel, carousel.ctaHref, carousel.ctaIcon, true)}
                                         {button(carousel.secondaryCtaLabel, carousel.secondaryCtaHref, carousel.secondaryCtaIcon, false)}
                                     </div>
                                 )}
 
+<<<<<<< HEAD
                                 {/* The editor's own rows on this banner. */}
                                 <div className={BANNER_PROSE}>
                                     <CmsExtraFields
@@ -649,13 +911,26 @@ export function CarouselSection() {
                                     <SectionFields proseClass={BANNER_PROSE} sections={sections} sectionKey="carousel.slides" tone="dark" force="content" />
                                     <SectionFields proseClass={BANNER_PROSE} sections={sections} sectionKey="carousel.galleryPosters" tone="dark" force="content" />
                                 </div>
+=======
+                                {/* The editor's own rows on this banner — see `overlayFields`. */}
+                                <CmsExtraFields
+                                    fields={overlayFields}
+                                    tone="dark"
+                                    className={hasButtons ? 'mt-10' : 'mt-8'}
+                                />
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             </div>
                         </div>
                     </div>
                 )}
+<<<<<<< HEAD
             </div>
 
                 {/* The card overlapping the bottom edge — outside the band, see above */}
+=======
+
+                {/* The card overlapping the bottom edge */}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 {showCard && (
                     /* A wide, shallow tilt on a long card: the same degrees that
                        look right on a 320px tile shear a 1024px one. The long
@@ -668,15 +943,20 @@ export function CarouselSection() {
                            into the banner — and the banner has a paragraph there. Less
                            overhang leaves the same plate-lifting-off effect with the
                            text clear behind it. */
+<<<<<<< HEAD
                         /* Under the banner at every width, over its edge only —
                            see the note on the band. */
                         className="relative z-30 mx-auto -mt-10 md:-mt-14 w-[calc(100%-2rem)] md:w-[90%] max-w-5xl"
+=======
+                        className="absolute left-1/2 -translate-x-1/2 -bottom-16 w-[90%] max-w-5xl z-30"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         intensity={4}
                         lift={1.01}
                         perspective={1600}
                         glare={false}
                     >
                     <div className="bg-white rounded-3xl shadow-[0_30px_70px_-24px_rgb(28_46_104/0.5)]
+<<<<<<< HEAD
                                     p-4 sm:p-6 md:p-8 lg:p-10 border border-brand-100">
                     {/*
                       * COMPACT ON A PHONE. The desktop type (STAT_FIGURE,
@@ -705,6 +985,28 @@ export function CarouselSection() {
                                         <CountUp value={card!.value} />
                                         {card!.caption && (
                                             <span className="block text-[0.95rem] sm:text-[1.25rem] font-medium text-gray-500 sm:mt-1">{card!.caption}</span>
+=======
+                                    p-6 md:p-8 lg:p-10 border border-brand-100">
+                    <div className="flex flex-col md:flex-row items-center
+                                    justify-between gap-6 md:gap-0">
+
+                        {(card!.value || card!.eyebrow) && (
+                            <div className="flex items-center space-x-6 w-full md:w-auto">
+                                <div className="w-16 h-16 bg-brand-50 rounded-full flex items-center justify-center
+                                                text-brand-600 shrink-0">
+                                    <CmsIcon name={card!.icon} size={32} fallback="users" />
+                                </div>
+                                <div>
+                                    {card!.eyebrow && (
+                                        <p className={`${EYEBROW} text-brand-500 mb-1.5`}>
+                                            {card!.eyebrow}
+                                        </p>
+                                    )}
+                                    <p className={`${STAT_FIGURE} text-brand-800`}>
+                                        <CountUp value={card!.value} />
+                                        {card!.caption && (
+                                            <span className="text-[1.25rem] font-medium text-gray-500 ml-2">{card!.caption}</span>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         )}
                                     </p>
                                 </div>
@@ -737,6 +1039,7 @@ export function CarouselSection() {
                              * card is already full width and a single row of five would
                              * be five unreadable columns.
                              */
+<<<<<<< HEAD
                             /* One row of equal columns at every width now — on a
                                phone as small figures three across (with a rule
                                above them), rather than two-up with an orphan. */
@@ -749,6 +1052,17 @@ export function CarouselSection() {
                                             <CountUp value={stat.value} />
                                         </p>
                                         <p className={`max-sm:text-[0.75rem] max-sm:tracking-[0.06em] ${STAT_LABEL} text-gray-500 mt-0.5 sm:mt-1.5 truncate max-w-full`}>
+=======
+                            <div className="grid w-full md:w-auto grid-cols-2 gap-x-6 gap-y-6
+                                            md:grid-flow-col md:auto-cols-fr sm:gap-x-8 lg:gap-x-16">
+                                {card!.stats.map((stat, i) => (
+                                    <div key={i} className="flex flex-col items-center text-center min-w-0">
+                                        <CmsIcon name={stat.icon} size={28} className="text-brand-600 mb-3" fallback="users" />
+                                        <p className={`${STAT_FIGURE} text-brand-800`}>
+                                            <CountUp value={stat.value} />
+                                        </p>
+                                        <p className={`${STAT_LABEL} text-gray-500 mt-1.5`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             {stat.label}
                                         </p>
                                     </div>
@@ -757,6 +1071,7 @@ export function CarouselSection() {
                         )}
                     </div>
 
+<<<<<<< HEAD
                     {/* The editor's own rows on this card, under the figures,
                         in the card's own type. */}
                     <div className={CARD_PROSE}>
@@ -771,6 +1086,17 @@ export function CarouselSection() {
                     </div>
                     </Tilt3D>
                 )}
+=======
+                    {/* The editor's own rows on this card, under the figures. */}
+                    <CmsExtraFields
+                        fields={cardFields}
+                        className="mt-8 border-t border-brand-100 pt-6"
+                    />
+                    </div>
+                    </Tilt3D>
+                )}
+            </div>
+>>>>>>> 8020f5d (Initial commit for website frontend)
         </div>
     );
 }

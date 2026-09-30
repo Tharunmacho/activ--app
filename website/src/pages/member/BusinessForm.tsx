@@ -1,5 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
+<<<<<<< HEAD
 import { PlatinumNotice } from '@/components/shared/Platinum';
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { useNavigate } from "react-router-dom";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -49,6 +52,7 @@ const toChoice = (value: unknown): string => {
 interface BusinessFormData {
   doingBusiness: string;
   businessCommencementYear: string;
+<<<<<<< HEAD
   /** Only when not doing business: 'aspirant' or 'student' — two plans, two prices. */
   nonBusinessKind: string;
 }
@@ -60,6 +64,10 @@ const toKind = (saved: any): string => {
   return '';
 };
 
+=======
+}
+
+>>>>>>> 8020f5d (Initial commit for website frontend)
 /** A selectable pill, matching mobile's `pillButton`. */
 const Pill = ({
   label, selected, onClick,
@@ -67,7 +75,11 @@ const Pill = ({
   <button
     type="button"
     onClick={onClick}
+<<<<<<< HEAD
     className={`flex-1 sm:flex-none min-h-[2.75rem] px-4 sm:px-5 py-2.5 rounded-xl text-[1.1875rem] font-semibold border transition-colors ${selected
+=======
+    className={`px-5 py-2.5 rounded-xl text-[1.1875rem] font-semibold border transition-colors ${selected
+>>>>>>> 8020f5d (Initial commit for website frontend)
       ? "bg-blue-600 text-white border-blue-600"
       : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
       }`}
@@ -81,7 +93,10 @@ const BusinessInformationForm = () => {
   const [formData, setFormData] = useState<BusinessFormData>({
     doingBusiness: "",
     businessCommencementYear: "",
+<<<<<<< HEAD
     nonBusinessKind: "",
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -114,7 +129,10 @@ const BusinessInformationForm = () => {
               (saved as any).businessCommencementYear === null
               ? ""
               : String((saved as any).businessCommencementYear),
+<<<<<<< HEAD
           nonBusinessKind: toKind(saved),
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
         });
       }
     } catch (error) {
@@ -130,12 +148,18 @@ const BusinessInformationForm = () => {
       // behind would price them into a band for a business they just said they
       // do not have.
       if (field === "doingBusiness" && value === "no") next.businessCommencementYear = "";
+<<<<<<< HEAD
       if (field === "doingBusiness" && value === "yes") next.nonBusinessKind = "";
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
       return next;
     });
 
   const isAspirant = formData.doingBusiness === "no";
+<<<<<<< HEAD
   const kind = formData.nonBusinessKind;
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,11 +169,14 @@ const BusinessInformationForm = () => {
       return;
     }
 
+<<<<<<< HEAD
     if (isAspirant && !kind) {
       toast.error("Please choose whether you are an aspirant or a student");
       return;
     }
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     if (!isAspirant && !formData.businessCommencementYear) {
       toast.error("Please select the year your business commenced");
       return;
@@ -167,9 +194,13 @@ const BusinessInformationForm = () => {
        */
       const payload: Record<string, any> = {
         doingBusiness: !isAspirant,
+<<<<<<< HEAD
         // Student and aspirant are both "not doing business", with different
         // plans — the server prices a student by this answer.
         registrationType: isAspirant ? (kind === 'student' ? 'student' : 'aspirant') : 'business',
+=======
+        registrationType: isAspirant ? 'aspirant' : 'business',
+>>>>>>> 8020f5d (Initial commit for website frontend)
       };
 
       // Sent only when there is one. An empty string here would overwrite a
@@ -209,9 +240,12 @@ const BusinessInformationForm = () => {
       submitLabel="Next"
       submitting={submitting}
       onSubmit={handleSubmit}
+<<<<<<< HEAD
       /* Platinum, for anyone joining as a business — at the foot of the screen,
          below the step and its buttons, never inside the business card. */
       after={formData.doingBusiness !== "no" ? <PlatinumNotice /> : null}
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     >
       <FormCard
         icon={Briefcase}
@@ -219,7 +253,11 @@ const BusinessInformationForm = () => {
         subtitle="This decides how your application is reviewed"
       >
         <FormField label="Are you currently doing business?" required>
+<<<<<<< HEAD
           <div className="flex flex-wrap gap-2">
+=======
+          <div className="flex gap-2">
+>>>>>>> 8020f5d (Initial commit for website frontend)
             <Pill
               label="Yes"
               selected={formData.doingBusiness === "yes"}
@@ -234,6 +272,7 @@ const BusinessInformationForm = () => {
         </FormField>
 
         {isAspirant && (
+<<<<<<< HEAD
           <FormField label="Which describes you?" required>
             <div className="flex flex-wrap gap-2">
               <Pill
@@ -263,6 +302,13 @@ const BusinessInformationForm = () => {
                 <>You are registering as an <strong>aspirant</strong>. You will be offered the Aspirant
                 membership. Continue to the declaration to submit your application.</>
               )}
+=======
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+            <p className="text-[1.1875rem] text-blue-900">
+              You are registering as an <strong>aspirant</strong>. There is nothing
+              further to fill in here — continue to the declaration to submit your
+              application.
+>>>>>>> 8020f5d (Initial commit for website frontend)
             </p>
           </div>
         )}
@@ -321,7 +367,10 @@ const BusinessInformationForm = () => {
           </p>
         </FormCard>
       )}
+<<<<<<< HEAD
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     </RegistrationFormShell>
   );
 };

@@ -488,7 +488,11 @@ export default function RegionTargetPicker({
                             {/* ------------------------------------- chosen -- */}
                             {list.length > 0 ? (
                                 <div className="mt-5">
+<<<<<<< HEAD
                                     <p className="text-[1.0625rem] font-semibold uppercase
+=======
+                                    <p className="text-[1.0625rem] sm:text-[1rem] font-semibold uppercase
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                   tracking-wider text-slate-400 mb-2">
                                         Chosen regions
                                     </p>
@@ -496,22 +500,35 @@ export default function RegionTargetPicker({
                                         {list.map((target) => (
                                             <li
                                                 key={`${target.state}|${target.district}|${target.block}`}
+<<<<<<< HEAD
                                                 className="inline-flex max-w-full items-center gap-2 min-h-9 py-1 pl-3 pr-2 rounded-full
+=======
+                                                className="inline-flex items-center gap-2 h-9 pl-3 pr-2 rounded-full
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                            bg-blue-50 dark:bg-blue-500/10 text-blue-700
                                                            dark:text-blue-300 text-[1.25rem] font-semibold"
                                             >
                                                 {/* Read left to right, widest first, so a
                                                     state-wide target cannot be mistaken for
                                                     a block of the same name. */}
+<<<<<<< HEAD
                                                 <span className="min-w-0 break-words">
                                                     {[target.state, target.district, target.block]
                                                         .filter(Boolean).join(' › ')}
                                                 </span>
+=======
+                                                {[target.state, target.district, target.block]
+                                                    .filter(Boolean).join(' › ')}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                 <button
                                                     type="button"
                                                     onClick={() => deselect(target)}
                                                     aria-label={`Remove ${target.block || target.district || target.state}`}
+<<<<<<< HEAD
                                                     className="w-7 h-7 shrink-0 rounded-full inline-flex items-center
+=======
+                                                    className="w-6 h-6 rounded-full inline-flex items-center
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                                justify-center hover:bg-blue-100
                                                                dark:hover:bg-blue-500/20"
                                                 >

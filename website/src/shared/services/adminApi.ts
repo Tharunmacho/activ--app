@@ -100,7 +100,11 @@ export const adminLogin = async (email: string, password: string): Promise<Admin
 
     // A member signing in is not an admin. Saying so explicitly stops a member
     // being handed an admin dashboard route they would only get 403s from.
+<<<<<<< HEAD
     const adminRoles: UserRole[] = ['block_admin', 'district_admin', 'state_admin', 'super_admin', 'events_admin'];
+=======
+    const adminRoles: UserRole[] = ['block_admin', 'district_admin', 'state_admin', 'super_admin'];
+>>>>>>> 8020f5d (Initial commit for website frontend)
     if (!adminRoles.includes(result.role)) {
         return { success: false, message: 'This account is not an admin account' };
     }

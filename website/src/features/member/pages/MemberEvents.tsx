@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
+<<<<<<< HEAD
 import { Link } from 'react-router-dom';
 import { CalendarDays, Ticket } from 'lucide-react';
 import MemberPageShell from '@/pages/member/MemberPageShell';
 import { EmptyState, RowsSkeleton } from '@/features/member/components/MemberUI';
 import EventRow from '@/features/member/components/EventRow';
+=======
+import { CalendarDays, Ticket } from 'lucide-react';
+import MemberPageShell from '@/pages/member/MemberPageShell';
+import { EmptyState, RowsSkeleton } from '@/features/member/components/MemberUI';
+import EventCard from '@/features/member/components/EventCard';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { isPast } from '@/features/member/components/eventFormat';
 import { listMemberEvents, type MemberEvent } from '@/services/memberHubApi';
 import { errorMessage } from '@/services/activApi';
@@ -88,8 +95,13 @@ export default function MemberEvents() {
             detail: 'Events that have finished stay here so you can look back at the programme.',
         },
         mine: {
+<<<<<<< HEAD
             title: 'You have not registered for any events yet',
             detail: 'Events you book — here or on the ACTIV website with this email — appear here with your ticket.',
+=======
+            title: 'You have not registered for anything',
+            detail: 'Open an upcoming event to see its agenda and take a seat.',
+>>>>>>> 8020f5d (Initial commit for website frontend)
         },
     };
 
@@ -108,7 +120,11 @@ export default function MemberEvents() {
                                 key={key}
                                 type="button"
                                 onClick={() => setTab(key)}
+<<<<<<< HEAD
                                 className={`flex-1 min-w-0 px-2 py-2.5 rounded-xl text-[1.0625rem] font-semibold
+=======
+                                className={`flex-1 min-w-0 px-2 py-2.5 rounded-xl text-[1rem] font-semibold
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             transition-colors flex items-center justify-center gap-1.5 ${
                                     active
                                         ? 'bg-blue-600 text-white'
@@ -117,7 +133,11 @@ export default function MemberEvents() {
                             >
                                 <span className="truncate">{label}</span>
                                 {count > 0 ? (
+<<<<<<< HEAD
                                     <span className={`shrink-0 text-[1.0625rem] font-bold px-1.5 rounded-full ${
+=======
+                                    <span className={`shrink-0 text-[0.8125rem] font-bold px-1.5 rounded-full ${
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         active ? 'bg-white/25' : 'bg-slate-200 text-slate-600'
                                     }`}>
                                         {count}
@@ -141,6 +161,7 @@ export default function MemberEvents() {
                         icon={tab === 'mine' ? <Ticket className="w-6 h-6" /> : <CalendarDays className="w-6 h-6" />}
                         title={EMPTY[tab].title}
                         detail={EMPTY[tab].detail}
+<<<<<<< HEAD
                         action={tab === 'mine' && upcoming.length > 0 ? (
                             <button
                                 type="button"
@@ -161,6 +182,22 @@ export default function MemberEvents() {
                      */
                     <div className="space-y-3">
                         {rows.map((event) => <EventRow key={event.id} event={event} />)}
+=======
+                    />
+                ) : (
+                    /*
+                     * The grid stretches, and every card fills its row.
+                     *
+                     * This carried `items-start` for a real reason: a card with
+                     * no banner, pulled up to match one that had a poster, was a
+                     * title, a date and then 400px of white. The fix for that is
+                     * not to let the row go ragged — it is for a card with no
+                     * poster to have something in the space where the poster
+                     * goes, which `EventCard` now draws. See the note there.
+                     */
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        {rows.map((event) => <EventCard key={event.id} event={event} />)}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     </div>
                 )}
             </div>

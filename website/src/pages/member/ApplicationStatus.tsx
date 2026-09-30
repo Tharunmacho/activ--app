@@ -257,7 +257,11 @@ export default function ApplicationStatus() {
     if (loading) {
         return (
             <MemberPageShell title="Application Status" subtitle="Track your membership approval progress" width="wide" sidebar={false} backTo={dashboard}>
+<<<<<<< HEAD
                 <div className="flex flex-col items-center justify-center py-16 sm:py-24 text-center">
+=======
+                <div className="flex flex-col items-center justify-center py-24 text-center">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <div className="w-16 h-16 rounded-2xl bg-blue-600
                                     flex items-center justify-center mb-5 shadow-lg shadow-blue-500/30">
                         <Loader2 className="w-8 h-8 animate-spin text-white" />
@@ -272,7 +276,11 @@ export default function ApplicationStatus() {
     if (!application) {
         return (
             <MemberPageShell title="Application Status" subtitle="Track your membership approval progress" width="wide" sidebar={false} backTo={dashboard}>
+<<<<<<< HEAD
                 <div className="flex flex-col items-center justify-center py-12 sm:py-20 text-center">
+=======
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <div className="w-[4.75rem] h-[4.75rem] rounded-full bg-white border border-slate-200
                                     flex items-center justify-center mb-5">
                         {error
@@ -401,7 +409,11 @@ export default function ApplicationStatus() {
               * click away and a second card style is how two halves of a
               * product stop looking like one product.
               */}
+<<<<<<< HEAD
             <div className="relative w-full space-y-4 sm:space-y-6">
+=======
+            <div className="relative w-full space-y-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 <div className={`relative overflow-hidden rounded-3xl ${heroSolid}
                                  text-white shadow-xl shadow-blue-900/20`}>
                     {/* Two rings bled off the corner. Decoration, so `aria-hidden`
@@ -412,11 +424,19 @@ export default function ApplicationStatus() {
                     <span aria-hidden className="pointer-events-none absolute -right-40 -top-10
                                                 h-[26rem] w-[26rem] rounded-full border border-white/[0.07]" />
 
+<<<<<<< HEAD
                     <div className="relative p-4 sm:p-6 lg:p-8">
                         <div className="flex flex-wrap items-start justify-between gap-4 sm:gap-6">
                             <div className="min-w-0 flex-1">
                                 <span className="inline-flex items-center gap-1.5 rounded-xl bg-white/20
                                                  px-3 py-1.5 text-[1.0625rem] font-bold tracking-wide">
+=======
+                    <div className="relative p-6 lg:p-8">
+                        <div className="flex flex-wrap items-start justify-between gap-6">
+                            <div className="min-w-0 flex-1">
+                                <span className="inline-flex items-center gap-1.5 rounded-xl bg-white/20
+                                                 px-3 py-1.5 text-[0.8125rem] font-bold tracking-wide">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     {isRejected ? <X className="w-3.5 h-3.5" />
                                         : isApproved ? <BadgeCheck className="w-3.5 h-3.5" />
                                             : <Hourglass className="w-3.5 h-3.5" />}
@@ -436,8 +456,13 @@ export default function ApplicationStatus() {
                         </div>
 
                         {/* ---- the track ---- */}
+<<<<<<< HEAD
                         <div className="mt-5 sm:mt-7 rounded-2xl bg-white/10 ring-1 ring-white/15 p-4 sm:p-5">
                             <p className="text-[1.0625rem] font-bold uppercase tracking-[0.1em] text-white/70">
+=======
+                        <div className="mt-7 rounded-2xl bg-white/10 ring-1 ring-white/15 p-4 sm:p-5">
+                            <p className="text-[0.8125rem] font-bold uppercase tracking-[0.1em] text-white/70">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 All three reviews run at the same time
                             </p>
 
@@ -492,7 +517,11 @@ export default function ApplicationStatus() {
                         </span>
                         <div className="min-w-0">
                             <p className="font-display text-[1.1875rem] font-bold text-[#991B1B]">Reviewer Note</p>
+<<<<<<< HEAD
                             <p className="text-[1.0625rem] text-[#B91C1C] mt-1 leading-relaxed">
+=======
+                            <p className="text-[1rem] text-[#B91C1C] mt-1 leading-relaxed">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 {application.rejectionReason}
                             </p>
                         </div>
@@ -506,7 +535,11 @@ export default function ApplicationStatus() {
                   * the left column while "Applicant" sat INSIDE its card, and
                   * every row down the page was offset from the one beside it.
                   */}
+<<<<<<< HEAD
                 <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 items-start">
+=======
+                <div className="grid gap-6 lg:grid-cols-3 items-start">
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
                     <div className="lg:col-span-2">
                         <SectionCaption>Review timeline</SectionCaption>
@@ -539,7 +572,11 @@ export default function ApplicationStatus() {
                                 {/* Stops short of the first and last dot so the
                                     rail begins and ends on a node, not on the
                                     card's own edge. */}
+<<<<<<< HEAD
                                 <span aria-hidden className="absolute left-[2.125rem] sm:left-[2.625rem] top-9 bottom-9 sm:top-11 sm:bottom-11 w-0.5
+=======
+                                <span aria-hidden className="absolute left-[2.625rem] top-11 bottom-11 w-0.5
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                             rounded-full bg-slate-200" />
 
                                 {stages.map((stage, i) => {
@@ -548,7 +585,11 @@ export default function ApplicationStatus() {
                                     return (
                                         <div
                                             key={stage.key}
+<<<<<<< HEAD
                                             className={`relative flex gap-3 sm:gap-5 px-4 sm:px-6 py-4 sm:py-6 transition-colors ${
+=======
+                                            className={`relative flex gap-5 px-6 py-6 transition-colors ${
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                 i > 0 ? 'border-t border-slate-100' : ''
                                             } ${stage.active ? 'bg-blue-50/60' : ''}`}
                                         >
@@ -577,13 +618,21 @@ export default function ApplicationStatus() {
                                                         /* The one row whose approval admits the
                                                            applicant. Without it a green Block row
                                                            reads as "you are in", which it is not. */
+<<<<<<< HEAD
                                                         <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[1.0625rem]
+=======
+                                                        <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[0.8125rem]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                                          font-bold text-amber-700 ring-1 ring-amber-200">
                                                             Grants membership
                                                         </span>
                                                     ) : null}
                                                     <span className={`ml-auto shrink-0 rounded-lg px-2.5 py-1
+<<<<<<< HEAD
                                                                       text-[1.0625rem] font-extrabold ${tone.soft} ${tone.text}`}>
+=======
+                                                                      text-[0.8125rem] font-extrabold ${tone.soft} ${tone.text}`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                         {stage.badge || tone.label}
                                                     </span>
                                                 </div>
@@ -642,11 +691,19 @@ export default function ApplicationStatus() {
                     <div>
                         <SectionCaption>Applicant</SectionCaption>
 
+<<<<<<< HEAD
                         <div className="space-y-4 sm:space-y-6">
                             {/* Same surface as the timeline cards beside it — two
                                 treatments on one screen is what made the two columns
                                 read as two pages. */}
                             <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)] p-4 sm:p-6">
+=======
+                        <div className="space-y-6">
+                            {/* Same surface as the timeline cards beside it — two
+                                treatments on one screen is what made the two columns
+                                read as two pages. */}
+                            <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)] p-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <div className="space-y-4">
                                     <DetailLine icon={<User className="w-4 h-4" />} label="Full Name"
                                         value={application.fullName || personal.fullName || '—'} />
@@ -681,12 +738,20 @@ export default function ApplicationStatus() {
                               * once.
                               */}
                             <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)] overflow-hidden">
+<<<<<<< HEAD
                                 <div className="p-4 sm:p-6">
+=======
+                                <div className="p-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     <div className="flex items-center gap-2">
                                         <span className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
                                             <Info className="w-4 h-4 text-[#1E50E6]" />
                                         </span>
+<<<<<<< HEAD
                                         <p className="font-display text-[1.1875rem] font-bold text-[#0F172A]">
+=======
+                                        <p className="font-display text-[1.125rem] font-bold text-[#0F172A]">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             What happens next
                                         </p>
                                     </div>
@@ -710,7 +775,11 @@ export default function ApplicationStatus() {
                                   * apply.
                                   */}
                                 {isApproved && !isPaid ? (
+<<<<<<< HEAD
                                     <div className="border-t border-slate-100 bg-slate-50 p-4 sm:p-5">
+=======
+                                    <div className="border-t border-slate-100 bg-slate-50 p-5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         <Button
                                             onClick={() => navigate('/member/payment')}
                                             className="w-full bg-[#1E50E6] hover:bg-[#1a45c9] font-bold h-12 rounded-xl"
@@ -735,7 +804,11 @@ const StripCell = ({ label, value, className = '', title }: {
     label: string; value: string; className?: string; title?: string;
 }) => (
     <div className={`px-4 text-center min-w-0 ${className}`}>
+<<<<<<< HEAD
         <p className="text-[1.0625rem] font-bold uppercase tracking-[0.06em] text-[#64748B]">{label}</p>
+=======
+        <p className="text-[0.75rem] font-bold uppercase tracking-[0.06em] text-[#64748B]">{label}</p>
+>>>>>>> 8020f5d (Initial commit for website frontend)
         <p className="font-display text-[1.1875rem] font-bold text-[#0F172A] mt-1 truncate" title={title || value}>
             {value}
         </p>
@@ -750,8 +823,13 @@ const DetailLine = ({ icon, label, value }: { icon: React.ReactNode; label: stri
             {icon}
         </span>
         <div className="min-w-0">
+<<<<<<< HEAD
             <p className="text-[1.0625rem] font-bold uppercase tracking-[0.06em] text-[#64748B]">{label}</p>
             <p className="text-[1.0625rem] font-medium text-[#0F172A] break-words leading-snug mt-0.5">{value}</p>
+=======
+            <p className="text-[0.75rem] font-bold uppercase tracking-[0.06em] text-[#64748B]">{label}</p>
+            <p className="text-[1rem] font-medium text-[#0F172A] break-words leading-snug mt-0.5">{value}</p>
+>>>>>>> 8020f5d (Initial commit for website frontend)
         </div>
     </div>
 );
@@ -762,7 +840,11 @@ const DetailLine = ({ icon, label, value }: { icon: React.ReactNode; label: stri
  * ones, in two different places, and the page was visibly stepped.
  */
 const SectionCaption = ({ children }: { children: React.ReactNode }) => (
+<<<<<<< HEAD
     <p className="font-display text-[1.0625rem] font-extrabold uppercase tracking-[0.08em]
+=======
+    <p className="font-display text-[1rem] font-extrabold uppercase tracking-[0.08em]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                   text-[#64748B] mb-4 h-5 flex items-center">
         {children}
     </p>
@@ -784,7 +866,11 @@ const ProgressDial = ({ percent }: { percent: number }) => {
     const r = 42;
     const c = 2 * Math.PI * r;
     return (
+<<<<<<< HEAD
         <div className="relative shrink-0 w-20 h-20 sm:w-[6.5rem] sm:h-[6.5rem]">
+=======
+        <div className="relative shrink-0 w-[6.5rem] h-[6.5rem]">
+>>>>>>> 8020f5d (Initial commit for website frontend)
             <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90" aria-hidden>
                 <circle cx="50" cy="50" r={r} fill="none" stroke="currentColor"
                         strokeWidth="8" className="opacity-25" />
@@ -795,7 +881,11 @@ const ProgressDial = ({ percent }: { percent: number }) => {
                         className="transition-[stroke-dashoffset] duration-700 ease-out" />
             </svg>
             <span className="absolute inset-0 flex items-center justify-center
+<<<<<<< HEAD
                              font-display text-xl sm:text-[1.5625rem] font-extrabold tabular tracking-tight">
+=======
+                             font-display text-[1.5rem] font-extrabold tabular tracking-tight">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 {safe}%
             </span>
         </div>
@@ -820,7 +910,11 @@ const TrackNode = ({ stage }: { stage: { short: string; completed: boolean; acti
         }`}>
             {stage.completed ? <Check className="w-3.5 h-3.5 text-[#1E3FA8]" strokeWidth={3} /> : null}
         </span>
+<<<<<<< HEAD
         <span className="text-sm sm:text-[1.0625rem] font-bold text-white/90 text-center leading-tight break-words">
+=======
+        <span className="text-[0.8125rem] font-bold text-white/90 text-center leading-tight">
+>>>>>>> 8020f5d (Initial commit for website frontend)
             {stage.short}
         </span>
     </div>
@@ -829,7 +923,11 @@ const TrackNode = ({ stage }: { stage: { short: string; completed: boolean; acti
 /** A reviewer or a date, as a chip on the card's meta row. */
 const MetaChip = ({ icon, text }: { icon: React.ReactNode; text: string }) => (
     <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1
+<<<<<<< HEAD
                      text-[1.0625rem] font-medium text-[#475569] max-w-full">
+=======
+                     text-[0.9375rem] font-medium text-[#475569] max-w-full">
+>>>>>>> 8020f5d (Initial commit for website frontend)
         <span className="shrink-0 text-[#94A3B8]">{icon}</span>
         <span className="truncate">{text}</span>
     </span>

@@ -109,7 +109,11 @@ export default function MediaPicker({ value, onChange, label = 'Media', aspect =
                 <div
                     className="bg-slate-50 dark:bg-[#050505] border border-slate-200 dark:border-[#262626]
                                rounded-lg overflow-hidden flex items-center justify-center
+<<<<<<< HEAD
                                w-full max-w-[15rem] sm:max-w-none sm:w-[13.75rem] shrink-0"
+=======
+                               w-full sm:w-[13.75rem] shrink-0"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     style={{ aspectRatio: aspect }}
                 >
                     {!media.url ? (
@@ -137,7 +141,11 @@ export default function MediaPicker({ value, onChange, label = 'Media', aspect =
                     )}
                 </div>
 
+<<<<<<< HEAD
                 <div className="flex-1 min-w-[min(15rem,100%)] space-y-2">
+=======
+                <div className="flex-1 min-w-[15rem] space-y-2">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <div className="flex flex-wrap gap-2">
                         <button
                             type="button"
@@ -174,14 +182,23 @@ export default function MediaPicker({ value, onChange, label = 'Media', aspect =
                         it when the same picture is wanted elsewhere. */}
                     {media.url && (
                         <div className="w-full">
+<<<<<<< HEAD
                             <span className="block text-[1.0625rem] font-bold uppercase tracking-wide
+=======
+                            <span className="block text-[0.9375rem] font-bold uppercase tracking-wide
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                              text-slate-400 dark:text-neutral-500">
                                 Picture address, saved with the page
                             </span>
                             <code
                                 title={media.url}
+<<<<<<< HEAD
                                 className="mt-1 block max-w-full sm:max-w-lg truncate rounded bg-slate-100 dark:bg-[#141414]
                                            px-2 py-1 text-[1.0625rem] font-mono text-slate-500
+=======
+                                className="mt-1 block max-w-lg truncate rounded bg-slate-100 dark:bg-[#141414]
+                                           px-2 py-1 text-[0.9375rem] font-mono text-slate-500
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                            dark:text-neutral-400 select-all"
                             >
                                 {media.url}

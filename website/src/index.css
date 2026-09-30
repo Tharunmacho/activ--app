@@ -109,7 +109,11 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 220 30% 15%;
 
+<<<<<<< HEAD
     --primary: 221 83% 53%; /* blue-600 — the site is blue, never violet */
+=======
+    --primary: 250 60% 55%;
+>>>>>>> 8020f5d (Initial commit for website frontend)
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 50% 50%;
@@ -118,7 +122,11 @@ All colors MUST be HSL.
     --muted: 210 40% 96%;
     --muted-foreground: 220 20% 50%;
 
+<<<<<<< HEAD
     --accent: 217 91% 60%;
+=======
+    --accent: 270 60% 60%;
+>>>>>>> 8020f5d (Initial commit for website frontend)
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 70% 55%;
@@ -129,7 +137,11 @@ All colors MUST be HSL.
 
     --border: 220 20% 90%;
     --input: 220 20% 90%;
+<<<<<<< HEAD
     --ring: 221 83% 53%;
+=======
+    --ring: 250 60% 55%;
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     --radius: 0.75rem;
 
@@ -154,7 +166,11 @@ All colors MUST be HSL.
     --popover: 220 25% 12%;
     --popover-foreground: 210 40% 98%;
 
+<<<<<<< HEAD
     --primary: 217 91% 60%;
+=======
+    --primary: 250 60% 60%;
+>>>>>>> 8020f5d (Initial commit for website frontend)
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 50% 45%;
@@ -163,7 +179,11 @@ All colors MUST be HSL.
     --muted: 220 25% 15%;
     --muted-foreground: 220 15% 65%;
 
+<<<<<<< HEAD
     --accent: 217 91% 60%;
+=======
+    --accent: 270 60% 55%;
+>>>>>>> 8020f5d (Initial commit for website frontend)
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 60% 50%;
@@ -174,7 +194,11 @@ All colors MUST be HSL.
 
     --border: 220 20% 20%;
     --input: 220 20% 20%;
+<<<<<<< HEAD
     --ring: 217 91% 60%;
+=======
+    --ring: 250 60% 60%;
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     --gradient-primary: linear-gradient(135deg, hsl(210, 40%, 15%) 0%, hsl(270, 40%, 20%) 100%);
     --gradient-card: linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 25%, 15%) 100%);
@@ -264,6 +288,7 @@ All colors MUST be HSL.
     font-size: clamp(1rem, 0.833vw, 1.25rem);
   }
 
+<<<<<<< HEAD
   /*
    * PHONES GET A SMALLER ROOT. The public pages are sized for a desktop read —
    * 1.25rem ledes, 2rem card padding, 5rem gaps — and at a 16px root that
@@ -301,6 +326,8 @@ All colors MUST be HSL.
     }
   }
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
   * {
     @apply border-border;
   }
@@ -631,6 +658,7 @@ All colors MUST be HSL.
  * The association preferred the navy: one palette, both surfaces, and nothing
  * for a reader to reconcile when they move between them.
  */
+<<<<<<< HEAD
 
 @layer base {
   /**
@@ -778,3 +806,5 @@ All colors MUST be HSL.
   .card-table td[colspan] { grid-template-columns: minmax(0, 1fr); text-align: center !important; }
   .card-table td[colspan]::before { display: none; }
 }
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)

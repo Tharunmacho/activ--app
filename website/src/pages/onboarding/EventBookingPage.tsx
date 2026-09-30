@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import api from '@/services/api';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -6,6 +7,17 @@ import {
 } from 'lucide-react';
 import { HeaderSection } from '../../components/layout/HeaderSection';
 import { FooterSection } from '../../components/layout/FooterSection';
+=======
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import {
+    ArrowLeft, ArrowRight, Calendar, CheckCircle2, IndianRupee, Loader2, Lock, MapPin, Users, UserPlus, AlertCircle, ExternalLink, Eye, EyeOff, Check, Menu, Info, Ticket, User, Mail, Phone, Video,
+} from 'lucide-react';
+import { HeaderSection } from '../../components/layout/HeaderSection';
+import { FooterSection } from '../../components/layout/FooterSection';
+import MemberSidebar from '@/features/member/pages/MemberSidebar';
+import MemberTopBar from '@/features/member/components/MemberTopBar';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
 import { sizedMediaUrl } from '@/config/api.config';
 import { SECTION_HEADING, MICRO_LABEL } from '@/components/layout/typography';
@@ -41,9 +53,15 @@ const BOOKING_SHEET =
 const BOOKING_PANEL = 'bg-white border border-slate-200 rounded-2xl';
 import { errorMessage } from '@/services/api';
 import { login } from '@/services/activApi';
+<<<<<<< HEAD
 import { isMemberSession } from '@/lib/session';
 import {
     getBookableEvent, bookAndPay, getEventBooking,
+=======
+import { STORAGE_KEYS } from '@/config/api.config';
+import {
+    getBookableEvent, bookAndPay,
+>>>>>>> 8020f5d (Initial commit for website frontend)
     type BookableEvent, type BookingParticipant, type EventBooking,
 } from '@/services/eventBookingApi';
 import EventPriceTiers from '@/components/shared/EventPriceTiers';
@@ -140,12 +158,20 @@ const FIELD_LABEL = BIZ_FIELD_LABEL;
 
 const PRIMARY_BUTTON =
     'inline-flex items-center justify-center gap-2 bg-brand-800 hover:bg-brand-700 text-white ' +
+<<<<<<< HEAD
     'px-6 sm:px-8 py-3.5 sm:py-4 rounded-full font-bold text-[1.125rem] uppercase tracking-[0.1em] ' +
+=======
+    'px-8 py-4 rounded-full font-bold text-[1.125rem] uppercase tracking-[0.1em] ' +
+>>>>>>> 8020f5d (Initial commit for website frontend)
     'transition-colors disabled:opacity-60 disabled:cursor-not-allowed';
 
 const GHOST_BUTTON =
     'inline-flex items-center justify-center gap-2 border border-brand-200 text-brand-700 ' +
+<<<<<<< HEAD
     'hover:bg-brand-50 px-6 sm:px-8 py-3.5 sm:py-4 rounded-full font-bold text-[1.125rem] uppercase ' +
+=======
+    'hover:bg-brand-50 px-8 py-4 rounded-full font-bold text-[1.125rem] uppercase ' +
+>>>>>>> 8020f5d (Initial commit for website frontend)
     'tracking-[0.1em] transition-colors disabled:opacity-60';
 
 
@@ -263,12 +289,15 @@ const nationalMobile = (value: string): string => {
     return d;
 };
 
+<<<<<<< HEAD
 /**
  * A mobile box keeps TEN DIGITS and nothing else: a pasted "+91 99401 75051"
  * or "09940175051" becomes "9940175051", and an eleventh digit cannot be typed.
  */
 const tenDigitMobile = (value: string): string => nationalMobile(value).slice(0, 10);
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 const emptyPerson = (): BookingParticipant => ({ name: '', email: '', phone: '' });
 
 /* ---------------------------------------------------------------- the page */
@@ -290,6 +319,10 @@ export default function EventBookingPage({ chrome = 'public' }: {
 }) {
     const { id = '' } = useParams<{ id: string }>();
     /* Only the member chrome has a sidebar; harmless in the public one. */
+<<<<<<< HEAD
+=======
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+>>>>>>> 8020f5d (Initial commit for website frontend)
     const navigate = useNavigate();
 
     const [event, setEvent] = useState<BookableEvent | null>(null);
@@ -305,10 +338,22 @@ export default function EventBookingPage({ chrome = 'public' }: {
      * changing underneath it is not a case worth engineering for. The only
      * thing it decides is whether the choice step is shown at all.
      */
+<<<<<<< HEAD
     // A MEMBER session only. An admin who books is booking as a person, not
     // from a member profile, so they get the guest form — and, after paying,
     // the public confirmation rather than the member area.
     const [signedIn, setSignedIn] = useState(() => isMemberSession());
+=======
+    const [signedIn, setSignedIn] = useState(() => {
+        try {
+            return localStorage.getItem(STORAGE_KEYS.IS_LOGGED_IN) === 'true';
+        } catch {
+            // A private window with storage blocked. Treated as a guest, which
+            // is the answer that still lets them book.
+            return false;
+        }
+    });
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     const [step, setStep] = useState<Step>('choice');
 
@@ -341,6 +386,7 @@ export default function EventBookingPage({ chrome = 'public' }: {
     const [showPassword, setShowPassword] = useState(false);
     const [signInError, setSignInError] = useState('');
 
+<<<<<<< HEAD
     /*
      * EVERY STEP OPENS AT ITS TOP.
      *
@@ -361,11 +407,14 @@ export default function EventBookingPage({ chrome = 'public' }: {
         } catch { /* scrolling is a nicety */ }
     }, [step]);
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     // ---- submitting
     const [paying, setPaying] = useState(false);
     const [payError, setPayError] = useState('');
     const [booking, setBooking] = useState<EventBooking | null>(null);
 
+<<<<<<< HEAD
     /*
      * `?ref=` OPENS STRAIGHT ON THE CONFIRMATION.
      *
@@ -404,6 +453,8 @@ export default function EventBookingPage({ chrome = 'public' }: {
         return () => { cancelled = true; };
     }, [refFromUrl, id, event]);
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     /* -------------------------------------------------------------- loading */
 
     useEffect(() => {
@@ -534,17 +585,26 @@ export default function EventBookingPage({ chrome = 'public' }: {
 
         if (!booker.name.trim()) found.name = 'Please enter your name';
         if (!booker.email.trim()) found.email = 'Please enter your email address';
+<<<<<<< HEAD
         else if (!EMAIL_RE.test(booker.email.trim())) found.email = 'Enter a valid email address';
 
         const mobile = nationalMobile(booker.phone);
         if (!mobile) found.phone = 'Please enter your mobile number';
         else if (!MOBILE_RE.test(mobile)) found.phone = 'Enter a valid 10-digit mobile number';
+=======
+        else if (!EMAIL_RE.test(booker.email.trim())) found.email = 'That does not look like an email address';
+
+        const mobile = nationalMobile(booker.phone);
+        if (!mobile) found.phone = 'Please enter your mobile number';
+        else if (!MOBILE_RE.test(mobile)) found.phone = 'Enter a 10-digit Indian mobile number';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
         if (!Number.isFinite(count) || count < 1) found.count = 'Enter how many people are attending';
         else if (count > maxPerBooking) found.count = `At most ${maxPerBooking} per booking`;
 
         participants.forEach((person, i) => {
             if (person.email.trim() && !EMAIL_RE.test(person.email.trim())) {
+<<<<<<< HEAD
                 found[`p${i}.email`] = 'Enter a valid email address';
             }
             const digitsOnly = nationalMobile(person.phone);
@@ -605,16 +665,36 @@ export default function EventBookingPage({ chrome = 'public' }: {
             found = await alreadyBooked();
             setChecking(false);
         }
+=======
+                found[`p${i}.email`] = 'Not a valid email address';
+            }
+            const digitsOnly = nationalMobile(person.phone);
+            if (digitsOnly && !MOBILE_RE.test(digitsOnly)) {
+                found[`p${i}.phone`] = 'Enter 10 digits';
+            }
+        });
+
+        return found;
+    }, [booker, count, participants, maxPerBooking]);
+
+    const goToReview = () => {
+        const found = validate();
+>>>>>>> 8020f5d (Initial commit for website frontend)
         setErrors(found);
         if (Object.keys(found).length) {
             // Put the first bad field in view. Without this, a validation error
             // on the participant rows of a long form is announced entirely
             // off-screen and the button simply appears not to work.
+<<<<<<< HEAD
             // After React paints the new messages.
             setTimeout(() => {
                 const first = document.querySelector('[data-invalid="true"]');
                 if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 50);
+=======
+            const first = document.querySelector('[data-invalid="true"]');
+            if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+>>>>>>> 8020f5d (Initial commit for website frontend)
             return;
         }
         setPayError('');
@@ -622,6 +702,7 @@ export default function EventBookingPage({ chrome = 'public' }: {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+<<<<<<< HEAD
     /*
      * AS YOU TYPE: "Email already registered" / "Mobile number already
      * registered" appear under the box while the form is being filled, not only
@@ -663,6 +744,8 @@ export default function EventBookingPage({ chrome = 'public' }: {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [step, booker.email, booker.phone, participants]);
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     /* -------------------------------------------------------------- signing in */
 
     const handleSignIn = async (submit: React.FormEvent) => {
@@ -733,6 +816,7 @@ export default function EventBookingPage({ chrome = 'public' }: {
                 })),
             });
 
+<<<<<<< HEAD
             /*
              * `null` MEANS WE ARE LEAVING THIS PAGE.
              *
@@ -748,6 +832,8 @@ export default function EventBookingPage({ chrome = 'public' }: {
              */
             if (!result) return;
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
             setBooking(result);
             setStep('done');
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -758,6 +844,7 @@ export default function EventBookingPage({ chrome = 'public' }: {
              * back to an empty form after a failed payment is how somebody
              * re-types eight participants.
              */
+<<<<<<< HEAD
             /*
              * ALREADY REGISTERED: the server names the boxes (`fields`). Back to
              * the form with each message under its own box, rather than a
@@ -778,6 +865,10 @@ export default function EventBookingPage({ chrome = 'public' }: {
                 return;
             }
             setPayError(errorMessage(error, 'The booking could not be completed'));
+=======
+            setPayError(errorMessage(error, 'The booking could not be completed'));
+        } finally {
+>>>>>>> 8020f5d (Initial commit for website frontend)
             setPaying(false);
         }
     };
@@ -794,6 +885,7 @@ export default function EventBookingPage({ chrome = 'public' }: {
 
     /* ----------------------------------------------------------------- shell */
 
+<<<<<<< HEAD
     /*
      * THE MEMBER-AREA BOOKING HAS NO RAIL.
      *
@@ -816,6 +908,22 @@ export default function EventBookingPage({ chrome = 'public' }: {
                                 aria-label="Back"
                             >
                                 <ArrowLeft className="h-5 w-5" />
+=======
+    const shell = (children: React.ReactNode) => (chrome === 'member' ? (
+        <div className="flex h-screen bg-slate-50 font-sans">
+            <MemberSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+            <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+                <header className="bg-white border-b border-slate-200 z-10">
+                    <div className="h-[5.5rem] px-4 sm:px-6 flex items-center justify-between gap-2 sm:gap-3">
+                        <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+                            <button
+                                className="lg:hidden shrink-0 p-2 rounded-xl hover:bg-slate-100"
+                                onClick={() => setSidebarOpen(true)}
+                                aria-label="Open menu"
+                            >
+                                <Menu className="h-6 w-6" />
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             </button>
                             <div className="min-w-0">
                                 <h1 className="text-[1.5625rem] sm:text-[2.0625rem] leading-tight font-bold
@@ -827,10 +935,18 @@ export default function EventBookingPage({ chrome = 'public' }: {
                                 </p>
                             </div>
                         </div>
+<<<<<<< HEAD
                     </div>
                 </header>
 
                 <main className="flex-1">
+=======
+                        <MemberTopBar />
+                    </div>
+                </header>
+
+                <main className="flex-1 overflow-y-auto">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     {/* The same column the rest of the member area uses, so the
                         booking sits under the header rather than beside it. */}
                     <div className="w-full max-w-[110rem] mx-auto pb-12">{children}</div>
@@ -845,7 +961,11 @@ export default function EventBookingPage({ chrome = 'public' }: {
         </div>
     ));
 
+<<<<<<< HEAD
     if (loading || loadingRef) {
+=======
+    if (loading) {
+>>>>>>> 8020f5d (Initial commit for website frontend)
         return shell(
             <div className={`${SCREEN_CONTAINER} py-20 animate-pulse`}>
                 <div className="h-4 w-32 bg-slate-200 rounded mb-10" />
@@ -942,7 +1062,11 @@ export default function EventBookingPage({ chrome = 'public' }: {
                 src={sizedMediaUrl(event.bannerUrl, 700)}
                 alt=""
                 aria-hidden="true"
+<<<<<<< HEAD
                 className="h-auto max-h-80 w-full rounded-2xl bg-slate-50 object-contain lg:h-36 lg:max-h-none lg:object-cover
+=======
+                className="h-36 w-full rounded-2xl object-cover
+>>>>>>> 8020f5d (Initial commit for website frontend)
                            shadow-[0_8px_24px_-16px_rgba(28,46,104,0.5)]"
             />
         ) : null}
@@ -1176,7 +1300,11 @@ export default function EventBookingPage({ chrome = 'public' }: {
                     <div className="grid md:grid-cols-2 gap-4 sm:gap-5 lg:gap-6 items-stretch">
 
                         {/* ---- guest ---- */}
+<<<<<<< HEAD
                         <div className={`${BOOKING_PANEL} p-4 sm:p-7 flex flex-col`}>
+=======
+                        <div className={`${BOOKING_PANEL} p-6 sm:p-7 flex flex-col`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             <span className={`${BIZ_BADGE} bg-slate-100 text-slate-600 border border-slate-200`}>
                                 <UserPlus size={13} /> No account needed
                             </span>
@@ -1246,7 +1374,11 @@ export default function EventBookingPage({ chrome = 'public' }: {
                           * cards to be shown regardless, and the objection is
                           * answered without hiding the step.
                           */}
+<<<<<<< HEAD
                         <div className={`${BOOKING_PANEL} p-4 sm:p-7 flex flex-col`}>
+=======
+                        <div className={`${BOOKING_PANEL} p-6 sm:p-7 flex flex-col`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             <span className={`${BIZ_BADGE} bg-brand-50 text-brand-700 border border-brand-100`}>
                                 <Lock size={13} /> Members
                             </span>
@@ -1378,12 +1510,20 @@ export default function EventBookingPage({ chrome = 'public' }: {
                               */}
                             <div className="flex flex-wrap items-start justify-between gap-4 mb-7">
                                 <div className="min-w-0">
+<<<<<<< HEAD
                                     <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-brand-50
+=======
+                                    <span className="inline-flex items-center gap-2 rounded-full bg-brand-50
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                      px-3.5 py-1.5 text-[1.0625rem] font-bold text-brand-700">
                                         <Calendar size={13} className="shrink-0" />
                                         <span className="truncate">{event.title}</span>
                                     </span>
+<<<<<<< HEAD
                                     <h1 className="mt-3 text-[1.875rem] sm:text-[2.75rem] font-black leading-[1.05]
+=======
+                                    <h1 className="mt-3 text-[2.25rem] sm:text-[2.75rem] font-black leading-[1.05]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                    tracking-tight text-brand-800">Book Now</h1>
                                     <p className="text-[1.0625rem] font-semibold text-gray-500 mt-1">
                                         Secure your seat for this event
@@ -1416,7 +1556,11 @@ export default function EventBookingPage({ chrome = 'public' }: {
                               * so the half the member has to fill in looked like
                               * the least considered thing on the screen.
                               */}
+<<<<<<< HEAD
                             <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 mb-6
+=======
+                            <div className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 mb-6
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_28px_-20px_rgba(28,46,104,0.3)]">
                                 <h2 className="flex items-center gap-2.5 text-[1.0625rem] font-bold
                                                tracking-tight text-brand-800 mb-4">
@@ -1426,7 +1570,11 @@ export default function EventBookingPage({ chrome = 'public' }: {
                                     </span>
                                     Your details
                                 </h2>
+<<<<<<< HEAD
                                 <div className="grid sm:grid-cols-2 gap-4 sm:gap-5">
+=======
+                                <div className="grid sm:grid-cols-2 gap-5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <Field
                                     label="Name"
                                     icon={<User size={16} />}
@@ -1454,7 +1602,11 @@ export default function EventBookingPage({ chrome = 'public' }: {
                                     inputMode="numeric"
                                     error={errors.phone}
                                     value={booker.phone}
+<<<<<<< HEAD
                                     onChange={(v) => setBooker({ ...booker, phone: tenDigitMobile(v) })}
+=======
+                                    onChange={(v) => setBooker({ ...booker, phone: v })}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     autoComplete="tel"
                                 />
                                 <Field
@@ -1517,7 +1669,11 @@ export default function EventBookingPage({ chrome = 'public' }: {
                                                a card nobody can see — and the
                                                white fields inside it had
                                                nothing to sit on. */
+<<<<<<< HEAD
                                             className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-5
+=======
+                                            className="rounded-2xl border border-gray-200 bg-white p-5
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                        shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-16px_rgba(28,46,104,0.25)]"
                                         >
                                             {/*
@@ -1575,7 +1731,11 @@ export default function EventBookingPage({ chrome = 'public' }: {
                                                     inputMode="numeric"
                                                     error={errors[`p${i}.phone`]}
                                                     value={person.phone}
+<<<<<<< HEAD
                                                     onChange={(v) => setParticipant(i, 'phone', tenDigitMobile(v))}
+=======
+                                                    onChange={(v) => setParticipant(i, 'phone', v)}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                     placeholder="Mobile"
                                                 />
                                             </div>
@@ -1590,7 +1750,11 @@ export default function EventBookingPage({ chrome = 'public' }: {
                                 tint, which is two near-whites describing an
                                 edge between them. */}
                             <div className="flex flex-col sm:flex-row sm:items-center gap-5 sm:justify-between
+<<<<<<< HEAD
                                             rounded-2xl border border-gray-200 bg-white p-4 sm:p-6
+=======
+                                            rounded-2xl border border-gray-200 bg-white p-5 sm:p-6
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_28px_-18px_rgba(28,46,104,0.35)]">
                                 <div>
                                     <p className="flex items-center gap-2 text-[1.0625rem] font-bold uppercase
@@ -1611,7 +1775,11 @@ export default function EventBookingPage({ chrome = 'public' }: {
                                         and the rate is already on the line
                                         below. */}
                                     {(isFree || countText) && (
+<<<<<<< HEAD
                                         <p className="text-[1.5625rem] font-black tracking-tight text-brand-800">
+=======
+                                        <p className="text-2xl font-black tracking-tight text-brand-800">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             {isFree ? 'Free' : rupees(estimatedTotal)}
                                         </p>
                                     )}
@@ -1672,6 +1840,7 @@ export default function EventBookingPage({ chrome = 'public' }: {
                                 <button
                                     type="button"
                                     onClick={goToReview}
+<<<<<<< HEAD
                                     disabled={checking}
                                     className="shrink-0 inline-flex flex-col items-center justify-center
                                                rounded-2xl bg-brand-800 hover:bg-brand-700 px-8 py-4
@@ -1681,6 +1850,14 @@ export default function EventBookingPage({ chrome = 'public' }: {
                                     <span className="text-[1.25rem] font-black tracking-tight">
                                         {checking ? 'Checking…' : 'Continue'}
                                     </span>
+=======
+                                    className="shrink-0 inline-flex flex-col items-center justify-center
+                                               rounded-2xl bg-brand-800 hover:bg-brand-700 px-8 py-4
+                                               text-white transition-colors shadow-lg
+                                               shadow-brand-900/20 min-w-[13rem]"
+                                >
+                                    <span className="text-[1.25rem] font-black tracking-tight">Continue</span>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     <span className="mt-0.5 inline-flex items-center gap-1.5 text-[1.0625rem]
                                                      font-semibold text-white/75">
                                         {isFree ? 'Confirm your seats' : 'Proceed to payment'}
@@ -1733,12 +1910,20 @@ export default function EventBookingPage({ chrome = 'public' }: {
                     {/* The same header the form carries, so the two steps read
                         as one screen a page further on. */}
                     <div className="mb-7">
+<<<<<<< HEAD
                         <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-brand-50
+=======
+                        <span className="inline-flex items-center gap-2 rounded-full bg-brand-50
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                          px-3.5 py-1.5 text-[1.0625rem] font-bold text-brand-700">
                             <Calendar size={13} className="shrink-0" />
                             <span className="truncate">{event.title}</span>
                         </span>
+<<<<<<< HEAD
                         <h1 className="mt-3 text-[1.875rem] sm:text-[2.75rem] font-black leading-[1.05]
+=======
+                        <h1 className="mt-3 text-[2.25rem] sm:text-[2.75rem] font-black leading-[1.05]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                      tracking-tight text-brand-800">Review your booking</h1>
                         <p className="text-[1.0625rem] font-semibold text-gray-500 mt-1">
                             Check these details before {isFree ? 'confirming' : 'paying'}.
@@ -1795,6 +1980,7 @@ export default function EventBookingPage({ chrome = 'public' }: {
                             </span>
                             Participant Details
                         </h2>
+<<<<<<< HEAD
                         {/* Phones: one stacked block per person. The three-column
                             table needs ~34rem and would scroll sideways. */}
                         <ul className="sm:hidden divide-y divide-gray-100 rounded-2xl border border-gray-200 bg-white">
@@ -1813,6 +1999,9 @@ export default function EventBookingPage({ chrome = 'public' }: {
                             ))}
                         </ul>
                         <div className="hidden sm:block overflow-x-auto rounded-2xl border border-gray-200 bg-white
+=======
+                        <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-16px_rgba(28,46,104,0.25)]">
                             <table className="w-full text-left border-collapse min-w-[34rem]">
                                 <thead>
@@ -1919,6 +2108,7 @@ export default function EventBookingPage({ chrome = 'public' }: {
     /* ==================================================== step: done */
 
     const confirmed = booking;
+<<<<<<< HEAD
     /*
      * A reference opened from a link may belong to a booking that is not
      * (or no longer) confirmed — an unfinished checkout, or one the organiser
@@ -1933,6 +2123,11 @@ export default function EventBookingPage({ chrome = 'public' }: {
 
     return shell(
         <div className={`${SCREEN_CONTAINER} py-8 md:py-16 max-w-4xl`}>
+=======
+
+    return shell(
+        <div className={`${SCREEN_CONTAINER} py-12 md:py-16 max-w-4xl`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
           <BookingSteps current="done" />
           <div className={BOOKING_SHEET}>
           {/* A plain wrapper. It used to be a second, TINTED sheet inside
@@ -1948,12 +2143,17 @@ export default function EventBookingPage({ chrome = 'public' }: {
               * read as the receipt they are — and the reference, which is the
               * thing somebody screenshots, sits in the middle of it.
               */}
+<<<<<<< HEAD
             <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-9 mb-8 text-center
+=======
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-9 mb-8 text-center
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_32px_-20px_rgba(28,46,104,0.35)]">
                 <span className="inline-flex w-14 h-14 rounded-full bg-emerald-50 text-emerald-600
                                  items-center justify-center mb-5">
                     <CheckCircle2 size={28} />
                 </span>
+<<<<<<< HEAD
                 <h1 className={`${SECTION_HEADING} text-brand-800 mb-3`}>{headline}</h1>
                 <p className="text-[1.25rem] sm:text-[1.0625rem] text-gray-600 font-semibold">
                     {!confirmed || settled ? (
@@ -1974,6 +2174,19 @@ export default function EventBookingPage({ chrome = 'public' }: {
                         Your booking reference
                     </p>
                     <p className="text-[1.5625rem] sm:text-3xl font-black tracking-tight text-brand-800 break-all">
+=======
+                <h1 className={`${SECTION_HEADING} text-brand-800 mb-3`}>Booking confirmed</h1>
+                <p className="text-[1.25rem] sm:text-[1.0625rem] text-gray-600 font-semibold">
+                    We have emailed the details to {confirmed?.bookedBy.email || booker.email}
+                    {confirmed?.bookedBy.phone ? ' and sent a WhatsApp confirmation.' : '.'}
+                </p>
+
+                <div className="mt-7 rounded-xl border border-brand-200 bg-brand-50/70 px-5 py-5">
+                    <p className="text-[1.0625rem] font-bold uppercase tracking-wider text-gray-600 mb-2">
+                        Your booking reference
+                    </p>
+                    <p className="text-2xl sm:text-3xl font-black tracking-tight text-brand-800 break-all">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         {confirmed?.bookingRef}
                     </p>
                     <p className="text-[1.0625rem] text-gray-600 font-semibold mt-2">
@@ -2011,9 +2224,15 @@ export default function EventBookingPage({ chrome = 'public' }: {
                   * in-person event missing its address.
                   */}
                 {confirmed?.mode === 'online' && (
+<<<<<<< HEAD
                     <div className="mt-7 rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-4 sm:px-5 sm:py-5 text-left">
                         <p className="text-[1.0625rem] font-extrabold uppercase tracking-widest text-emerald-700">
                             Register for this webinar
+=======
+                    <div className="mt-7 rounded-xl border border-emerald-200 bg-emerald-50/70 px-5 py-5 text-left">
+                        <p className="text-[1.0625rem] font-extrabold uppercase tracking-widest text-emerald-700">
+                            Joining this event
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         </p>
                         {confirmed.onlineUrl ? (
                             <>
@@ -2030,13 +2249,21 @@ export default function EventBookingPage({ chrome = 'public' }: {
                                                bg-emerald-600 px-5 text-[1.25rem] font-bold text-white
                                                transition-colors hover:bg-emerald-700"
                                 >
+<<<<<<< HEAD
                                     <Video size={16} /> Complete your registration
+=======
+                                    <Video size={16} /> Open the joining link
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 </a>
                                 <p className="mt-3 break-all text-[1.25rem] font-semibold text-emerald-800/80">
                                     {confirmed.onlineUrl}
                                 </p>
                                 <p className="mt-2 text-[1.25rem] font-semibold text-emerald-700/80">
+<<<<<<< HEAD
                                     Once you register, your personal joining link is emailed to you.
+=======
+                                    Keep this to yourself — it is your seat.
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 </p>
                             </>
                         ) : (
@@ -2044,7 +2271,11 @@ export default function EventBookingPage({ chrome = 'public' }: {
                                 {confirmed.onlinePlatform
                                     ? `This event runs on ${confirmed.onlinePlatform}. `
                                     : 'This event is online. '}
+<<<<<<< HEAD
                                 The registration link will be shared with you soon.
+=======
+                                The joining link will be emailed to you before it starts.
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             </p>
                         )}
                     </div>
@@ -2125,7 +2356,11 @@ export default function EventBookingPage({ chrome = 'public' }: {
                 emphasiseLast
             />
 
+<<<<<<< HEAD
             <div className="flex flex-col sm:flex-row gap-3 mt-7 sm:mt-9">
+=======
+            <div className="flex flex-col sm:flex-row gap-3 mt-9">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 <Link to={eventsHref} className={GHOST_BUTTON}>See other events</Link>
                 {!signedIn && (
                     <button
@@ -2249,7 +2484,11 @@ function DetailTable(props: {
     if (!kept.length) return null;
 
     return (
+<<<<<<< HEAD
         <section className="mb-7 sm:mb-10">
+=======
+        <section className="mb-10">
+>>>>>>> 8020f5d (Initial commit for website frontend)
             {/*
               * WEIGHT WHERE IT MEANS SOMETHING.
               *
@@ -2282,7 +2521,11 @@ function DetailTable(props: {
                             key={label}
                             className={
                                 'flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-6 '
+<<<<<<< HEAD
                                 + 'px-4 sm:px-6 py-3 sm:py-3.5 border-b border-gray-100 last:border-0 '
+=======
+                                + 'px-5 sm:px-6 py-3.5 border-b border-gray-100 last:border-0 '
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 + (last ? 'bg-brand-50/60' : '')
                             }
                         >

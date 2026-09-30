@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { getMyMembershipPlans, toPlanAudience, type PlanAudience } from '@/services/activApi';
+=======
+import { getMyMembershipPlans } from '@/services/activApi';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { getUserApplication } from '@/services/applicationApi';
 
 /**
@@ -25,8 +29,11 @@ export interface MembershipPlan {
     experience: string;
     features: string[];
     popular?: boolean;
+<<<<<<< HEAD
     /** business / aspirant / student. Platinum never reaches this list. */
     audience: PlanAudience;
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 }
 
 /*
@@ -51,8 +58,11 @@ export interface PlanEligibility {
     /** True when the answer is a single plan: an aspirant, or a matched band. */
     locked: boolean;
     isCompany: boolean;
+<<<<<<< HEAD
     /** Whose plan this is — the screens word "Company" / "Aspirant" / "Student" from it. */
     audience: PlanAudience;
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     experience: string;
     applicationId: string;
     /**
@@ -97,7 +107,11 @@ interface ServerPlan {
     name: string;
     description: string;
     price: number;
+<<<<<<< HEAD
     audience: PlanAudience;
+=======
+    audience: 'business' | 'aspirant';
+>>>>>>> 8020f5d (Initial commit for website frontend)
     experience: string;
     features: string[];
     popular?: boolean;
@@ -115,7 +129,11 @@ interface ResolvedPlans {
      *   no-year   no commencement year on file
      *   no-band   a year that no band covers
      */
+<<<<<<< HEAD
     reason: 'band' | 'aspirant' | 'student' | 'all' | 'no-year' | 'no-band';
+=======
+    reason: 'band' | 'aspirant' | 'all' | 'no-year' | 'no-band';
+>>>>>>> 8020f5d (Initial commit for website frontend)
     showAllPlans: boolean;
 }
 
@@ -127,7 +145,10 @@ const toPlan = (row: ServerPlan): MembershipPlan => ({
     experience: row.experience || '',
     features: Array.isArray(row.features) ? row.features : [],
     popular: row.popular === true,
+<<<<<<< HEAD
     audience: toPlanAudience(row.audience),
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 });
 
 /**
@@ -150,6 +171,7 @@ export const resolvePlanEligibility = async (): Promise<PlanEligibility> => {
         readApplicationId(),
     ]);
 
+<<<<<<< HEAD
     /*
      * PLATINUM IS NEVER FOR SALE HERE. It is a lifetime membership the Super
      * Admin grants by hand against a cash payment; a row that reached this list
@@ -157,6 +179,9 @@ export const resolvePlanEligibility = async (): Promise<PlanEligibility> => {
      */
     const rows = (Array.isArray(resolved?.plans) ? resolved!.plans : [])
         .filter((row) => toPlanAudience(row?.audience) !== 'platinum');
+=======
+    const rows = Array.isArray(resolved?.plans) ? resolved!.plans : [];
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     /*
      * NOTHING LOADED — say so, and show no price.
@@ -173,7 +198,10 @@ export const resolvePlanEligibility = async (): Promise<PlanEligibility> => {
             selected: null,
             locked: false,
             isCompany: true,
+<<<<<<< HEAD
             audience: 'business',
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
             experience: '',
             applicationId,
             failed: resolved === null,
@@ -181,9 +209,13 @@ export const resolvePlanEligibility = async (): Promise<PlanEligibility> => {
     }
 
     const plans = rows.map(toPlan);
+<<<<<<< HEAD
     const audience = toPlanAudience(rows[0].audience);
     // Neither an aspirant nor a student is a company.
     const isCompany = audience === 'business';
+=======
+    const isCompany = rows[0].audience !== 'aspirant';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     /*
      * `locked` means "there is nothing to choose", and that is now true in more
@@ -194,8 +226,12 @@ export const resolvePlanEligibility = async (): Promise<PlanEligibility> => {
      */
     const locked = plans.length === 1;
 
+<<<<<<< HEAD
     const matched = resolved?.matched && toPlanAudience(resolved.matched.audience) !== 'platinum'
         ? toPlan(resolved.matched) : null;
+=======
+    const matched = resolved?.matched ? toPlan(resolved.matched) : null;
+>>>>>>> 8020f5d (Initial commit for website frontend)
     const selected = matched
         || plans.find((plan) => plan.popular)
         || plans[0];
@@ -205,7 +241,10 @@ export const resolvePlanEligibility = async (): Promise<PlanEligibility> => {
         selected,
         locked,
         isCompany,
+<<<<<<< HEAD
         audience,
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
         experience: selected.experience,
         applicationId,
         failed: false,

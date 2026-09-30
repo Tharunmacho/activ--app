@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+<<<<<<< HEAD
 import { getContactInfo } from '@/services/cmsApi';
 import { useSocialLinks, SocialButtons } from '@/components/shared/SocialLinks';
 import { RegionsMenu, RegionsAccordion } from './RegionsMenu';
@@ -6,6 +7,12 @@ import { SchemesMenu, SchemesAccordion } from './SchemesMenu';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronRight, LogIn, Mail, Phone, X } from 'lucide-react';
 import { getSiteSettings, peekCmsCache, type SiteSettings } from '@/services/cmsApi';
+=======
+import { RegionsMenu, RegionsAccordion } from './RegionsMenu';
+import { Link, useLocation } from 'react-router-dom';
+import { Menu, X } from 'lucide-react';
+import { getSiteSettings, type SiteSettings } from '@/services/cmsApi';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { sectionHidden } from '@/components/shared/cmsSections';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
 import { BAR_CONTAINER } from './pageContainer';
@@ -30,9 +37,13 @@ export function HeaderSection() {
     const location = useLocation();
     const pathname = location.pathname;
 
+<<<<<<< HEAD
     // The last copy this browser saw, so the header draws on the first frame
     // instead of an empty bar; replaced by the live answer below.
     const [site, setSite] = useState<SiteSettings | null>(() => peekCmsCache<SiteSettings>('site'));
+=======
+    const [site, setSite] = useState<SiteSettings | null>(null);
+>>>>>>> 8020f5d (Initial commit for website frontend)
     const [menuOpen, setMenuOpen] = useState(false);
 
     useEffect(() => {
@@ -41,14 +52,19 @@ export function HeaderSection() {
             .then((data) => { if (!cancelled) setSite(data); })
             // `getSiteSettings` already resolves to an empty shape on failure;
             // this catches only the unexpected. The page still renders.
+<<<<<<< HEAD
             // Keep the copy on screen rather than blanking the header.
             .catch(() => { /* `getSiteSettings` already resolves on failure */ });
+=======
+            .catch(() => { if (!cancelled) setSite(null); });
+>>>>>>> 8020f5d (Initial commit for website frontend)
         return () => { cancelled = true; };
     }, []);
 
     // Collapse the drawer on navigation, or it stays open over the new page.
     useEffect(() => { setMenuOpen(false); }, [pathname]);
 
+<<<<<<< HEAD
     /*
      * While the phone menu is open the page behind it must not scroll, and
      * Escape closes it. Restored on close, and on unmount.
@@ -65,6 +81,8 @@ export function HeaderSection() {
         };
     }, [menuOpen]);
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     const brand = site?.brand;
     /*
      * Each card on the Header & Footer screen can be removed — see
@@ -78,6 +96,7 @@ export function HeaderSection() {
     const navLinks = removed('header.navLinks') ? [] : (site?.header?.navLinks || []);
     const ctaLabel = removed('header.cta') ? '' : (site?.header?.ctaLabel || '');
     const ctaHref = site?.header?.ctaHref || '/login';
+<<<<<<< HEAD
     // One-tap contact in the phone menu, from the footer's own contact card.
     /* The site's own phone/email first; the Contact page's HEAD OFFICE when those
        are blank — never an assumed state. */
@@ -96,6 +115,8 @@ export function HeaderSection() {
     }, []);
     const phone = String((site?.footer?.phones || [])[0] || headOffice.phone || '').trim();
     const email = String(site?.footer?.email || headOffice.email || '').trim();
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     /**
      * The bar's colours, from the CMS.
@@ -127,9 +148,12 @@ export function HeaderSection() {
      * labels shifted up by a pixel as you moved between pages. Reserving the
      * space means the baseline never moves.
      */
+<<<<<<< HEAD
     /* The menu link that becomes the Schemes dropdown — see `SchemesMenu`. */
     const isSchemes = (href?: string) => String(href || '').replace(/\/+$/, '') === '/schemes';
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     const navItemStyle = (href: string) =>
         isActive(href)
             ? { color: accent, borderColor: accent }
@@ -157,6 +181,7 @@ export function HeaderSection() {
                   where it was — the one strip on the page that ignored the zoom
                   fix. Everything here is now rem-based and scales with the rest.
                 */}
+<<<<<<< HEAD
                 <div className="flex h-[4.5rem] sm:h-[5.5rem] items-center gap-3 sm:gap-5 lg:gap-9">
 
                     {/*
@@ -190,6 +215,9 @@ export function HeaderSection() {
                             </span>
                         </button>
                     )}
+=======
+                <div className="flex h-[5.5rem] items-center gap-5 lg:gap-9">
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
                     {/* ---------------------------------------------- brand */}
                     <Link to="/" className="flex items-center gap-3 min-w-0" aria-label="ACTIV home">
@@ -226,14 +254,19 @@ export function HeaderSection() {
                         {brand?.logo?.url && brand?.fullName && (
                             <span
                                 aria-hidden="true"
+<<<<<<< HEAD
                                 /* The same widths as the name it divides —
                                    see the threshold note below. A rule with
                                    nothing on its right is a stray line. */
                                 className="hidden md:block lg:hidden min-[1700px]:block h-8 lg:h-9 w-px shrink-0"
+=======
+                                className="hidden md:block h-8 lg:h-9 w-px shrink-0"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 style={{ backgroundColor: `${accent}33` }}
                             />
                         )}
 
+<<<<<<< HEAD
                         {/*
                           * THE FULL NAME YIELDS TO THE MENU.
                           *
@@ -315,6 +348,12 @@ export function HeaderSection() {
                                 className="hidden md:block lg:hidden min-[1700px]:block shrink-0
                                            text-[1rem] lg:text-[1.0625rem] font-bold uppercase
                                            leading-[1.35] tracking-[0.06em] max-w-[21.6em]"
+=======
+                        {brand?.fullName && (
+                            <span
+                                className="hidden md:block text-[1rem] lg:text-[1.0625rem] font-bold uppercase
+                                           leading-[1.35] tracking-[0.06em] max-w-[17rem]"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 style={{ color: accent }}
                             >
                                 {brand.fullName}
@@ -328,6 +367,7 @@ export function HeaderSection() {
                         `justify-between` happened to produce at a given width. */}
                     <div className="ml-auto flex items-center gap-5 lg:gap-8">
                         {navLinks.length > 0 && (
+<<<<<<< HEAD
                             <nav className="hidden lg:flex shrink-0 items-center gap-5 xl:gap-7 2xl:gap-8" aria-label="Main">
                                 {navLinks.map((item, i) => isSchemes(item.href) ? (
                                     /* The CMS's "Schemes" link opens a dropdown like
@@ -339,6 +379,10 @@ export function HeaderSection() {
                                         active={pathname.startsWith('/schemes')}
                                     />
                                 ) : (
+=======
+                            <nav className="hidden lg:flex items-center gap-7 xl:gap-9" aria-label="Main">
+                                {navLinks.map((item, i) => (
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     <Link
                                         key={`${item.href}-${i}`}
                                         to={item.href || '/'}
@@ -352,7 +396,11 @@ export function HeaderSection() {
                                           button. With bottom padding only, the
                                           whole nav rode 3px high.
                                         */
+<<<<<<< HEAD
                                         className={`whitespace-nowrap text-[1.0625rem] pt-1.5 pb-1 border-b-2 transition ${
+=======
+                                        className={`text-[1.0625rem] pt-1.5 pb-1 border-b-2 transition ${
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             isActive(item.href)
                                                 ? 'font-semibold'
                                                 : 'font-medium opacity-70 hover:opacity-100'
@@ -377,6 +425,7 @@ export function HeaderSection() {
                             </nav>
                         )}
 
+<<<<<<< HEAD
                         <div className="flex items-center gap-2 sm:gap-3">
                             {ctaLabel && (
                                 /*
@@ -396,10 +445,22 @@ export function HeaderSection() {
                                     style={{ backgroundImage: `linear-gradient(135deg, ${accent} 0%, #2563eb 100%)` }}
                                 >
                                     <LogIn size={17} className="shrink-0 transition-transform duration-300 group-hover:translate-x-0.5" />
+=======
+                        <div className="flex items-center gap-2">
+                            {ctaLabel && (
+                                <Link
+                                    to={ctaHref}
+                                    className="inline-flex items-center justify-center h-11 px-7 rounded-full
+                                               text-white text-[1.0625rem] font-semibold whitespace-nowrap shadow-sm
+                                               transition-opacity hover:opacity-90"
+                                    style={{ backgroundColor: accent }}
+                                >
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     {ctaLabel}
                                 </Link>
                             )}
 
+<<<<<<< HEAD
                         </div>
                     </div>
                 </div>
@@ -543,11 +604,56 @@ export function HeaderSection() {
                                 >
                                     <LogIn size={18} /> {ctaLabel}
                                 </Link>
+=======
+                            {/* The nav collapses below `lg`; without this it is unreachable. */}
+                            {navLinks.length > 0 && (
+                                <button
+                                    type="button"
+                                    className="lg:hidden inline-flex items-center justify-center
+                                               h-11 w-11 rounded-full transition-colors hover:bg-black/5"
+                                    style={{ color: accent }}
+                                    onClick={() => setMenuOpen(v => !v)}
+                                    aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                                    aria-expanded={menuOpen}
+                                >
+                                    {menuOpen ? <X size={24} /> : <Menu size={24} />}
+                                </button>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             )}
                         </div>
                     </div>
                 </div>
+<<<<<<< HEAD
             )}
+=======
+
+                {menuOpen && navLinks.length > 0 && (
+                    <nav
+                        className="lg:hidden flex flex-col gap-1 pb-4 pt-3 border-t"
+                        style={{ borderColor: `${accent}1A` }}
+                        aria-label="Main"
+                    >
+                        {navLinks.map((item, i) => (
+                            <Link
+                                key={`m-${item.href}-${i}`}
+                                to={item.href || '/'}
+                                aria-current={isActive(item.href) ? 'page' : undefined}
+                                className={`px-3 py-2.5 rounded-lg text-[1.0625rem] transition-colors hover:bg-black/5 ${
+                                    isActive(item.href) ? 'font-semibold bg-black/5' : 'font-medium'
+                                }`}
+                                style={{ color: accent }}
+                            >
+                                {item.label}
+                            </Link>
+                        ))}
+
+                        {/* An accordion here, not the flyout — see the note in
+                            RegionsMenu about the first tap on a touch screen. */}
+                        <RegionsAccordion accent={accent} onNavigate={() => setMenuOpen(false)} />
+                    </nav>
+                )}
+            </div>
+>>>>>>> 8020f5d (Initial commit for website frontend)
         </header>
     );
 }

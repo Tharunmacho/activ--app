@@ -1,6 +1,9 @@
 import { type CmsExtraField } from '@/services/cmsApi';
 import { MICRO_LABEL } from '@/components/layout/typography';
+<<<<<<< HEAD
 import { CmsIcon } from '@/components/shared/CmsIcon';
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * The fields an editor named themselves, wherever they were added.
@@ -11,6 +14,7 @@ import { CmsIcon } from '@/components/shared/CmsIcon';
  * A page that grows an empty band the moment the feature ships would be worse
  * than not having it.
  *
+<<<<<<< HEAD
  * ==========================================================================
  * A FIELD SAYS WHERE IT GOES, AND THIS DRAWS BOTH ANSWERS
  * ==========================================================================
@@ -34,6 +38,9 @@ import { CmsIcon } from '@/components/shared/CmsIcon';
  *
  * Two shapes for the card half, because the same content sits in two kinds of
  * place:
+=======
+ * Two shapes, because the same content sits in two kinds of place:
+>>>>>>> 8020f5d (Initial commit for website frontend)
  *
  *   `list`  a labelled column — for a details card or a footer, where each row
  *           reads as a fact.
@@ -50,6 +57,7 @@ interface Props {
     className?: string;
     /** Colour set for the footer, where the ground is dark. */
     tone?: 'light' | 'dark';
+<<<<<<< HEAD
     /**
      * Draw only one half.
      *
@@ -192,5 +200,35 @@ export function CmsExtraFields({
                 </dl>
             )}
         </div>
+=======
+}
+
+export function CmsExtraFields({ fields, variant = 'grid', className = '', tone = 'light' }: Props) {
+    const rows = (fields || []).filter(f => f && (f.label || f.value));
+    if (!rows.length) return null;
+
+    const labelClass = tone === 'dark' ? 'text-white/60' : 'text-gray-400';
+    const valueClass = tone === 'dark' ? 'text-white/90' : 'text-brand-800';
+
+    return (
+        <dl
+            className={`${variant === 'grid'
+                ? 'grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5'
+                : 'space-y-4'} ${className}`}
+        >
+            {rows.map((field, i) => (
+                <div key={`${field.label}-${i}`} className="min-w-0">
+                    {field.label && (
+                        <dt className={`${MICRO_LABEL} ${labelClass} mb-1`}>{field.label}</dt>
+                    )}
+                    {field.value && (
+                        <dd className={`text-[1.125rem] font-semibold ${valueClass} break-words whitespace-pre-line`}>
+                            {field.value}
+                        </dd>
+                    )}
+                </div>
+            ))}
+        </dl>
+>>>>>>> 8020f5d (Initial commit for website frontend)
     );
 }

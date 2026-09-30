@@ -7,14 +7,23 @@ import { HeaderSection } from '../../components/layout/HeaderSection';
 import { FooterSection } from '../../components/layout/FooterSection';
 import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
 import {
+<<<<<<< HEAD
     SECTION_HEADING, SECTION_LEDE, EYEBROW, MICRO_LABEL, HERO_HEADING, HERO_LEDE, BAND_MEASURE } from '@/components/layout/typography';
+=======
+    SECTION_HEADING, SECTION_LEDE, EYEBROW, MICRO_LABEL, HERO_HEADING, HERO_LEDE,
+} from '@/components/layout/typography';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { BIZ_CARD } from '@/components/layout/surface';
 import { Reveal } from '@/components/shared/Reveal';
 import { AcrossIndia } from '@/components/shared/AcrossIndia';
 import { CmsIcon } from '@/components/shared/CmsIcon';
 import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
+<<<<<<< HEAD
 import { sectionHidden } from '@/components/shared/cmsSections';
 import { SectionFields } from '@/components/shared/SectionFields';
+=======
+import { sectionHidden, sectionFields } from '@/components/shared/cmsSections';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import {
     getMembership, EMPTY_MEMBERSHIP,
     type MembershipContent, type MembershipAdvantage, type MembershipStep,
@@ -234,7 +243,11 @@ const PLATE_DARK =
     'transition-transform duration-300 group-hover:scale-110';
 
 /** A card's heading — `BusinessUI`'s 22px taken up a step. */
+<<<<<<< HEAD
 const CARD_HEADING = 'text-[1.5rem] sm:text-[1.875rem] font-extrabold leading-[1.2] tracking-tight text-slate-900';
+=======
+const CARD_HEADING = 'text-[1.875rem] font-extrabold leading-[1.2] tracking-tight text-slate-900';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
 /** Body copy inside a card. */
 const CARD_TEXT = 'text-[1.3125rem] xl:text-[1.1875rem] leading-relaxed font-medium text-slate-600';
@@ -242,6 +255,7 @@ const CARD_TEXT = 'text-[1.3125rem] xl:text-[1.1875rem] leading-relaxed font-med
 /** `BusinessUI.Field`'s label — the line that introduces a list. */
 const CARD_LEAD = 'text-[1.3125rem] xl:text-[1.1875rem] font-bold text-slate-800';
 
+<<<<<<< HEAD
 /**
  * What a band's own added fields are set in.
  *
@@ -252,6 +266,8 @@ const CARD_LEAD = 'text-[1.3125rem] xl:text-[1.1875rem] font-bold text-slate-800
  */
 const BAND_PROSE = 'text-[1.3125rem] md:text-[1.5625rem] font-bold leading-relaxed tracking-tight text-slate-700';
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 /** A card's sub-heading — the document's own line under each title. */
 const CARD_SUB = 'text-[1.1875rem] font-bold leading-snug text-brand-600';
 
@@ -290,7 +306,11 @@ function SectionHead({
     children?: React.ReactNode;
 }) {
     return (
+<<<<<<< HEAD
         <Reveal className="mx-auto mb-7 sm:mb-10 flex max-w-5xl flex-col items-center text-center md:mb-12">
+=======
+        <Reveal className="mx-auto mb-10 flex max-w-5xl flex-col items-center text-center md:mb-12">
+>>>>>>> 8020f5d (Initial commit for website frontend)
             {eyebrow && (
                 <div className="flex items-center gap-4 mb-5">
                     <span className={`h-px w-10 ${dark ? 'bg-white/30' : 'bg-brand-300'}`} />
@@ -300,7 +320,11 @@ function SectionHead({
             )}
             <h2 className={`${SECTION_HEADING} ${dark ? 'text-white' : 'text-brand-800'}`}>{heading}</h2>
             {subtitle && (
+<<<<<<< HEAD
                 <p className={`${SECTION_LEDE} mt-4 ${BAND_MEASURE} ${dark ? 'text-white/70' : 'text-brand-600'}`}>
+=======
+                <p className={`${SECTION_LEDE} mt-4 max-w-3xl ${dark ? 'text-white/70' : 'text-brand-600'}`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     {subtitle}
                 </p>
             )}
@@ -361,10 +385,17 @@ function AdvantageCard({
     const panelId = `${advantage.slug}-panel`;
 
     return (
+<<<<<<< HEAD
         <article id={advantage.slug} className={`${CARD} scroll-mt-28 p-4 sm:p-7`}>
 
             <div className="mb-5 flex items-start justify-between gap-3">
                 <span aria-hidden="true" className={`${PLATE} h-11 w-11 sm:h-[3.25rem] sm:w-[3.25rem]`}>
+=======
+        <article id={advantage.slug} className={`${CARD} scroll-mt-28 p-6 sm:p-7`}>
+
+            <div className="mb-5 flex items-start justify-between gap-3">
+                <span aria-hidden="true" className={`${PLATE} h-[3.25rem] w-[3.25rem]`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <CmsIcon name={icon} size={24} />
                 </span>
                 <span className={`${MICRO_LABEL} mt-1 text-brand-300`}>{advantage.number}</span>
@@ -496,6 +527,17 @@ export default function MembershipPage() {
      * the page, not that it renders empty with its heading still on it.
      */
     const show = (key: string) => !sectionHidden(copy.sections, key);
+<<<<<<< HEAD
+=======
+    const rowsOf = (key: string) => (show(key) ? sectionFields(copy.sections, key) : []);
+
+    const ownRows = [
+        ...rowsOf('membership.opening'), ...rowsOf('membership.why'),
+        ...rowsOf('membership.advantages'), ...rowsOf('membership.journey'),
+        ...rowsOf('membership.who'), ...rowsOf('membership.matters'),
+        ...rowsOf('membership.closing'), ...(copy.extraFields || []),
+    ];
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     /** Which advantages are open, by slug. Shut is the default for all fifteen. */
     const [opened, setOpened] = useState<Record<string, boolean>>({});
@@ -584,8 +626,13 @@ export default function MembershipPage() {
                         </svg>
                     </div>
 
+<<<<<<< HEAD
                     <div className={`${SCREEN_CONTAINER} relative z-10 pt-10 pb-10 sm:pt-16 sm:pb-16 md:pt-20 md:pb-20`}>
                         <div className="grid grid-cols-1 items-center gap-10 lg:gap-14 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+=======
+                    <div className={`${SCREEN_CONTAINER} relative z-10 pt-16 pb-16 md:pt-20 md:pb-20`}>
+                        <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-[1.1fr_0.9fr]">
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
                             {/* ---------------------------------------- copy */}
                             <Reveal variant="left" className="min-w-0">
@@ -622,10 +669,17 @@ export default function MembershipPage() {
                                     <span>Open to SC/ST and women entrepreneurs</span>
                                 </p>
 
+<<<<<<< HEAD
                                 <div className="mt-7 sm:mt-9 flex flex-wrap gap-3">
                                     <Link
                                         to="/register"
                                         className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-full bg-white px-6 sm:px-9 py-3.5 sm:py-4
+=======
+                                <div className="mt-9 flex flex-wrap gap-3">
+                                    <Link
+                                        to="/register"
+                                        className="inline-flex items-center gap-2 rounded-full bg-white px-9 py-4
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                    text-[1.25rem] font-bold uppercase tracking-[0.1em] text-brand-900
                                                    shadow-lg transition-opacity hover:opacity-90"
                                     >
@@ -633,8 +687,13 @@ export default function MembershipPage() {
                                     </Link>
                                     <a
                                         href="#advantages"
+<<<<<<< HEAD
                                         className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-full border border-white/30
                                                    px-6 sm:px-9 py-3.5 sm:py-4 text-[1.25rem] font-bold uppercase tracking-[0.1em]
+=======
+                                        className="inline-flex items-center gap-2 rounded-full border border-white/30
+                                                   px-9 py-4 text-[1.25rem] font-bold uppercase tracking-[0.1em]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                    text-white transition-colors hover:bg-white/10"
                                     >
                                         See what is included
@@ -709,7 +768,11 @@ export default function MembershipPage() {
                             The document's own first six headings, as a way in.
                             Events counts things in its hero; this one shows
                             what is actually inside. */}
+<<<<<<< HEAD
                         <Reveal delay={200} className="mt-10 sm:mt-14 border-t border-white/10 pt-7">
+=======
+                        <Reveal delay={200} className="mt-14 border-t border-white/10 pt-7">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             <p className={`${MICRO_LABEL} mb-4 text-white/40`}>What a membership carries</p>
                             <div className="flex flex-wrap gap-2.5">
                                 {advantages.slice(0, 6).map((advantage) => (
@@ -734,6 +797,7 @@ export default function MembershipPage() {
                             </div>
                         </Reveal>
                     </div>
+<<<<<<< HEAD
 
                     {/* This card's own fields, inside this card — see
                         `SectionFields`. They used to be pooled with every
@@ -741,6 +805,8 @@ export default function MembershipPage() {
                     <div className={SCREEN_CONTAINER}>
                         <SectionFields proseClass={BAND_PROSE} sections={copy.sections} sectionKey="membership.opening" />
                     </div>
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 </section>
                 )}
 
@@ -749,7 +815,11 @@ export default function MembershipPage() {
                     card takes the rest of the width, so the wide column is
                     filled without setting body copy 1,800px wide. */}
                 {show('membership.why') && (
+<<<<<<< HEAD
                 <section className="relative overflow-hidden dot-band py-10 sm:py-14 md:py-20">
+=======
+                <section className="relative overflow-hidden dot-band py-14 md:py-20">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <DotField id="membership-dots-intro" />
 
                     <div className={`${SCREEN_CONTAINER} relative z-10`}>
@@ -763,7 +833,11 @@ export default function MembershipPage() {
                             }
                         />
 
+<<<<<<< HEAD
                         <div className="grid items-start gap-6 sm:gap-8 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]
+=======
+                        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         lg:gap-12 xl:grid-cols-[minmax(0,34rem)_minmax(0,1fr)] xl:gap-16">
 
                             <Reveal variant="left">
@@ -795,7 +869,11 @@ export default function MembershipPage() {
                             </Reveal>
 
                             <Reveal variant="right" delay={120}>
+<<<<<<< HEAD
                                 <div className={`${CARD} p-4 sm:p-8`}>
+=======
+                                <div className={`${CARD} p-6 sm:p-8`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     <h3 className={CARD_HEADING}>{copy.whyJoin.heading}</h3>
                                     <p className={`${CARD_SUB} mt-2`}>{copy.whyJoin.subtitle}</p>
                                     <p className={`mt-4 ${CARD_LEAD}`}>{copy.whyJoin.lead}</p>
@@ -812,6 +890,7 @@ export default function MembershipPage() {
                             </Reveal>
                         </div>
                     </div>
+<<<<<<< HEAD
 
                     {/* This card's own fields, inside this card — see
                         `SectionFields`. They used to be pooled with every
@@ -819,12 +898,18 @@ export default function MembershipPage() {
                     <div className={SCREEN_CONTAINER}>
                         <SectionFields proseClass={BAND_PROSE} sections={copy.sections} sectionKey="membership.why" />
                     </div>
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 </section>
                 )}
 
                 {/* ======================================= the fifteen parts */}
                 {show('membership.advantages') && (
+<<<<<<< HEAD
                 <section id="advantages" className="relative overflow-hidden scroll-mt-24 dot-band py-10 sm:py-14 md:py-20">
+=======
+                <section id="advantages" className="relative overflow-hidden scroll-mt-24 dot-band py-14 md:py-20">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
                         <div className="absolute -top-24 -left-20 h-80 w-80 rounded-full bg-brand-200/40 blur-3xl animate-activ-float-slow" />
                         <div className="absolute -bottom-32 right-0 h-96 w-96 rounded-full bg-brand-100/60 blur-3xl animate-activ-float" />
@@ -872,13 +957,21 @@ export default function MembershipPage() {
                             already on the card it points at, and fifteen of them
                             down the left of the block read as a second thing to
                             take in before the labels. */}
+<<<<<<< HEAD
                         <Reveal className="mb-7 sm:mb-10 grid gap-2.5 sm:gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+=======
+                        <Reveal className="mb-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             {advantages.map((item) => (
                                 <a
                                     key={item.slug}
                                     href={`#${item.slug}`}
                                     onClick={() => reveal(item.slug)}
+<<<<<<< HEAD
                                     className={`${PILL} flex items-center justify-center px-4 py-3 sm:px-5 sm:py-4 text-center
+=======
+                                    className={`${PILL} flex items-center justify-center px-5 py-4 text-center
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                 text-[1.0625rem] font-bold leading-snug text-brand-700
                                                 hover:border-brand-800 hover:bg-brand-800 hover:text-white`}
                                 >
@@ -904,7 +997,11 @@ export default function MembershipPage() {
                           lines; three keeps a card at ~430px, which is the
                           width the 1920 layout gives it too.
                         */}
+<<<<<<< HEAD
                         <div className="flex flex-wrap justify-center gap-4 sm:gap-5">
+=======
+                        <div className="flex flex-wrap justify-center gap-5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             {advantages.map((advantage, i) => (
                                 <Reveal
                                     key={advantage.slug}
@@ -921,6 +1018,7 @@ export default function MembershipPage() {
                             ))}
                         </div>
                     </div>
+<<<<<<< HEAD
 
                     {/* This card's own fields, inside this card — see
                         `SectionFields`. They used to be pooled with every
@@ -928,12 +1026,18 @@ export default function MembershipPage() {
                     <div className={SCREEN_CONTAINER}>
                         <SectionFields proseClass={BAND_PROSE} sections={copy.sections} sectionKey="membership.advantages" />
                     </div>
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 </section>
                 )}
 
                 {/* ============================================== the journey */}
                 {show('membership.journey') && (
+<<<<<<< HEAD
                 <section className="relative overflow-hidden bg-brand-900 text-white py-10 sm:py-14 md:py-20">
+=======
+                <section className="relative overflow-hidden bg-brand-900 text-white py-14 md:py-20">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
                         <div className="absolute -top-24 right-0 h-96 w-96 rounded-full bg-brand-600/25 blur-3xl animate-activ-float" />
                     </div>
@@ -943,7 +1047,11 @@ export default function MembershipPage() {
 
                         {/* Four abreast, then three centred beneath — the same
                             wrap the advantages use, for the same reason. */}
+<<<<<<< HEAD
                         <div className="flex flex-wrap justify-center gap-4 sm:gap-5">
+=======
+                        <div className="flex flex-wrap justify-center gap-5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             {journey.map((step, i) => {
                                 const icon = step.icon;
                                 return (
@@ -953,18 +1061,31 @@ export default function MembershipPage() {
                                         className="w-full sm:w-[calc(50%-0.625rem)] lg:w-[calc(25%-0.9375rem)]"
                                     >
                                         <div className="group flex h-full flex-col rounded-2xl border
+<<<<<<< HEAD
                                                         border-white/15 bg-white/[0.06] p-4 sm:p-6
                                                         transition-colors hover:bg-white/[0.1]">
                                             <div className="mb-4 sm:mb-5 flex items-center justify-between">
                                                 <span
                                                     aria-hidden="true"
                                                     className={`${PLATE_DARK} h-11 w-11 sm:h-[3.25rem] sm:w-[3.25rem]`}
+=======
+                                                        border-white/15 bg-white/[0.06] p-6
+                                                        transition-colors hover:bg-white/[0.1]">
+                                            <div className="mb-5 flex items-center justify-between">
+                                                <span
+                                                    aria-hidden="true"
+                                                    className={`${PLATE_DARK} h-[3.25rem] w-[3.25rem]`}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                 >
                                                     <CmsIcon name={icon} size={24} />
                                                 </span>
                                                 <span className={`${MICRO_LABEL} text-white/40`}>{step.step}</span>
                                             </div>
+<<<<<<< HEAD
                                             <h3 className="text-[1.5rem] sm:text-[1.875rem] font-extrabold tracking-tight">
+=======
+                                            <h3 className="text-[1.875rem] font-extrabold tracking-tight">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                 {step.title}
                                             </h3>
                                             <p className="mt-2 text-[1.3125rem] xl:text-[1.1875rem] leading-relaxed
@@ -977,6 +1098,7 @@ export default function MembershipPage() {
                             })}
                         </div>
                     </div>
+<<<<<<< HEAD
 
                     {/* This card's own fields, inside this card — see
                         `SectionFields`. They used to be pooled with every
@@ -984,12 +1106,18 @@ export default function MembershipPage() {
                     <div className={SCREEN_CONTAINER}>
                         <SectionFields proseClass={BAND_PROSE} sections={copy.sections} sectionKey="membership.journey" />
                     </div>
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 </section>
                 )}
 
                 {/* ========================================= who should join */}
                 {show('membership.who') && (
+<<<<<<< HEAD
                 <section className="relative overflow-hidden dot-band py-10 sm:py-14 md:py-20">
+=======
+                <section className="relative overflow-hidden dot-band py-14 md:py-20">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <DotField id="membership-dots-who" />
 
                     <div className={`${SCREEN_CONTAINER} relative z-10`}>
@@ -1002,6 +1130,7 @@ export default function MembershipPage() {
                         {/* The same grid as the contents strip above, for the
                             same reason and with the same count — fifteen, which
                             divides by three and by five. */}
+<<<<<<< HEAD
                         {/* On a phone, compact chips that wrap several to a row —
                             sixteen full-width pills were a very long column. */}
                         <Reveal className="flex flex-wrap justify-center gap-2 sm:grid sm:gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
@@ -1010,6 +1139,14 @@ export default function MembershipPage() {
                                     key={i}
                                     className={`${PILL} flex items-center justify-center gap-2 sm:gap-2.5 px-3.5 py-2.5 sm:px-5 sm:py-4
                                                 text-center text-[0.95rem] sm:text-[1.0625rem] font-bold leading-snug
+=======
+                        <Reveal className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+                            {copy.whoShouldJoin.bullets.map((item, i) => (
+                                <span
+                                    key={i}
+                                    className={`${PILL} flex items-center justify-center gap-2.5 px-5 py-4
+                                                text-center text-[1.0625rem] font-bold leading-snug
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                 text-slate-800`}
                                 >
                                     <span aria-hidden="true"
@@ -1019,6 +1156,7 @@ export default function MembershipPage() {
                             ))}
                         </Reveal>
                     </div>
+<<<<<<< HEAD
 
                     {/* This card's own fields, inside this card — see
                         `SectionFields`. They used to be pooled with every
@@ -1026,12 +1164,18 @@ export default function MembershipPage() {
                     <div className={SCREEN_CONTAINER}>
                         <SectionFields proseClass={BAND_PROSE} sections={copy.sections} sectionKey="membership.who" />
                     </div>
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 </section>
                 )}
 
                 {/* ==================================== why membership matters */}
                 {show('membership.matters') && (
+<<<<<<< HEAD
                 <section className="dot-band py-10 sm:py-14 md:py-20">
+=======
+                <section className="dot-band py-14 md:py-20">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <div className={SCREEN_CONTAINER}>
                         <SectionHead
                             eyebrow="The short answer"
@@ -1040,15 +1184,26 @@ export default function MembershipPage() {
                         />
 
                         {/* Eight cards, four abreast: two full rows and no hole. */}
+<<<<<<< HEAD
                         <div className="grid items-stretch gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:gap-6">
+=======
+                        <div className="grid items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:gap-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             {copy.whyItMatters.map((item, i) => {
                                 const icon = item.icon;
                                 return (
                                     <Reveal key={item.title} delay={(i % 4) * 70} className="h-full">
+<<<<<<< HEAD
                                         <div className={`${CARD} p-4 sm:p-7`}>
                                             <span
                                                 aria-hidden="true"
                                                 className={`${PLATE} mb-4 sm:mb-5 h-11 w-11 sm:h-[3.25rem] sm:w-[3.25rem]`}
+=======
+                                        <div className={`${CARD} p-6 sm:p-7`}>
+                                            <span
+                                                aria-hidden="true"
+                                                className={`${PLATE} mb-5 h-[3.25rem] w-[3.25rem]`}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             >
                                                 <CmsIcon name={icon} size={24} />
                                             </span>
@@ -1060,6 +1215,7 @@ export default function MembershipPage() {
                             })}
                         </div>
                     </div>
+<<<<<<< HEAD
 
                     {/* This card's own fields, inside this card — see
                         `SectionFields`. They used to be pooled with every
@@ -1067,16 +1223,26 @@ export default function MembershipPage() {
                     <div className={SCREEN_CONTAINER}>
                         <SectionFields proseClass={BAND_PROSE} sections={copy.sections} sectionKey="membership.matters" />
                     </div>
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 </section>
                 )}
 
                 {/* ============================================== the closing */}
                 {show('membership.closing') && (
+<<<<<<< HEAD
                 <section className="relative overflow-hidden bg-[#eef2f9] py-10 sm:py-14 md:py-20">
                     <DotField id="membership-dots-closing" />
 
                     <div className={`${SCREEN_CONTAINER} relative z-10`}>
                         <div className="grid items-center gap-8 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)]
+=======
+                <section className="relative overflow-hidden bg-[#eef2f9] py-14 md:py-20">
+                    <DotField id="membership-dots-closing" />
+
+                    <div className={`${SCREEN_CONTAINER} relative z-10`}>
+                        <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         lg:gap-16 xl:grid-cols-[minmax(0,1fr)_minmax(0,34rem)]">
 
                             <Reveal>
@@ -1115,9 +1281,15 @@ export default function MembershipPage() {
 
                             {/* ---- join ACTIV today ---- */}
                             <Reveal delay={90}>
+<<<<<<< HEAD
                                 <div className="rounded-2xl bg-brand-900 text-white p-5 sm:p-7 md:p-9
                                                 shadow-[0_18px_50px_-18px_rgb(28_46_104/0.55)]">
                                     <h3 className="text-[1.5rem] sm:text-[1.875rem] font-extrabold tracking-tight mb-5 sm:mb-6">
+=======
+                                <div className="rounded-2xl bg-brand-900 text-white p-7 md:p-9
+                                                shadow-[0_18px_50px_-18px_rgb(28_46_104/0.55)]">
+                                    <h3 className="text-[1.875rem] font-extrabold tracking-tight mb-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         {copy.callHeading}
                                     </h3>
 
@@ -1135,7 +1307,11 @@ export default function MembershipPage() {
                                     <Link
                                         to="/register"
                                         className="mt-6 inline-flex w-full items-center justify-center gap-2
+<<<<<<< HEAD
                                                    rounded-full bg-white px-6 sm:px-9 py-3.5 sm:py-4 font-bold text-[1.25rem]
+=======
+                                                   rounded-full bg-white px-9 py-4 font-bold text-[1.25rem]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                    uppercase tracking-[0.1em] text-brand-900 shadow-lg
                                                    transition-opacity hover:opacity-90"
                                     >
@@ -1148,7 +1324,11 @@ export default function MembershipPage() {
                                             {copy.enquiriesHeading}
                                         </p>
 
+<<<<<<< HEAD
                                         <div className="flex min-w-0 flex-wrap items-center gap-x-8 gap-y-2.5">
+=======
+                                        <div className="flex flex-wrap items-center gap-x-8 gap-y-2.5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             <a
                                                 href={`https://${copy.website}`}
                                                 target="_blank"
@@ -1161,7 +1341,11 @@ export default function MembershipPage() {
                                             </a>
                                             <a
                                                 href={`mailto:${copy.email}`}
+<<<<<<< HEAD
                                                 className="inline-flex min-w-0 items-center gap-2.5 text-[1.3125rem] break-all
+=======
+                                                className="inline-flex items-center gap-2.5 text-[1.3125rem]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                            font-bold text-white/85 transition-colors hover:text-white"
                                             >
                                                 <Mail size={17} className="shrink-0 opacity-60" />
@@ -1173,6 +1357,7 @@ export default function MembershipPage() {
                             </Reveal>
                         </div>
                     </div>
+<<<<<<< HEAD
 
                     {/* This card's own fields, inside this card — see
                         `SectionFields`. They used to be pooled with every
@@ -1196,6 +1381,15 @@ export default function MembershipPage() {
                 {(copy.extraFields || []).length > 0 && (
                     <div className={`${SCREEN_CONTAINER} py-12 ${BAND_PROSE}`}>
                         <CmsExtraFields fields={copy.extraFields} />
+=======
+                </section>
+                )}
+
+                {/* The editor's own rows, per band, then the page's own list. */}
+                {ownRows.length > 0 && (
+                    <div className={`${SCREEN_CONTAINER} py-12`}>
+                        <CmsExtraFields fields={ownRows} />
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     </div>
                 )}
             </main>

@@ -1,18 +1,31 @@
 import { useState, useEffect } from "react";
+<<<<<<< HEAD
 import ApplicantAvatar from '@/components/shared/ApplicantAvatar';
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { formatApplicationRef } from '@/lib/applicationRef';
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+<<<<<<< HEAD
 import { Users, Clock, CheckCircle, XCircle } from "lucide-react";
+=======
+import { Menu, Users, Clock, CheckCircle, XCircle } from "lucide-react";
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { toast } from "sonner";
 import AdminSidebar from "./AdminSidebar";
 import { getAdminProfile, getAdminDashboard, errorMessage } from "@/services/activApi";
 import { TIERS, type AdminTier } from "./tierConfig";
+<<<<<<< HEAD
 import { AdminPageHeader, ADMIN_PAGE } from './AdminUI';
 
 import { CARD_TITLE } from '@/components/layout/appTypography';
+=======
+import { AdminBackButton } from './AdminUI';
+
+import { PAGE_SUBTITLE, PAGE_TITLE, CARD_TITLE } from '@/components/layout/appTypography';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 /**
  * The admin dashboard, shared by the three tiers.
  *
@@ -162,6 +175,7 @@ export default function AdminDashboardScreen({ tier }: { tier: AdminTier }) {
 
     return (
         <div className="min-h-screen flex bg-white">
+<<<<<<< HEAD
             <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
             <div className="flex-1 min-w-0 flex flex-col">
@@ -197,17 +211,102 @@ export default function AdminDashboardScreen({ tier }: { tier: AdminTier }) {
                                             <p className={`${t.sub} text-[0.95rem] sm:text-[1.25rem] font-medium leading-tight`}>{t.label}</p>
                                         </div>
                                         <p className="text-[2rem] sm:text-[2.5625rem] font-bold tracking-tight tabular-nums text-white">
+=======
+            <AdminSidebar tier={tier} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+            <div className="flex-1 min-w-0 flex flex-col">
+                <div className="lg:hidden flex items-center gap-2 p-4 bg-white border-b shadow-sm">
+                    <button
+                        onClick={() => setSidebarOpen(true)}
+                        className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                        aria-label="Open menu"
+                    >
+                        <Menu className="w-6 h-6" />
+                    </button>
+                    {/* The rail moves sideways between sections; this retraces
+                        the step that got here. On a phone it was the only thing
+                        missing, because the rail is behind the hamburger and the
+                        browser chrome was the sole way back. Renders nothing on
+                        the tier's own landing page. */}
+                    <AdminBackButton />
+                    <h1 className={`${PAGE_TITLE} text-slate-900 flex-1 min-w-0 truncate`}>Dashboard</h1>
+                </div>
+
+                {/*
+                  The white header bar every other admin screen opens with.
+                  Dashboard had none, so it was the one screen whose title
+                  scrolled away with the content — and the only one without a way
+                  back to itself from a sub-page.
+                */}
+                {/* `lg`, matching the bar above and the breakpoint the rail appears
+                    at. The two were `md:hidden` / `hidden md:flex`, which was
+                    exclusive while the rail also switched at `md`. Moving the
+                    rail to `lg` left both bars rendering between 768px and
+                    1023px — the same title and the same back arrow, twice. */}
+                <header className="hidden lg:flex bg-white border-b border-slate-200 px-6 py-4
+                                   flex-wrap items-center gap-3">
+                    <div className="min-w-0 flex-1">
+                        <h1 className={`${PAGE_TITLE} text-slate-900`}>
+                            Dashboard
+                        </h1>
+                        <p className={`${PAGE_SUBTITLE} text-slate-500 mt-0.5`}>
+                            {config.label} admin — your region at a glance.
+                        </p>
+                    </div>
+                </header>
+
+                <div className="flex-1 overflow-auto">
+                    {/* `max-w-7xl mx-auto` centred this one screen's content
+                        while every other admin page runs from the left margin. */}
+                    <div className="p-6 max-w-[90rem] space-y-6">
+                        <div>
+                            <div className="flex items-center gap-4 mb-8">
+                                <Avatar className="w-16 h-16 ring-4 ring-blue-100">
+                                    <AvatarFallback className="bg-blue-600 text-white font-bold text-[1.5625rem]">
+                                        {config.initials}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="min-w-0">
+                                    <h1 className="text-[1.75rem] md:text-[2.125rem] font-bold text-slate-900 truncate">{userName}</h1>
+                                    <p className="text-slate-500">{config.dashboardTitle}</p>
+                                    {location ? <p className="text-[1.25rem] text-slate-500 truncate">{location}</p> : null}
+                                </div>
+                            </div>
+
+                            <h2 className={`${CARD_TITLE} mb-4 text-slate-900`}>Overview Statistics</h2>
+                            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                                {TILES.map((t) => (
+                                    <div
+                                        key={t.label}
+                                        className={`bg-gradient-to-br ${t.tint} rounded-2xl p-6 border shadow-xl`}
+                                    >
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <t.icon className={`w-5 h-5 ${t.sub}`} />
+                                            <p className={`${t.sub} text-[1.25rem] font-medium`}>{t.label}</p>
+                                        </div>
+                                        <p className="text-[2.5625rem] font-bold tracking-tight tabular-nums text-white tabular-nums">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             {loading ? "…" : t.value}
                                         </p>
                                     </div>
                                 ))}
                             </div>
                         </div>
+<<<<<<< HEAD
 
                     {/* Recent activity */}
                         <div className="space-y-4 sm:space-y-6">
                             <div className="flex items-center justify-between flex-wrap gap-3">
                                 <div className="min-w-0">
+=======
+                    </div>
+
+                    {/* Recent activity */}
+                    <div className="px-6 pb-6 max-w-[90rem]">
+                        <div className="max-w-[90rem] space-y-6">
+                            <div className="flex items-center justify-between flex-wrap gap-3">
+                                <div>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     <h2 className={`${CARD_TITLE} text-slate-900`}>Recent Activity</h2>
                                     <p className="text-slate-500 text-[1.25rem]">Latest application submissions</p>
                                 </div>
@@ -218,7 +317,11 @@ export default function AdminDashboardScreen({ tier }: { tier: AdminTier }) {
                                 </Link>
                             </div>
 
+<<<<<<< HEAD
                             <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+=======
+                            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <div className="hidden md:grid grid-cols-4 gap-4 px-5 py-4 text-[1.25rem] font-semibold text-slate-700 border-b border-slate-200 mb-4">
                                     <div>Name</div>
                                     <div>Status</div>
@@ -240,11 +343,22 @@ export default function AdminDashboardScreen({ tier }: { tier: AdminTier }) {
                                             return (
                                                 <div
                                                     key={app.id || app.applicationId}
+<<<<<<< HEAD
                                                     className="grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-4 gap-x-3 gap-y-1.5 md:gap-5 items-center p-3 sm:p-4 rounded-xl bg-white hover:bg-slate-50 transition-colors duration-200 border border-slate-200"
                                                 >
                                                     <div className="flex items-center gap-3 min-w-0">
                                                         <ApplicantAvatar name={displayName} photo={app.profilePhoto}
                                                             className="w-10 h-10 ring-2 ring-blue-200" textClassName="text-[1.25rem]" />
+=======
+                                                    className="grid grid-cols-1 md:grid-cols-4 gap-5 items-center p-4 rounded-xl bg-white hover:bg-slate-50 transition-colors duration-200 border border-slate-200"
+                                                >
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <Avatar className="w-10 h-10 ring-2 ring-blue-200">
+                                                            <AvatarFallback className="bg-blue-600 text-white font-bold text-[1.25rem]">
+                                                                {initials}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                         <div className="min-w-0">
                                                             <p className="font-semibold text-slate-900 text-[1.25rem] truncate">{displayName}</p>
                                                             <p className="text-[1.1875rem] text-slate-500 truncate">
@@ -259,10 +373,17 @@ export default function AdminDashboardScreen({ tier }: { tier: AdminTier }) {
                                                             {app.statusLabel || stage}
                                                         </Badge>
                                                     </div>
+<<<<<<< HEAD
                                                     <div className="text-[1.0625rem] md:text-[1.25rem] text-slate-500 md:text-slate-700 capitalize truncate">
                                                         {app.memberType || "—"}
                                                     </div>
                                                     <div className="text-[1.0625rem] md:text-[1.25rem] text-slate-500 md:text-slate-700 text-right md:text-left whitespace-nowrap">
+=======
+                                                    <div className="text-[1.25rem] text-slate-700 capitalize">
+                                                        {app.memberType || "—"}
+                                                    </div>
+                                                    <div className="text-[1.25rem] text-slate-700">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                         {app.submittedAt
                                                             ? new Date(app.submittedAt).toLocaleDateString("en-GB", {
                                                                 day: "2-digit", month: "short", year: "numeric",
@@ -283,6 +404,10 @@ export default function AdminDashboardScreen({ tier }: { tier: AdminTier }) {
                                 </div>
                             </div>
                         </div>
+<<<<<<< HEAD
+=======
+                    </div>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 </div>
             </div>
         </div>

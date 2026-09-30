@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, ChevronRight, Globe2 } from 'lucide-react';
+<<<<<<< HEAD
 import { getRegionMap, zoneName, type RegionMapEntry } from '@/services/cmsRegionsApi';
+=======
+import { getRegionMap, type RegionMapEntry } from '@/services/cmsRegionsApi';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * The Regions menu in the header.
@@ -132,11 +136,15 @@ export function RegionsMenu({ accent }: { accent: string }) {
                 }`}
                 style={{ color: accent }}
             >
+<<<<<<< HEAD
                 {/* ZONES, not "Regions". The five above the states are zones;
                     "region" is the word for the tier INSIDE a state, which is
                     drawn on that state's own page. Two tiers under one word
                     is what this menu and the state pages used to share. */}
                 Zones
+=======
+                Regions
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 <ChevronDown size={14} className={open ? 'rotate-180 transition-transform' : 'transition-transform'} />
             </button>
 
@@ -185,7 +193,11 @@ export function RegionsMenu({ accent }: { accent: string }) {
                                                 {region.national && (
                                                     <Globe2 size={15} className="shrink-0 text-brand-500" />
                                                 )}
+<<<<<<< HEAD
                                                 {zoneName(region.label, region.national)}
+=======
+                                                {region.label}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             </span>
                                             <ChevronRight size={14} className="text-gray-400" />
                                         </Link>
@@ -199,7 +211,11 @@ export function RegionsMenu({ accent }: { accent: string }) {
                                                 on ? 'bg-brand-50 text-gray-500' : 'text-gray-500 hover:bg-brand-50/60'
                                             }`}
                                         >
+<<<<<<< HEAD
                                             {zoneName(region.label, region.national)}
+=======
+                                            {region.label}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             <ChevronRight size={14} className="text-gray-300" />
                                         </button>
                                     )}
@@ -211,7 +227,11 @@ export function RegionsMenu({ accent }: { accent: string }) {
                     {/* ---- what is inside it ---- */}
                     <div className="w-56 py-2">
                         <p className="px-4 pb-2 text-[1rem] font-bold uppercase tracking-wider text-gray-400">
+<<<<<<< HEAD
                             {current?.national ? 'The five zones' : `${zoneName(current?.label)} states`}
+=======
+                            {current?.national ? 'The five regions' : `${current?.label} states`}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         </p>
 
                         {current?.national ? (
@@ -224,7 +244,11 @@ export function RegionsMenu({ accent }: { accent: string }) {
                                             className="block px-4 py-2.5 text-[1.0625rem] font-semibold
                                                        text-brand-700 transition-colors hover:bg-brand-50/60"
                                         >
+<<<<<<< HEAD
                                             {zoneName(region.label, region.national)}
+=======
+                                            {region.label}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         </Link>
                                     </li>
                                 ))}
@@ -274,12 +298,18 @@ export function RegionsAccordion({ accent, onNavigate }: {
     if (!regions.length) return null;
 
     return (
+<<<<<<< HEAD
         /* Rows share the drawer links' px-4 box (HeaderSection), so the
            zone names start on the same left edge as About / Gallery. */
         <div className="mt-2 border-t border-slate-100 pt-3">
             <p className="px-4 mb-1 text-[0.8rem] font-bold uppercase tracking-[0.16em] text-gray-400">
                 {/* See the note on the desktop trigger. */}
                 Zones
+=======
+        <div className="px-3 py-2">
+            <p className="text-[1rem] font-bold uppercase tracking-wider text-gray-400 mb-1.5">
+                Regions
+>>>>>>> 8020f5d (Initial commit for website frontend)
             </p>
             {regions.map((region) => {
                 const on = openKey === region.key;
@@ -304,12 +334,21 @@ export function RegionsAccordion({ accent, onNavigate }: {
                             key={region.key}
                             to={`/regions/${region.slug}`}
                             onClick={onNavigate}
+<<<<<<< HEAD
                             className="flex items-center gap-2 rounded-2xl px-4 py-3.5
                                        text-[1.0625rem] font-semibold transition-all hover:bg-slate-50 active:scale-[0.98]"
                             style={{ color: accent }}
                         >
                             <Globe2 size={17} className="shrink-0 opacity-50" />
                             {zoneName(region.label, region.national)}
+=======
+                            className="flex items-center gap-2 border-b border-gray-100 py-2.5
+                                       text-[1.0625rem] font-extrabold"
+                            style={{ color: accent }}
+                        >
+                            <Globe2 size={15} className="shrink-0 opacity-60" />
+                            {region.label}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         </Link>
                     );
                 }
@@ -319,6 +358,7 @@ export function RegionsAccordion({ accent, onNavigate }: {
                         <button
                             type="button"
                             onClick={() => setOpenKey(on ? '' : region.key)}
+<<<<<<< HEAD
                             className="flex w-full items-center justify-between gap-2 rounded-2xl px-4 py-3.5 text-left
                                        text-[1.0625rem] font-semibold transition-all hover:bg-slate-50 active:scale-[0.98]"
                             style={{ color: accent }}
@@ -328,18 +368,37 @@ export function RegionsAccordion({ accent, onNavigate }: {
                             <ChevronDown
                                 size={18}
                                 className={`shrink-0 opacity-40 transition-transform duration-200 ${on ? 'rotate-180' : ''}`}
+=======
+                            className="flex w-full items-center justify-between gap-2 py-2.5 text-left
+                                       text-[1.0625rem] font-bold"
+                            style={{ color: accent }}
+                            aria-expanded={on}
+                        >
+                            {region.label}
+                            <ChevronDown
+                                size={14}
+                                className={on ? 'rotate-180 transition-transform' : 'transition-transform'}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             />
                         </button>
 
                         {on && (
+<<<<<<< HEAD
                             <div className="pl-8 pr-4 pb-2 space-y-1">
+=======
+                            <div className="pl-3 pb-2 space-y-1">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 {region.hasPage && (
                                     <Link
                                         to={`/regions/${region.slug}`}
                                         onClick={onNavigate}
                                         className="block py-2 text-[1.0625rem] font-bold text-brand-700"
                                     >
+<<<<<<< HEAD
                                         {zoneName(region.label)} overview
+=======
+                                        {region.label} Region overview
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     </Link>
                                 )}
                                 {states.map((state) => (

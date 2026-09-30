@@ -374,6 +374,7 @@ export const upcomingFeatures = (access: MemberAccess): MemberNavItem[] =>
  * derives to "business" — contradicting what the applicant plainly said. One
  * such row exists today.
  */
+<<<<<<< HEAD
 /**
  * `student` is the third answer: not doing business, and studying — a plan and
  * a price of its own, separate from the aspirant's.
@@ -383,6 +384,13 @@ export type ApplicantKind = 'aspirant' | 'student' | 'business' | '';
 const DECLARED = (value: unknown): ApplicantKind => {
     const v = String(value || '').toLowerCase();
     return v === 'aspirant' || v === 'student' || v === 'business' ? v : '';
+=======
+export type ApplicantKind = 'aspirant' | 'business' | '';
+
+const DECLARED = (value: unknown): ApplicantKind => {
+    const v = String(value || '').toLowerCase();
+    return v === 'aspirant' || v === 'business' ? v : '';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 };
 
 export const resolveApplicantKind = (application: any | null): ApplicantKind => {
@@ -425,7 +433,10 @@ export const resolveApplicantKind = (application: any | null): ApplicantKind => 
 export const applicantKindLabel = (application: any | null): string => {
     const kind = resolveApplicantKind(application);
     if (kind === 'aspirant') return 'Aspirant';
+<<<<<<< HEAD
     if (kind === 'student') return 'Student';
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     if (kind === 'business') return 'Business';
     return '';
 };
@@ -446,7 +457,11 @@ export const applicantKindLabel = (application: any | null): string => {
  * right about them on the day they pay, not on the day they get round to
  * filling in the business form.
  */
+<<<<<<< HEAD
 export type MemberPlan = 'aspirant' | 'student' | 'business' | 'unknown';
+=======
+export type MemberPlan = 'aspirant' | 'business' | 'unknown';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
 export interface PlanContext {
     /** What the applicant declared, from `resolveApplicantKind`. */
@@ -471,7 +486,10 @@ export interface PlanContext {
 export const resolvePlan = ({ declared, hasBusinessRecord }: PlanContext): MemberPlan => {
     if (declared === 'business') return 'business';
     if (declared === 'aspirant') return 'aspirant';
+<<<<<<< HEAD
     if (declared === 'student') return 'student';
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     return hasBusinessRecord ? 'business' : 'unknown';
 };
 
@@ -479,7 +497,10 @@ export const resolvePlan = ({ declared, hasBusinessRecord }: PlanContext): Membe
 export const planLabel = (plan: MemberPlan): string => {
     if (plan === 'business') return 'Business Membership';
     if (plan === 'aspirant') return 'Aspirant Membership';
+<<<<<<< HEAD
     if (plan === 'student') return 'Student Membership';
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     return '';
 };
 
@@ -507,8 +528,12 @@ export interface PlanEntitlements {
 }
 
 export const entitlementsFor = (plan: MemberPlan): PlanEntitlements => {
+<<<<<<< HEAD
     // Neither an aspirant nor a student trades — no catalogue to measure.
     const trading = plan !== 'aspirant' && plan !== 'student';
+=======
+    const trading = plan !== 'aspirant';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     return {
         catalogue: trading,
@@ -531,7 +556,11 @@ export const planExplainer = (plan: MemberPlan, feature: keyof PlanEntitlements)
 
     if (feature === 'catalogue') {
         return 'Catalogue and stock tools come with a Company or Business membership. '
+<<<<<<< HEAD
             + 'An Aspirant or Student membership covers association updates, events and the member directory.';
+=======
+            + 'An Aspirant membership covers association updates, events and the member directory.';
+>>>>>>> 8020f5d (Initial commit for website frontend)
     }
     if (feature === 'analytics') {
         return 'Operational analytics measure a catalogue, which comes with a Company or '
@@ -574,6 +603,7 @@ export interface MembershipCta {
     detail: string;
 }
 
+<<<<<<< HEAD
 export const membershipCta = (
     access: MemberAccess,
     /** `useRenewal()`'s answer. An EXPIRED member is not an applicant: they renew. */
@@ -589,6 +619,12 @@ export const membershipCta = (
             detail: 'Your membership has ended. One payment renews it for another year.',
         };
     }
+=======
+export const membershipCta = (access: MemberAccess): MembershipCta => {
+    if (access.membershipActive) {
+        return { label: 'Your membership', to: '/payment/member-dashboard', detail: '' };
+    }
+>>>>>>> 8020f5d (Initial commit for website frontend)
     if (access.applicationApproved) {
         return {
             label: 'Activate membership',

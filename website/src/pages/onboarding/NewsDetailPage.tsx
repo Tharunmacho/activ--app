@@ -1,7 +1,13 @@
+<<<<<<< HEAD
 import { publicUrl, shareLink } from '@/lib/share';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowUpRight, Calendar, MapPin, Newspaper, Share2 } from 'lucide-react';
+=======
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { ArrowLeft, Calendar, MapPin, Share2 } from 'lucide-react';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { HeaderSection } from '../../components/layout/HeaderSection';
 import { FooterSection } from '../../components/layout/FooterSection';
 import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
@@ -81,8 +87,21 @@ export default function NewsDetailPage() {
         return () => { cancelled = true; };
     }, [slug]);
 
+<<<<<<< HEAD
     // One share behaviour site-wide — see lib/share.
     const share = () => shareLink({ title: article?.title, url: publicUrl(window.location.pathname) });
+=======
+    const share = () => {
+        const url = window.location.href;
+        try {
+            if (navigator.share) { navigator.share({ title: article?.title, url }); return; }
+            navigator.clipboard?.writeText(url);
+        } catch {
+            /* No share sheet and no clipboard: the URL is in the address bar,
+               which is where it was before this button existed. */
+        }
+    };
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     const date = article?.displayDate || (article?.publishedAt
         ? new Date(article.publishedAt).toLocaleDateString('en-IN', {
@@ -90,6 +109,7 @@ export default function NewsDetailPage() {
         })
         : '');
 
+<<<<<<< HEAD
     /* A pasted link without a scheme ("thehindu.com/…") would resolve
        relative to this site; the host is printed under the button. */
     const sourceHref = article?.externalUrl
@@ -99,12 +119,18 @@ export default function NewsDetailPage() {
         try { return sourceHref ? new URL(sourceHref).hostname.replace(/^www\./, '') : ''; } catch { return ''; }
     })();
 
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     return (
         <div className="flex min-h-screen flex-col bg-white font-sans">
             <HeaderSection />
 
             <main className="flex-grow">
+<<<<<<< HEAD
                 <div className="mx-auto w-full max-w-[90rem] px-4 sm:px-6 py-5 sm:py-8 lg:px-10">
+=======
+                <div className="mx-auto w-full max-w-[90rem] px-6 py-8 lg:px-10">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <Link
                         to="/news"
                         className="inline-flex items-center gap-2 rounded-full border border-gray-200
@@ -116,9 +142,15 @@ export default function NewsDetailPage() {
                 </div>
 
                 {state === 'loading' && (
+<<<<<<< HEAD
                     <div className="mx-auto w-full max-w-[90rem] px-4 sm:px-6 pb-14 sm:pb-20 lg:px-10">
                         <div className="h-[22rem] animate-pulse rounded-2xl bg-gray-100 lg:w-2/3" />
                         <div className="mt-8 space-y-4 lg:w-2/3">
+=======
+                    <div className="mx-auto w-full max-w-[90rem] px-6 pb-20 lg:px-10">
+                        <div className="h-[22rem] animate-pulse rounded-2xl bg-gray-100" />
+                        <div className="mx-auto mt-8 max-w-3xl space-y-4">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             {[1, 2, 3, 4].map((i) => (
                                 <div key={i} className="h-5 animate-pulse rounded bg-gray-100" />
                             ))}
@@ -127,8 +159,13 @@ export default function NewsDetailPage() {
                 )}
 
                 {state === 'missing' && (
+<<<<<<< HEAD
                     <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 pb-16 sm:pb-24 text-center lg:px-10">
                         <h1 className="text-[1.75rem] sm:text-[2.1875rem] font-black tracking-tight text-brand-900">
+=======
+                    <div className="mx-auto w-full max-w-3xl px-6 pb-24 text-center lg:px-10">
+                        <h1 className="text-3xl font-black tracking-tight text-brand-900">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             That article is not here
                         </h1>
                         <p className={`mt-3 ${CARD_BODY} text-gray-500`}>
@@ -147,6 +184,7 @@ export default function NewsDetailPage() {
                 )}
 
                 {state === 'ready' && article && (
+<<<<<<< HEAD
                     /*
                       * ONE GRID, ONE LEFT EDGE.
                       *
@@ -211,10 +249,68 @@ export default function NewsDetailPage() {
 
                                 {article.summary && (
                                     <p className="mt-8 border-l-4 border-brand-200 pl-4 sm:pl-5 text-[1.25rem]
+=======
+                    <article className="pb-20">
+                        <div className="mx-auto w-full max-w-[90rem] px-6 lg:px-10">
+                            {article.image?.url && (
+                                <Reveal>
+                                    <div className="overflow-hidden rounded-2xl bg-brand-900/5">
+                                        <img
+                                            src={sizedMediaUrl(article.image.url, 1600)}
+                                            alt={article.image.alt || article.title}
+                                            className="h-auto max-h-[34rem] w-full object-cover"
+                                        />
+                                    </div>
+                                </Reveal>
+                            )}
+
+                            <Reveal as="header" className="mx-auto mt-8 max-w-3xl">
+                                {article.category && (
+                                    <span className="inline-flex rounded-full bg-brand-50 px-3 py-1
+                                                     text-[0.9375rem] font-bold uppercase
+                                                     tracking-[0.14em] text-brand-600">
+                                        {article.category}
+                                    </span>
+                                )}
+
+                                <h1 className="mt-3 text-[2rem] sm:text-[2.5rem] font-black
+                                               leading-[1.12] tracking-tight text-brand-900">
+                                    {article.title || 'Untitled article'}
+                                </h1>
+
+                                <div className={`mt-4 flex flex-wrap items-center gap-x-5 gap-y-2
+                                                 ${META_TEXT} text-gray-500`}
+                                >
+                                    {date && (
+                                        <span className="inline-flex items-center gap-1.5">
+                                            <Calendar size={15} className="text-brand-500" /> {date}
+                                        </span>
+                                    )}
+                                    {article.location && (
+                                        <span className="inline-flex items-center gap-1.5">
+                                            <MapPin size={15} className="text-brand-500" />
+                                            {article.location}
+                                        </span>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={share}
+                                        className="ml-auto inline-flex items-center gap-1.5 font-bold
+                                                   text-brand-700 transition-colors
+                                                   hover:text-brand-900"
+                                    >
+                                        <Share2 size={15} /> Share
+                                    </button>
+                                </div>
+
+                                {article.summary && (
+                                    <p className="mt-6 border-l-4 border-brand-200 pl-5 text-[1.25rem]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                   font-semibold leading-relaxed text-gray-700">
                                         {article.summary}
                                     </p>
                                 )}
+<<<<<<< HEAD
 
                                 <div className="mt-8">
                                     <Body text={article.body} />
@@ -325,6 +421,56 @@ export default function NewsDetailPage() {
                                     </div>
                                 </div>
                             </aside>
+=======
+                            </Reveal>
+
+                            <div className="mx-auto mt-8 max-w-3xl">
+                                <Body text={article.body} />
+
+                                {article.externalUrl && (
+                                    <p className={`mt-8 rounded-xl bg-gray-50 px-5 py-4 ${CARD_BODY}
+                                                   text-gray-600`}
+                                    >
+                                        This story was published by{' '}
+                                        <span className="font-bold">
+                                            {article.sourceName || 'another site'}
+                                        </span>.{' '}
+                                        <a
+                                            href={article.externalUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="font-bold text-brand-700 underline
+                                                       underline-offset-2"
+                                        >
+                                            Read it there
+                                        </a>
+                                    </p>
+                                )}
+                                {/* Under the story and above the photographs:
+                                    a labelled list is a footnote to what was
+                                    written, not an interruption of it. */}
+                                <CmsExtraFields
+                                    fields={article.extraFields}
+                                    variant="list"
+                                    className="mt-10 border-t border-slate-200 pt-8"
+                                />
+                            </div>
+
+                            {article.photos?.length > 0 && (
+                                <div className="mx-auto mt-12 grid max-w-5xl gap-5 sm:grid-cols-2">
+                                    {article.photos.map((photo, i) => (
+                                        <Reveal key={i} delay={Math.min(i, 4) * 60}>
+                                            <img
+                                                src={sizedMediaUrl(photo.url, 900)}
+                                                alt={photo.alt || `${article.title} — ${i + 1}`}
+                                                loading="lazy"
+                                                className="h-full w-full rounded-xl object-cover"
+                                            />
+                                        </Reveal>
+                                    ))}
+                                </div>
+                            )}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         </div>
                     </article>
                 )}
@@ -334,6 +480,7 @@ export default function NewsDetailPage() {
         </div>
     );
 }
+<<<<<<< HEAD
 
 function Fact({ label, value }: { label: string; value: string }) {
     return (
@@ -343,3 +490,5 @@ function Fact({ label, value }: { label: string; value: string }) {
         </div>
     );
 }
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)

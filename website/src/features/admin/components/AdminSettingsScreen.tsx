@@ -40,17 +40,24 @@ import { PAGE_TITLE, CARD_TITLE } from '@/components/layout/appTypography';
  * `{ oldPassword, newPassword }`, sent only when a new password was typed.
  */
 
+<<<<<<< HEAD
 /*
  * `events` is the Events Admin — a platform-level account with NO region, so
  * the region field is neither shown nor sent for it (see `hasRegion`).
  */
 type Tier = "block" | "district" | "state" | "events";
+=======
+type Tier = "block" | "district" | "state";
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
 const TIER_LABEL: Record<Tier, string> = {
     block: "Block",
     district: "District",
     state: "State",
+<<<<<<< HEAD
     events: "Events",
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 };
 
 /** A field that is plain text until the screen is put into edit mode. */
@@ -65,7 +72,11 @@ function EditableField({
     placeholder?: string;
 }) {
     return (
+<<<<<<< HEAD
         <div className="min-w-0">
+=======
+        <div>
+>>>>>>> 8020f5d (Initial commit for website frontend)
             <Label className="text-[1.25rem] font-semibold text-slate-700">{label}</Label>
             {editing ? (
                 <Input
@@ -76,7 +87,11 @@ function EditableField({
                     className="mt-1.5 h-11 border-slate-200 focus-visible:ring-blue-500"
                 />
             ) : (
+<<<<<<< HEAD
                 <p className="mt-1.5 min-h-11 py-2 flex items-center px-3 rounded-md bg-slate-50 border border-slate-200 text-slate-800 min-w-0 [overflow-wrap:anywhere]">
+=======
+                <p className="mt-1.5 h-11 flex items-center px-3 rounded-md bg-slate-50 border border-slate-200 text-slate-800">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     {value || <span className="text-slate-400">Not set</span>}
                 </p>
             )}
@@ -136,7 +151,10 @@ export default function AdminSettingsScreen({
 }) {
     const navigate = useNavigate();
     const regionLabel = TIER_LABEL[tier];
+<<<<<<< HEAD
     const hasRegion = tier !== "events";
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -162,7 +180,11 @@ export default function AdminSettingsScreen({
                     fullName: profile?.fullName || profile?.name || "",
                     email: profile?.email || "",
                     phoneNumber: profile?.phoneNumber || profile?.phone || "",
+<<<<<<< HEAD
                     region: hasRegion ? (profile?.[tier] || "") : "",
+=======
+                    region: profile?.[tier] || "",
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 };
                 setSaved(next);
                 setNameInput(next.fullName);
@@ -210,7 +232,11 @@ export default function AdminSettingsScreen({
                         fullName: nameInput,
                         email: emailInput,
                         phoneNumber: phone,
+<<<<<<< HEAD
                         ...(hasRegion ? { [tier]: regionInput } : {}),
+=======
+                        [tier]: regionInput,
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     }),
                 });
                 const body = await res.json();
@@ -252,7 +278,11 @@ export default function AdminSettingsScreen({
         } catch (err) {
             console.warn("Logout safely caught:", err);
         }
+<<<<<<< HEAD
         navigate("/admin/login");
+=======
+        navigate("/login");
+>>>>>>> 8020f5d (Initial commit for website frontend)
     };
 
     const initials =
@@ -263,11 +293,19 @@ export default function AdminSettingsScreen({
             {sidebar}
 
             <div className="flex-1 min-w-0 flex flex-col">
+<<<<<<< HEAD
                 <header className="h-16 sm:h-[5.5rem] shrink-0 bg-white border-b border-slate-200 flex items-center gap-2 sm:gap-3 px-4 sm:px-5 lg:px-8">
                     {onMenu && (
                         <button
                             type="button"
                             className="lg:hidden shrink-0 w-10 h-10 -ml-2 rounded-xl flex items-center justify-center
+=======
+                <header className="h-[5.5rem] shrink-0 bg-white border-b border-slate-200 flex items-center gap-2 sm:gap-3 px-4 sm:px-5 lg:px-8">
+                    {onMenu && (
+                        <button
+                            type="button"
+                            className="lg:hidden shrink-0 w-9 h-9 -ml-1 rounded-xl flex items-center justify-center
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                        text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
                             onClick={onMenu}
                             aria-label="Open menu"
@@ -288,7 +326,11 @@ export default function AdminSettingsScreen({
                         type="button"
                         onClick={() => navigate(TIERS[tier].base + '/dashboard')}
                         aria-label="Back to dashboard"
+<<<<<<< HEAD
                         className="shrink-0 w-10 h-10 -ml-1 rounded-xl flex items-center justify-center text-slate-500
+=======
+                        className="w-9 h-9 -ml-1 rounded-xl flex items-center justify-center text-slate-500
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                    transition-colors hover:bg-slate-100 hover:text-slate-900"
                     >
                         <ArrowLeft className="w-5 h-5" />
@@ -296,7 +338,11 @@ export default function AdminSettingsScreen({
                     <h1 className={`${PAGE_TITLE} text-slate-900 flex-1 min-w-0 truncate`}>Settings</h1>
 
                     {/* Mobile's header Edit/Save toggle. */}
+<<<<<<< HEAD
                     <div className="ml-auto shrink-0">
+=======
+                    <div className="ml-auto">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         {editing ? (
                             <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleSave} disabled={saving}>
                                 {saving
@@ -325,6 +371,7 @@ export default function AdminSettingsScreen({
                   Members and the Hub beside it ran the full width. Two pages of
                   one product should not disagree about where the left margin is.
                 */}
+<<<<<<< HEAD
                 <main className="flex-1 overflow-y-auto p-4 sm:p-5 lg:p-8">
                     <div className="max-w-[90rem] space-y-4 sm:space-y-6">
 
@@ -335,6 +382,18 @@ export default function AdminSettingsScreen({
                                     type="button"
                                     onClick={() => toast.info("Photo upload is not available yet")}
                                     className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-blue-600 text-white text-[1.5rem] sm:text-[1.75rem] font-bold flex items-center justify-center shrink-0 group"
+=======
+                <main className="flex-1 overflow-y-auto p-6">
+                    <div className="max-w-[90rem] space-y-6">
+
+                        {/* Profile card — avatar, name, role, email, region. */}
+                        <section className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-6">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+                                <button
+                                    type="button"
+                                    onClick={() => toast.info("Photo upload is not available yet")}
+                                    className="relative w-20 h-20 rounded-full bg-blue-600 text-white text-[1.75rem] font-bold flex items-center justify-center shrink-0 group"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 >
                                     {initials}
                                     <span className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center">
@@ -342,12 +401,20 @@ export default function AdminSettingsScreen({
                                     </span>
                                 </button>
 
+<<<<<<< HEAD
                                 <div className="min-w-0 flex-1">
+=======
+                                <div className="min-w-0">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     <h2 className={`${CARD_TITLE} text-slate-900 truncate`}>
                                         {saved.fullName || "Admin"}
                                     </h2>
                                     <p className="text-[1.25rem] text-slate-600 flex items-center gap-1.5 mt-0.5">
+<<<<<<< HEAD
                                         <Shield className="w-4 h-4 shrink-0 text-blue-600" />
+=======
+                                        <Shield className="w-4 h-4 text-blue-600" />
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         {saved.region ? `${saved.region} ${regionLabel} Admin` : `${regionLabel} Admin`}
                                     </p>
                                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[1.25rem] text-slate-500">
@@ -362,8 +429,13 @@ export default function AdminSettingsScreen({
                                             <span className="truncate">{saved.email || "No email on record"}</span>
                                         </span>
                                         {saved.region ? (
+<<<<<<< HEAD
                                             <span className="flex items-center gap-1.5 min-w-0 break-words">
                                                 <MapPin className="w-4 h-4 shrink-0" />
+=======
+                                            <span className="flex items-center gap-1.5">
+                                                <MapPin className="w-4 h-4" />
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                 {saved.region}
                                             </span>
                                         ) : null}
@@ -373,15 +445,24 @@ export default function AdminSettingsScreen({
                         </section>
 
                         {/* Profile Information — inline, read-only until Edit. */}
+<<<<<<< HEAD
                         <section className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-4 sm:p-6">
                             <h3 className={`${CARD_TITLE} text-slate-900 mb-4 sm:mb-5`}>Profile Information</h3>
+=======
+                        <section className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-6">
+                            <h3 className={`${CARD_TITLE} text-slate-900 mb-5`}>Profile Information</h3>
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
                             {loading ? (
                                 <div className="flex items-center gap-2 text-slate-500 py-6">
                                     <Loader2 className="w-4 h-4 animate-spin" /> Loading…
                                 </div>
                             ) : (
+<<<<<<< HEAD
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+=======
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     <EditableField
                                         label="Full Name" value={nameInput} onChange={setNameInput}
                                         editing={editing} placeholder="Enter your name"
@@ -394,22 +475,37 @@ export default function AdminSettingsScreen({
                                         label="Mobile Number" value={phoneInput} onChange={setPhoneInput}
                                         editing={editing} type="tel" placeholder="Enter your mobile number"
                                     />
+<<<<<<< HEAD
                                     {hasRegion && (
                                         <EditableField
                                             label={`${regionLabel} Name`} value={regionInput} onChange={setRegionInput}
                                             editing={editing} placeholder={`Enter ${regionLabel.toLowerCase()} name`}
                                         />
                                     )}
+=======
+                                    <EditableField
+                                        label={`${regionLabel} Name`} value={regionInput} onChange={setRegionInput}
+                                        editing={editing} placeholder={`Enter ${regionLabel.toLowerCase()} name`}
+                                    />
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 </div>
                             )}
 
                             {/* Password, only while editing — as on mobile. */}
                             {editing && (
+<<<<<<< HEAD
                                 <div className="mt-5 pt-5 sm:mt-6 sm:pt-6 border-t border-slate-200">
                                     <h4 className="text-[1.25rem] font-bold text-slate-900 mb-4">
                                         Change Password (Optional)
                                     </h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+=======
+                                <div className="mt-6 pt-6 border-t border-slate-200">
+                                    <h4 className="text-[1.25rem] font-bold text-slate-900 mb-4">
+                                        Change Password (Optional)
+                                    </h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         <PasswordField
                                             label="Current Password" value={oldPassword} onChange={setOldPassword}
                                             placeholder="Enter current password"

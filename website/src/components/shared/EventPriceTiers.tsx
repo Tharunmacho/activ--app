@@ -124,7 +124,11 @@ export function EventPriceTiers({
                         You pay
                     </p>
                 )}
+<<<<<<< HEAD
                 <span className={`${variant === 'panel' ? 'mt-1 inline-block ' : ''}text-[1.75rem] sm:text-[2.0625rem] font-black leading-none tracking-tight text-slate-900 tabular-nums`}>
+=======
+                <span className={`${variant === 'panel' ? 'mt-1 inline-block ' : ''}text-[2.0625rem] font-black leading-none tracking-tight text-slate-900 tabular-nums`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     {standard > 0 ? rupees(standard) : 'Free'}
                 </span>
                 {standard > 0 && (
@@ -168,11 +172,19 @@ export function EventPriceTiers({
                                   text-slate-500">
                         Standard
                     </p>
+<<<<<<< HEAD
                     <p className="mt-2 text-[1.625rem] sm:text-[2.0625rem] font-black leading-none tracking-tight
                                   text-slate-900 tabular-nums break-all">
                         {rupees(standard)}
                     </p>
                     <p className="mt-1.5 text-[1.0625rem] sm:text-[1.1875rem] font-semibold text-slate-500">per seat</p>
+=======
+                    <p className="mt-2 text-[2.0625rem] font-black leading-none tracking-tight
+                                  text-slate-900 tabular-nums">
+                        {rupees(standard)}
+                    </p>
+                    <p className="mt-1.5 text-[1.1875rem] font-semibold text-slate-500">per seat</p>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     {/* The Standard column's half of the chip row — see above. */}
                     <span aria-hidden="true" className="mt-3 block h-[1.375rem]" />
                 </div>
@@ -182,6 +194,7 @@ export function EventPriceTiers({
                                   text-emerald-700">
                         Members price
                     </p>
+<<<<<<< HEAD
                     <p className="mt-2 text-[1.625rem] sm:text-[2.0625rem] font-black leading-none tracking-tight
                                   text-emerald-700 tabular-nums break-all">
                         {rupees(member)}
@@ -192,6 +205,18 @@ export function EventPriceTiers({
                     <span className="mt-3 inline-flex h-[1.375rem] w-fit items-center gap-1
                                      rounded-full bg-emerald-600 px-2 sm:px-2.5 text-[0.75rem] sm:text-[0.8125rem]
                                      font-extrabold uppercase tracking-normal sm:tracking-wide text-white whitespace-nowrap max-w-full">
+=======
+                    <p className="mt-2 text-[2.0625rem] font-black leading-none tracking-tight
+                                  text-emerald-700 tabular-nums">
+                        {rupees(member)}
+                    </p>
+                    <p className="mt-1.5 text-[1.1875rem] font-semibold text-emerald-700/80">
+                        per seat
+                    </p>
+                    <span className="mt-3 inline-flex h-[1.375rem] w-fit items-center gap-1
+                                     rounded-full bg-emerald-600 px-2.5 text-[0.8125rem]
+                                     font-extrabold uppercase tracking-wide text-white">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         Save {rupees(saving)} · {percent}%
                     </span>
                 </div>
@@ -247,7 +272,11 @@ export function EventPriceTiers({
                            focus-visible:outline-none focus-visible:ring-2
                            focus-visible:ring-brand-400 sm:px-5"
             >
+<<<<<<< HEAD
                 <span className="flex min-w-0 items-center gap-2.5 text-left">
+=======
+                <span className="flex items-center gap-2.5 text-left">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <Sparkles size={18} className="shrink-0 text-amber-300" />
                     <span>
                         <span className="block text-[1.125rem] font-black leading-tight">

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useCardTable } from '@/lib/useCardTable';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -7,12 +8,22 @@ import {
 import { toast } from 'sonner';
 import AdminSidebar from './AdminSidebar';
 import PlatinumMembers from '../components/PlatinumMembers';
+=======
+import { useEffect, useMemo, useState } from 'react';
+import {
+    Menu, Plus, Pencil, X, Loader2, IndianRupee, Users, Building2,
+    GraduationCap, EyeOff, Check, AlertTriangle, Sparkles, CalendarRange, Wand2, Trash2,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import AdminSidebar from './AdminSidebar';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { CARD_TITLE } from '@/components/layout/appTypography';
 import { ADMIN_PAGE, ADMIN_PRIMARY_BTN, AdminPageHeader, rupees,
 } from '@/features/admin/components/AdminUI';
 import {
     listMembershipPlans, createMembershipPlan, updateMembershipPlan,
     retireMembershipPlan, deleteMembershipPlan, updateMembershipSettings, alignMembershipBands, errorMessage,
+<<<<<<< HEAD
     type MembershipPlanRow, type PlanAudience,
 } from '@/services/activApi';
 
@@ -23,6 +34,12 @@ import {
 const hasBand = (plan: Partial<MembershipPlanRow>) => (plan.audience || 'business') === 'business';
 
 /**
+=======
+    type MembershipPlanRow,
+} from '@/services/activApi';
+
+/**
+>>>>>>> 8020f5d (Initial commit for website frontend)
  * Membership pricing — what it costs, and who is offered which plan.
  *
  * THIS SCREEN DECIDES WHAT IS CHARGED, not what is advertised. The rows it
@@ -80,8 +97,11 @@ const money = rupees;
  */
 const bandLabel = (plan: Partial<MembershipPlanRow>) => {
     if (plan.audience === 'aspirant') return 'No business — aspirant';
+<<<<<<< HEAD
     if (plan.audience === 'student') return 'Not doing business — student';
     if (plan.audience === 'platinum') return 'Lifetime · granted offline';
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     const min = Number(plan.minYears || 0);
     const max = plan.maxYears === null || plan.maxYears === undefined ? null : Number(plan.maxYears);
     if (max === null) return `${min}+ years trading`;
@@ -127,7 +147,11 @@ const yearWindow = (plan: Partial<MembershipPlanRow>, thisYear: number) => {
 
 /** "started 2022–2026", or "started 2016 or earlier". */
 const yearWindowLabel = (plan: Partial<MembershipPlanRow>, thisYear: number) => {
+<<<<<<< HEAD
     if (!hasBand(plan)) return '';
+=======
+    if (plan.audience === 'aspirant') return '';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     const { newest, oldest } = yearWindow(plan, thisYear);
     if (oldest === null) return `started ${newest} or earlier`;
@@ -147,7 +171,10 @@ const inBand = (plan: MembershipPlanRow, years: number) => {
 };
 
 export default function SuperAdminMembership() {
+<<<<<<< HEAD
     const cardTableRef = useCardTable();
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [plans, setPlans] = useState<MembershipPlanRow[]>([]);
     const [showAll, setShowAll] = useState(false);
@@ -303,8 +330,11 @@ export default function SuperAdminMembership() {
         [plans],
     );
     const aspirant = useMemo(() => plans.filter(p => p.audience === 'aspirant'), [plans]);
+<<<<<<< HEAD
     const student = useMemo(() => plans.filter(p => p.audience === 'student'), [plans]);
     const platinum = useMemo(() => plans.filter(p => p.audience === 'platinum'), [plans]);
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
     /**
      * GAPS AND OVERLAPS IN THE BANDS, found rather than assumed.
@@ -446,7 +476,11 @@ export default function SuperAdminMembership() {
 
                 <main className={ADMIN_PAGE}>
                     {/* ------------------------------------------------ the rule */}
+<<<<<<< HEAD
                     <section className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-4 sm:p-6">
+=======
+                    <section className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-6">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         <div
                             role="checkbox"
                             aria-checked={showAll}
@@ -503,9 +537,15 @@ export default function SuperAdminMembership() {
                           "bands look fine" panel is a panel nobody reads, and the
                           one time it matters it looks the same as always.
                         */
+<<<<<<< HEAD
                         <section className="rounded-xl border border-amber-300 bg-amber-50 shadow-sm p-4 sm:p-6">
                             <p className="flex items-center gap-2 text-[1.25rem] font-bold text-amber-900">
                                 <AlertTriangle className="w-5 h-5 shrink-0" />
+=======
+                        <section className="rounded-xl border border-amber-300 bg-amber-50 shadow-sm p-6">
+                            <p className="flex items-center gap-2 text-[1.25rem] font-bold text-amber-900">
+                                <AlertTriangle className="w-5 h-5" />
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 These bands leave applicants without a plan
                             </p>
                             <ul className="mt-2 space-y-1 text-[1.1875rem] text-amber-700 list-disc list-inside">
@@ -551,6 +591,7 @@ export default function SuperAdminMembership() {
                           read against each other, and a modal covers the rows the
                           editor is comparing this one to.
                         */
+<<<<<<< HEAD
                         <form onSubmit={save} className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-4 sm:p-6 space-y-5 sm:space-y-6">
                             <div className="flex items-center justify-between gap-3">
                                 <h2 className={`${CARD_TITLE} text-slate-900 min-w-0`}>
@@ -558,6 +599,15 @@ export default function SuperAdminMembership() {
                                 </h2>
                                 <button type="button" onClick={closeForm} aria-label="Close"
                                     className="shrink-0 -mr-2 grid h-10 w-10 place-items-center rounded-lg text-slate-400 hover:text-slate-700">
+=======
+                        <form onSubmit={save} className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-6 space-y-6">
+                            <div className="flex items-center justify-between">
+                                <h2 className={`${CARD_TITLE} text-slate-900`}>
+                                    {creating ? 'New plan' : `Editing ${editingPlan?.name || editingKey}`}
+                                </h2>
+                                <button type="button" onClick={closeForm} aria-label="Close"
+                                    className="text-slate-400 hover:text-slate-700">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
@@ -601,14 +651,21 @@ export default function SuperAdminMembership() {
                                         value={form.audience || 'business'}
                                         onChange={(e) => setForm({
                                             ...form,
+<<<<<<< HEAD
                                             audience: e.target.value as PlanAudience,
+=======
+                                            audience: e.target.value as 'business' | 'aspirant',
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         })}
                                         className={INPUT}
                                     >
                                         <option value="business">A company — priced by years trading</option>
                                         <option value="aspirant">An aspirant — no company</option>
+<<<<<<< HEAD
                                         <option value="student">A student — no company</option>
                                         <option value="platinum">Platinum — lifetime, granted by Super Admin (not paid online)</option>
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     </select>
                                 </Field>
 
@@ -616,7 +673,11 @@ export default function SuperAdminMembership() {
                                     no company, so there is no commencement year to
                                     band. Hidden rather than disabled — a disabled
                                     pair of boxes invites the question this removes. */}
+<<<<<<< HEAD
                                 {hasBand(form) && (
+=======
+                                {form.audience !== 'aspirant' && (
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     <>
                                         <Field label="From (years trading)" hint="Inclusive.">
                                             <input
@@ -789,13 +850,19 @@ export default function SuperAdminMembership() {
                             />
                             <PlanGroup
                                 title="Aspirant plan"
+<<<<<<< HEAD
                                 hint="For an applicant planning a business who is not trading yet. No band applies."
                                 icon={<Star className="w-4 h-4 text-emerald-600" />}
+=======
+                                hint="For an applicant who declared no business. No band applies."
+                                icon={<GraduationCap className="w-4 h-4 text-emerald-600" />}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 plans={aspirant}
                                 thisYear={thisYear}
                                 onEdit={openEdit}
                                 onDelete={removePlan}
                             />
+<<<<<<< HEAD
                             <PlanGroup
                                 title="Student plan"
                                 hint="For an applicant who is studying and not in business. No band applies."
@@ -820,6 +887,11 @@ export default function SuperAdminMembership() {
                     {/* Platinum lifetime members — granted here after the fee is paid at the office. */}
                     <PlatinumMembers />
 
+=======
+                        </>
+                    )}
+
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     {/* --------------------------------------- year → plan map */}
                     {/*
                       EVERY COMMENCEMENT YEAR, AS RANGES RATHER THAN AS FORTY TILES.
@@ -835,8 +907,13 @@ export default function SuperAdminMembership() {
                       the only thing on this panel drawn in amber.
                     */}
                     {business.some(p => p.active) && (
+<<<<<<< HEAD
                         <section className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-4 sm:p-6">
                             <div className="flex items-start gap-3 mb-4 sm:mb-5">
+=======
+                        <section className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-6">
+                            <div className="flex items-start gap-3 mb-5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <span className="w-10 h-10 rounded-xl bg-blue-50 flex items-center
                                                  justify-center shrink-0">
                                     <CalendarRange className="w-5 h-5 text-blue-600" />
@@ -852,6 +929,7 @@ export default function SuperAdminMembership() {
                                 </div>
                             </div>
 
+<<<<<<< HEAD
                             <div ref={cardTableRef} className="overflow-x-auto card-table">
                                 <table className="w-full text-[1.25rem]">
                                     <thead>
@@ -860,6 +938,16 @@ export default function SuperAdminMembership() {
                                             <th className="pb-3 pr-4 text-[1.0625rem] font-semibold uppercase tracking-wider">Years trading</th>
                                             <th className="pb-3 pr-4 text-[1.0625rem] font-semibold uppercase tracking-wider">Plan</th>
                                             <th className="pb-3 text-[1.0625rem] font-semibold uppercase tracking-wider text-right">Price</th>
+=======
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-[1.25rem]">
+                                    <thead>
+                                        <tr className="text-left text-slate-500 border-b border-slate-200">
+                                            <th className="pb-3 pr-4 text-[1.0625rem] sm:text-[1rem] font-semibold uppercase tracking-wider">Started in</th>
+                                            <th className="pb-3 pr-4 text-[1.0625rem] sm:text-[1rem] font-semibold uppercase tracking-wider">Years trading</th>
+                                            <th className="pb-3 pr-4 text-[1.0625rem] sm:text-[1rem] font-semibold uppercase tracking-wider">Plan</th>
+                                            <th className="pb-3 text-[1.0625rem] sm:text-[1rem] font-semibold uppercase tracking-wider text-right">Price</th>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -916,8 +1004,13 @@ export default function SuperAdminMembership() {
                       Typing the year here answers the same question in a second,
                       using the same half-open rule the server applies.
                     */}
+<<<<<<< HEAD
                     <section className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-4 sm:p-6">
                         <div className="flex items-start gap-3 mb-4 sm:mb-5">
+=======
+                    <section className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-6">
+                        <div className="flex items-start gap-3 mb-5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             <span className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
                                 <Sparkles className="w-5 h-5 text-blue-600" />
                             </span>
@@ -935,7 +1028,11 @@ export default function SuperAdminMembership() {
                                 value={previewYear}
                                 onChange={(e) => setPreviewYear(e.target.value)}
                                 placeholder="e.g. 2021"
+<<<<<<< HEAD
                                 className={`${INPUT} max-w-full sm:max-w-[11rem]`}
+=======
+                                className={`${INPUT} max-w-[11rem]`}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             />
 
                             {preview && (
@@ -1071,7 +1168,11 @@ function PlanGroup({ title, hint, icon, plans, thisYear, onEdit, onDelete }: {
 }) {
     return (
         <section className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] overflow-hidden">
+<<<<<<< HEAD
             <header className="px-4 sm:px-6 py-4 border-b border-slate-200 flex items-start gap-3">
+=======
+            <header className="px-6 py-4 border-b border-slate-200 flex items-start gap-3">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 <span className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center shrink-0">
                     {icon}
                 </span>
@@ -1088,7 +1189,11 @@ function PlanGroup({ title, hint, icon, plans, thisYear, onEdit, onDelete }: {
                     {plans.map((plan) => (
                         <li
                             key={plan.key}
+<<<<<<< HEAD
                             className={`px-4 sm:px-6 py-3.5 sm:py-4 flex flex-wrap items-center gap-x-4 gap-y-2 ${
+=======
+                            className={`px-6 py-4 flex flex-wrap items-center gap-x-4 gap-y-2 ${
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 plan.active ? '' : 'bg-slate-50'
                             }`}
                         >
@@ -1101,7 +1206,11 @@ function PlanGroup({ title, hint, icon, plans, thisYear, onEdit, onDelete }: {
                                     </span>
 
                                     {plan.popular && (
+<<<<<<< HEAD
                                         <span className="inline-flex items-center gap-1 text-[1.0625rem] font-bold
+=======
+                                        <span className="inline-flex items-center gap-1 text-[0.75rem] font-bold
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                          uppercase tracking-wide px-1.5 py-0.5 rounded-full
                                                          bg-blue-100 text-blue-700">
                                             <Users className="w-2.5 h-2.5" /> Popular
@@ -1112,7 +1221,11 @@ function PlanGroup({ title, hint, icon, plans, thisYear, onEdit, onDelete }: {
                                         other row is offered, so a badge saying so
                                         would be on every line. */}
                                     {!plan.active && (
+<<<<<<< HEAD
                                         <span className="inline-flex items-center gap-1 text-[1.0625rem] font-bold
+=======
+                                        <span className="inline-flex items-center gap-1 text-[0.75rem] font-bold
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                          uppercase tracking-wide px-1.5 py-0.5 rounded-full
                                                          bg-slate-200 text-slate-500">
                                             <EyeOff className="w-2.5 h-2.5" /> Retired
@@ -1125,7 +1238,11 @@ function PlanGroup({ title, hint, icon, plans, thisYear, onEdit, onDelete }: {
                                         The form asks for a year; this row said
                                         "5 – 10 years trading", and nobody was doing
                                         that conversion reliably in their head. */}
+<<<<<<< HEAD
                                     {hasBand(plan) && (
+=======
+                                    {plan.audience !== 'aspirant' && (
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         <span className="text-slate-400">
                                             {' · '}{yearWindowLabel(plan, thisYear)}
                                         </span>
@@ -1143,7 +1260,11 @@ function PlanGroup({ title, hint, icon, plans, thisYear, onEdit, onDelete }: {
                                 <button
                                     onClick={() => onEdit(plan)}
                                     aria-label={`Edit ${plan.name}`}
+<<<<<<< HEAD
                                     className="p-2.5 sm:p-2 rounded-lg text-slate-500 hover:bg-slate-100"
+=======
+                                    className="p-2 rounded-lg text-slate-500 hover:bg-slate-100"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 >
                                     <Pencil className="w-4 h-4" />
                                 </button>

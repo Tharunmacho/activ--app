@@ -34,8 +34,13 @@ export default function DonationCertificatePage() {
     const navigate = useNavigate();
 
     return (
+<<<<<<< HEAD
         <div className="min-h-screen overflow-x-auto bg-[#f3f6fb] px-4 py-6 sm:py-10 print:overflow-visible print:bg-white print:p-0">
             <div className="mx-auto mb-4 sm:mb-6 flex max-w-[210mm] items-center justify-between gap-3
+=======
+        <div className="min-h-screen bg-[#f3f6fb] px-4 py-10 print:bg-white print:p-0">
+            <div className="mx-auto mb-6 flex max-w-[210mm] items-center justify-between
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             print:hidden">
                 <button
                     type="button"
@@ -49,17 +54,25 @@ export default function DonationCertificatePage() {
                 <button
                     type="button"
                     onClick={() => window.print()}
+<<<<<<< HEAD
                     className="inline-flex items-center gap-2 rounded-full bg-brand-700 px-4 sm:px-5 py-2.5
+=======
+                    className="inline-flex items-center gap-2 rounded-full bg-brand-700 px-5 py-2.5
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                font-bold text-white transition-colors hover:bg-brand-800"
                 >
                     <Printer className="h-4 w-4" /> Print or save as PDF
                 </button>
             </div>
 
+<<<<<<< HEAD
             {/* A4 portrait (794px) zoomed down to fit a phone; print keeps the real size. */}
             <div className="max-md:[zoom:0.75] max-sm:[zoom:0.4] print:[zoom:1]">
                 <DonationCertificate data={EXAMPLE} />
             </div>
+=======
+            <DonationCertificate data={EXAMPLE} />
+>>>>>>> 8020f5d (Initial commit for website frontend)
         </div>
     );
 }

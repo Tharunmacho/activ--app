@@ -1,5 +1,9 @@
 import api, { unwrap } from './api';
+<<<<<<< HEAD
 import { cached, invalidateCmsCache, type CmsSectionOverride, type CmsExtraField } from './cmsApi';
+=======
+import { cached, invalidateCmsCache, type CmsSectionOverride } from './cmsApi';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * ============================================================================
@@ -56,7 +60,11 @@ export interface NewsArticle {
      * it, and every reader has to cope with that rather than assume an
      * array is there.
      */
+<<<<<<< HEAD
     extraFields?: CmsExtraField[];
+=======
+    extraFields?: { label: string; value: string }[];
+>>>>>>> 8020f5d (Initial commit for website frontend)
     status: string;
     sortOrder: number;
 }
@@ -84,7 +92,11 @@ export interface Scheme {
      * it, and every reader has to cope with that rather than assume an
      * array is there.
      */
+<<<<<<< HEAD
     extraFields?: CmsExtraField[];
+=======
+    extraFields?: { label: string; value: string }[];
+>>>>>>> 8020f5d (Initial commit for website frontend)
     status: string;
     sortOrder: number;
 }

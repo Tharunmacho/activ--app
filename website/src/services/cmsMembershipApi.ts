@@ -1,5 +1,9 @@
 import api, { unwrap } from './api';
+<<<<<<< HEAD
 import { cached, invalidateCmsCache, type CmsSectionOverride, type CmsExtraField } from './cmsApi';
+=======
+import { cached, invalidateCmsCache, type CmsSectionOverride } from './cmsApi';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * ============================================================================
@@ -87,7 +91,11 @@ export interface MembershipContent {
     ctaLabel: string;
     ctaHref: string;
 
+<<<<<<< HEAD
     extraFields: CmsExtraField[];
+=======
+    extraFields: { label: string; value: string }[];
+>>>>>>> 8020f5d (Initial commit for website frontend)
     /** Cards the editor removed, and the rows they added to each. */
     sections: CmsSectionOverride[];
 }

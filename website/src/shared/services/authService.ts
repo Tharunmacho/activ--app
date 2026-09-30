@@ -11,7 +11,11 @@
  * compatibility surface over it and should eventually be deleted in favour of
  * importing that module directly.
  */
+<<<<<<< HEAD
 import api, { clearSession, errorMessage, loginPathFor } from '@/services/api';
+=======
+import api, { clearSession, errorMessage } from '@/services/api';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import {
     login as apiLogin,
     register as apiRegister,
@@ -44,8 +48,11 @@ export interface RegisterData {
     district?: string;
     block?: string;
     city?: string;
+<<<<<<< HEAD
     /** Members outside India: where they are, in place of state/district/block. */
     place?: string;
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 }
 
 export interface LoginData {
@@ -100,7 +107,10 @@ export const register = async (userData: RegisterData): Promise<AuthResponse> =>
             district: userData.district || '',
             block: userData.block || '',
             city: userData.city,
+<<<<<<< HEAD
             place: userData.place || '',
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
         });
 
         return {
@@ -165,10 +175,16 @@ export const getCurrentUser = async (): Promise<UserData | null> => {
 };
 
 export const logout = () => {
+<<<<<<< HEAD
     const signIn = loginPathFor();
     api.post('/auth/logout').catch(() => null);
     clearSession();
     window.location.href = signIn;
+=======
+    api.post('/auth/logout').catch(() => null);
+    clearSession();
+    window.location.href = '/login';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 };
 
 export const isAuthenticated = (): boolean => apiIsAuthenticated();

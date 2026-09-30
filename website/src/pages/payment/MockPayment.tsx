@@ -47,7 +47,11 @@ export default function MockPayment() {
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}
+<<<<<<< HEAD
           className="mb-4 sm:mb-6 text-slate-600 hover:text-slate-900 hover:bg-white/50"
+=======
+          className="mb-6 text-slate-600 hover:text-slate-900 hover:bg-white/50"
+>>>>>>> 8020f5d (Initial commit for website frontend)
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
@@ -63,14 +67,22 @@ export default function MockPayment() {
         >
           {/* Left Panel - Payment Info */}
           <div
+<<<<<<< HEAD
             className="p-5 sm:p-8 lg:p-10"
+=======
+            className="p-8 lg:p-10"
+>>>>>>> 8020f5d (Initial commit for website frontend)
             style={{
               background: 'linear-gradient(145deg, #0f766e 0%, #134e4a 100%)'
             }}
           >
             <div className="h-full flex flex-col">
               {/* Logo/Brand */}
+<<<<<<< HEAD
               <div className="flex items-center gap-3 mb-6 sm:mb-10">
+=======
+              <div className="flex items-center gap-3 mb-10">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 <div
                   className="w-11 h-11 rounded-xl flex items-center justify-center"
                   style={{ background: 'rgba(255, 255, 255, 0.15)' }}
@@ -78,17 +90,30 @@ export default function MockPayment() {
                   <Building2 className="w-5 h-5 text-white" />
                 </div>
                 <div>
+<<<<<<< HEAD
                   <h2 className="text-white font-bold text-[1.1875rem]">ACTIV Platform</h2>
                   <p className="text-teal-200 text-[1.0625rem]">Secure Payment</p>
+=======
+                  <h2 className="text-white font-bold text-lg">ACTIV Platform</h2>
+                  <p className="text-teal-200 text-xs">Secure Payment</p>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 </div>
               </div>
 
               {/* Amount Display */}
+<<<<<<< HEAD
               <div className="mb-6 sm:mb-10">
                 <p className="text-teal-200 text-[1.0625rem] uppercase tracking-widest mb-2">Amount to Pay</p>
                 <div className="flex flex-wrap items-baseline gap-1">
                   <span className="text-4xl sm:text-[3.125rem] lg:text-[3.375rem] font-bold text-white break-all">₹{amount || '0'}</span>
                   <span className="text-teal-300 text-[1.25rem]">.00</span>
+=======
+              <div className="mb-10">
+                <p className="text-teal-200 text-xs uppercase tracking-widest mb-2">Amount to Pay</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-5xl lg:text-6xl font-bold text-white">₹{amount || '0'}</span>
+                  <span className="text-teal-300 text-xl">.00</span>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 </div>
               </div>
 
@@ -101,8 +126,13 @@ export default function MockPayment() {
                   <div className="flex items-center gap-3">
                     <Hash className="w-4 h-4 text-teal-300" />
                     <div>
+<<<<<<< HEAD
                       <p className="text-teal-300 text-[1.0625rem]">Payment Request ID</p>
                       <p className="mt-0.5 text-[1.0625rem] font-semibold tracking-wide tabular-nums text-white break-all">
+=======
+                      <p className="text-teal-300 text-xs">Payment Request ID</p>
+                      <p className="mt-0.5 text-[1.0625rem] font-semibold tracking-wide tabular-nums text-white">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         {paymentRequestId || 'N/A'}
                       </p>
                     </div>
@@ -116,8 +146,13 @@ export default function MockPayment() {
                   <div className="flex items-center gap-3">
                     <Calendar className="w-4 h-4 text-teal-300" />
                     <div>
+<<<<<<< HEAD
                       <p className="text-teal-300 text-[1.0625rem]">Date</p>
                       <p className="text-white text-[1.0625rem] mt-0.5">{new Date().toLocaleDateString('en-IN', {
+=======
+                      <p className="text-teal-300 text-xs">Date</p>
+                      <p className="text-white text-sm mt-0.5">{new Date().toLocaleDateString('en-IN', {
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         weekday: 'short',
                         year: 'numeric',
                         month: 'short',
@@ -129,33 +164,58 @@ export default function MockPayment() {
               </div>
 
               {/* Security Badge */}
+<<<<<<< HEAD
               <div className="mt-6 sm:mt-8 flex items-center gap-2">
                 <Lock className="w-3.5 h-3.5 text-emerald-300" />
                 <p className="text-teal-200 text-[1.0625rem]">256-bit SSL Encrypted</p>
+=======
+              <div className="mt-8 flex items-center gap-2">
+                <Lock className="w-3.5 h-3.5 text-emerald-300" />
+                <p className="text-teal-200 text-xs">256-bit SSL Encrypted</p>
+>>>>>>> 8020f5d (Initial commit for website frontend)
               </div>
             </div>
           </div>
 
           {/* Right Panel - Actions */}
+<<<<<<< HEAD
           <div className="bg-white p-5 sm:p-8 lg:p-10 flex flex-col">
             {/* Header */}
             <div className="text-center mb-5 sm:mb-8">
               <div
                 className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-5"
+=======
+          <div className="bg-white p-8 lg:p-10 flex flex-col">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div
+                className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 style={{
                   background: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)',
                   boxShadow: '0 8px 24px -4px rgba(20, 184, 166, 0.4)'
                 }}
               >
+<<<<<<< HEAD
                 <CreditCard className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
               <h1 className="text-[1.5625rem] font-bold text-slate-900 mb-1">Test Payment</h1>
               <p className="text-slate-500 text-[1.0625rem]">Simulate payment for testing</p>
+=======
+                <CreditCard className="w-8 h-8 text-white" />
+              </div>
+              <h1 className="text-2xl font-bold text-slate-900 mb-1">Test Payment</h1>
+              <p className="text-slate-500 text-sm">Simulate payment for testing</p>
+>>>>>>> 8020f5d (Initial commit for website frontend)
             </div>
 
             {/* Test Mode Badge */}
             <div
+<<<<<<< HEAD
               className="p-4 rounded-2xl mb-5 sm:mb-8 flex items-start gap-3"
+=======
+              className="p-4 rounded-2xl mb-8 flex items-start gap-3"
+>>>>>>> 8020f5d (Initial commit for website frontend)
               style={{ background: '#fef3c7' }}
             >
               <div
@@ -165,8 +225,13 @@ export default function MockPayment() {
                 <Shield className="w-4 h-4 text-white" />
               </div>
               <div>
+<<<<<<< HEAD
                 <p className="text-amber-800 font-semibold text-[1.0625rem]">Test Environment</p>
                 <p className="text-amber-700 text-[1.0625rem] mt-0.5 leading-relaxed">
+=======
+                <p className="text-amber-800 font-semibold text-sm">Test Environment</p>
+                <p className="text-amber-700 text-xs mt-0.5 leading-relaxed">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                   No real transactions will occur.
                 </p>
               </div>
@@ -175,7 +240,11 @@ export default function MockPayment() {
             {/* Action Buttons */}
             <div className="space-y-3 flex-1">
               <Button
+<<<<<<< HEAD
                 className="w-full py-5 sm:py-6 text-[1.0625rem] font-semibold rounded-xl transition-all duration-200"
+=======
+                className="w-full py-6 text-sm font-semibold rounded-xl transition-all duration-200"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 style={{
                   background: processing ? '#d1d5db' : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
                   boxShadow: processing ? 'none' : '0 8px 24px -4px rgba(5, 150, 105, 0.4)'
@@ -198,7 +267,11 @@ export default function MockPayment() {
 
               <Button
                 variant="outline"
+<<<<<<< HEAD
                 className="w-full py-6 text-[1.0625rem] font-semibold rounded-xl transition-all duration-200 border-2"
+=======
+                className="w-full py-6 text-sm font-semibold rounded-xl transition-all duration-200 border-2"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 style={{
                   borderColor: '#fca5a5',
                   color: '#dc2626',
@@ -215,6 +288,7 @@ export default function MockPayment() {
             </div>
 
             {/* Footer */}
+<<<<<<< HEAD
             <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-slate-100">
               <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-slate-400">
                 <div className="flex items-center gap-1.5">
@@ -228,6 +302,21 @@ export default function MockPayment() {
                 <div className="flex items-center gap-1.5">
                   <CreditCard className="w-3.5 h-3.5" />
                   <span className="text-[1.0625rem]">PCI Compliant</span>
+=======
+            <div className="mt-8 pt-6 border-t border-slate-100">
+              <div className="flex items-center justify-center gap-6 text-slate-400">
+                <div className="flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5" />
+                  <span className="text-xs">Secure</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5" />
+                  <span className="text-xs">Encrypted</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span className="text-xs">PCI Compliant</span>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 </div>
               </div>
             </div>

@@ -278,14 +278,22 @@ export default function EventRegistration() {
                         return (
                             <li key={s.key} className="flex items-center gap-2 min-w-0 flex-1 last:flex-none">
                                 <span className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center
+<<<<<<< HEAD
                                                   text-[1.0625rem] font-bold transition-colors ${
+=======
+                                                  text-[0.8125rem] font-bold transition-colors ${
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     done ? 'bg-emerald-600 text-white'
                                         : current ? 'bg-blue-600 text-white'
                                             : 'bg-slate-200 text-slate-500'
                                 }`}>
                                     {done ? <Check className="w-3.5 h-3.5" /> : i + 1}
                                 </span>
+<<<<<<< HEAD
                                 <span className={`text-[1.0625rem] font-semibold truncate ${
+=======
+                                <span className={`text-[1rem] font-semibold truncate ${
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     current ? 'text-slate-900' : 'text-slate-400'
                                 }`}>
                                     {s.label}
@@ -306,12 +314,20 @@ export default function EventRegistration() {
                         {step === 'details' ? (
                             <form
                                 onSubmit={submitDetails}
+<<<<<<< HEAD
                                 className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-4 sm:p-5 lg:p-6
+=======
+                                className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-5 lg:p-6
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                            space-y-4"
                             >
                                 <div>
                                     <h2 className={`${CARD_TITLE} text-slate-900`}>Your details</h2>
+<<<<<<< HEAD
                                     <p className="text-[1.0625rem] text-slate-500 mt-0.5">
+=======
+                                    <p className="text-[1rem] text-slate-500 mt-0.5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         So the organiser can reach you on the day.
                                     </p>
                                 </div>
@@ -345,7 +361,11 @@ export default function EventRegistration() {
                                   */}
                                 {fields.length > 0 ? (
                                     <div className="pt-4 border-t border-slate-100 space-y-4">
+<<<<<<< HEAD
                                         <p className="text-[1.0625rem] font-bold uppercase tracking-wide
+=======
+                                        <p className="text-[0.8125rem] font-bold uppercase tracking-wide
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                       text-slate-500">
                                             For this event
                                         </p>
@@ -388,17 +408,26 @@ export default function EventRegistration() {
                         ) : null}
 
                         {step === 'payment' && registration ? (
+<<<<<<< HEAD
                             <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-4 sm:p-5 lg:p-6
                                             space-y-5">
                                 <div>
                                     <h2 className={`${CARD_TITLE} text-slate-900`}>Payment</h2>
                                     <p className="text-[1.0625rem] text-slate-500 mt-0.5">
+=======
+                            <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-5 lg:p-6
+                                            space-y-5">
+                                <div>
+                                    <h2 className={`${CARD_TITLE} text-slate-900`}>Payment</h2>
+                                    <p className="text-[1rem] text-slate-500 mt-0.5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         Your seat is held. It is confirmed the moment this is paid.
                                     </p>
                                 </div>
 
                                 <div className="rounded-2xl bg-blue-600
                                                 text-white p-5 shadow-md">
+<<<<<<< HEAD
                                     <p className="text-[1.0625rem] font-bold uppercase tracking-wider
                                                   text-blue-200">
                                         Amount due
@@ -408,6 +437,17 @@ export default function EventRegistration() {
                                     </p>
                                     {registration.payment.reference ? (
                                         <p className="mt-4 pt-3 border-t border-white/20 text-[1.0625rem]
+=======
+                                    <p className="text-[0.8125rem] font-bold uppercase tracking-wider
+                                                  text-blue-200">
+                                        Amount due
+                                    </p>
+                                    <p className="text-[2.5625rem] font-extrabold mt-1 tabular-nums">
+                                        ₹{registration.payment.amount.toLocaleString('en-IN')}
+                                    </p>
+                                    {registration.payment.reference ? (
+                                        <p className="mt-4 pt-3 border-t border-white/20 text-[0.8125rem]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                       text-blue-200">
                                             Reference{' '}
                                             <span className="font-semibold tracking-wider text-white">
@@ -427,7 +467,11 @@ export default function EventRegistration() {
                                   and never through this server.
                                 */}
                                 <div>
+<<<<<<< HEAD
                                     <p className="text-[1.0625rem] font-bold uppercase tracking-wide
+=======
+                                    <p className="text-[0.8125rem] font-bold uppercase tracking-wide
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                   text-slate-500 mb-2">
                                         Pay using
                                     </p>
@@ -450,7 +494,11 @@ export default function EventRegistration() {
                                                 }`}
                                             >
                                                 <Icon className="w-5 h-5" />
+<<<<<<< HEAD
                                                 <span className="px-1 text-center text-[1rem] sm:text-[1.0625rem] font-bold leading-tight">{label}</span>
+=======
+                                                <span className="text-[0.8125rem] font-bold">{label}</span>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             </button>
                                         ))}
                                     </div>
@@ -484,7 +532,11 @@ export default function EventRegistration() {
                         ) : null}
 
                         {step === 'done' && registration ? (
+<<<<<<< HEAD
                             <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-5 sm:p-6 lg:p-8
+=======
+                            <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-6 lg:p-8
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                             text-center">
                                 <span className={`w-16 h-16 rounded-2xl mx-auto flex items-center
                                                   justify-center ${
@@ -579,25 +631,41 @@ export default function EventRegistration() {
                                 </div>
                             ) : null}
 
+<<<<<<< HEAD
                             <div className="p-4 sm:p-5 space-y-3">
+=======
+                            <div className="p-5 space-y-3">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 <h3 className={`${CARD_TITLE} text-slate-900`}>
                                     {event.title}
                                 </h3>
 
+<<<<<<< HEAD
                                 <p className="text-[1.0625rem] text-slate-600 flex items-start gap-2">
+=======
+                                <p className="text-[1rem] text-slate-600 flex items-start gap-2">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     <CalendarDays className="w-4 h-4 shrink-0 mt-0.5 text-slate-400" />
                                     {formatWhen(event)}
                                 </p>
 
                                 {event.venue ? (
+<<<<<<< HEAD
                                     <p className="text-[1.0625rem] text-slate-600 flex items-start gap-2">
+=======
+                                    <p className="text-[1rem] text-slate-600 flex items-start gap-2">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         <MapPin className="w-4 h-4 shrink-0 mt-0.5 text-slate-400" />
                                         {event.venue}
                                     </p>
                                 ) : null}
 
                                 {left !== null ? (
+<<<<<<< HEAD
                                     <p className={`text-[1.0625rem] font-semibold flex items-center gap-2 ${
+=======
+                                    <p className={`text-[1rem] font-semibold flex items-center gap-2 ${
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         full ? 'text-amber-600' : 'text-slate-600'
                                     }`}>
                                         <Users className="w-4 h-4 shrink-0" />
@@ -616,9 +684,15 @@ export default function EventRegistration() {
                               server reads it from the seat it wrote, so there is
                               nothing here a client could change.
                             */}
+<<<<<<< HEAD
                             <div className="border-t border-slate-100 p-4 sm:p-5 bg-slate-50">
                                 <div className="flex items-baseline justify-between gap-3">
                                     <span className="text-[1.0625rem] text-slate-600 flex items-center gap-1.5">
+=======
+                            <div className="border-t border-slate-100 p-5 bg-slate-50">
+                                <div className="flex items-baseline justify-between gap-3">
+                                    <span className="text-[1rem] text-slate-600 flex items-center gap-1.5">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         <Ticket className="w-3.5 h-3.5" />
                                         Registration fee
                                     </span>
@@ -632,7 +706,11 @@ export default function EventRegistration() {
                                 {/* The membership's effect, on the screen that
                                     takes the money. */}
                                 {savedByMembership > 0 ? (
+<<<<<<< HEAD
                                     <p className="text-[1.0625rem] font-semibold text-emerald-600 mt-2">
+=======
+                                    <p className="text-[1rem] font-semibold text-emerald-600 mt-2">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         Member price applied — ₹{savedByMembership.toLocaleString('en-IN')} off
                                         the usual ₹{listFee.toLocaleString('en-IN')}.
                                     </p>
@@ -655,7 +733,11 @@ export default function EventRegistration() {
                         </div>
 
                         {event.registrationNote ? (
+<<<<<<< HEAD
                             <p className="text-[1.0625rem] text-slate-600 leading-relaxed bg-blue-50
+=======
+                            <p className="text-[1rem] text-slate-600 leading-relaxed bg-blue-50
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                           border border-blue-100 rounded-xl p-4">
                                 {event.registrationNote}
                             </p>
@@ -665,7 +747,11 @@ export default function EventRegistration() {
                             <button
                                 type="button"
                                 onClick={() => navigate(`/member/events/${event.id}`)}
+<<<<<<< HEAD
                                 className="w-full h-10 rounded-xl text-[1.0625rem] font-semibold
+=======
+                                className="w-full h-10 rounded-xl text-[1rem] font-semibold
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                            text-slate-500 hover:text-slate-700 inline-flex items-center
                                            justify-center gap-1"
                             >
@@ -744,7 +830,11 @@ function CustomField({
                     className="w-4 h-4 mt-0.5 accent-blue-600 shrink-0"
                 />
                 <span className="min-w-0">
+<<<<<<< HEAD
                     <span className="block text-[1.0625rem] text-slate-700 leading-snug">
+=======
+                    <span className="block text-[1rem] text-slate-700 leading-snug">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         {field.label}
                         {field.required ? <span className="text-red-500"> *</span> : null}
                     </span>
@@ -817,7 +907,11 @@ function ReceiptRow({ label, value }: { label: string; value: string }) {
     return (
         <div className="flex items-baseline justify-between gap-3">
             <span className="text-[1.0625rem] text-slate-500 shrink-0">{label}</span>
+<<<<<<< HEAD
             <span className="text-[1.0625rem] font-semibold text-slate-900 text-right break-words">
+=======
+            <span className="text-[1rem] font-semibold text-slate-900 text-right break-words">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 {value}
             </span>
         </div>

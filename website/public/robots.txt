@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Paths below are not ACTIV pages. They are left over from whoever held this
 # domain before, and crawlers keep requesting them. The SPA fallback serves
 # index.html with a 200 for every path, so without these lines they get crawled
@@ -8,3 +9,21 @@ Disallow: /*?search
 Allow: /
 
 Sitemap: https://activ.org.in/sitemap.xml
+=======
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: *
+Allow: /
+
+Sitemap: https://activ.welocalhost.com/sitemap.xml
+>>>>>>> 8020f5d (Initial commit for website frontend)

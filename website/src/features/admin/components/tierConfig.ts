@@ -20,7 +20,11 @@
  * Anything tier-specific belongs here, so a change lands in every tier at once.
  */
 
+<<<<<<< HEAD
 export type AdminTier = 'block' | 'district' | 'state' | 'super' | 'events';
+=======
+export type AdminTier = 'block' | 'district' | 'state' | 'super';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
 /** One entry in a tier's navigation rail. */
 export interface NavItem {
@@ -28,8 +32,13 @@ export interface NavItem {
     to: string;
     label: string;
     /** Which react-icons/fa glyph the sidebar renders. */
+<<<<<<< HEAD
     icon: 'home' | 'check' | 'users' | 'shield' | 'calendar' | 'megaphone' | 'bell' | 'cog' | 'image' | 'newspaper' | 'landmark'
     | 'ticket' | 'tags' | 'list' | 'heart';
+=======
+    icon: 'home' | 'check' | 'users' | 'shield' | 'calendar' | 'megaphone' | 'bell' | 'cog'
+    | 'ticket' | 'tags' | 'list';
+>>>>>>> 8020f5d (Initial commit for website frontend)
     /**
      * A SECTION rather than a single destination.
      *
@@ -220,8 +229,11 @@ export const TIERS: Record<AdminTier, TierConfig> = {
             // What a membership costs, and which commencement-year band earns
             // which plan. Only this role sets prices.
             { to: '/super-admin/membership', label: 'Membership', icon: 'shield' },
+<<<<<<< HEAD
             // Who donated, how much, and their 80G receipts and year certificates.
             { to: '/super-admin/donations', label: 'Donors', icon: 'heart' },
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
             // Association Updates. Only this role authors them, and they are
             // not events — an update has no date, no venue and no attendees.
             { to: '/super-admin/updates', label: 'Updates', icon: 'megaphone' },
@@ -232,6 +244,7 @@ export const TIERS: Record<AdminTier, TierConfig> = {
             { to: '/super-admin/settings', label: 'Settings', icon: 'cog' },
         ],
     },
+<<<<<<< HEAD
     /*
      * THE EVENTS ADMIN — one portal, the programme.
      *
@@ -289,6 +302,8 @@ export const adminBasePath = (): string => {
     let role = '';
     try { role = localStorage.getItem('role') || ''; } catch { /* storage blocked */ }
     return role === 'events_admin' ? '/events-admin' : '/super-admin';
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 };
 
 /**
@@ -299,7 +314,10 @@ export const adminBasePath = (): string => {
  */
 export const tierForRole = (role?: string | null): AdminTier => {
     switch (String(role || '')) {
+<<<<<<< HEAD
         case 'events_admin': return 'events';
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
         case 'district_admin': return 'district';
         case 'state_admin': return 'state';
         case 'super_admin': return 'super';

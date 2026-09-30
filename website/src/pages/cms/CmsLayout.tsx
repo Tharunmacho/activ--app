@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
+<<<<<<< HEAD
     Home, LayoutGrid, FileText, PartyPopper, Images, Newspaper, Landmark, BadgeCheck, PanelTop,
+=======
+    Home, LayoutGrid, FileText, PartyPopper, Images, Newspaper, BadgeCheck, PanelTop,
+>>>>>>> 8020f5d (Initial commit for website frontend)
     Phone, Inbox, LogOut, ChevronsUpDown, Sun, Moon, Menu, X, Shield, MessageSquare,
     Search, Bell, ExternalLink, CornerDownLeft, Scale, MapPin,
 } from 'lucide-react';
@@ -65,11 +69,18 @@ const CONTENT_NAV: NavItem[] = [
     { to: '/cms/events', label: 'Events', icon: PartyPopper, keywords: 'agenda speakers venue audience' },
     { to: '/cms/gallery', label: 'Gallery', icon: Images, keywords: 'photos images album' },
     /* After Gallery, because it is posted the same way and read on the same
+<<<<<<< HEAD
        kind of page. Schemes follow News: they used to be a tab inside it, and
        have their own page at /schemes now. */
     { to: '/cms/news', label: 'News', icon: Newspaper, keywords: 'news article press headline newspaper hindu source link youtube' },
     { to: '/cms/schemes', label: 'Schemes', icon: Landmark, keywords: 'scheme schemes benefit subsidy central national state district apply government' },
     { to: '/cms/regions', label: 'Zones & States', icon: MapPin, keywords: 'zone region state leadership chairman focus states south north east west gallery' },
+=======
+       kind of page — and because the schemes under it are the one thing here
+       a member acts on rather than reads. */
+    { to: '/cms/news', label: 'News & Schemes', icon: Newspaper, keywords: 'news article press headline scheme benefit subsidy national state district link youtube' },
+    { to: '/cms/regions', label: 'Regions & States', icon: MapPin, keywords: 'region state leadership chairman focus states south north east west gallery' },
+>>>>>>> 8020f5d (Initial commit for website frontend)
     { to: '/cms/contact', label: 'Contact Details', icon: Phone, keywords: 'address phone email map' },
     // Last in the content group because it is opened rarely and deliberately —
     // and because it is the only screen here that keeps a version history.
@@ -105,14 +116,19 @@ const TITLES: Record<string, string> = {
     '/cms/membership': 'Membership',
     '/cms/events': 'Events',
     '/cms/gallery': 'Gallery',
+<<<<<<< HEAD
     '/cms/news': 'News',
     '/cms/schemes': 'Schemes',
+=======
+    '/cms/news': 'News & Schemes',
+>>>>>>> 8020f5d (Initial commit for website frontend)
     '/cms/contact': 'Contact Details',
     '/cms/legal': 'Legal Notices',
     '/cms/messages': 'Inbox',
     '/cms/leader-messages': 'Leader enquiries',
 };
 
+<<<<<<< HEAD
 /** One row on the bell: a new contact-form message or a message to a leader. */
 interface CmsNote {
     id: string;
@@ -140,6 +156,9 @@ const ago = (value: string) => {
  * new default under the old key would never have reached anybody.
  */
 const THEME_KEY = 'cms_theme_v2';
+=======
+const THEME_KEY = 'cms_theme';
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
 export default function CmsLayout() {
     const navigate = useNavigate();
@@ -162,7 +181,11 @@ export default function CmsLayout() {
      * while a request is in flight.
      */
     const [dark, setDark] = useState(() => {
+<<<<<<< HEAD
         try { return localStorage.getItem(THEME_KEY) === 'dark'; } catch { return false; }
+=======
+        try { return localStorage.getItem(THEME_KEY) !== 'light'; } catch { return true; }
+>>>>>>> 8020f5d (Initial commit for website frontend)
     });
 
     const role = getStoredRole();
@@ -185,7 +208,11 @@ export default function CmsLayout() {
     const initial = displayName.charAt(0).toUpperCase();
 
     useEffect(() => {
+<<<<<<< HEAD
         if (!canEdit) navigate('/admin/login', { replace: true });
+=======
+        if (!canEdit) navigate('/login', { replace: true });
+>>>>>>> 8020f5d (Initial commit for website frontend)
     }, [canEdit, navigate]);
 
     /**
@@ -223,6 +250,7 @@ export default function CmsLayout() {
 
     // The inbox count is the one number worth carrying on every screen: a
     // message nobody notices is the same as one never sent.
+<<<<<<< HEAD
     /*
      * THE BELL: every new message, from BOTH inboxes — the contact form and the
      * messages written to a leader on a region or state page. It only ever
@@ -273,6 +301,20 @@ export default function CmsLayout() {
 
     useEffect(() => { setNotesOpen(false); }, [location.pathname]);
 
+=======
+    useEffect(() => {
+        let cancelled = false;
+        listContactMessages({ limit: 1 })
+            .then((r) => { if (!cancelled) setUnread(r.unread || 0); })
+            .catch(() => { /* a badge is not worth an error */ });
+
+        listLeaderMessages({ limit: 1 })
+            .then((r) => { if (!cancelled) setLeaderUnread(r.unread || 0); })
+            .catch(() => { /* likewise */ });
+        return () => { cancelled = true; };
+    }, [location.pathname]);
+
+>>>>>>> 8020f5d (Initial commit for website frontend)
     // Close the drawer on navigation, or it stays open over the new screen.
     useEffect(() => { setDrawer(false); setQuery(''); }, [location.pathname]);
 
@@ -327,7 +369,11 @@ export default function CmsLayout() {
 
     const handleLogout = async () => {
         await logout();
+<<<<<<< HEAD
         navigate('/admin/login', { replace: true });
+=======
+        navigate('/login', { replace: true });
+>>>>>>> 8020f5d (Initial commit for website frontend)
     };
 
     /*
@@ -386,7 +432,11 @@ export default function CmsLayout() {
 
     const NavGroup = ({ label, items }: { label: string; items: NavItem[] }) => (
         <div className="mb-6 last:mb-0">
+<<<<<<< HEAD
             <p className={`px-4 pb-2.5 text-[1.0625rem] font-semibold uppercase tracking-[0.14em] ${t.faint}`}>
+=======
+            <p className={`px-4 pb-2.5 text-[0.9375rem] font-semibold uppercase tracking-[0.14em] ${t.faint}`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                 {label}
             </p>
             <div className="space-y-0.5">
@@ -395,13 +445,21 @@ export default function CmsLayout() {
                         <Icon className="w-[1.25rem] h-[1.25rem] shrink-0" />
                         <span className="truncate flex-1">{text}</span>
                         {badge === 'unread' && unread > 0 && (
+<<<<<<< HEAD
                             <span className="text-[1.0625rem] font-bold bg-[#DC2626] text-white
+=======
+                            <span className="text-[0.8125rem] font-bold bg-[#DC2626] text-white
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                              rounded-full min-w-[1.25rem] text-center px-1.5 py-0.5 shrink-0">
                                 {unread}
                             </span>
                         )}
                         {badge === 'leaderUnread' && leaderUnread > 0 && (
+<<<<<<< HEAD
                             <span className="text-[1.0625rem] font-bold bg-[#DC2626] text-white
+=======
+                            <span className="text-[0.8125rem] font-bold bg-[#DC2626] text-white
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                              rounded-full min-w-[1.25rem] text-center px-1.5 py-0.5 shrink-0">
                                 {leaderUnread}
                             </span>
@@ -416,15 +474,24 @@ export default function CmsLayout() {
         // `h-screen overflow-hidden`, not `min-h-screen`. The rail and the working
         // area are two independent scroll regions; with a growing page height they
         // scrolled together, which carried the rail's footer off the bottom.
+<<<<<<< HEAD
         <div className={`h-[100dvh] overflow-hidden flex font-sans ${dark ? 'dark ' : ''}${t.shell}`}>
+=======
+        <div className={`h-screen overflow-hidden flex font-sans ${dark ? 'dark ' : ''}${t.shell}`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
             {drawer && (
                 <div className="fixed inset-0 bg-black/70 z-30 lg:hidden" onClick={() => setDrawer(false)} />
             )}
 
             {/* ======================================================= sidebar */}
             <aside
+<<<<<<< HEAD
                 className={`fixed lg:sticky lg:top-0 inset-y-0 left-0 z-40 w-[min(20rem,85vw)] lg:w-[20rem] shrink-0 border-r
                             h-[100dvh] min-h-0 flex flex-col transition-transform duration-200 ${t.side}
+=======
+                className={`fixed lg:sticky lg:top-0 inset-y-0 left-0 z-40 w-[20rem] shrink-0 border-r
+                            h-screen min-h-0 flex flex-col transition-transform duration-200 ${t.side}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             ${drawer ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
             >
                 {/*
@@ -460,8 +527,12 @@ export default function CmsLayout() {
                     )}
 
                     <button
+<<<<<<< HEAD
                         className={`lg:hidden absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center
                                     justify-center ${t.muted}`}
+=======
+                        className={`lg:hidden absolute right-4 top-1/2 -translate-y-1/2 ${t.muted}`}
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         onClick={() => setDrawer(false)}
                         aria-label="Close menu"
                     >
@@ -493,10 +564,17 @@ export default function CmsLayout() {
                                 {initial}
                             </span>
                             <span className="min-w-0 flex-1">
+<<<<<<< HEAD
                                 <span className={`block text-[1.1875rem] font-semibold truncate ${t.title}`}>
                                     {displayName}
                                 </span>
                                 <span className={`block text-[1.0625rem] truncate ${t.muted}`}>
+=======
+                                <span className={`block text-[1.125rem] font-semibold truncate ${t.title}`}>
+                                    {displayName}
+                                </span>
+                                <span className={`block text-[1rem] truncate ${t.muted}`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     {email || 'Administrator'}
                                 </span>
                             </span>
@@ -543,8 +621,12 @@ export default function CmsLayout() {
             <div className="flex-1 min-w-0 min-h-0 flex flex-col">
                 <header className={`h-[5.5rem] shrink-0 border-b flex items-center gap-2 sm:gap-3 px-4 sm:px-5 lg:px-8
                                     backdrop-blur ${t.head}`}>
+<<<<<<< HEAD
                     <button className={`lg:hidden -ml-2 w-10 h-10 shrink-0 flex items-center justify-center ${t.muted}`}
                             onClick={() => setDrawer(true)} aria-label="Open menu">
+=======
+                    <button className={`lg:hidden ${t.muted}`} onClick={() => setDrawer(true)} aria-label="Open menu">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         <Menu className="w-5 h-5" />
                     </button>
 
@@ -560,10 +642,17 @@ export default function CmsLayout() {
                             }}
                             placeholder="Search sections…"
                             aria-label="Search CMS sections"
+<<<<<<< HEAD
                             className={`w-full h-12 pl-11 pr-16 rounded-xl border text-[1.1875rem]
                                         outline-none focus:border-[#2563EB] transition-colors ${t.field}`}
                         />
                         <kbd className={`absolute right-3 top-1/2 -translate-y-1/2 text-[1.0625rem]
+=======
+                            className={`w-full h-12 pl-11 pr-16 rounded-xl border text-[1.125rem]
+                                        outline-none focus:border-[#2563EB] transition-colors ${t.field}`}
+                        />
+                        <kbd className={`absolute right-3 top-1/2 -translate-y-1/2 text-[0.8125rem]
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                          font-medium px-1.5 py-0.5 rounded border ${t.divide} ${t.faint}`}>
                             ⌘K
                         </kbd>
@@ -588,7 +677,11 @@ export default function CmsLayout() {
                         )}
                     </div>
 
+<<<<<<< HEAD
                     <h1 className={`sm:hidden min-w-0 truncate font-display ${PAGE_TITLE} ${t.title}`}>
+=======
+                    <h1 className={`sm:hidden font-display ${PAGE_TITLE} ${t.title}`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         {pageTitle}
                     </h1>
 
@@ -596,11 +689,16 @@ export default function CmsLayout() {
                         {/* The public site is live and this panel edits it — worth
                             saying on every screen, because that is the whole risk. */}
                         <span className={`hidden md:inline-flex items-center gap-2 h-9 px-3 rounded-full
+<<<<<<< HEAD
                                           border text-[1.0625rem] font-semibold ${t.card} ${t.muted}`}>
+=======
+                                          border text-[0.9375rem] font-semibold ${t.card} ${t.muted}`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E]" />
                             Live
                         </span>
 
+<<<<<<< HEAD
                         {/* Light / dark — here as well as in the rail, so it is one
                             tap away on a phone without opening the menu. */}
                         <button
@@ -684,14 +782,35 @@ export default function CmsLayout() {
                                 </>
                             )}
                         </div>
+=======
+                        <NavLink
+                            to="/cms/messages"
+                            aria-label={`Inbox${unread ? `, ${unread} unread` : ''}`}
+                            className={`relative w-9 h-9 rounded-full border flex items-center justify-center
+                                        transition-colors ${t.card} ${t.muted} ${t.iconHover}`}
+                        >
+                            <Bell className="w-4 h-4" />
+                            {unread > 0 && (
+                                <span className="absolute -top-1 -right-1 min-w-[1.125rem] text-[0.75rem]
+                                                 font-bold bg-[#DC2626] text-white rounded-full px-1 py-0.5">
+                                    {unread}
+                                </span>
+                            )}
+                        </NavLink>
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
                         <a
                             href="/"
                             target="_blank"
                             rel="noreferrer"
+<<<<<<< HEAD
                             aria-label="View site"
                             className="inline-flex items-center justify-center gap-2 h-10 sm:h-11 min-w-[2.5rem] px-3 sm:px-5 rounded-xl bg-[#2563EB]
                                        hover:bg-[#1D4ED8] text-white text-[1.1875rem] font-semibold
+=======
+                            className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-[#2563EB]
+                                       hover:bg-[#1D4ED8] text-white text-[1.125rem] font-semibold
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                        transition-colors"
                         >
                             <ExternalLink className="w-4 h-4" />

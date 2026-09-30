@@ -7,11 +7,14 @@ import { FooterSection } from '../../components/layout/FooterSection';
 import { AcrossIndia } from '@/components/shared/AcrossIndia';
 import { getHome, type CmsSectionOverride } from '@/services/cmsApi';
 import { sectionHidden } from '@/components/shared/cmsSections';
+<<<<<<< HEAD
 import { SectionFields } from '@/components/shared/SectionFields';
 import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
 
 /** The home page's band copy, for the rows added to those bands. */
 const BAND_PROSE = 'text-[1.125rem] sm:text-[1.25rem] font-medium leading-relaxed text-gray-600';
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * The home page.
@@ -72,7 +75,11 @@ export default function Hero() {
               */}
             {unreachable && (
                 <div className="w-full border-b border-amber-200 bg-amber-50">
+<<<<<<< HEAD
                     <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-3 px-4 sm:px-6 py-4
+=======
+                    <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-3 px-6 py-4
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                     sm:flex-row sm:items-center sm:justify-between lg:px-10">
                         <p className="text-[1.0625rem] font-semibold text-amber-900">
                             The page content could not be loaded just now — the site is up but
@@ -103,6 +110,7 @@ export default function Hero() {
             <AboutSection />
 
             {/* 3. Upcoming Events Section */}
+<<<<<<< HEAD
             {!sectionHidden(sections, 'home.eventsBand') && (
                 <>
                     <EventsGrid showViewAll />
@@ -114,11 +122,15 @@ export default function Hero() {
                     </div>
                 </>
             )}
+=======
+            {!sectionHidden(sections, 'home.eventsBand') && <EventsGrid showViewAll />}
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
             {/* 4. Footer */}
             {/* Above the footer, as on every other page — see `AcrossIndia`. On the
                 home page it is the last thing a reader passes, which is where
                 "where else can I go" is the useful question. */}
+<<<<<<< HEAD
             {!sectionHidden(sections, 'home.acrossIndia') && (
                 <>
                     <AcrossIndia />
@@ -127,6 +139,9 @@ export default function Hero() {
                     </div>
                 </>
             )}
+=======
+            {!sectionHidden(sections, 'home.acrossIndia') && <AcrossIndia />}
+>>>>>>> 8020f5d (Initial commit for website frontend)
 
             <FooterSection />
         </div>

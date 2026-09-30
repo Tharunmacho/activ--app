@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 import { BAND_MEASURE } from '@/components/layout/typography';
+=======
+>>>>>>> 8020f5d (Initial commit for website frontend)
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -86,7 +89,11 @@ function CardHead({ icon, title, viewAllHref, onViewAll, viewAllLabel = 'View Al
     viewAllLabel?: string;
 }) {
     return (
+<<<<<<< HEAD
         <div className="flex items-center justify-between gap-3 px-4 sm:px-5 pt-4 pb-3">
+=======
+        <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3">
+>>>>>>> 8020f5d (Initial commit for website frontend)
             <div className="flex items-center gap-2.5 min-w-0">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg
                                  bg-brand-50 text-brand-600">
@@ -102,7 +109,11 @@ function CardHead({ icon, title, viewAllHref, onViewAll, viewAllLabel = 'View Al
             {viewAllHref ? (
                 <Link
                     to={viewAllHref}
+<<<<<<< HEAD
                     className="inline-flex shrink-0 items-center gap-1.5 text-[1rem] sm:text-[1.25rem] font-bold
+=======
+                    className="inline-flex shrink-0 items-center gap-1.5 text-[1.25rem] font-bold
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                text-brand-600 hover:text-brand-800 transition-colors"
                 >
                     {viewAllLabel} <ArrowRight size={14} />
@@ -156,23 +167,39 @@ export function DetailDialog({ title, onClose, children }: {
                 role="dialog"
                 aria-modal="true"
                 aria-label={title}
+<<<<<<< HEAD
                 className="relative w-full max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl bg-white
                            shadow-2xl border border-gray-200 flex flex-col"
             >
                 <header className="shrink-0 flex items-start gap-3 sm:gap-4 border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
                     <h2 className="flex-1 min-w-0 break-words text-[1.25rem] sm:text-[1.5625rem] font-extrabold text-brand-800">{title}</h2>
+=======
+                className="relative w-full sm:max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl bg-white
+                           shadow-2xl border border-gray-200 flex flex-col"
+            >
+                <header className="shrink-0 flex items-start gap-4 border-b border-gray-200 px-6 py-4">
+                    <h2 className="flex-1 min-w-0 text-[1.5625rem] font-extrabold text-brand-800">{title}</h2>
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     <button
                         type="button"
                         onClick={onClose}
                         aria-label="Close"
+<<<<<<< HEAD
                         className="shrink-0 flex h-10 w-10 sm:h-9 sm:w-9 items-center justify-center rounded-lg
+=======
+                        className="shrink-0 flex h-9 w-9 items-center justify-center rounded-lg
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                    border border-gray-200 text-gray-500 transition-colors hover:bg-gray-50"
                     >
                         <X size={16} />
                     </button>
                 </header>
 
+<<<<<<< HEAD
                 <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">{children}</div>
+=======
+                <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">{children}</div>
+>>>>>>> 8020f5d (Initial commit for website frontend)
             </div>
         </div>
     );
@@ -183,14 +210,24 @@ export function AllLeaders({ leaders }: { leaders: RegionLeader[] }) {
     return (
         <ul className="space-y-6">
             {leaders.map((person, i) => (
+<<<<<<< HEAD
                 <li key={person.id || i} className="flex items-start gap-3 sm:gap-4">
                     {/* A PORTRAIT FRAME, 3:4, holding the whole photograph. */}
                     <span className="w-20 sm:w-28 aspect-[3/4] shrink-0 overflow-hidden rounded-xl bg-gray-100
+=======
+                <li key={person.id || i} className="flex items-start gap-4">
+                    {/* A PORTRAIT FRAME, 3:4, holding the whole photograph. */}
+                    <span className="w-28 aspect-[3/4] shrink-0 overflow-hidden rounded-xl bg-gray-100
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                      border border-gray-200">
                         <PersonPhoto url={person.photoUrl} name={person.name} width={200} fallbackSize={24} />
                     </span>
 
+<<<<<<< HEAD
                     <div className="min-w-0 break-words">
+=======
+                    <div className="min-w-0">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         <p className="text-[1.0625rem] font-extrabold text-brand-900">{person.name}</p>
                         {person.role && (
                             <span className="mt-1 inline-block rounded-full bg-brand-700 px-2.5 py-0.5
@@ -317,7 +354,11 @@ export function StateHeroBand({
               * does it in a little over three hundred pixels, which is what
               * leaves the bench on screen.
               */}
+<<<<<<< HEAD
             <div className="relative z-10 grid gap-5 sm:gap-6 px-4 py-5 sm:px-8 sm:py-7
+=======
+            <div className="relative z-10 grid gap-6 px-6 py-6 sm:px-8 sm:py-7
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] lg:items-center">
                 <div className="min-w-0">
                     {backHref && (
@@ -336,7 +377,11 @@ export function StateHeroBand({
                         </Link>
                     )}
 
+<<<<<<< HEAD
                     <h1 className="mt-3 break-words text-[1.75rem] sm:text-4xl font-black tracking-tight text-white
+=======
+                    <h1 className="mt-3 text-3xl sm:text-4xl font-black tracking-tight text-white
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                    leading-[1.05]">
                         {headline}
                     </h1>
@@ -357,8 +402,13 @@ export function StateHeroBand({
                       * not this component’s to lose.
                       */}
                     {lede && (
+<<<<<<< HEAD
                         <p className={`mt-3 ${BAND_MEASURE} text-[1.0625rem] sm:text-[1.1875rem] font-semibold
                                       leading-relaxed text-white/80 line-clamp-3`}>
+=======
+                        <p className="mt-3 max-w-2xl text-[1.0625rem] sm:text-[1.1875rem] font-semibold
+                                      leading-relaxed text-white/80 line-clamp-3">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                             {lede}
                         </p>
                     )}
@@ -381,7 +431,11 @@ export function StateHeroBand({
                             {hero.facts.map((fact, i) => (
                                 <li
                                     key={i}
+<<<<<<< HEAD
                                     className="flex max-w-full min-w-0 items-center gap-2 rounded-lg bg-white/15 px-2.5 sm:px-3 py-1.5
+=======
+                                    className="flex items-center gap-2 rounded-lg bg-white/15 px-3 py-1.5
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                                ring-1 ring-white/20"
                                 >
                                     <CmsIcon
@@ -391,11 +445,19 @@ export function StateHeroBand({
                                         className="shrink-0 text-white/70"
                                     />
                                     {fact.label && (
+<<<<<<< HEAD
                                         <span className="shrink-0 whitespace-nowrap text-[1rem] font-semibold text-white/60">
                                             {fact.label}
                                         </span>
                                     )}
                                     <span className="min-w-0 break-words text-[1rem] font-bold text-white">
+=======
+                                        <span className="text-[1rem] font-semibold text-white/60">
+                                            {fact.label}
+                                        </span>
+                                    )}
+                                    <span className="text-[1rem] font-bold text-white">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                         {fact.value}
                                     </span>
                                 </li>
@@ -494,7 +556,11 @@ export function GlanceRow({ items, title = 'State at a Glance' }: {
     if (!rows.length) return null;
 
     return (
+<<<<<<< HEAD
         <section className={`${CARD_SURFACE} px-4 py-4 sm:px-6 sm:py-5`}>
+=======
+        <section className={`${CARD_SURFACE} px-5 py-5 sm:px-6`}>
+>>>>>>> 8020f5d (Initial commit for website frontend)
             <p className="mb-4 text-center text-[1.0625rem] font-bold uppercase tracking-[0.16em]
                           text-brand-500">
                 {title}
@@ -1198,7 +1264,11 @@ export function PhotoLightbox({ photos, index, onIndex, onClose }: {
     const photo = photos[index];
 
     return (
+<<<<<<< HEAD
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-8">
+=======
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
+>>>>>>> 8020f5d (Initial commit for website frontend)
             <button
                 type="button"
                 aria-label="Close"
@@ -1215,21 +1285,37 @@ export function PhotoLightbox({ photos, index, onIndex, onClose }: {
                     <img
                         src={sizedMediaUrl(photo.media.url, 1400)}
                         alt={photo.media.alt || photo.title}
+<<<<<<< HEAD
                         className="w-full max-h-[62vh] sm:max-h-[70vh] object-contain"
+=======
+                        className="w-full max-h-[70vh] object-contain"
+>>>>>>> 8020f5d (Initial commit for website frontend)
                     loading="lazy"
                             decoding="async"
                         />
                 </div>
+<<<<<<< HEAD
                 <div className="mt-3 sm:mt-4 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
                     <div className="min-w-0 break-words">
                         <p className="text-[1.125rem] sm:text-[1.375rem] font-extrabold text-white">{photo.title}</p>
                         {(photo.category || photo.state) && (
                             <p className="mt-0.5 text-[1rem] sm:text-[1.25rem] font-semibold text-white/60">
+=======
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+                    <div className="min-w-0">
+                        <p className="text-[1.375rem] font-extrabold text-white">{photo.title}</p>
+                        {(photo.category || photo.state) && (
+                            <p className="mt-0.5 text-[1.25rem] font-semibold text-white/60">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                                 {[photo.category, photo.state].filter(Boolean).join(' · ')}
                             </p>
                         )}
                     </div>
+<<<<<<< HEAD
                     <div className="ml-auto flex items-center gap-2 sm:gap-3">
+=======
+                    <div className="flex items-center gap-3">
+>>>>>>> 8020f5d (Initial commit for website frontend)
                         <span className="text-[1.0625rem] font-bold text-white/60 tabular-nums">
                             {index + 1} / {photos.length}
                         </span>
