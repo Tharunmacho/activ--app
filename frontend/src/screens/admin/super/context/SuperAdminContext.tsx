@@ -104,6 +104,8 @@ interface SuperAdminContextType {
   bottlenecks: Bottleneck[];
   bottleneckAfterDays: number;
   coverageGaps: CoverageGap[];
+  /** The overview request failed — the figures on the Hub are not current (website Hub banner). */
+  overviewFailed: boolean;
   pendingActionId: string | null;
   searchQuery: string;
   searchResults: SearchResults;
@@ -137,6 +139,7 @@ export const SuperAdminProvider: React.FC<{ children: ReactNode }> = ({ children
   const [bottleneckAfterDays, setBottleneckAfterDays] = useState(3);
   const [coverageGaps, setCoverageGaps] = useState<CoverageGap[]>([]);
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
+  const [overviewFailed, setOverviewFailed] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResults>(EMPTY_SEARCH);
@@ -156,8 +159,12 @@ export const SuperAdminProvider: React.FC<{ children: ReactNode }> = ({ children
       setBottlenecks(payload.bottlenecks || []);
       setBottleneckAfterDays(Number(payload.bottleneckAfterDays || 3));
       setCoverageGaps(payload.coverageGaps || []);
+      // Same test as the website Hub: an answer without `stats` is not an overview.
+      setOverviewFailed(!payload || !payload.stats);
     } catch (error: any) {
-      Alert.alert('Error', error?.response?.data?.message || 'Failed to load the command centre');
+      // Shown inline on the Hub (website parity) — an Alert on every focus
+      // refresh would stack popups while the drill-down still works.
+      setOverviewFailed(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -249,12 +256,12 @@ export const SuperAdminProvider: React.FC<{ children: ReactNode }> = ({ children
 
     setPendingActionId(id);
     try {
-      await api.post(`/applications/${id}/${action}`, {
-        action,
-        rejectionReason: action === 'reject'
-          ? (reason || '').trim() || 'Rejected by Super Admin'
-          : undefined,
-      });
+      // Exactly the website's payloads (activApi approveApplication /
+      // rejectApplication): approve `{}`, reject `{ rejectionReason }`.
+      const res = await api.post(
+        `/applications/${id}/${action}`,
+        action === 'reject' ? { rejectionReason: (reason || '').trim() || 'No reason given' } : {},
+      );
 
       setBottlenecks(prev => (prev || []).filter(item => item.id !== id));
       setStats(prev => ({ ...prev, bottleneckCount: Math.max(0, (prev.bottleneckCount || 0) - 1) }));
@@ -262,8 +269,8 @@ export const SuperAdminProvider: React.FC<{ children: ReactNode }> = ({ children
       Alert.alert(
         'Done',
         action === 'approve'
-          ? 'Application moved to the next tier.'
-          : 'Application rejected.',
+          ? String(res?.data?.message || 'Approved — the member profile has been created')
+          : 'Rejected',
       );
       fetchOverview(true);
       return true;
@@ -308,6 +315,7 @@ export const SuperAdminProvider: React.FC<{ children: ReactNode }> = ({ children
     bottlenecks,
     bottleneckAfterDays,
     coverageGaps,
+    overviewFailed,
     pendingActionId,
     searchQuery,
     searchResults,

@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { SUPER, ACCENTS, superStyles } from '../superTheme';
+import { PALETTE, RADIUS, SPACE, SIZE, TYPE, BRAND } from '../../../../ui';
+
+const FAINT = PALETTE.textFaint;
 
 /**
  * A region name field: a full dropdown, free text, and a "+" to add what is
@@ -70,6 +72,42 @@ const MAX_RENDER = 150;
 
 const clean = (value?: string | null) => String(value || '').trim();
 
+/**
+ * How far wrong a typed name may be and still be offered — the website's
+ * `editBudget`: proportional to length, capped at three.
+ */
+const editBudget = (needle: string) => Math.min(3, Math.max(1, Math.floor((needle || '').length / 4)));
+
+/**
+ * Levenshtein distance, abandoned as soon as it cannot come in under `budget`
+ * (website RegionInput `editDistance`). Returns `budget + 1` for "too far".
+ */
+const editDistance = (a: string, b: string, budget: number): number => {
+  const x = a || '';
+  const y = b || '';
+  if (Math.abs(x.length - y.length) > budget) return budget + 1;
+  let prev = Array.from({ length: y.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= x.length; i++) {
+    const row = new Array<number>(y.length + 1);
+    row[0] = i;
+    let best = row[0];
+    for (let j = 1; j <= y.length; j++) {
+      row[j] = Math.min(
+        prev[j] + 1,
+        row[j - 1] + 1,
+        prev[j - 1] + (x[i - 1] === y[j - 1] ? 0 : 1),
+      );
+      if (row[j] < best) best = row[j];
+    }
+    if (best > budget) return budget + 1;
+    prev = row;
+  }
+  return prev[y.length];
+};
+
+/** Below this length most short names are within tolerance of each other. */
+const NEAR_MIN_LENGTH = 3;
+
 const eq = (a?: string | null, b?: string | null) =>
   clean(a).toLowerCase() === clean(b).toLowerCase();
 
@@ -126,12 +164,36 @@ const RegionInput: React.FC<Props> = ({
     [suggested, usedList, addedList],
   );
 
-  const narrow = (list: string[]) =>
-    (list || []).filter(name => !needle || name.toLowerCase().includes(needle));
+  /**
+   * Substring first, and a near-miss pass behind it — ONLY when the substring
+   * pass found nothing (CLAUDE.md §4b), so "karanataka" offers Karnataka
+   * instead of offering to create a 37th state. `near` marks the result as
+   * approximate so the panel can say so rather than present a guess as a match.
+   */
+  const narrow = (list: string[]): { names: string[]; near: boolean } => {
+    const source = list || [];
+    if (!needle) return { names: source, near: false };
+    const exact = source.filter(name => (name || '').toLowerCase().includes(needle));
+    if (exact.length || typed.length < NEAR_MIN_LENGTH) return { names: exact, near: false };
+    const budget = editBudget(needle);
+    const near = source
+      .map(name => ({ name, distance: editDistance(needle, (name || '').toLowerCase(), budget) }))
+      .filter(row => row.distance <= budget)
+      .sort((a, b) => a.distance - b.distance || a.name.localeCompare(b.name))
+      .map(row => row.name);
+    return { names: near, near: near.length > 0 };
+  };
 
-  const addedMatches = useMemo(() => narrow(addedList), [addedList, needle]);
-  const usedMatches = useMemo(() => narrow(usedList), [usedList, needle]);
-  const referenceMatches = useMemo(() => narrow(referenceList), [referenceList, needle]);
+  const addedResult = useMemo(() => narrow(addedList), [addedList, needle]);
+  const usedResult = useMemo(() => narrow(usedList), [usedList, needle]);
+  const referenceResult = useMemo(() => narrow(referenceList), [referenceList, needle]);
+  const addedMatches = addedResult.names;
+  const usedMatches = usedResult.names;
+  const referenceMatches = referenceResult.names;
+
+  /** Every group that found anything found it only approximately. */
+  const approximate = [addedResult, usedResult, referenceResult].some(r => r.near)
+    && [addedResult, usedResult, referenceResult].every(r => r.near || r.names.length === 0);
 
   const totalMatches = addedMatches.length + usedMatches.length + referenceMatches.length;
 
@@ -197,14 +259,14 @@ const RegionInput: React.FC<Props> = ({
             >
               <Icon name={icon} size={16} color={color} />
               <Text style={styles.optionText} numberOfLines={1}>{name}</Text>
-              {selected ? <Icon name="done" size={16} color={ACCENTS.green} /> : null}
+              {selected ? <Icon name="done" size={16} color={PALETTE.successText} /> : null}
               {removable ? (
                 <TouchableOpacity
                   onPress={() => remove(name)}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   accessibilityLabel={`Remove ${name} from the ${label.toLowerCase()} list`}
                 >
-                  <Icon name="close" size={16} color={ACCENTS.red} />
+                  <Icon name="close" size={16} color={PALETTE.danger} />
                 </TouchableOpacity>
               ) : null}
             </TouchableOpacity>
@@ -222,7 +284,7 @@ const RegionInput: React.FC<Props> = ({
   return (
     <View style={styles.wrap}>
       <View style={styles.labelRow}>
-        <Text style={superStyles.label}>{label}</Text>
+        <Text style={styles.label}>{label}</Text>
         {isNew ? (
           <View style={styles.newBadge}>
             <Text style={styles.newBadgeText}>NEW REGION</Text>
@@ -231,25 +293,23 @@ const RegionInput: React.FC<Props> = ({
       </View>
 
       <View style={styles.inputRow}>
+        <View style={[styles.field, open && !disabled && styles.fieldOpen, disabled && styles.inputDisabled, isNew && styles.inputNew]}>
+        <Icon name={label.toLowerCase() === 'state' ? 'public' : label.toLowerCase() === 'district' ? 'map' : 'place'} size={SIZE.icon} color={open && !disabled ? PALETTE.indigo : PALETTE.textMuted} />
         <TextInput
-          style={[
-            superStyles.input,
-            styles.input,
-            disabled && styles.inputDisabled,
-            isNew && styles.inputNew,
-          ]}
+          style={styles.input}
           value={value}
           onChangeText={next => {
             onChange(next);
             if (!disabled) setOpen(true);
           }}
           placeholder={placeholder}
-          placeholderTextColor={SUPER.textFaint}
+          placeholderTextColor={FAINT}
           editable={!disabled}
           autoCapitalize="words"
           autoCorrect={false}
           onFocus={() => { if (!disabled) setOpen(true); }}
         />
+        </View>
 
         {canAdd && !disabled ? (
           <TouchableOpacity
@@ -258,7 +318,7 @@ const RegionInput: React.FC<Props> = ({
             activeOpacity={0.75}
             accessibilityLabel={`Add ${typed} to the ${label.toLowerCase()} list`}
           >
-            <Icon name="add" size={20} color="#FFFFFF" />
+            <Icon name="add" size={22} color={PALETTE.white} />
           </TouchableOpacity>
         ) : null}
 
@@ -270,13 +330,15 @@ const RegionInput: React.FC<Props> = ({
             open ? `Hide the ${label.toLowerCase()} list` : `Show the ${label.toLowerCase()} list`
           }
         >
-          <Icon name={open ? 'expand-less' : 'expand-more'} size={22} color={SUPER.textFaint} />
+          <Icon name={open ? 'expand-less' : 'expand-more'} size={22} color={FAINT} />
         </TouchableOpacity>
       </View>
 
       {canAdd && !disabled ? (
         <Text style={styles.newHint}>
-          {`“${typed}” is not in the list — press + to add it${scopeLabel ? ` ${scopeLabel}` : ''}.`}
+          {approximate
+            ? `“${typed}” is not in the list — check the closest names below before pressing +.`
+            : `“${typed}” is not in the list — press + to add it${scopeLabel ? ` ${scopeLabel}` : ''}.`}
         </Text>
       ) : isNew ? (
         <Text style={styles.newHint}>
@@ -300,13 +362,18 @@ const RegionInput: React.FC<Props> = ({
               nestedScrollEnabled
               keyboardShouldPersistTaps="handled"
             >
-              {renderGroup('Added now', addedMatches, 'fiber-new', ACCENTS.orange, true)}
-              {renderGroup('Already in use', usedMatches, 'check-circle', ACCENTS.green)}
+              {approximate ? (
+                <Text style={styles.nearNote}>
+                  {`Nothing matches “${typed}” exactly. Closest names below — pick one, or press + to open “${typed}” as a new region.`}
+                </Text>
+              ) : null}
+              {renderGroup('Added now', addedMatches, 'fiber-new', PALETTE.warningText, true)}
+              {renderGroup('Already in use', usedMatches, 'check-circle', PALETTE.successText)}
               {renderGroup(
                 `All ${label.toLowerCase()}s${scopeLabel ? ` ${scopeLabel}` : ''}`,
                 referenceMatches,
                 'add-circle-outline',
-                SUPER.textFaint,
+                FAINT,
               )}
             </ScrollView>
           )}
@@ -317,58 +384,73 @@ const RegionInput: React.FC<Props> = ({
 };
 
 const styles = StyleSheet.create({
-  wrap: { marginBottom: 14 },
-  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  wrap: { marginBottom: SPACE.lg },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
+  label: { fontSize: 13, lineHeight: 18, fontWeight: '600', color: PALETTE.textSoft, marginBottom: SPACE.sm, marginLeft: 2 },
 
-  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  input: { flex: 1, marginBottom: 0 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
+  field: {
+    flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: SPACE.sm + 2, minHeight: 52,
+    borderRadius: 14, borderWidth: 1.5, borderColor: 'transparent', backgroundColor: BRAND.inputFillAdmin, paddingHorizontal: SPACE.md + 2,
+  },
+  fieldOpen: { borderColor: PALETTE.indigo, backgroundColor: PALETTE.white },
+  input: { flex: 1, minWidth: 0, fontSize: 15, color: PALETTE.text, paddingVertical: 10 },
   inputDisabled: { opacity: 0.55 },
-  inputNew: { borderColor: ACCENTS.orange },
+  inputNew: { borderColor: PALETTE.warning, backgroundColor: PALETTE.card },
 
   iconButton: {
-    width: 44, height: 44, borderRadius: 12,
+    width: 52, height: 52, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: SUPER.borderStrong,
-    backgroundColor: SUPER.card,
+    borderWidth: 1.5, borderColor: PALETTE.border,
+    backgroundColor: PALETTE.card,
   },
-  addButton: { backgroundColor: ACCENTS.orange, borderColor: ACCENTS.orange },
+  addButton: { backgroundColor: PALETTE.warningText, borderColor: PALETTE.warningText },
 
   newBadge: {
-    paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6,
-    backgroundColor: ACCENTS.lightOrange, marginBottom: 6,
+    paddingHorizontal: SPACE.sm, paddingVertical: SPACE.xxs, borderRadius: RADIUS.pill,
+    backgroundColor: PALETTE.warningSoft, marginBottom: 6,
   },
-  newBadgeText: { fontSize: 9, fontWeight: '800', color: '#B45309', letterSpacing: 0.4 },
+  newBadgeText: { fontSize: 10, lineHeight: 13, fontWeight: '800', color: PALETTE.warningText, letterSpacing: 0.4 },
 
-  hint: { fontSize: 11, color: SUPER.textFaint, marginTop: 5, lineHeight: 15 },
-  newHint: { fontSize: 11, color: '#B45309', marginTop: 5, lineHeight: 15 },
+  hint: { ...TYPE.caption, marginTop: 6, marginLeft: 2 },
+  newHint: { ...TYPE.caption, color: PALETTE.warningText, marginTop: 6, marginLeft: 2 },
 
   panel: {
-    marginTop: 8,
-    backgroundColor: SUPER.card,
+    marginTop: SPACE.sm,
+    backgroundColor: PALETTE.card,
     borderWidth: 1,
-    borderColor: SUPER.borderStrong,
-    borderRadius: 12,
+    borderColor: PALETTE.border,
+    borderRadius: 14,
     overflow: 'hidden',
-    paddingVertical: 4,
+    paddingVertical: SPACE.xs,
+    shadowColor: BRAND.indigoDeep,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    elevation: 5,
   },
-  panelScroll: { maxHeight: 260 },
+  panelScroll: { maxHeight: 264 },
   groupHeading: {
-    fontSize: 10, fontWeight: '700', color: SUPER.textFaint,
-    letterSpacing: 0.4, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 4,
+    ...TYPE.eyebrow, fontSize: 10, lineHeight: 13, color: PALETTE.textFaint,
+    paddingHorizontal: 14, paddingTop: SPACE.sm, paddingBottom: SPACE.xs,
   },
   option: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 14, paddingVertical: 10,
+    flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, minHeight: SIZE.touch,
+    paddingHorizontal: 14, paddingVertical: SPACE.sm,
   },
-  optionSelected: { backgroundColor: SUPER.field },
-  optionText: { flex: 1, fontSize: 14, color: SUPER.text },
+  optionSelected: { backgroundColor: PALETTE.indigoSoft },
+  optionText: { flex: 1, minWidth: 0, fontSize: 14, lineHeight: 20, color: PALETTE.text },
   moreNote: {
-    fontSize: 11, color: SUPER.textFaint,
-    paddingHorizontal: 14, paddingVertical: 8, fontStyle: 'italic',
+    ...TYPE.caption, fontSize: 11, color: PALETTE.textFaint,
+    paddingHorizontal: 14, paddingVertical: SPACE.sm, fontStyle: 'italic',
+  },
+  nearNote: {
+    ...TYPE.caption, lineHeight: 17, color: PALETTE.warningText, backgroundColor: PALETTE.warningSoft,
+    paddingHorizontal: 14, paddingVertical: SPACE.md - 2,
   },
   emptyNote: {
-    fontSize: 12, color: SUPER.textFaint,
-    paddingHorizontal: 14, paddingVertical: 12, lineHeight: 17,
+    ...TYPE.caption, lineHeight: 17, color: PALETTE.textMuted,
+    paddingHorizontal: 14, paddingVertical: SPACE.md,
   },
 });
 

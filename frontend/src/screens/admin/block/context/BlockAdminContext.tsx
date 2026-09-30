@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api, { getUserData, setUserData } from '../../../../services/api';
 import { Applicant } from '../../../../types';
+import { approveApplication, rejectApplication } from '../../../../services/adminApi';
 
 export interface BlockStats {
   totalMembers: number;
@@ -51,7 +52,6 @@ interface BlockAdminContextType {
   applicants: ApplicantBuckets;
   /** Approved + rejected applicants, Active/Inactive resolved by the server. */
   members: AdminMember[];
-  memberAction: (member: AdminMember, action: 'activate' | 'suspend' | 'delete') => Promise<void>;
   adminName: string;
   adminEmail: string;
   adminPhone: string;
@@ -64,6 +64,8 @@ interface BlockAdminContextType {
 
   updateAdminProfile: (fullName: string, email: string, phoneNumber?: string) => void;
   pendingActionId: string | null;
+  /** The server's sentence when this account has no region on record (`scopeUnresolved`). */
+  scopeMessage: string;
 }
 
 const BlockAdminContext = createContext<BlockAdminContextType | undefined>(undefined);
@@ -78,6 +80,7 @@ export const BlockAdminProvider: React.FC<{ children: ReactNode }> = ({ children
   const [adminEmail, setAdminEmail] = useState<string>('');
   const [adminPhone, setAdminPhone] = useState<string>('');
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
+  const [scopeMessage, setScopeMessage] = useState<string>('');
   const [profileImageUri, setProfileImageUriState] = useState<string | null>(null);
 
   const setProfileImageUri = async (uri: string | null) => {
@@ -93,7 +96,9 @@ export const BlockAdminProvider: React.FC<{ children: ReactNode }> = ({ children
 
     try {
       const response = await api.get('/admin/block/dashboard');
-      const payload = response.data.data || response.data;
+      const payload = response?.data?.data || response?.data || {};
+      // Website parity: an account with no region is told so, not shown zeros.
+      setScopeMessage(payload?.scopeUnresolved ? String(payload?.message || 'This account has no region on record. Ask the Super Admin to set it.') : '');
 
       setStats(payload.stats || null);
       setApplicants({ ...EMPTY_BUCKETS, ...(payload.applicants || {}) });
@@ -188,13 +193,13 @@ export const BlockAdminProvider: React.FC<{ children: ReactNode }> = ({ children
     setPendingActionId(applicant.id);
 
     try {
-      await api.post(`/applications/${applicant.id}/block-review`, {
-        action,
-        rejectionReason:
-          action === 'reject'
-            ? (reason || '').trim() || `Rejected by ${dynamicRoleTitle}`
-            : undefined,
-      });
+      // The website's tier-agnostic aliases (activApi approve/rejectApplication):
+      // the caller's role selects the seat, and the server's own sentence says
+      // which tier the decision was recorded under.
+      const res: any = action === 'approve'
+        ? await approveApplication(String(applicant?.id || ''))
+        : await rejectApplication(String(applicant?.id || ''), (reason || '').trim() || 'No reason given');
+      const serverMessage = String(res?.data?.message || '');
 
       setApplicants(prev => {
         const nextPending = (prev.pending || []).filter(a => a.id !== applicant.id);
@@ -221,10 +226,10 @@ export const BlockAdminProvider: React.FC<{ children: ReactNode }> = ({ children
       });
 
       Alert.alert(
-        'Success',
-        action === 'approve'
-          ? 'Application approved and forwarded to the District Admin.'
-          : 'Application rejected.',
+        action === 'approve' ? 'Approved' : 'Rejected',
+        serverMessage || (action === 'approve'
+          ? 'Your approval is recorded for the file. The State Admin grants the membership.'
+          : 'Your rejection is recorded for the file.'),
       );
 
       // Refetch for correct stats
@@ -241,31 +246,6 @@ export const BlockAdminProvider: React.FC<{ children: ReactNode }> = ({ children
 
 
 
-  /**
-   * Suspend, reactivate or permanently delete a member.
-   *
-   * The id sent is the application id the row carries. `memberId` on the same
-   * payload is the auth id whenever the applicant has a login — a different
-   * collection from the one the endpoint searched — so passing it returned
-   * "User not found" for a member plainly on screen.
-   *
-   * `delete` cascades on the server: application, credential, member record and
-   * all four additional forms. It cannot be undone, so the caller confirms.
-   */
-  const memberAction = async (member: AdminMember, action: 'activate' | 'suspend' | 'delete') => {
-    const id = member?.applicationId || member?.id;
-    if (!id) return;
-
-    setPendingActionId(String(id));
-    try {
-      await api.post(`/admin/users/${id}/${action}`, {});
-      await fetchDashboardData(true);
-    } catch (error: any) {
-      Alert.alert('Error', error?.response?.data?.message || `Failed to ${action} this member`);
-    } finally {
-      setPendingActionId(null);
-    }
-  };
 
   const value: BlockAdminContextType = {
     loading,
@@ -273,7 +253,6 @@ export const BlockAdminProvider: React.FC<{ children: ReactNode }> = ({ children
     stats,
     applicants,
     members,
-    memberAction,
     adminName: adminName && adminName !== 'Block Admin' ? adminName : dynamicRoleTitle,
     adminEmail,
     adminPhone,
@@ -286,6 +265,7 @@ export const BlockAdminProvider: React.FC<{ children: ReactNode }> = ({ children
 
     updateAdminProfile,
     pendingActionId,
+    scopeMessage,
   };
 
   return (

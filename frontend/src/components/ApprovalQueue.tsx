@@ -1,15 +1,13 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-  TextInput,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Applicant, ApplicantBuckets, AdminLevel, normalizeApplicationStatus } from '../types';
-import { COLORS, FONTS, SPACING } from '../theme/theme';
+import { resolveMediaUrl } from '../config/api.config';
+import {
+  PALETTE, SPACE, TYPE, SIZE,
+  ConsoleCard, ConsoleChip, ConsoleTabs, ConsoleButton, ConsoleState, TierProgressRail, GradientAvatar,
+  PremiumInput, FadeInUp, consoleStageKind,
+} from '../ui';
 
 type FilterKey = keyof ApplicantBuckets;
 
@@ -34,11 +32,9 @@ const FILTER_TABS: { key: FilterKey; label: string }[] = [
 /*
  * Why a queue is empty is more useful than the fact that it is.
  *
- * These sentences used to explain the relay - "applications appear here only
- * after the Block Admin approves them" - which was the honest answer to an empty
- * district queue and is now false. Every admin sees every application in their
- * own patch from the moment it is submitted, so an empty queue means one thing:
- * nobody has applied, or everything has been dealt with.
+ * Every admin sees every application in their own patch from the moment it is
+ * submitted, so an empty queue means one thing: nobody has applied, or
+ * everything has been dealt with.
  */
 const LEVEL_COPY: Record<AdminLevel, { title: string; waitingOn: string }> = {
   block: {
@@ -55,19 +51,10 @@ const LEVEL_COPY: Record<AdminLevel, { title: string; waitingOn: string }> = {
   },
 };
 
-/* Three stages, because there are three answers - see `ApplicantStage`. */
-const STAGE_COLORS: Record<string, { bg: string; fg: string }> = {
-  pending: { bg: '#FEF3C7', fg: '#D97706' },
-  approved: { bg: '#DCFCE7', fg: '#16A34A' },
-  rejected: { bg: '#FEE2E2', fg: '#DC2626' },
-};
+/** Quick fills for the reason field — the admin can still type anything. */
+const QUICK_REASONS = ['Incomplete application details', 'Applicant is outside this region', 'Duplicate application'];
 
-const getInitials = (fullName?: string | null): string => {
-  const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-};
+const STRIPE: Record<string, string> = { pending: PALETTE.amber, approved: PALETTE.green, rejected: PALETTE.red };
 
 const ApprovalQueue: React.FC<Props> = ({
   buckets,
@@ -119,28 +106,23 @@ const ApprovalQueue: React.FC<Props> = ({
     [onReview],
   );
 
-  const renderCard = (applicant: Applicant) => {
+  const renderCard = (applicant: Applicant, index: number) => {
     const stage = applicant?.stage || 'pending';
-    const palette = STAGE_COLORS[stage] || STAGE_COLORS.pending;
     const isBusy = busyId === (applicant?.id || '');
-    // Undecided is the whole test. This queue is geofenced to the admin's own
-    // region, so an applicant they can see is one they can decide - until one
-    // of the other two tiers holding the same file gets there first.
     /*
      * THIS TIER'S OWN VERDICT IS THE WHOLE TEST — not "has anybody decided".
      *
-     * The three tiers hold three separate verdicts. The State approving does
-     * not sign the District's slot, and the District's buttons stay live until
-     * the District itself acts. `canAct` is the server's answer; the stage
-     * fallback is the same answer for this tier and covers an older payload.
+     * The three tiers hold three separate verdicts. `canAct` is the server's
+     * answer; the stage fallback is the same answer for this tier and covers an
+     * older payload.
      */
     const canAct = applicant?.canAct ?? (stage === 'pending');
     const isRejecting = rejectingId === (applicant?.id || '');
 
     /*
-     * The APPLICATION's outcome, which the badge above does not report. Only
-     * the State's approval enrols anybody, so a block admin's own "Approved"
-     * badge says nothing about whether this person is a member.
+     * The APPLICATION's outcome, which the chip above does not report. Only the
+     * State's approval enrols anybody, so a block admin's own "Approved" chip
+     * says nothing about whether this person is a member.
      */
     const outcome = String(applicant?.outcome || applicant?.status || '');
     const enrolled = normalizeApplicationStatus(outcome) === 'Approved';
@@ -148,11 +130,6 @@ const ApprovalQueue: React.FC<Props> = ({
     const endorsement = String(applicant?.endorsementLine || '');
     const grantsMembership = applicant?.decidesOutcome !== false;
 
-    /*
-     * One line under the attribution, built here rather than in three screens.
-     * Each half is withheld when it would restate the badge — a State admin's
-     * own approved card does not need "Approved" printed under it again.
-     */
     const context = [
       endorsement,
       enrolled && stage !== 'approved' ? 'Approved — the member profile exists' : '',
@@ -162,460 +139,326 @@ const ApprovalQueue: React.FC<Props> = ({
         : '',
     ].filter(Boolean).join(' · ');
 
-    // Prefer a real member code; fall back to a short form of the application
-    // id, which is a genuine reference rather than an invented one.
-    const reference = (applicant?.memberCode || applicant?.id || '').slice(-6).toUpperCase();
-    const location = [applicant?.block, applicant?.district].filter(Boolean).join(', ');
+    // An applicant from abroad has no block or district; the website names the
+    // country and place instead (ApprovalQueue.tsx, `abroad`).
+    const extra: any = applicant || {};
+    const abroad = extra?.isInternational === true;
+    const location = abroad
+      ? ['Outside India', extra?.place, extra?.country].filter(Boolean).join(' · ')
+      : [applicant?.block, applicant?.district].filter(Boolean).join(', ');
+    const appliedOn = (() => {
+      const d = applicant?.submittedAt ? new Date(applicant.submittedAt) : null;
+      return d && !isNaN(d.getTime())
+        ? d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+        : '—';
+    })();
+
+    const declaredKind = String(applicant?.registrationType || applicant?.memberType || applicant?.role || '').toLowerCase();
+    const isStudent = declaredKind.includes('student');
+    const isAsp =
+      isStudent ||
+      applicant?.doingBusiness === false ||
+      applicant?.businessInfo?.doingBusiness === false ||
+      declaredKind.includes('aspirant');
+    const displayRole = isStudent
+      ? 'Student'
+      : isAsp
+      ? 'Aspirant'
+      : (applicant?.doingBusiness === true || applicant?.businessInfo?.doingBusiness === true || applicant?.organizationName
+          ? 'Business Member'
+          : (applicant?.role && String(applicant.role || '').toLowerCase() !== 'member' ? applicant.role : 'Business Member'));
+
+    const photoPath = String(extra?.profilePhoto || '');
+    const photo = photoPath ? resolveMediaUrl(photoPath) : '';
+    const memberType = String(applicant?.memberType || applicant?.role || 'Member');
+    const memberTypeLabel = memberType ? memberType.charAt(0).toUpperCase() + memberType.slice(1) : 'Member';
 
     return (
-      <TouchableOpacity
-        key={applicant?.id || applicant?.applicationId}
-        style={styles.card}
-        activeOpacity={onPressApplicant ? 0.85 : 1}
-        disabled={!onPressApplicant}
-        onPress={() => onPressApplicant && onPressApplicant(applicant)}
-      >
-        <View style={styles.cardHeader}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{getInitials(applicant?.fullName)}</Text>
+      <FadeInUp key={applicant?.id || applicant?.applicationId || index} delay={Math.min(index, 6) * 50}>
+        <ConsoleCard
+          onPress={onPressApplicant ? () => onPressApplicant(applicant) : undefined}
+          accessibilityLabel={`${applicant?.fullName || 'Applicant'}, ${applicant?.statusLabel || 'Pending'}`}
+          accent={STRIPE[stage] || PALETTE.amber}
+        >
+          <View style={styles.cardHeader}>
+            <GradientAvatar
+              name={applicant?.fullName}
+              uri={photo}
+              size={AVATAR}
+              tone="admin"
+              status={stage === 'pending' ? 'pending' : stage === 'approved' ? 'verified' : undefined}
+            />
+            <View style={styles.headerText}>
+              <Text style={styles.name} numberOfLines={2}>
+                {applicant?.fullName || 'Name not provided'}
+              </Text>
+              {!!applicant?.email && (
+                <Text style={styles.email} numberOfLines={1}>
+                  {applicant.email}
+                </Text>
+              )}
+              <ConsoleChip
+                label={applicant?.statusLabel || 'Pending'}
+                kind={consoleStageKind(stage)}
+                style={styles.chip}
+              />
+            </View>
+            {onPressApplicant ? <Icon name="chevron-right" size={22} color={PALETTE.textFaint} /> : null}
           </View>
 
-          <View style={styles.headerText}>
-            <Text style={styles.name} numberOfLines={1}>
-              {applicant?.fullName || 'Name not provided'}
-            </Text>
-            {!!applicant?.email && (
-              <Text style={styles.email} numberOfLines={1}>
-                {applicant.email}
+          {/* Only what the applicant actually submitted. An admin deciding on a
+              membership must never see a fabricated phone number or location. */}
+          <View style={styles.metaList}>
+            <View style={styles.metaRow}>
+              <View style={[styles.metaIcon, { backgroundColor: isAsp ? PALETTE.successSoft : PALETTE.indigoSoft }]}>
+                <Icon name={isAsp ? 'school' : 'business-center'} size={14} color={isAsp ? PALETTE.successText : PALETTE.indigo} />
+              </View>
+              <Text style={[styles.metaValue, { color: isAsp ? PALETTE.successText : PALETTE.indigo, fontWeight: '700' }]} numberOfLines={1}>
+                {displayRole}
               </Text>
+            </View>
+            {!!location && (
+              <View style={styles.metaRow}>
+                <View style={styles.metaIcon}><Icon name="location-on" size={14} color={PALETTE.textMuted} /></View>
+                <Text style={styles.metaValue} numberOfLines={2}>{location}</Text>
+              </View>
+            )}
+            {!!applicant?.phone && (
+              <View style={styles.metaRow}>
+                <View style={styles.metaIcon}><Icon name="call" size={14} color={PALETTE.textMuted} /></View>
+                <Text style={styles.metaValue} selectable>{applicant.phone}</Text>
+              </View>
             )}
           </View>
 
-          <View style={[styles.statusPill, { backgroundColor: palette.bg }]}>
-            <Text style={[styles.statusPillText, { color: palette.fg }]} numberOfLines={1}>
-              {applicant?.statusLabel || 'Pending'}
-            </Text>
+          {/* The three verdicts, Block → District → State, with this seat ringed. */}
+          <View style={styles.rail}>
+            <TierProgressRail app={applicant} you={level} />
           </View>
-        </View>
 
-        {/* Only what the applicant actually submitted. An admin deciding on a
-            membership must never see a fabricated phone number or location. */}
-        <View style={styles.metaGrid}>
+          {/* Applied on / Membership Type — how long a file has waited and what
+              kind of member it is, without opening it (website parity). */}
+          <View style={styles.facts}>
+            <View style={styles.fact}>
+              <Text style={styles.factLabel}>Applied on</Text>
+              <Text style={styles.factValue} numberOfLines={1}>{appliedOn}</Text>
+            </View>
+            <View style={styles.factDivider} />
+            <View style={styles.fact}>
+              <Text style={styles.factLabel}>Membership type</Text>
+              <Text style={styles.factValue} numberOfLines={1}>{memberTypeLabel}</Text>
+            </View>
+          </View>
 
-          {(() => {
-            const isAsp =
-              applicant?.doingBusiness === false ||
-              applicant?.businessInfo?.doingBusiness === false ||
-              String(applicant?.registrationType || applicant?.memberType || applicant?.role || '').toLowerCase().includes('aspirant');
-
-            const displayRole = isAsp
-              ? 'Aspirant'
-              : (applicant?.doingBusiness === true || applicant?.businessInfo?.doingBusiness === true || applicant?.organizationName
-                  ? 'Business Member'
-                  : (applicant?.role && applicant.role.toLowerCase() !== 'member' ? applicant.role : 'Business Member'));
-
-            return (
-              <View style={styles.metaHalf}>
-                <Text style={styles.metaLabel}>Role: </Text>
-                <Text
-                  style={[
-                    styles.metaValue,
-                    isAsp ? { color: '#059669', fontWeight: '700' } : { color: '#2563EB', fontWeight: '700' },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {displayRole}
-                </Text>
-              </View>
-            );
-          })()}
-          {!!location && (
-            <View style={styles.metaFull}>
-              <Icon name="location-on" size={14} color="#64748B" />
-              <Text style={styles.metaValue} numberOfLines={1}>
-                {location}
+          {/* Nobody at any tier covers this region, so it will sit here until the
+              Super Admin clears it or somebody is appointed. */}
+          {!!applicant?.orphaned && !!applicant?.fallbackReason && (
+            <View style={styles.escalation}>
+              <Icon name="trending-up" size={SIZE.iconSm} color={PALETTE.warningText} />
+              <Text style={styles.escalationText}>
+                {applicant.fallbackReason}
               </Text>
             </View>
           )}
-          {!!applicant?.phone && (
-            <View style={styles.metaFull}>
-              <Icon name="call" size={14} color="#64748B" />
-              <Text style={styles.metaValue}>{applicant.phone}</Text>
+
+          {!!applicant?.approvedByText && (
+            <View style={styles.attributionRow}>
+              <Icon name={stage === 'rejected' ? 'gpp-bad' : 'verified'} size={15} color={stage === 'rejected' ? PALETTE.dangerText : PALETTE.indigo} />
+              <Text style={[styles.attribution, stage === 'rejected' && { color: PALETTE.dangerText }]}>
+                {applicant.approvedByText}
+              </Text>
             </View>
           )}
-        </View>
 
-        {/* Nobody at any tier covers this region, so it will sit here until the
-            Super Admin clears it or somebody is appointed. It used to explain an
-            escalation; nothing escalates now, because all three tiers hold every
-            pending file in their region from the start. */}
-        {!!applicant?.orphaned && !!applicant?.fallbackReason && (
-          <View style={styles.escalation}>
-            <Icon name="trending-up" size={14} color="#B45309" />
-            <Text style={styles.escalationText} numberOfLines={2}>
-              {applicant.fallbackReason}
+          {!!context && (
+            <Text style={styles.context}>
+              {context}
             </Text>
-          </View>
-        )}
+          )}
 
-        {!!applicant?.approvedByText && (
-          <Text
-            style={[
-              styles.attribution,
-              stage === 'rejected' && { color: '#DC2626' },
-            ]}
-          >
-            {applicant.approvedByText}
-          </Text>
-        )}
+          {!!applicant?.rejectionReason && stage !== 'pending' && (
+            <View style={styles.reason}>
+              <Text style={styles.reasonLabel}>Reason</Text>
+              <Text style={styles.reasonText}>{applicant.rejectionReason}</Text>
+            </View>
+          )}
 
-        {!!context && (
-          <Text style={styles.attribution} numberOfLines={3}>
-            {context}
-          </Text>
-        )}
-
-        {!!applicant?.rejectionReason && stage !== 'pending' && (
-          <Text style={styles.reason} numberOfLines={3}>
-            Reason: {applicant.rejectionReason}
-          </Text>
-        )}
-
-        {canAct && !isRejecting && (
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.approveBtn]}
-              disabled={isBusy}
-              onPress={() => submit(applicant, 'approve')}
-            >
-              {isBusy && busyAction === 'approve' ? (
-                <ActivityIndicator size="small" color={COLORS.white} />
-              ) : (
-                <>
-                  <Icon name="check" size={16} color={COLORS.white} />
-                  <Text style={styles.actionText}>Approve</Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.rejectBtn]}
-              disabled={isBusy}
-              onPress={() => {
-                setRejectingId(applicant?.id || '');
-                setRejectReason('');
-              }}
-            >
-              <Icon name="close" size={16} color={COLORS.white} />
-              <Text style={styles.actionText}>Reject</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {canAct && isRejecting && (
-          <View style={styles.rejectForm}>
-            <Text style={styles.rejectLabel}>Reason for rejection</Text>
-            <TextInput
-              style={styles.rejectInput}
-              value={rejectReason}
-              onChangeText={setRejectReason}
-              placeholder="Explain why this application is being rejected"
-              placeholderTextColor="#94A3B8"
-              multiline
-            />
+          {canAct && !isRejecting && (
             <View style={styles.actions}>
-              <TouchableOpacity
-                style={[styles.actionBtn, styles.cancelBtn]}
+              <ConsoleButton
+                kind="danger"
+                size="sm"
+                icon="close"
+                label="Reject"
                 disabled={isBusy}
                 onPress={() => {
-                  setRejectingId(null);
+                  setRejectingId(applicant?.id || '');
                   setRejectReason('');
                 }}
-              >
-                <Text style={[styles.actionText, { color: '#475569' }]}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.actionBtn, styles.rejectBtn]}
-                disabled={isBusy}
-                onPress={() => submit(applicant, 'reject', (rejectReason || '').trim())}
-              >
-                {isBusy && busyAction === 'reject' ? (
-                  <ActivityIndicator size="small" color={COLORS.white} />
-                ) : (
-                  <Text style={styles.actionText}>Confirm Reject</Text>
-                )}
-              </TouchableOpacity>
+                style={styles.actionBtn}
+              />
+              <ConsoleButton
+                kind="approve"
+                size="sm"
+                icon="check"
+                label="Approve"
+                loading={isBusy && busyAction === 'approve'}
+                disabled={isBusy && busyAction !== 'approve'}
+                onPress={() => submit(applicant, 'approve')}
+                style={styles.actionBtn}
+              />
             </View>
-          </View>
-        )}
-      </TouchableOpacity>
+          )}
+
+          {/* Inline, never a native Modal — this queue lives inside tabs (Rule 2). */}
+          {canAct && isRejecting && (
+            <View style={styles.rejectForm}>
+              <PremiumInput
+                tone="admin"
+                label="Reason for rejection"
+                value={rejectReason}
+                onChangeText={setRejectReason}
+                placeholder="Explain why this application is being rejected"
+                multiline
+                icon="edit-note"
+                style={styles.fieldFlush}
+              />
+              <View style={styles.quick}>
+                {QUICK_REASONS.map((q) => (
+                  <TouchableOpacity
+                    key={q}
+                    onPress={() => setRejectReason((prev) => ((prev || '').trim() ? `${(prev || '').trim()}. ${q}` : q))}
+                    style={styles.quickChip}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Use reason: ${q}`}
+                  >
+                    <Icon name="add" size={13} color={PALETTE.indigo} />
+                    <Text style={styles.quickText} numberOfLines={1}>{q}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.actions}>
+                <ConsoleButton
+                  kind="soft"
+                  size="sm"
+                  label="Cancel"
+                  disabled={isBusy}
+                  onPress={() => {
+                    setRejectingId(null);
+                    setRejectReason('');
+                  }}
+                  style={styles.actionBtn}
+                />
+                <ConsoleButton
+                  kind="dangerSolid"
+                  size="sm"
+                  icon="block"
+                  label="Confirm Reject"
+                  loading={isBusy && busyAction === 'reject'}
+                  onPress={() => submit(applicant, 'reject', (rejectReason || '').trim())}
+                  style={styles.actionBtn}
+                />
+              </View>
+            </View>
+          )}
+        </ConsoleCard>
+      </FadeInUp>
     );
   };
 
+  const tabs = FILTER_TABS.map((tab) => ({
+    value: tab.key,
+    label: tab.label,
+    count: (safeBuckets[tab.key] || []).length,
+  }));
+
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>{copy.title}</Text>
-
-      {/* Flex row so all four pills stay visible and tappable on narrow screens. */}
-      <View style={styles.tabsRow}>
-        {FILTER_TABS.map(tab => {
-          const isActive = activeFilter === tab.key;
-          const count = (safeBuckets[tab.key] || []).length;
-
-          let activeBg = '#2563EB';
-          if (tab.key === 'approved') activeBg = '#16A34A';
-          else if (tab.key === 'rejected') activeBg = '#DC2626';
-          else if (tab.key === 'pending') activeBg = '#2563EB';
-
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              style={[styles.tab, isActive && { backgroundColor: activeBg, borderColor: activeBg }]}
-              activeOpacity={0.8}
-              onPress={() => setActiveFilter(tab.key)}
-            >
-              <Text
-                style={[styles.tabText, isActive && styles.tabTextActive]}
-                numberOfLines={1}
-              >
-                {tab.label} ({count})
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+      <View style={styles.titleRow}>
+        <Text style={styles.sectionTitle} accessibilityRole="header" numberOfLines={1}>{copy.title}</Text>
+        <View style={styles.countPill}>
+          <Text style={styles.sectionCount}>{visible.length} shown</Text>
+        </View>
       </View>
 
-      {visible.length > 0 ? (
-        visible.map(renderCard)
-      ) : (
-        <View style={styles.empty}>
-          <Icon name="inbox" size={36} color={COLORS.textDisabled} />
-          <Text style={styles.emptyTitle}>No {activeFilter} applications</Text>
-          <Text style={styles.emptyText}>
-            {activeFilter === 'pending'
-              ? copy.waitingOn
-              : 'Nothing to show in this bucket yet.'}
-          </Text>
-        </View>
-      )}
+      {/* Equal-width track: all four fit side by side at 360dp (Rule 4). */}
+      <ConsoleTabs
+        options={tabs}
+        value={activeFilter}
+        onChange={(v) => setActiveFilter(v as FilterKey)}
+        scrollable={false}
+      />
+
+      <View style={styles.list}>
+        {visible.length > 0 ? (
+          visible.map(renderCard)
+        ) : (
+          <ConsoleCard>
+            <ConsoleState
+              title={`No ${activeFilter === 'all' ? '' : `${activeFilter} `}applications`}
+              message={activeFilter === 'pending' ? copy.waitingOn : 'Nothing to show in this bucket yet.'}
+            />
+          </ConsoleCard>
+        )}
+      </View>
     </View>
   );
 };
 
+const AVATAR = 52;
+
 const styles = StyleSheet.create({
-  container: {
-    padding: SPACING.md,
+  container: { paddingTop: SPACE.md },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: SPACE.lg, marginBottom: SPACE.md, gap: SPACE.sm },
+  sectionTitle: { ...TYPE.heading, fontSize: 17, flexShrink: 1 },
+  countPill: { paddingHorizontal: SPACE.md - 2, paddingVertical: 4, borderRadius: 999, backgroundColor: PALETTE.indigoSoft },
+  sectionCount: { ...TYPE.caption, fontWeight: '700', color: PALETTE.indigoDark },
+  list: { paddingHorizontal: SPACE.lg, paddingTop: SPACE.md, gap: SPACE.md },
+
+  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.md },
+  headerText: { flex: 1, minWidth: 0 },
+  name: { ...TYPE.subheading, fontWeight: '800', fontSize: 16 },
+  email: { ...TYPE.caption, marginTop: SPACE.xxs },
+  chip: { marginTop: SPACE.sm - 2 },
+
+  metaList: { marginTop: SPACE.md, gap: SPACE.sm - 2 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
+  metaIcon: { width: 26, height: 26, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: PALETTE.divider },
+  metaValue: { ...TYPE.label, flex: 1, minWidth: 0 },
+
+  rail: {
+    marginTop: SPACE.md, paddingVertical: SPACE.md, paddingHorizontal: SPACE.xs, borderRadius: 16,
+    backgroundColor: PALETTE.indigoTint,
   },
-  sectionTitle: {
-    fontSize: FONTS.sizes.md,
-    fontWeight: FONTS.weights.bold,
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.sm,
-  },
-  tabsRow: {
-    flexDirection: 'row',
-    gap: 4,
-    marginBottom: SPACING.sm,
-  },
-  tab: {
-    flex: 1,
-    paddingHorizontal: 4,
-    paddingVertical: SPACING.sm,
-    borderRadius: 999,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E8EBF2',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabText: {
-    fontSize: FONTS.sizes.xs,
-    fontWeight: FONTS.weights.semiBold,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
-  tabTextActive: {
-    color: COLORS.white,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: SPACING.md,
-    marginBottom: SPACING.sm,
-    borderWidth: 1,
-    borderColor: '#E8EBF2',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#DBEAFE',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    color: '#1D4ED8',
-    fontWeight: '700',
-    fontSize: 17,
-  },
-  headerText: {
-    flex: 1,
-    marginLeft: SPACING.sm,
-  },
-  name: {
-    fontSize: FONTS.sizes.base,
-    fontWeight: FONTS.weights.semiBold,
-    color: COLORS.textPrimary,
-  },
-  email: {
-    marginTop: 2,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-  },
-  statusPill: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 4,
-    borderRadius: 999,
-    marginLeft: SPACING.xs,
-    maxWidth: 110,
-  },
-  statusPillText: {
-    fontSize: FONTS.sizes.xs,
-    fontWeight: FONTS.weights.bold,
-  },
-  metaGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: SPACING.sm,
-  },
-  metaHalf: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '50%',
-    marginBottom: 4,
-    paddingRight: SPACING.xs,
-  },
-  metaFull: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    marginTop: 2,
-    gap: 6,
-  },
-  metaLabel: {
-    fontSize: FONTS.sizes.xs,
-    color: '#64748B',
-  },
-  metaValue: {
-    flexShrink: 1,
-    fontSize: FONTS.sizes.xs,
-    color: '#334155',
-    fontWeight: FONTS.weights.medium,
-  },
-  attribution: {
-    marginTop: SPACING.sm,
-    fontSize: FONTS.sizes.xs,
-    color: '#2563EB',
-    fontWeight: FONTS.weights.medium,
-  },
+
+  facts: { flexDirection: 'row', alignItems: 'center', marginTop: SPACE.md, paddingTop: SPACE.md, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: PALETTE.divider },
+  fact: { flex: 1, minWidth: 0 },
+  factDivider: { width: StyleSheet.hairlineWidth * 2, alignSelf: 'stretch', backgroundColor: PALETTE.divider, marginHorizontal: SPACE.md },
+  factLabel: { ...TYPE.eyebrow, fontSize: 10, lineHeight: 13 },
+  factValue: { ...TYPE.bodyStrong, marginTop: 2 },
+
   escalation: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: SPACING.sm,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: '#FFFBEB',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
+    flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.sm, marginTop: SPACE.md,
+    paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm, borderRadius: 12, backgroundColor: PALETTE.warningSoft,
   },
-  escalationText: {
-    flex: 1,
-    fontSize: FONTS.sizes.xs,
-    color: '#B45309',
-    fontWeight: FONTS.weights.medium,
+  escalationText: { flex: 1, minWidth: 0, ...TYPE.caption, color: PALETTE.warningText },
+  attributionRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: SPACE.md },
+  attribution: { flex: 1, minWidth: 0, ...TYPE.caption, fontWeight: '700', color: PALETTE.indigo },
+  context: { marginTop: SPACE.xs, ...TYPE.caption, lineHeight: 17 },
+  reason: { marginTop: SPACE.sm, padding: SPACE.md, borderRadius: 12, backgroundColor: PALETTE.dangerSoft },
+  reasonLabel: { ...TYPE.eyebrow, color: PALETTE.dangerText, marginBottom: SPACE.xxs },
+  reasonText: { ...TYPE.caption, color: PALETTE.dangerText },
+
+  actions: { flexDirection: 'row', marginTop: SPACE.md, gap: SPACE.sm },
+  actionBtn: { flex: 1 },
+  rejectForm: { marginTop: SPACE.md, paddingTop: SPACE.md, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: PALETTE.divider },
+  fieldFlush: { marginBottom: 0 },
+  quick: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: SPACE.sm },
+  quickChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 3, maxWidth: '100%', minHeight: 32,
+    paddingHorizontal: SPACE.sm + 2, borderRadius: 999, backgroundColor: PALETTE.indigoSoft,
   },
-  reason: {
-    marginTop: 4,
-    fontSize: FONTS.sizes.xs,
-    color: '#64748B',
-  },
-  actions: {
-    flexDirection: 'row',
-    marginTop: SPACING.sm,
-    gap: SPACING.sm,
-  },
-  actionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.sm + 2,
-    borderRadius: 12,
-    gap: 6,
-  },
-  approveBtn: {
-    backgroundColor: '#16A34A',
-  },
-  rejectBtn: {
-    backgroundColor: '#DC2626',
-  },
-  cancelBtn: {
-    backgroundColor: '#F1F5F9',
-  },
-  actionText: {
-    color: COLORS.white,
-    fontSize: FONTS.sizes.base,
-    fontWeight: FONTS.weights.semiBold,
-  },
-  rejectForm: {
-    marginTop: SPACING.sm,
-    paddingTop: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-  },
-  rejectLabel: {
-    fontSize: FONTS.sizes.xs,
-    fontWeight: FONTS.weights.semiBold,
-    color: '#475569',
-    marginBottom: 4,
-  },
-  rejectInput: {
-    minHeight: 64,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: FONTS.sizes.sm,
-    color: '#0F172A',
-    textAlignVertical: 'top',
-  },
-  empty: {
-    alignItems: 'center',
-    paddingVertical: SPACING.xl,
-  },
-  emptyTitle: {
-    marginTop: SPACING.sm,
-    fontSize: FONTS.sizes.base,
-    fontWeight: FONTS.weights.semiBold,
-    color: COLORS.textPrimary,
-    textTransform: 'capitalize',
-  },
-  emptyText: {
-    marginTop: 4,
-    paddingHorizontal: SPACING.md,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
+  quickText: { fontSize: 12, lineHeight: 16, fontWeight: '600', color: PALETTE.indigoDark, flexShrink: 1 },
 });
 
 export default ApprovalQueue;

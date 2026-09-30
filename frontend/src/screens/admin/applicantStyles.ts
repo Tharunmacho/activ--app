@@ -1,22 +1,23 @@
 import { ApplicantStage } from '../../types';
+import { PALETTE } from '../../ui';
 
 /**
  * Soft-accent pairs used across the block admin screens: `tint` is the wash used
  * behind cards and pills, `solid` is the saturated colour for icons and text.
  */
 export const ACCENTS = {
-  indigo: { tint: '#EEF0FF', solid: '#5B5BD6' },
-  blue: { tint: '#E8F1FE', solid: '#2563EB' },
-  green: { tint: '#E7F6EC', solid: '#16A34A' },
-  red: { tint: '#FEECEC', solid: '#DC2626' },
-  amber: { tint: '#FEF4E6', solid: '#D97706' },
-  slate: { tint: '#EFF1F5', solid: '#64748B' },
+  indigo: { tint: PALETTE.indigoSoft, solid: PALETTE.indigo },
+  blue: { tint: PALETTE.blueSoft, solid: PALETTE.blue },
+  green: { tint: PALETTE.successSoft, solid: PALETTE.success },
+  red: { tint: PALETTE.dangerSoft, solid: PALETTE.danger },
+  amber: { tint: PALETTE.warningSoft, solid: PALETTE.warningText },
+  slate: { tint: PALETTE.divider, solid: PALETTE.textMuted },
 };
 
 export const SURFACE = {
-  background: '#F4F6FB',
-  card: '#FFFFFF',
-  border: '#E8EBF2',
+  background: PALETTE.canvasAdmin,
+  card: PALETTE.card,
+  border: PALETTE.border,
 };
 
 /*

@@ -1,0 +1,168 @@
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
+import {
+  PALETTE, SPACE, TYPE, SIZE, BRAND,
+  ConsoleScroll, ConsoleHeader, ConsoleButton, ConsoleNote, BrandLogo, GradientAvatar, PressableScale, FadeInUp,
+  AdminConsole3D, CONSOLE_ACCENTS, ConsoleAccent,
+} from '../../../ui';
+import { clearSession } from '../../../services/session';
+import { useAuthStore } from '../../../stores/exampleStore';
+import { resolveMediaUrl } from '../../../config/api.config';
+import { useSuperAdminData } from './context/SuperAdminContext';
+import { confirm } from './superKit';
+
+/**
+ * ============================================================================
+ * SUPER ADMIN — "More": admin maintenance
+ * ============================================================================
+ *
+ * In the app the Super Admin maintains admins and the three admin tiers only:
+ * Hub, Approvals, Members, Admins, Settings — and sign out. The one events
+ * screen is Event attendance, READ-ONLY (who came, when, admitted by whom;
+ * search and CSV) — SuperEventAttendance. Writing events, bookings, payments,
+ * donors, membership plans, Platinum, updates, notifications and the CMS are
+ * website-only by decision.
+ *
+ * Premium: the indigo wave header with the admin console art, and a grid of
+ * gradient tiles that spring when pressed.
+ */
+
+type Item = { key: string; icon: string; label: string; hint: string; accent: ConsoleAccent; go: (nav: any) => void };
+
+const tab = (name: string) => (nav: any) => nav.navigate(name);
+const stack = (name: string, params?: any) => (nav: any) => nav.navigate(name, params);
+
+const SECTIONS: { title: string; items: Item[] }[] = [
+  {
+    title: 'Applications & members',
+    items: [
+      { key: 'hub', icon: 'space-dashboard', label: 'Hub', hint: 'Every tier, every region', accent: 'indigo', go: tab('Hub') },
+      { key: 'approvals', icon: 'fact-check', label: 'Approvals', hint: 'Decide in the State seat', accent: 'sky', go: stack('SuperApprovals') },
+      { key: 'members', icon: 'groups', label: 'Members', hint: 'Active, expired, reminders', accent: 'green', go: stack('SuperMembers') },
+      { key: 'admins', icon: 'admin-panel-settings', label: 'Admins', hint: 'Block, district, state', accent: 'amber', go: tab('Admins') },
+    ],
+  },
+  {
+    title: 'Events',
+    items: [
+      { key: 'attendance', icon: 'how-to-reg', label: 'Event attendance', hint: 'Who came · read-only', accent: 'gold', go: stack('SuperEventAttendance') },
+    ],
+  },
+  {
+    title: 'Account',
+    items: [
+      { key: 'settings', icon: 'settings', label: 'Settings & audit', hint: 'Profile, password, audit log', accent: 'slate', go: tab('Settings') },
+    ],
+  },
+];
+
+/** One grid tile. Equal heights per row: the cell stretches, the tile fills it. */
+function Tile({ item, onPress, delay }: { item: Item; onPress: () => void; delay: number }) {
+  const a = CONSOLE_ACCENTS[item.accent] || CONSOLE_ACCENTS.indigo;
+  return (
+    <FadeInUp delay={delay} style={s.cellInner}>
+      <PressableScale onPress={onPress} style={s.flex} contentStyle={s.flex} accessibilityRole="button" accessibilityLabel={`${item.label}, ${item.hint}`}>
+        <View style={s.tileShadow}>
+        <View style={s.tile}>
+          <View pointerEvents="none" style={[s.tileGlow, { backgroundColor: a.soft }]} />
+          <View style={s.tileHead}>
+            <LinearGradient colors={a.grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.tileIcon}>
+              <Icon name={item.icon} size={SIZE.icon + 2} color={PALETTE.white} />
+            </LinearGradient>
+            <Icon name="arrow-outward" size={16} color={PALETTE.textFaint} />
+          </View>
+          <Text style={s.tileLabel} numberOfLines={1}>{item.label}</Text>
+          <Text style={s.tileHint} numberOfLines={2}>{item.hint}</Text>
+        </View>
+        </View>
+      </PressableScale>
+    </FadeInUp>
+  );
+}
+
+const SuperMenuScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
+  const { logout } = useAuthStore();
+  const { adminName, adminEmail, adminProfilePhoto } = useSuperAdminData() as any;
+
+  const signOut = async () => {
+    if (!(await confirm('Sign out', 'Sign out of the Super Admin account on this phone?', 'Sign out', true))) return;
+    try { await logout(); } catch { /* storage */ }
+    await clearSession();
+    navigation.reset({ index: 0, routes: [{ name: 'AdminLogin' }] });
+  };
+
+  let n = 0;
+
+  return (
+    <ConsoleScroll>
+      <ConsoleHeader
+        left={<BrandLogo size="sm" />}
+        right={<GradientAvatar name={adminName || 'Super Admin'} uri={adminProfilePhoto ? resolveMediaUrl(adminProfilePhoto) : ''} size={44} tone="admin" status="online" />}
+        eyebrow="Super Admin"
+        title={adminName ? String(adminName) : 'Everything, in one place'}
+        subtitle={adminEmail ? String(adminEmail) : 'Admin maintenance, built for your phone.'}
+        art={<AdminConsole3D size={100} />}
+        badges={[{ icon: 'public', label: 'All India' }, { icon: 'verified-user', label: 'Full access' }]}
+        waveHeight={62}
+      />
+
+      {SECTIONS.map((sec, si) => (
+        <View key={sec.title} style={si === 0 ? s.firstSection : undefined}>
+          <Text style={s.section}>{sec.title}</Text>
+          <View style={s.grid}>
+            {sec.items.map((it) => {
+              n += 1;
+              return (
+                <View key={it.key} style={s.cell}>
+                  <Tile item={it} delay={60 * n} onPress={() => it.go(navigation)} />
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      ))}
+
+      <ConsoleNote
+        icon="language"
+        style={s.note}
+        text="Event attendance (read-only) is in the app. Writing events, bookings, donors, membership plans, Platinum, updates and notifications are managed on the ACTIV website."
+      />
+
+      <FadeInUp delay={420} style={s.signout}>
+        <ConsoleButton kind="danger" icon="logout" label="Sign out" onPress={signOut} />
+        <Text style={s.signoutHint}>End the Super Admin session on this phone</Text>
+      </FadeInUp>
+    </ConsoleScroll>
+  );
+};
+
+const s = StyleSheet.create({
+  flex: { flex: 1 },
+  firstSection: { marginTop: -SPACE.lg },
+  section: { ...TYPE.eyebrow, color: PALETTE.indigoDark, marginHorizontal: SPACE.lg, marginTop: SPACE.lg, marginBottom: SPACE.md },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'stretch', paddingHorizontal: SPACE.lg },
+  cell: { width: '48.4%', marginBottom: SPACE.md },
+  cellInner: { flex: 1 },
+  tileShadow: {
+    flex: 1, borderRadius: 22, backgroundColor: PALETTE.card,
+    shadowColor: BRAND.indigoDeep, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 18, elevation: 4,
+  },
+  tile: {
+    flex: 1, backgroundColor: PALETTE.card, borderRadius: 22, borderWidth: 1, borderColor: 'rgba(226,232,240,0.9)',
+    padding: SPACE.lg, minHeight: 136, overflow: 'hidden',
+  },
+  tileGlow: { position: 'absolute', width: 110, height: 110, borderRadius: 55, top: -50, right: -40 },
+  tileHead: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: SPACE.md },
+  tileIcon: { width: SIZE.touch, height: SIZE.touch, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  tileLabel: { ...TYPE.subheading, fontWeight: '800' },
+  tileHint: { ...TYPE.caption, marginTop: SPACE.xxs },
+  note: { marginHorizontal: SPACE.lg, marginTop: SPACE.sm },
+  signout: { marginHorizontal: SPACE.lg, marginTop: SPACE.lg },
+  signoutHint: { ...TYPE.caption, textAlign: 'center', marginTop: SPACE.sm, color: PALETTE.textFaint },
+});
+
+export default SuperMenuScreen;

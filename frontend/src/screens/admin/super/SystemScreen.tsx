@@ -3,16 +3,12 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   FlatList,
-  ActivityIndicator,
-  StatusBar,
   RefreshControl,
   Alert,
-  Image,
+  ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -20,7 +16,13 @@ import api, { STORAGE_KEYS } from '../../../services/api';
 import { resolveMediaUrl } from '../../../config/api.config';
 import { useSuperAdminData } from './context/SuperAdminContext';
 import { useSuperAdminBack } from './useSuperAdminBack';
-import { SUPER, ACCENTS, superStyles, getInitials } from './superTheme';
+import LinearGradient from 'react-native-linear-gradient';
+import {
+  BottomActionBar, PALETTE, SPACE, TYPE, SIZE,
+  ConsoleFrame, ConsoleHeader, ConsoleCard, ConsoleChip, ConsoleTabs, ConsoleSearch, ConsoleButton, ConsolePill,
+  ConsoleSectionTitle, ConsoleCountUp, GradientAvatar, GlassIconButton, PremiumSection, PremiumInput, PressableScale,
+  FadeInUp, AuditLog3D, ProfileGear3D, CONSOLE_LIST, CONSOLE_ACCENTS,
+} from '../../../ui';
 import { SkeletonList } from './components/Skeleton';
 import EmptyState from './components/EmptyState';
 
@@ -48,15 +50,15 @@ const CATEGORY_TABS: { key: Category; label: string }[] = [
 ];
 
 const ACTION_ICON: Record<string, { icon: string; fg: string; bg: string }> = {
-  'application.approved': { icon: 'check-circle', fg: ACCENTS.green, bg: ACCENTS.lightGreen },
-  'application.rejected': { icon: 'cancel', fg: ACCENTS.red, bg: ACCENTS.lightRed },
-  'admin.created': { icon: 'person-add', fg: ACCENTS.purple, bg: ACCENTS.lightPurple },
-  'admin.updated': { icon: 'edit', fg: ACCENTS.orange, bg: ACCENTS.lightOrange },
-  'admin.deleted': { icon: 'person-remove', fg: ACCENTS.red, bg: ACCENTS.lightRed },
-  'event.created': { icon: 'event', fg: ACCENTS.purple, bg: ACCENTS.lightPurple },
-  'event.published': { icon: 'campaign', fg: ACCENTS.green, bg: ACCENTS.lightGreen },
-  'event.unpublished': { icon: 'visibility-off', fg: SUPER.textMuted, bg: SUPER.field },
-  'event.deleted': { icon: 'delete-outline', fg: ACCENTS.red, bg: ACCENTS.lightRed },
+  'application.approved': { icon: 'check-circle', fg: PALETTE.successText, bg: PALETTE.successSoft },
+  'application.rejected': { icon: 'cancel', fg: PALETTE.dangerText, bg: PALETTE.dangerSoft },
+  'admin.created': { icon: 'person-add', fg: PALETTE.indigo, bg: PALETTE.indigoSoft },
+  'admin.updated': { icon: 'edit', fg: PALETTE.warningText, bg: PALETTE.warningSoft },
+  'admin.deleted': { icon: 'person-remove', fg: PALETTE.dangerText, bg: PALETTE.dangerSoft },
+  'event.created': { icon: 'event', fg: PALETTE.indigo, bg: PALETTE.indigoSoft },
+  'event.published': { icon: 'campaign', fg: PALETTE.successText, bg: PALETTE.successSoft },
+  'event.unpublished': { icon: 'visibility-off', fg: PALETTE.textMuted, bg: PALETTE.field },
+  'event.deleted': { icon: 'delete-outline', fg: PALETTE.dangerText, bg: PALETTE.dangerSoft },
 };
 
 const PAGE_SIZE = 30;
@@ -70,6 +72,14 @@ const formatStamp = (value?: string | null): string => {
   return date.toLocaleString('en-GB', {
     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
   });
+};
+
+/** `22 Aug 2026` — the timeline's day headings. */
+const dayLabel = (value?: string | null): string => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
 };
 
 /**
@@ -92,6 +102,7 @@ const SystemScreen = ({ navigation }: any) => {
   const [phoneInput, setPhoneInput] = useState(adminPhone);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [revealed, setRevealed] = useState<{ [label: string]: boolean }>({});
 
   useEffect(() => {
@@ -101,32 +112,56 @@ const SystemScreen = ({ navigation }: any) => {
   }, [adminName, adminEmail, adminPhone]);
 
   const handleSaveProfile = async () => {
+    // The website ProfileEditModal's checks, before anything is sent.
+    const name = (nameInput || '').trim();
+    const email = (emailInput || '').trim();
+    if (!name) return Alert.alert('Validation Error', 'Please enter your full name.');
+    if (!email) return Alert.alert('Validation Error', 'Please enter your email.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return Alert.alert('Validation Error', 'Please enter a valid email address.');
+    }
+    if (newPassword || oldPassword || confirmPassword) {
+      if (!oldPassword) return Alert.alert('Validation Error', 'Please enter your current password.');
+      if (!newPassword) return Alert.alert('Validation Error', 'Please enter a new password.');
+      if (newPassword.length < 6) return Alert.alert('Validation Error', 'New password must be at least 6 characters.');
+      if (newPassword !== confirmPassword) {
+        return Alert.alert('Validation Error', 'New password and confirm password do not match.');
+      }
+      if (oldPassword === newPassword) {
+        return Alert.alert('Validation Error', 'New password must be different from current password.');
+      }
+    }
+
     setIsSaving(true);
     let changed = 0;
+    let passwordChanged = false;
     try {
-      if (nameInput !== adminName || emailInput !== adminEmail || phoneInput !== adminPhone) {
+      if (name !== adminName || email !== adminEmail || phoneInput !== adminPhone) {
+        // `phoneNumber` is sent even when blank: the server reads the KEY's
+        // presence, so an emptied number is a removal, not "unchanged".
         await api.put('/admin/profile', {
-          fullName: nameInput,
-          email: emailInput,
+          fullName: name,
+          email,
           phoneNumber: (phoneInput || '').trim(),
         });
-        updateAdminProfile(nameInput, emailInput, (phoneInput || '').trim());
+        updateAdminProfile(name, email, (phoneInput || '').trim());
         changed += 1;
       }
 
       if (newPassword) {
-        if (!oldPassword) {
-          Alert.alert('Validation Error', 'Provide your current password to set a new one.');
-          setIsSaving(false);
-          return;
-        }
         await api.post('/auth/change-password', { oldPassword, newPassword });
         setOldPassword('');
         setNewPassword('');
+        setConfirmPassword('');
         changed += 1;
+        passwordChanged = true;
       }
 
-      if (changed > 0) Alert.alert('Success', 'Profile updated successfully!');
+      if (passwordChanged) {
+        Alert.alert('Success', 'Password updated successfully! Please use your new password next time you sign in.');
+      } else if (changed > 0) {
+        Alert.alert('Success', 'Profile updated successfully!');
+      }
       setIsEditing(false);
       setRevealed({});
     } catch (error: any) {
@@ -142,37 +177,35 @@ const SystemScreen = ({ navigation }: any) => {
     value: string,
     onChangeText: (text: string) => void,
     placeholder: string,
-    options: { secure?: boolean; keyboard?: any; capitalize?: any } = {},
+    options: { secure?: boolean; keyboard?: any; capitalize?: any; icon?: string } = {},
   ) => {
     const shown = !!options.secure && !!revealed[label];
     return (
-      <View style={styles.inputContainer} key={label}>
-        <Text style={styles.inputLabel}>{label}</Text>
-        <View style={styles.inputRow}>
-          <TextInput
-            style={[styles.inputField, styles.inputFlex, options.secure && styles.inputWithIcon]}
-            value={value}
-            onChangeText={onChangeText}
-            placeholder={placeholder}
-            placeholderTextColor={SUPER.textFaint}
-            secureTextEntry={!!options.secure && !shown}
-            keyboardType={options.keyboard || 'default'}
-            autoCapitalize={options.capitalize || 'words'}
-            autoCorrect={false}
-            editable={isEditing}
-          />
-          {options.secure ? (
-            <TouchableOpacity
-              style={styles.revealBtn}
-              onPress={() => setRevealed(prev => ({ ...prev, [label]: !prev[label] }))}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityLabel={shown ? 'Hide password' : 'Show password'}
-            >
-              <Icon name={shown ? 'visibility-off' : 'visibility'} size={20} color={SUPER.textFaint} />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      </View>
+      <PremiumInput
+        key={label}
+        tone="admin"
+        label={label}
+        icon={options.icon}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        secureTextEntry={!!options.secure && !shown}
+        keyboardType={options.keyboard || 'default'}
+        autoCapitalize={options.capitalize || 'words'}
+        autoCorrect={false}
+        editable={isEditing}
+        right={options.secure ? (
+          <TouchableOpacity
+            style={styles.revealBtn}
+            onPress={() => setRevealed(prev => ({ ...prev, [label]: !prev[label] }))}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={shown ? 'Hide password' : 'Show password'}
+          >
+            <Icon name={shown ? 'visibility-off' : 'visibility'} size={SIZE.icon} color={PALETTE.textFaint} />
+          </TouchableOpacity>
+        ) : undefined}
+      />
     );
   };
 
@@ -202,7 +235,14 @@ const SystemScreen = ({ navigation }: any) => {
   }, [query]);
 
   const params = useMemo(
-    () => ({ category, q: (debouncedQuery || '').trim(), limit: PAGE_SIZE }),
+    () => {
+      const q = (debouncedQuery || '').trim();
+      return {
+        limit: PAGE_SIZE,
+        ...(category !== 'all' ? { category } : {}),
+        ...(q.length >= 2 ? { q } : {}),
+      };
+    },
     [category, debouncedQuery],
   );
 
@@ -257,7 +297,7 @@ const SystemScreen = ({ navigation }: any) => {
           } catch {
             // A storage failure must not trap the admin in the console.
           }
-          navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+          navigation.reset({ index: 0, routes: [{ name: 'AdminLogin' }] });
         },
       },
     ]);
@@ -268,59 +308,67 @@ const SystemScreen = ({ navigation }: any) => {
     [],
   );
 
-  const renderItem = useCallback(({ item }: { item: AuditEntry }) => {
-    const tone = ACTION_ICON[item?.action] || { icon: 'history', fg: SUPER.textMuted, bg: SUPER.field };
+  const renderItem = useCallback(({ item, index }: { item: AuditEntry; index: number }) => {
+    const tone = ACTION_ICON[item?.action] || { icon: 'history', fg: PALETTE.textMuted, bg: PALETTE.field };
+    // A day heading whenever the day changes — the log reads as a timeline.
+    const day = dayLabel(item?.createdAt);
+    const prevDay = index > 0 ? dayLabel(entries?.[index - 1]?.createdAt) : '';
+    const showDay = !!day && day !== prevDay;
+    const last = index === (entries || []).length - 1;
     return (
-      <View style={styles.entryCard}>
-        <View style={[styles.entryIcon, { backgroundColor: tone.bg }]}>
-          <Icon name={tone.icon} size={18} color={tone.fg} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.entrySummary}>{item?.summary || item?.action || 'Action recorded'}</Text>
-          <View style={styles.entryMetaRow}>
-            <Icon name="person" size={12} color={SUPER.textFaint} />
-            <Text style={styles.entryMeta} numberOfLines={1}>
-              {[item?.actorName, item?.location].filter(Boolean).join(' · ') || 'Unknown actor'}
-            </Text>
+      <View style={styles.gutter}>
+        {showDay ? (
+          <View style={styles.dayRow}>
+            <View style={styles.dayDot} />
+            <Text style={styles.dayText}>{day}</Text>
           </View>
-          <View style={styles.entryFooter}>
-            <Icon name="schedule" size={12} color={SUPER.textFaint} />
-            <Text style={styles.entryStamp}>{formatStamp(item?.createdAt) || 'Unknown time'}</Text>
-            {item?.proxy ? (
-              <View style={styles.proxyTag}><Text style={styles.proxyTagText}>Proxy</Text></View>
-            ) : null}
+        ) : null}
+        <View style={styles.entryRow}>
+          <View style={styles.rail}>
+            <View style={[styles.entryIcon, { backgroundColor: tone.bg }]}>
+              <Icon name={tone.icon} size={18} color={tone.fg} />
+            </View>
+            {!last ? <View style={styles.railLine} /> : null}
           </View>
+          <ConsoleCard style={styles.entryCard}>
+            <Text style={styles.entrySummary}>{item?.summary || item?.action || 'Action recorded'}</Text>
+            <View style={styles.entryMetaRow}>
+              <Icon name="person" size={14} color={PALETTE.textFaint} />
+              <Text style={styles.entryMeta} numberOfLines={2}>
+                {[item?.actorName || item?.actorEmail, item?.actorRoleLabel, item?.location].filter(Boolean).join(' · ') || 'Unknown actor'}
+              </Text>
+            </View>
+            <View style={styles.entryFooter}>
+              <Icon name="schedule" size={14} color={PALETTE.textFaint} />
+              <Text style={styles.entryStamp}>{formatStamp(item?.createdAt) || 'Unknown time'}</Text>
+              {item?.proxy ? <ConsoleChip label="Proxy" kind="warning" /> : null}
+            </View>
+          </ConsoleCard>
         </View>
       </View>
     );
-  }, []);
+  }, [entries]);
 
   const listFooter = () => {
-    if (loadingMore) return <ActivityIndicator style={{ marginVertical: 20 }} size="small" color={ACCENTS.purple} />;
+    if (tab !== 'audit') return null;
+    if (loadingMore) return <ActivityIndicator style={styles.more} size="small" color={PALETTE.indigo} />;
     if (page < pages) {
       return (
-        <TouchableOpacity
-          style={[superStyles.ghostButton, { marginBottom: 16 }]}
-          onPress={() => fetchPage(page + 1, 'append')}
-          activeOpacity={0.8}
-        >
-          <Text style={superStyles.ghostButtonText}>Load more</Text>
-        </TouchableOpacity>
+        <ConsoleButton kind="soft" icon="expand-more" label="Load more" onPress={() => fetchPage(page + 1, 'append')} style={styles.loadMore} />
       );
     }
     return null;
   };
 
   const listEmpty = () => {
-    if (loading) return <SkeletonList count={5} />;
+    if (tab !== 'audit') return null;
+    if (loading) return <View style={styles.gutter}><SkeletonList count={5} /></View>;
     if (error) {
-      return <EmptyState icon="cloud-off" accentIcon="refresh" tone="error" title={error} caption="Pull down to try again." />;
+      return <EmptyState tone="error" title={error} caption="Pull down to try again." action="Try again" onAction={() => fetchPage(1, 'replace')} />;
     }
     return (
       <EmptyState
-        icon="history"
-        accentIcon="visibility"
-        title="Nothing recorded yet"
+        title={(query || '').trim() || category !== 'all' ? 'Nothing matches that filter' : 'No activity recorded yet'}
         caption="Approvals, rejections and admin changes appear here as they happen."
       />
     );
@@ -337,6 +385,7 @@ const SystemScreen = ({ navigation }: any) => {
         setIsEditing(false);
         setOldPassword('');
         setNewPassword('');
+        setConfirmPassword('');
         setRevealed({});
         setNameInput(adminName);
         setEmailInput(adminEmail);
@@ -353,6 +402,7 @@ const SystemScreen = ({ navigation }: any) => {
 
   const handlePhotoUpload = async () => {
     try {
+      if (typeof launchImageLibrary !== 'function') return;
       const result = await launchImageLibrary({
         mediaType: 'photo',
         quality: 0.8,
@@ -393,302 +443,225 @@ const SystemScreen = ({ navigation }: any) => {
   };
 
   const renderProfile = () => (
-    <View style={styles.profileScroll}>
-      {/* Profile card, matching the tier admins' settings screen. */}
-      <View style={styles.profileCard}>
-        <TouchableOpacity style={styles.avatarLarge} onPress={handlePhotoUpload} disabled={uploading}>
-          {adminProfilePhoto ? (
-            <Image 
-              source={{ uri: resolveMediaUrl(adminProfilePhoto) }} 
-              style={{ width: '100%', height: '100%', borderRadius: 999 }} 
-            />
-          ) : (
-            <Text style={styles.avatarLargeText}>{getInitials(adminName)}</Text>
-          )}
-          
-          <View style={styles.cameraIconBadge}>
-            {uploading ? (
-              <ActivityIndicator size="small" color="#FFF" />
-            ) : (
-              <Icon name="camera-alt" size={14} color="#FFF" />
-            )}
-          </View>
-        </TouchableOpacity>
-        <View style={styles.profileInfo}>
-          <Text style={styles.profileName} numberOfLines={1}>{adminName || 'Super Admin'}</Text>
-          <Text style={styles.profileRole}>Super Admin</Text>
-          <Text style={styles.profileEmail} numberOfLines={1}>{adminEmail || 'No email on this account'}</Text>
-        </View>
-      </View>
-
-      <View style={superStyles.formCard}>
-        <View style={styles.formHeaderRow}>
-          <Text style={styles.menuSectionTitle}>Profile Information</Text>
-          <TouchableOpacity
-            style={styles.editBtn}
-            onPress={() => (isEditing ? handleSaveProfile() : setIsEditing(true))}
-            disabled={isSaving}
-            activeOpacity={0.8}
-          >
-            {isSaving
-              ? <ActivityIndicator size="small" color="#FFFFFF" />
-              : <Text style={styles.editBtnText}>{isEditing ? 'Save' : 'Edit'}</Text>}
-          </TouchableOpacity>
-        </View>
-
-        {renderField('Full Name', nameInput, setNameInput, 'Enter your name')}
-        {renderField('Email Address', emailInput, setEmailInput, 'Enter your email', {
-          keyboard: 'email-address', capitalize: 'none',
-        })}
-        {renderField('Mobile Number', phoneInput, setPhoneInput, 'Enter your mobile number', {
-          keyboard: 'phone-pad',
-        })}
-
-        {isEditing ? (
-          <>
-            {renderField('Current Password', oldPassword, setOldPassword, 'Enter current password', {
-              secure: true, capitalize: 'none',
-            })}
-            {renderField('New Password', newPassword, setNewPassword, 'Leave blank to keep', {
-              secure: true, capitalize: 'none',
-            })}
-          </>
-        ) : null}
-      </View>
-
-      <View style={superStyles.formCard}>
-        <Text style={styles.menuSectionTitle}>Platform</Text>
-        {[
-          { icon: 'groups', label: 'Total members', value: stats.totalMembers, color: ACCENTS.purple, light: ACCENTS.lightPurple },
-          { icon: 'description', label: 'Applications', value: stats.totalApplications, color: ACCENTS.orange, light: ACCENTS.lightOrange },
-          { icon: 'admin-panel-settings', label: 'Admin accounts', value: stats.totalAdmins, color: ACCENTS.green, light: ACCENTS.lightGreen },
-        ].map((row, index, all) => (
-          <View
-            key={row.label}
-            style={[styles.summaryRow, index === all.length - 1 && styles.summaryRowLast]}
-          >
-            <View style={[styles.summaryIcon, { backgroundColor: row.light }]}>
-              <Icon name={row.icon} size={18} color={row.color} />
+    <View>
+      {/* Profile card, lifted over the waves. */}
+      <FadeInUp style={styles.overlap}>
+        <ConsoleCard>
+          <View style={styles.profileRow}>
+            <PressableScale onPress={handlePhotoUpload} disabled={uploading} scaleTo={0.94} accessibilityRole="button" accessibilityLabel="Change photo">
+              <GradientAvatar
+                name={adminName || 'Super Admin'}
+                uri={adminProfilePhoto ? resolveMediaUrl(adminProfilePhoto) : ''}
+                size={AVATAR}
+                tone="admin"
+              />
+              <LinearGradient colors={CONSOLE_ACCENTS.indigo.grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cameraIconBadge}>
+                {uploading ? (
+                  <ActivityIndicator size="small" color={PALETTE.white} />
+                ) : (
+                  <Icon name="camera-alt" size={14} color={PALETTE.white} />
+                )}
+              </LinearGradient>
+            </PressableScale>
+            <View style={styles.flexText}>
+              <Text style={styles.profileName} numberOfLines={2}>{adminName || 'Super Admin'}</Text>
+              <Text style={styles.profileRole}>Super Admin</Text>
+              <Text style={styles.profileEmail} numberOfLines={1}>{adminEmail || 'No email on this account'}</Text>
+              <View style={styles.profileMetaRow}>
+                {/* A super admin is not geofenced — the website says the same. */}
+                <ConsoleChip label="All India" kind="info" icon="public" />
+                <ConsoleChip label="Active" kind="approved" />
+              </View>
             </View>
-            <Text style={styles.summaryLabel}>{row.label}</Text>
-            <Text style={[styles.summaryValue, { color: row.color }]}>{Number(row.value || 0)}</Text>
           </View>
-        ))}
-      </View>
+        </ConsoleCard>
+      </FadeInUp>
 
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
-        <Icon name="logout" size={20} color={ACCENTS.red} />
-        <Text style={styles.logoutBtnText}>Log Out</Text>
-      </TouchableOpacity>
+      <FadeInUp delay={100}>
+        <PremiumSection
+          tone="admin"
+          icon="badge"
+          title="Profile Information"
+          subtitle={isEditing ? 'Editing — save with the button below' : 'Tap Edit to change your details'}
+        >
+          {!isEditing ? (
+            <View style={styles.editRow}>
+              <ConsolePill icon="edit" label="Edit profile" onPress={() => setIsEditing(true)} disabled={isSaving} />
+            </View>
+          ) : null}
+
+          {renderField('Full Name', nameInput, setNameInput, 'Enter your name', { icon: 'person-outline' })}
+          {renderField('Email Address', emailInput, setEmailInput, 'Enter your email', {
+            keyboard: 'email-address', capitalize: 'none', icon: 'mail-outline',
+          })}
+          {renderField('Mobile Number', phoneInput, setPhoneInput, 'Enter your mobile number', {
+            keyboard: 'phone-pad', icon: 'phone',
+          })}
+
+          {isEditing ? (
+            <>
+              <View style={styles.rule} />
+              <Text style={styles.groupLabel}>Change password (optional)</Text>
+              {renderField('Current Password', oldPassword, setOldPassword, 'Enter current password', {
+                secure: true, capitalize: 'none', icon: 'lock-outline',
+              })}
+              {renderField('New Password', newPassword, setNewPassword, 'Leave blank to keep', {
+                secure: true, capitalize: 'none', icon: 'lock-reset',
+              })}
+              {newPassword ? renderField('Confirm New Password', confirmPassword, setConfirmPassword, 'Confirm new password', {
+                secure: true, capitalize: 'none', icon: 'lock-outline',
+              }) : null}
+            </>
+          ) : null}
+        </PremiumSection>
+      </FadeInUp>
+
+      <ConsoleSectionTitle icon="insights" title="Platform" subtitle="Live figures from the overview" style={styles.sectionTight} />
+      <FadeInUp delay={160} style={styles.gutter}>
+        <ConsoleCard>
+          <View style={styles.platformRow}>
+            {[
+              { icon: 'groups', label: 'Total members', value: stats.totalMembers, accent: 'indigo' as const },
+              { icon: 'description', label: 'Applications', value: stats.totalApplications, accent: 'amber' as const },
+              { icon: 'admin-panel-settings', label: 'Admin accounts', value: stats.totalAdmins, accent: 'green' as const },
+            ].map((row, index) => {
+              const a = CONSOLE_ACCENTS[row.accent];
+              return (
+                <View key={row.label} style={[styles.platformCell, index > 0 && styles.platformDivider]}>
+                  <LinearGradient colors={a.grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.platformIcon}>
+                    <Icon name={row.icon} size={18} color={PALETTE.white} />
+                  </LinearGradient>
+                  <ConsoleCountUp value={Number(row.value || 0)} style={[styles.platformValue, { color: a.fg }]} />
+                  <Text style={styles.platformLabel} numberOfLines={2}>{row.label}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </ConsoleCard>
+      </FadeInUp>
+
+      {!isEditing ? (
+        <FadeInUp delay={220} style={styles.logout}>
+          <ConsoleButton kind="danger" icon="logout" label="Log Out" onPress={handleLogout} />
+        </FadeInUp>
+      ) : null}
+    </View>
+  );
+
+  const footer = tab === 'profile' && isEditing ? (
+    <BottomActionBar safeBottom={false}>
+      <ConsoleButton kind="soft" label="Cancel" onPress={() => goBack()} style={styles.flex} />
+      <ConsoleButton icon="check" label="Save changes" loading={isSaving} onPress={handleSaveProfile} style={styles.flex} />
+    </BottomActionBar>
+  ) : undefined;
+
+  const header = (
+    <View>
+      <ConsoleHeader
+        left={<GlassIconButton icon="arrow-back" onPress={goBack} accessibilityLabel="Back" />}
+        topCenter="Super Admin"
+        eyebrow={tab === 'audit' ? `${total} recorded actions` : 'Your account'}
+        title={tab === 'audit' ? 'Audit log' : 'Settings'}
+        subtitle={tab === 'audit' ? 'Who approved, rejected, created or deleted what — and when' : 'Profile, password and the system log'}
+        art={tab === 'audit' ? <AuditLog3D size={96} /> : <ProfileGear3D size={92} />}
+        waveHeight={tab === 'profile' ? 62 : 58}
+      >
+        <ConsoleTabs
+          value={tab}
+          onChange={setTab}
+          options={[{ value: 'profile', label: 'Profile' }, { value: 'audit', label: 'Audit Log' }]}
+          style={styles.headerTabs}
+        />
+      </ConsoleHeader>
+
+      {tab === 'profile' ? renderProfile() : (
+        <View>
+          <ConsoleSearch value={query} onChangeText={setQuery} placeholder="Who did what — name, email or applicant" />
+          <ConsoleTabs
+            value={category}
+            onChange={setCategory}
+            options={CATEGORY_TABS.map(item => {
+              const count = item.key === 'all' ? counts.all : counts[item.key];
+              return { value: item.key, label: item.label, ...(count !== undefined ? { count: Number(count || 0) } : {}) };
+            })}
+            style={styles.categoryTabs}
+          />
+        </View>
+      )}
     </View>
   );
 
   return (
-    <SafeAreaView style={superStyles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={SUPER.bg} />
-
-      <View style={superStyles.pageHeader}>
-        <TouchableOpacity style={superStyles.backBtn} onPress={goBack} activeOpacity={0.7}>
-          <Icon name="arrow-back" size={24} color={SUPER.text} />
-        </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={superStyles.pageTitle}>Settings</Text>
-          <Text style={superStyles.pageSubtitle}>
-            {tab === 'audit' ? `${total} recorded actions` : 'Profile and system log'}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.tabsWrap}>
-        <View style={superStyles.tabsRow}>
-          {(['profile', 'audit'] as const).map(key => {
-            const isActive = tab === key;
-            return (
-              <TouchableOpacity
-                key={key}
-                style={[superStyles.tabPill, isActive && superStyles.tabPillActive]}
-                onPress={() => setTab(key)}
-                activeOpacity={0.75}
-              >
-                <Text
-                  style={[superStyles.tabPillText, isActive && superStyles.tabPillTextActive]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  {key === 'profile' ? 'Profile' : 'Audit Log'}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      {tab === 'profile' ? (
-        <FlatList
-          data={[]}
-          keyExtractor={keyExtractor}
-          renderItem={() => null}
-          contentContainerStyle={superStyles.listContent}
-          showsVerticalScrollIndicator={false}
-          ListHeaderComponent={renderProfile()}
-        />
-      ) : (
-        <>
-          <View style={superStyles.searchBar}>
-            <Icon name="search" size={20} color={SUPER.textFaint} />
-            <TextInput
-              style={superStyles.searchInput}
-              placeholder="Who did what — name, email or applicant"
-              placeholderTextColor={SUPER.textFaint}
-              value={query}
-              onChangeText={setQuery}
-              autoCorrect={false}
-              autoCapitalize="none"
-            />
-            {query ? (
-              <TouchableOpacity onPress={() => setQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Icon name="close" size={20} color={SUPER.textFaint} />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
-          <View style={styles.tabsWrap}>
-            <View style={superStyles.tabsRow}>
-              {CATEGORY_TABS.map(item => {
-                const isActive = category === item.key;
-                const count = item.key === 'all' ? counts.all : counts[item.key];
-                return (
-                  <TouchableOpacity
-                    key={item.key}
-                    style={[superStyles.tabPill, isActive && superStyles.tabPillActive]}
-                    onPress={() => setCategory(item.key)}
-                    activeOpacity={0.75}
-                  >
-                    <Text
-                      style={[superStyles.tabPillText, isActive && superStyles.tabPillTextActive]}
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                    >
-                      {item.label}{count !== undefined ? ` (${count})` : ''}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          <FlatList
-            data={entries || []}
-            keyExtractor={keyExtractor}
-            renderItem={renderItem}
-            contentContainerStyle={superStyles.listContent}
-            initialNumToRender={10}
-            maxToRenderPerBatch={10}
-            windowSize={10}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={listEmpty}
-            ListFooterComponent={listFooter}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchPage(1, 'refresh')} />}
-          />
-        </>
-      )}
-    </SafeAreaView>
+    <ConsoleFrame footer={footer} avoidKeyboard>
+      <FlatList
+        data={tab === 'audit' ? (entries || []) : []}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        contentContainerStyle={CONSOLE_LIST}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={header}
+        ListEmptyComponent={listEmpty}
+        ListFooterComponent={listFooter}
+        refreshControl={tab === 'audit'
+          ? <RefreshControl refreshing={refreshing} onRefresh={() => fetchPage(1, 'refresh')} colors={[PALETTE.indigo]} tintColor={PALETTE.white} />
+          : undefined}
+      />
+    </ConsoleFrame>
   );
 };
 
+const AVATAR = 76;
+
 const styles = StyleSheet.create({
-  tabsWrap: { paddingHorizontal: 16 },
-  profileScroll: { paddingTop: 4 },
+  flex: { flex: 1 },
+  flexText: { flex: 1, minWidth: 0 },
+  gutter: { marginHorizontal: SPACE.lg },
+  overlap: { marginTop: -30, marginHorizontal: SPACE.lg, marginBottom: SPACE.lg },
+  headerTabs: { paddingHorizontal: 0, marginBottom: SPACE.sm },
+  categoryTabs: { marginTop: SPACE.md, marginBottom: SPACE.md },
+  revealBtn: { paddingLeft: SPACE.sm, minHeight: SIZE.touch, justifyContent: 'center' },
+  sectionTight: { marginTop: SPACE.xs },
 
-  profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: ACCENTS.lightPurple,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
-  },
-  avatarLarge: {
-    width: 72, height: 72, borderRadius: 36, marginRight: 16,
-    backgroundColor: ACCENTS.purple, justifyContent: 'center', alignItems: 'center',
-  },
-  avatarLargeText: { fontSize: 32, fontWeight: '700', color: '#FFFFFF', letterSpacing: -1 },
+  profileRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.lg },
   cameraIconBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: ACCENTS.purple,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFF',
+    position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14,
+    justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: PALETTE.card,
   },
-  profileInfo: { flex: 1 },
-  profileName: { fontSize: 18, fontWeight: '700', color: SUPER.text, marginBottom: 2 },
-  profileRole: { fontSize: 13, color: ACCENTS.purple, fontWeight: '500', marginBottom: 2 },
-  profileEmail: { fontSize: 12, color: SUPER.textMuted },
+  profileName: { ...TYPE.title },
+  profileRole: { ...TYPE.label, color: PALETTE.indigo, marginTop: SPACE.xxs },
+  profileEmail: { ...TYPE.caption, marginTop: SPACE.xxs },
+  profileMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: SPACE.sm, flexWrap: 'wrap' },
+  editRow: { flexDirection: 'row', marginTop: -SPACE.sm, marginBottom: SPACE.md },
+  rule: { height: StyleSheet.hairlineWidth * 2, backgroundColor: PALETTE.divider, marginBottom: SPACE.lg },
+  groupLabel: { ...TYPE.eyebrow, color: PALETTE.indigoDark, marginBottom: SPACE.sm },
 
-  menuSectionTitle: { fontSize: 15, fontWeight: '700', color: SUPER.text, marginBottom: 8 },
-  summaryRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: SUPER.border,
-  },
-  summaryRowLast: { borderBottomWidth: 0, paddingBottom: 0 },
-  summaryIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  summaryLabel: { flex: 1, fontSize: 14, color: SUPER.textMuted, fontWeight: '500' },
-  summaryValue: { fontSize: 18, fontWeight: '800' },
+  platformRow: { flexDirection: 'row' },
+  platformCell: { flex: 1, minWidth: 0, alignItems: 'center', paddingHorizontal: SPACE.xs },
+  platformDivider: { borderLeftWidth: StyleSheet.hairlineWidth * 2, borderLeftColor: PALETTE.divider },
+  platformIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  platformValue: { ...TYPE.number, fontSize: 22, lineHeight: 28, marginTop: SPACE.sm },
+  platformLabel: { ...TYPE.caption, fontSize: 11, textAlign: 'center', marginTop: 2 },
+  logout: { marginHorizontal: SPACE.lg, marginTop: SPACE.xl },
 
-  formHeaderRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  editBtn: {
-    backgroundColor: ACCENTS.purple, paddingHorizontal: 18, paddingVertical: 8,
-    borderRadius: 10, minWidth: 72, alignItems: 'center', justifyContent: 'center',
-  },
-  editBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
-
-  inputContainer: { marginBottom: 14 },
-  inputLabel: { fontSize: 12, fontWeight: '600', color: SUPER.textMuted, marginBottom: 6 },
-  inputRow: { flexDirection: 'row', alignItems: 'center' },
-  inputField: {
-    height: 46, borderRadius: 12, borderWidth: 1, borderColor: SUPER.borderStrong,
-    backgroundColor: '#FBFCFE', paddingHorizontal: 14, fontSize: 14, color: SUPER.text,
-  },
-  inputFlex: { flex: 1 },
-  inputWithIcon: { paddingRight: 44 },
-  revealBtn: {
-    position: 'absolute', right: 0, top: 0, bottom: 0,
-    width: 44, alignItems: 'center', justifyContent: 'center',
-  },
-
-  logoutBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: ACCENTS.lightRed, borderRadius: 16, paddingVertical: 16, marginBottom: 16,
-  },
-  logoutBtnText: { fontSize: 15, fontWeight: '600', color: ACCENTS.red },
-
-  entryCard: {
-    flexDirection: 'row', gap: 12,
-    backgroundColor: SUPER.card, borderRadius: 16, padding: 16, marginBottom: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03, shadowRadius: 8, elevation: 1,
-  },
-  entryIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  entrySummary: { fontSize: 14, fontWeight: '600', color: SUPER.text, lineHeight: 20 },
-  entryMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
-  entryMeta: { flex: 1, fontSize: 12, color: SUPER.textMuted },
-  entryFooter: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5 },
-  entryStamp: { fontSize: 11, color: SUPER.textFaint },
-  proxyTag: {
-    paddingHorizontal: 7, paddingVertical: 2, borderRadius: 999,
-    backgroundColor: ACCENTS.lightOrange, marginLeft: 4,
-  },
-  proxyTagText: { fontSize: 10, fontWeight: '700', color: ACCENTS.orange },
+  dayRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginTop: SPACE.sm, marginBottom: SPACE.sm },
+  dayDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: PALETTE.indigo, marginLeft: 15 },
+  dayText: { ...TYPE.eyebrow, color: PALETTE.indigoDark },
+  entryRow: { flexDirection: 'row', gap: SPACE.md },
+  rail: { width: 40, alignItems: 'center' },
+  railLine: { flex: 1, width: 2, backgroundColor: PALETTE.border, marginTop: 4 },
+  entryIcon: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  entryCard: { flex: 1, minWidth: 0, marginBottom: SPACE.md },
+  entrySummary: { ...TYPE.bodyStrong },
+  entryMetaRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs, marginTop: SPACE.sm - 2 },
+  entryMeta: { flex: 1, minWidth: 0, ...TYPE.caption },
+  entryFooter: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs, marginTop: SPACE.xs, flexWrap: 'wrap' },
+  entryStamp: { ...TYPE.caption, fontSize: 11, color: PALETTE.textFaint },
+  more: { marginVertical: SPACE.xl },
+  loadMore: { marginHorizontal: SPACE.lg, marginBottom: SPACE.lg },
 });
 
 export default SystemScreen;

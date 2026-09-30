@@ -1,575 +1,266 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  Image,
-  ActivityIndicator,
-  StatusBar,
-  RefreshControl,
-  Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Alert, Share } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { launchImageLibrary } from 'react-native-image-picker';
-import api from '../../../services/api';
 import { resolveMediaUrl } from '../../../config/api.config';
-import { SUPER, ACCENTS, superStyles, formatDate } from './superTheme';
+import {
+  Screen, AppHeader, IconButton, Field, Loading, ErrorState, EmptyState, SegmentedTabs, Badge,
+  PALETTE, SPACE, RADIUS, SHADOW,
+} from '../../../ui';
+import { listCmsEventsForEditor, deleteCmsEvent, eventPublicUrl, errorText, type CmsEventRow } from '../../../services/superApi';
 import { useSuperAdminBack } from './useSuperAdminBack';
-import { SkeletonList } from './components/Skeleton';
-import EmptyState from './components/EmptyState';
+import { ChipRow, MiniAction, confirm } from './superKit';
+import { hasBeenHeld, isOnPublicSite, listWhen } from './events/eventKit';
 
-interface EventRow {
-  id: string;
-  title: string;
-  description: string;
-  startAt: string | null;
-  endAt: string | null;
-  venue: string;
-  state: string;
-  district: string;
-  block: string;
-  bannerUrl: string;
-  status: 'draft' | 'published';
+/**
+ * ============================================================================
+ * SUPER ADMIN → EVENTS (website /super-admin/events — EventsManager with
+ * channel "members")
+ * ============================================================================
+ *
+ *   GET    /cms/events       every event, drafts / members-only / targeted
+ *   DELETE /cms/events/:id
+ *   create / edit           → SuperEventEditor (its own screen, as the
+ *                             website opens the form as its own screen)
+ *
+ * The list mirrors the website's: Upcoming / Past tabs with counts, a filter by
+ * audience built from the targets actually in use, a search over everything a
+ * person might recognise an event by, and on every row the facts the status
+ * column cannot carry — members-only, on the onboarding site or members only,
+ * registration open or not, and who it reaches. A blank title reads “Untitled
+ * event”; an undated event reads “Date to be confirmed”, never a dash.
+ */
+
+type When = 'upcoming' | 'past';
+
+function EventCard({ e, onEdit, onDelete, onShare, onQr }: { e: CmsEventRow; onEdit: () => void; onDelete: () => void; onShare: () => void; onQr: () => void }) {
+  const banner = resolveMediaUrl(e?.media?.url || e?.imageUrl || '');
+  const published = e?.status === 'published';
+  const onPublic = isOnPublicSite(e);
+  const where = e?.mode === 'online'
+    ? `Online${e?.onlinePlatform ? ` · ${e.onlinePlatform}` : ''}`
+    : (e?.location || '');
+  return (
+    <TouchableOpacity activeOpacity={0.9} onPress={onEdit} style={[s.card, SHADOW.card]}>
+      {banner ? (
+        <Image source={{ uri: banner }} style={s.banner} resizeMode={e?.media?.fit === 'contain' ? 'contain' : 'cover'} />
+      ) : (
+        <View style={[s.banner, s.bannerEmpty]}><Icon name="event" size={30} color="#A5B4FC" /></View>
+      )}
+      <View style={s.statusFloat}>
+        <Badge label={published ? 'Published' : 'Draft'} status={published ? 'published' : 'draft'} />
+      </View>
+      <View style={s.body}>
+        {e?.title
+          ? <Text style={s.title} numberOfLines={2}>{e.title}</Text>
+          : <Text style={[s.title, s.untitled]}>Untitled event</Text>}
+
+        <View style={s.badges}>
+          {e?.audience === 'paid' ? <Tag icon="lock" text="Members" fg={PALETTE.blueDark} bg={PALETTE.blueSoft} /> : null}
+          {onPublic
+            ? <Tag icon="language" text="Onboarding" fg="#047857" bg={PALETTE.greenSoft} />
+            : <Tag icon="lock-outline" text="Members only" fg={PALETTE.textSoft} bg="#E2E8F0" />}
+          {e?.registrationEnabled
+            ? <Tag icon="how-to-reg" text="Registration open" fg="#047857" bg={PALETTE.greenSoft} />
+            : <Tag icon="block" text="No registration" fg="#B45309" bg={PALETTE.amberSoft} />}
+          {e?.category ? <Tag icon="sell" text={e.category} fg={PALETTE.indigo} bg={PALETTE.indigoSoft} /> : null}
+        </View>
+
+        <View style={s.meta}>
+          <Icon name="schedule" size={15} color={PALETTE.textMuted} />
+          <Text style={[s.metaText, !e?.startAt && { fontStyle: 'italic' }]} numberOfLines={1}>
+            {e?.startAt ? (listWhen(e.startAt) || 'Date to be confirmed') : 'Date to be confirmed'}
+          </Text>
+        </View>
+        <View style={s.meta}>
+          <Icon name={e?.mode === 'online' ? 'videocam' : 'place'} size={15} color={PALETTE.textMuted} />
+          <Text style={s.metaText} numberOfLines={1}>{where || '—'}</Text>
+        </View>
+        <View style={[s.reach, e?.targetLabel ? { backgroundColor: PALETTE.blueSoft } : null]}>
+          <Icon name={e?.targetLabel ? 'my-location' : 'public'} size={14} color={e?.targetLabel ? PALETTE.blueDark : PALETTE.textMuted} />
+          <Text style={[s.reachText, e?.targetLabel ? { color: PALETTE.blueDark } : null]} numberOfLines={2}>
+            {e?.targetLabel ? `${e.targetLabel} only` : 'Everyone'}
+          </Text>
+        </View>
+
+        <View style={s.actions}>
+          <MiniAction icon="edit" label="Edit" onPress={onEdit} />
+          <MiniAction icon="qr-code-2" label="QR" onPress={onQr} color={PALETTE.textSoft} />
+          <MiniAction icon="share" label="Share link" onPress={onShare} color={PALETTE.blueDark} />
+          <View style={{ flex: 1 }} />
+          <TouchableOpacity onPress={onDelete} style={s.delete} accessibilityLabel={`Delete ${e?.title || 'this event'}`}>
+            <Icon name="delete-outline" size={20} color={PALETTE.red} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 }
 
-type StatusFilter = 'all' | 'published' | 'draft';
+function Tag({ icon, text, fg, bg }: { icon: string; text: string; fg: string; bg: string }) {
+  return (
+    <View style={[s.tag, { backgroundColor: bg }]}>
+      <Icon name={icon} size={12} color={fg} />
+      <Text style={[s.tagText, { color: fg }]} numberOfLines={1}>{text}</Text>
+    </View>
+  );
+}
 
-const STATUS_TABS: { key: StatusFilter; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'published', label: 'Live' },
-  { key: 'draft', label: 'Drafts' },
-];
-
-const EMPTY_FORM = {
-  title: '',
-  description: '',
-  startAt: '',
-  venue: '',
-  state: '',
-};
-
-/** `2026-08-30` or `2026-08-30 18:30` — the two shapes the form accepts. */
-const DATE_HINT = 'YYYY-MM-DD or YYYY-MM-DD HH:mm';
-
-const parseDateInput = (value: string): Date | null => {
-  const raw = (value || '').trim();
-  if (!/^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2})?$/.test(raw)) return null;
-  const parsed = new Date(raw.replace(' ', 'T'));
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-};
-
-const toDateInput = (value?: string | null): string => {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-};
-
-/** Create, publish and remove the platform-wide events members see. */
-const ManageEventsScreen = () => {
-  const [events, setEvents] = useState<EventRow[]>([]);
-  const [filter, setFilter] = useState<StatusFilter>('all');
+const ManageEventsScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
+  const [events, setEvents] = useState<CmsEventRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [when, setWhen] = useState<When>('upcoming');
+  const [target, setTarget] = useState('all');
+  const [query, setQuery] = useState('');
 
-  const [editorOpen, setEditorOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [bannerAsset, setBannerAsset] = useState<any>(null);
-  const [bannerPreview, setBannerPreview] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const goBack = useSuperAdminBack();
 
-  const fetchEvents = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
+  const load = useCallback(async (mode: 'load' | 'refresh' | 'quiet' = 'load') => {
+    if (mode === 'refresh') setRefreshing(true);
+    else if (mode === 'load') setLoading(true);
+    setError('');
     try {
-      const response = await api.get('/events', { params: { status: 'all' } });
-      const payload = response.data?.data || response.data || {};
-      setEvents(payload.events || []);
-      setError('');
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'Could not load events');
-      setEvents([]);
+      setEvents(await listCmsEventsForEditor());
+    } catch (err) {
+      setError(errorText(err, 'Could not load events'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+  // Refetch on every return from the editor, without blanking the list.
+  const loadedOnce = useRef(false);
+  useFocusEffect(useCallback(() => {
+    load(loadedOnce.current ? 'quiet' : 'load');
+    loadedOnce.current = true;
+  }, [load]));
 
-  const setField = (key: keyof typeof EMPTY_FORM, value: string) =>
-    setForm(prev => ({ ...prev, [key]: value }));
+  const targetOf = (e: CmsEventRow) => e?.targetLabel || 'Everyone';
+  const targetOptions = useMemo(() => Array.from(new Set((events || []).map(targetOf)))
+    .sort((a, b) => (a === 'Everyone' ? -1 : b === 'Everyone' ? 1 : a.localeCompare(b))), [events]);
+  const upcomingCount = useMemo(() => (events || []).filter((e) => !hasBeenHeld(e)).length, [events]);
+  const pastCount = (events || []).length - upcomingCount;
 
-  const closeEditor = () => {
-    setEditorOpen(false);
-    setEditingId(null);
-    setForm(EMPTY_FORM);
-    setBannerAsset(null);
-    setBannerPreview('');
-  };
+  const visible = useMemo(() => {
+    const needle = (query || '').trim().toLowerCase();
+    return (events || [])
+      .filter((e) => target === 'all' || targetOf(e) === target)
+      .filter((e) => (when === 'past' ? hasBeenHeld(e) : !hasBeenHeld(e)))
+      .filter((e) => !needle || [e?.title, e?.venue, e?.category, e?.state, e?.district, e?.block, e?.description, e?.targetLabel]
+        .filter(Boolean).join(' ').toLowerCase().includes(needle));
+  }, [events, target, when, query]);
 
-  /** An open editor is what back closes first; only then does it leave the tab. */
-  const goBack = useSuperAdminBack(
-    useCallback(() => {
-      if (editorOpen) {
-        closeEditor();
-        return true;
-      }
-      return false;
-    }, [editorOpen]),
-  );
+  const openNew = () => navigation.navigate('SuperEventEditor', {});
+  const openEdit = (e: CmsEventRow) => navigation.navigate('SuperEventEditor', { event: e });
 
-  const openCreate = () => {
-    setEditingId(null);
-    setForm(EMPTY_FORM);
-    setBannerAsset(null);
-    setBannerPreview('');
-    setEditorOpen(true);
-  };
-
-  const openEdit = (event: EventRow) => {
-    setEditingId(event?.id || null);
-    setForm({
-      title: event?.title || '',
-      description: event?.description || '',
-      startAt: toDateInput(event?.startAt),
-      venue: event?.venue || '',
-      state: event?.state || '',
-    });
-    setBannerAsset(null);
-    setBannerPreview(resolveMediaUrl(event?.bannerUrl));
-    setEditorOpen(true);
-  };
-
-  const pickBanner = () => {
-    // Native module calls are guarded: a missing picker must not take the app down.
+  const remove = async (e: CmsEventRow) => {
+    const ok = await confirm('Delete event', `Delete “${e?.title || 'Untitled event'}”? This removes it from the public site and from the member app.`, 'Delete', true);
+    if (!ok) return;
     try {
-      if (typeof launchImageLibrary !== 'function') {
-        Alert.alert('Unavailable', 'The photo picker is not available on this device.');
-        return;
-      }
-
-      launchImageLibrary(
-        { mediaType: 'photo', maxWidth: 1600, maxHeight: 900, quality: 0.9, selectionLimit: 1 },
-        response => {
-          if (response.didCancel) return;
-          if (response.errorCode) {
-            Alert.alert('Error', response.errorMessage || 'Could not pick that image.');
-            return;
-          }
-          const asset = (response.assets || [])[0];
-          if (!asset?.uri) {
-            Alert.alert('Error', 'That image could not be read. Please pick another.');
-            return;
-          }
-          setBannerAsset(asset);
-          setBannerPreview(asset.uri);
-        },
-      );
+      await deleteCmsEvent(String(e?.id || ''));
+      setEvents((prev) => (prev || []).filter((x) => x?.id !== e?.id));
+      load('quiet');
     } catch (err) {
-      console.warn('Native module call safely caught:', err);
+      Alert.alert('Could not delete the event', errorText(err));
     }
   };
 
-  const handleSave = async () => {
-    const title = (form.title || '').trim();
-    const startAt = parseDateInput(form.startAt);
-
-    if (!title) return Alert.alert('Missing field', 'A title is required.');
-    if (!startAt) return Alert.alert('Invalid date', `Enter the start date as ${DATE_HINT}.`);
-
-    const fields: Record<string, string> = {
-      title,
-      description: (form.description || '').trim(),
-      startAt: startAt.toISOString(),
-      venue: (form.venue || '').trim(),
-      state: (form.state || '').trim(),
-    };
-
-    setSaving(true);
-    try {
-      let body: any = fields;
-      let config: any = undefined;
-
-      if (bannerAsset?.uri) {
-        const multipart = new FormData();
-        Object.entries(fields).forEach(([key, value]) => multipart.append(key, value));
-        multipart.append('banner', {
-          uri: bannerAsset.uri,
-          type: bannerAsset.type || 'image/jpeg',
-          name: bannerAsset.fileName || 'event-banner.jpg',
-        } as any);
-        body = multipart;
-        config = { headers: { 'Content-Type': 'multipart/form-data' } };
-      }
-
-      if (editingId) await api.put(`/events/${editingId}`, body, config);
-      else await api.post('/events', body, config);
-
-      closeEditor();
-      fetchEvents(true);
-    } catch (err: any) {
-      Alert.alert('Could not save', err?.response?.data?.message || 'Please try again.');
-    } finally {
-      setSaving(false);
-    }
+  const share = (e: CmsEventRow) => {
+    const url = eventPublicUrl(e);
+    Share.share({ message: e?.title ? `${e.title}\n${url}` : url, title: e?.title || 'Event' }).catch(() => null);
   };
 
-  const togglePublish = async (event: EventRow) => {
-    const next = event?.status === 'published' ? 'draft' : 'published';
-    setBusyId(event?.id || '');
-    try {
-      await api.patch(`/events/${event?.id}/status`, { status: next });
-      setEvents(prev => (prev || []).map(row => (row.id === event?.id ? { ...row, status: next } : row)));
-    } catch (err: any) {
-      Alert.alert('Could not update', err?.response?.data?.message || 'Please try again.');
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  const handleDelete = (event: EventRow) => {
-    Alert.alert('Delete event', `“${event?.title || 'This event'}” will be removed permanently.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          setBusyId(event?.id || '');
-          try {
-            await api.delete(`/events/${event?.id}`);
-            setEvents(prev => (prev || []).filter(row => row.id !== event?.id));
-          } catch (err: any) {
-            Alert.alert('Could not delete', err?.response?.data?.message || 'Please try again.');
-          } finally {
-            setBusyId(null);
-          }
-        },
-      },
-    ]);
-  };
-
-  const visibleEvents = (events || []).filter(e => filter === 'all' || e?.status === filter);
-
-  const keyExtractor = useCallback(
-    (item: EventRow, index: number) => String(item?.id || index),
-    [],
-  );
-
-  const renderItem = useCallback(({ item }: { item: EventRow }) => {
-    const busy = busyId === item?.id;
-    const published = item?.status === 'published';
-    const banner = resolveMediaUrl(item?.bannerUrl);
-
-    return (
-      <View style={styles.eventCard}>
-        {banner ? <Image source={{ uri: banner }} style={styles.banner} resizeMode="cover" /> : null}
-
-        <View style={styles.eventBody}>
-          <View style={styles.eventHeader}>
-            <View style={{ flex: 1, paddingRight: 8 }}>
-              <Text style={styles.eventTitle} numberOfLines={2}>{item?.title || 'Untitled event'}</Text>
-            </View>
-            <View style={[
-              styles.statusBadge,
-              { backgroundColor: published ? ACCENTS.lightGreen : SUPER.field },
-            ]}>
-              <Icon
-                name={published ? 'campaign' : 'edit'}
-                size={12}
-                color={published ? ACCENTS.green : SUPER.textMuted}
-              />
-              <Text style={[
-                styles.statusBadgeText,
-                { color: published ? ACCENTS.green : SUPER.textMuted },
-              ]}>
-                {published ? 'Live' : 'Draft'}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.eventMetaRow}>
-            <View style={styles.metaItem}>
-              <Icon name="event" size={14} color={SUPER.textMuted} />
-              <Text style={styles.metaText} numberOfLines={1}>{formatDate(item?.startAt) || 'No date'}</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <Icon name="place" size={14} color={SUPER.textMuted} />
-              <Text style={styles.metaText} numberOfLines={1}>
-                {item?.venue || item?.state || 'Everywhere'}
-              </Text>
-            </View>
-          </View>
-
-          {item?.description ? (
-            <Text style={styles.eventDescription} numberOfLines={2}>{item.description}</Text>
-          ) : null}
-
-          <View style={styles.eventActions}>
-            <TouchableOpacity
-              style={[
-                superStyles.reviewBtn,
-                { backgroundColor: published ? SUPER.field : ACCENTS.lightGreen },
-              ]}
-              onPress={() => togglePublish(item)}
-              disabled={busy}
-              activeOpacity={0.7}
-            >
-              {busy ? (
-                <ActivityIndicator size="small" color={published ? SUPER.textMuted : ACCENTS.green} />
-              ) : (
-                <>
-                  <Icon
-                    name={published ? 'visibility-off' : 'campaign'}
-                    size={16}
-                    color={published ? SUPER.textMuted : ACCENTS.green}
-                  />
-                  <Text style={[
-                    styles.eventActionText,
-                    { color: published ? SUPER.textMuted : ACCENTS.green },
-                  ]}>
-                    {published ? 'Unpublish' : 'Publish'}
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[superStyles.reviewBtn, { backgroundColor: ACCENTS.lightPurple }]}
-              onPress={() => openEdit(item)}
-              activeOpacity={0.7}
-            >
-              <Icon name="edit" size={16} color={ACCENTS.purple} />
-              <Text style={[styles.eventActionText, { color: ACCENTS.purple }]}>Edit</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.deleteBtn}
-              onPress={() => handleDelete(item)}
-              disabled={busy}
-              activeOpacity={0.7}
-            >
-              <Icon name="delete-outline" size={18} color={ACCENTS.red} />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    );
-  }, [busyId]);
-
-  const renderInput = (
-    label: string,
-    value: string,
-    onChange: (text: string) => void,
-    placeholder: string,
-    multiline = false,
-  ) => (
-    <View style={styles.formField}>
-      <Text style={superStyles.label}>{label}</Text>
-      <TextInput
-        style={[superStyles.input, multiline && styles.textArea]}
-        placeholder={placeholder}
-        placeholderTextColor={SUPER.textFaint}
-        value={value}
-        onChangeText={onChange}
-        multiline={multiline}
-        autoCorrect={false}
-      />
-    </View>
-  );
-
-  const renderEditor = () => (
-    <View style={superStyles.formCard}>
-      <Text style={styles.formTitle}>{editingId ? 'Edit event' : 'New event'}</Text>
-
-      <TouchableOpacity style={styles.bannerPicker} onPress={pickBanner} activeOpacity={0.85}>
-        {bannerPreview ? (
-          <Image source={{ uri: bannerPreview }} style={styles.bannerPreview} resizeMode="cover" />
-        ) : (
-          <View style={styles.bannerPlaceholder}>
-            <Icon name="add-photo-alternate" size={26} color={ACCENTS.purple} />
-            <Text style={styles.bannerPlaceholderText}>Add a banner image</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-
-      {renderInput('Title', form.title, v => setField('title', v), 'Annual members meet')}
-      {renderInput('Starts', form.startAt, v => setField('startAt', v), DATE_HINT)}
-      {renderInput('Venue (optional)', form.venue, v => setField('venue', v), 'Where it takes place')}
-      {renderInput('State (optional)', form.state, v => setField('state', v), 'Leave empty for every state')}
-      {renderInput('Description (optional)', form.description, v => setField('description', v),
-        'What is happening, and who should attend', true)}
-
-      <Text style={styles.formNote}>
-        New events are saved as a draft. Publish when it is ready for members to see.
+  const header = (
+    <View>
+      <AppHeader tone="admin" title="Events" onBack={goBack}
+        subtitle={`${(events || []).filter((e) => e?.status === 'published').length} published · ${(events || []).length} in all`}
+        right={<IconButton icon="add" accessibilityLabel="Add event" onPress={openNew} color={PALETTE.indigo} />} />
+      <Text style={s.lede}>
+        Aim an event at a state, district or block and every member there sees it — paid or unpaid. Every event also goes
+        on the onboarding site, unless you untick that on the form.
       </Text>
-
-      <View style={styles.formActions}>
-        <TouchableOpacity style={[superStyles.ghostButton, { flex: 1 }]} onPress={closeEditor} activeOpacity={0.8}>
-          <Text style={superStyles.ghostButtonText}>Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[superStyles.primaryButton, { flex: 1 }]}
-          onPress={handleSave}
-          disabled={saving}
-          activeOpacity={0.8}
-        >
-          {saving ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text style={superStyles.primaryButtonText}>
-              {editingId ? 'Save changes' : 'Create event'}
-            </Text>
-          )}
-        </TouchableOpacity>
+      <SegmentedTabs<When> tone="admin" value={when} onChange={setWhen}
+        options={[{ value: 'upcoming', label: 'Upcoming', count: upcomingCount }, { value: 'past', label: 'Past', count: pastCount }]} />
+      {targetOptions.length > 1 ? (
+        <ChipRow<string> value={target} onChange={setTarget}
+          options={[{ value: 'all', label: 'Every audience' }, ...targetOptions.map((t) => ({ value: t, label: t === 'Everyone' ? 'Everyone (no target)' : t }))]} />
+      ) : null}
+      <View style={{ paddingHorizontal: SPACE.lg, marginTop: SPACE.md }}>
+        <Field icon="search" value={query} onChangeText={setQuery} placeholder="Title, venue, category or region" autoCorrect={false} />
       </View>
+      {when === 'upcoming' && pastCount > 0 ? (
+        <TouchableOpacity onPress={() => setWhen('past')} activeOpacity={0.8} style={s.note}>
+          <Text style={s.noteText}>
+            <Text style={{ fontWeight: '800', color: PALETTE.text }}>{upcomingCount} {upcomingCount === 1 ? 'is' : 'are'} still to come. </Text>
+            The other {pastCount} {pastCount === 1 ? 'has' : 'have'} already been held.
+          </Text>
+          <Text style={s.noteLink}>Show them</Text>
+        </TouchableOpacity>
+      ) : null}
+      {(events || []).length > 0 && visible.length !== (events || []).length ? (
+        <Text style={s.count}>Showing {visible.length} of {(events || []).length}</Text>
+      ) : null}
     </View>
   );
 
-  const listEmpty = () => {
-    if (loading) return <SkeletonList count={3} />;
-    if (error) {
-      return <EmptyState icon="cloud-off" accentIcon="refresh" tone="error" title={error} caption="Pull down to try again." />;
-    }
-    return (
-      <EmptyState
-        icon="event"
-        accentIcon="add"
-        title="No events yet"
-        caption="Tap “Add” to create the first one."
-      />
-    );
-  };
+  if (loading && !(events || []).length) {
+    return <Screen tone="admin"><AppHeader tone="admin" title="Events" onBack={goBack} /><Loading tone="admin" label="Loading events…" /></Screen>;
+  }
+  if (error && !(events || []).length) {
+    return <Screen tone="admin"><AppHeader tone="admin" title="Events" onBack={goBack} /><ErrorState tone="admin" message={error} onRetry={() => load()} /></Screen>;
+  }
 
   return (
-    <SafeAreaView style={superStyles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={SUPER.bg} />
-
-      <View style={superStyles.pageHeader}>
-        <TouchableOpacity style={superStyles.backBtn} onPress={goBack} activeOpacity={0.7}>
-          <Icon name="arrow-back" size={24} color={SUPER.text} />
-        </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={superStyles.pageTitle}>Events</Text>
-          <Text style={superStyles.pageSubtitle}>
-            {(events || []).filter(e => e?.status === 'published').length} live · {(events || []).length} total
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={[superStyles.actionBtn, editorOpen && styles.actionBtnCancel]}
-          onPress={() => (editorOpen ? closeEditor() : openCreate())}
-          activeOpacity={0.8}
-        >
-          <Icon name={editorOpen ? 'close' : 'add'} size={16} color="#FFFFFF" />
-          <Text style={superStyles.actionBtnText}>{editorOpen ? 'Close' : 'Add'}</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.tabsWrap}>
-        <View style={superStyles.tabsRow}>
-          {STATUS_TABS.map(tab => {
-            const isActive = filter === tab.key;
-            const count = tab.key === 'all'
-              ? (events || []).length
-              : (events || []).filter(e => e?.status === tab.key).length;
-            return (
-              <TouchableOpacity
-                key={tab.key}
-                style={[superStyles.tabPill, isActive && superStyles.tabPillActive]}
-                onPress={() => setFilter(tab.key)}
-                activeOpacity={0.75}
-              >
-                <Text
-                  style={[superStyles.tabPillText, isActive && superStyles.tabPillTextActive]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  {tab.label} ({count})
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
+    <Screen tone="admin" scroll={false}>
       <FlatList
-        data={visibleEvents}
-        keyExtractor={keyExtractor}
-        renderItem={renderItem}
-        contentContainerStyle={superStyles.listContent}
+        data={visible}
+        keyExtractor={(item, index) => String(item?.id || index)}
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={10}
+        ListHeaderComponent={header}
+        refreshing={refreshing}
+        onRefresh={() => load('refresh')}
         keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        /* Inline expandable editor — never a native Modal inside a tab. */
-        ListHeaderComponent={editorOpen ? renderEditor() : null}
-        ListEmptyComponent={listEmpty}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchEvents(true)} />}
+        contentContainerStyle={{ paddingBottom: SPACE.xxl * 2 }}
+        ListEmptyComponent={(events || []).length === 0
+          ? <EmptyState tone="admin" icon="event" title="No events yet" message="Aim your first event at a region, or at everyone." action="Add event" onAction={openNew} />
+          : <EmptyState tone="admin" icon="filter-alt-off" title="Nothing matches" message="No event answers all of the filters above. Clear one of them." />}
+        renderItem={({ item }) => (
+          <EventCard e={item} onEdit={() => openEdit(item)} onDelete={() => remove(item)} onShare={() => share(item)}
+            onQr={() => navigation.navigate('SuperEventQr', { event: item, justCreated: false })} />
+        )}
       />
-    </SafeAreaView>
+    </Screen>
   );
 };
 
-const styles = StyleSheet.create({
-  tabsWrap: { paddingHorizontal: 16 },
-  actionBtnCancel: { backgroundColor: SUPER.textMuted },
-
-  formTitle: { fontSize: 18, fontWeight: '700', color: SUPER.text, marginBottom: 4 },
-  formField: { marginBottom: 14 },
-  textArea: { height: 90, paddingTop: 12, textAlignVertical: 'top' },
-  formNote: { fontSize: 12, color: SUPER.textFaint, lineHeight: 17, marginBottom: 16 },
-  formActions: { flexDirection: 'row', gap: 12 },
-
-  bannerPicker: {
-    marginTop: 16, marginBottom: 16, height: 140, borderRadius: 14, overflow: 'hidden',
-    borderWidth: 1.5, borderColor: SUPER.borderStrong, borderStyle: 'dashed',
-    backgroundColor: ACCENTS.lightPurple,
-  },
-  bannerPreview: { width: '100%', height: '100%' },
-  bannerPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  bannerPlaceholderText: { fontSize: 13, fontWeight: '600', color: ACCENTS.purple },
-
-  eventCard: {
-    backgroundColor: SUPER.card, borderRadius: 16, marginBottom: 16, overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03, shadowRadius: 8, elevation: 1,
-  },
-  banner: { width: '100%', height: 140 },
-  eventBody: { padding: 16 },
-  eventHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
-  eventTitle: { fontSize: 16, fontWeight: '700', color: SUPER.text, lineHeight: 22 },
-  statusBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12,
-  },
-  statusBadgeText: { fontSize: 11, fontWeight: '600' },
-
-  eventMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 12 },
-  metaItem: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  metaText: { flex: 1, fontSize: 13, color: SUPER.textMuted },
-
-  eventDescription: {
-    fontSize: 13, color: SUPER.textMuted, lineHeight: 19, marginBottom: 16,
-    borderTopWidth: 1, borderTopColor: SUPER.border, paddingTop: 12,
-  },
-
-  eventActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  eventActionText: { fontWeight: '600', fontSize: 14 },
-  deleteBtn: {
-    width: 46, height: 46, borderRadius: 12,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: ACCENTS.lightRed,
-  },
+const s = StyleSheet.create({
+  lede: { fontSize: 13, lineHeight: 19, color: PALETTE.textMuted, paddingHorizontal: SPACE.lg, marginBottom: SPACE.md },
+  note: { marginHorizontal: SPACE.lg, marginBottom: SPACE.md, padding: SPACE.md, borderRadius: RADIUS.md, backgroundColor: PALETTE.card, borderWidth: 1, borderColor: PALETTE.border },
+  noteText: { fontSize: 12, lineHeight: 17, color: PALETTE.textMuted },
+  noteLink: { fontSize: 12, fontWeight: '800', color: PALETTE.indigo, marginTop: 4 },
+  count: { fontSize: 12, fontWeight: '700', color: PALETTE.textFaint, paddingHorizontal: SPACE.lg, marginBottom: SPACE.sm },
+  card: { backgroundColor: PALETTE.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: PALETTE.border, marginHorizontal: SPACE.lg, marginBottom: SPACE.lg, overflow: 'hidden' },
+  banner: { width: '100%', aspectRatio: 16 / 9, backgroundColor: PALETTE.field },
+  bannerEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: PALETTE.indigoSoft, aspectRatio: 3.2 },
+  statusFloat: { position: 'absolute', top: SPACE.md, right: SPACE.md },
+  body: { padding: SPACE.lg },
+  title: { fontSize: 17, fontWeight: '800', color: PALETTE.text, lineHeight: 23 },
+  untitled: { fontStyle: 'italic', fontWeight: '600', color: PALETTE.textFaint },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: SPACE.sm, marginBottom: SPACE.md },
+  tag: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: RADIUS.pill, maxWidth: '100%' },
+  tagText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.2, flexShrink: 1 },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  metaText: { flex: 1, fontSize: 13, color: PALETTE.textSoft },
+  reach: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', maxWidth: '100%', backgroundColor: PALETTE.field, borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 5, marginTop: 4 },
+  reachText: { fontSize: 12, fontWeight: '700', color: PALETTE.textMuted, flexShrink: 1 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: SPACE.lg, paddingTop: SPACE.md, borderTopWidth: 1, borderTopColor: PALETTE.border },
+  delete: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: PALETTE.redSoft },
 });
 
 export default ManageEventsScreen;

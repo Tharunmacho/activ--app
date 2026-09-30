@@ -4,20 +4,22 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   SectionList,
-  ActivityIndicator,
-  StatusBar,
   RefreshControl,
   Alert,
   Platform,
+  Switch,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
+import {
+  BottomActionBar, PALETTE, SPACE, TYPE, SIZE, shortDate,
+  ConsoleFrame, ConsoleHeader, ConsoleCard, ConsoleChip, ConsoleTabs, ConsoleSearch, ConsoleButton, ConsoleNote,
+  GradientAvatar, GlassIconButton, PremiumInput, FadeInUp, TeamKeys3D, CONSOLE_LIST, CONSOLE_ACCENTS, ConsoleChipKind,
+} from '../../../ui';
 import api from '../../../services/api';
 import { getGeography, invalidateRegionCache } from '../../../services/regions';
-import { SUPER, ACCENTS, superStyles, getInitials } from './superTheme';
 import { SkeletonList } from './components/Skeleton';
 import EmptyState from './components/EmptyState';
 import RegionInput from './components/RegionInput';
@@ -82,10 +84,10 @@ interface RemovalPreview {
 
 // Ordered most-senior first, so the categorised list reads top-down the way the
 // hierarchy actually works.
-const TIERS: { key: AdminRole; label: string; plural: string; icon: string; color: string; light: string }[] = [
-  { key: 'state_admin', label: 'State', plural: 'State Admins', icon: 'public', color: ACCENTS.green, light: ACCENTS.lightGreen },
-  { key: 'district_admin', label: 'District', plural: 'District Admins', icon: 'map', color: ACCENTS.orange, light: ACCENTS.lightOrange },
-  { key: 'block_admin', label: 'Block', plural: 'Block Admins', icon: 'location-city', color: ACCENTS.purple, light: ACCENTS.lightPurple },
+const TIERS: { key: AdminRole; label: string; plural: string; icon: string; color: string; light: string; chip: ConsoleChipKind; grad: string[] }[] = [
+  { key: 'state_admin', label: 'State', plural: 'State Admins', icon: 'public', color: PALETTE.successText, light: PALETTE.successSoft, chip: 'approved', grad: CONSOLE_ACCENTS.green.grad },
+  { key: 'district_admin', label: 'District', plural: 'District Admins', icon: 'map', color: PALETTE.warningText, light: PALETTE.warningSoft, chip: 'gold', grad: CONSOLE_ACCENTS.gold.grad },
+  { key: 'block_admin', label: 'Block', plural: 'Block Admins', icon: 'location-city', color: PALETTE.indigo, light: PALETTE.indigoSoft, chip: 'info', grad: CONSOLE_ACCENTS.indigo.grad },
 ];
 
 const ROLE_TABS: { key: RoleFilter; label: string }[] = [
@@ -96,7 +98,13 @@ const ROLE_TABS: { key: RoleFilter; label: string }[] = [
 ];
 
 const EMPTY_FORM = {
-  role: 'block_admin' as AdminRole,
+  /**
+   * Usually one of the three tiers. Widened to `string` because the roster
+   * (website ManageAdmins) also lists accounts outside them — the events admin,
+   * the super admin — and editing one must keep its role rather than silently
+   * turning it into a block admin.
+   */
+  role: 'block_admin' as string,
   fullName: '',
   email: '',
   phoneNumber: '',
@@ -105,6 +113,8 @@ const EMPTY_FORM = {
   state: '',
   district: '',
   block: '',
+  /** Edit only — sent as `active` when it changes (PUT accepts it). */
+  active: true,
 };
 
 /** Which region fields each tier owns. Anything below its tier is not stored. */
@@ -113,6 +123,10 @@ const REGION_FIELDS: Record<AdminRole, ('state' | 'district' | 'block')[]> = {
   district_admin: ['state', 'district'],
   block_admin: ['state', 'district', 'block'],
 };
+/** A role outside the three tiers owns no region (website `needs` -> []). */
+const regionFieldsFor = (role?: string): ('state' | 'district' | 'block')[] =>
+  (REGION_FIELDS as Record<string, ('state' | 'district' | 'block')[]>)[String(role || '')] || [];
+const isTierRole = (role?: string) => TIERS.some(t => t.key === role);
 
 type FormState = typeof EMPTY_FORM;
 
@@ -154,6 +168,9 @@ const ManageAdminsScreen = ({ route }: any) => {
   /** Which secure fields are currently unmasked, keyed by their label. */
   const [revealedFields, setRevealedFields] = useState<{ [label: string]: boolean }>({});
 
+  /** The account's stored on/off, so `active` is only sent when the Super Admin changes it. */
+  const [originalActive, setOriginalActive] = useState(true);
+
   // A name handed over from the Hub's search bar.
   const incomingQuery = route?.params?.q;
   useEffect(() => {
@@ -171,7 +188,15 @@ const ManageAdminsScreen = ({ route }: any) => {
   }, [query]);
 
   const params = useMemo(
-    () => ({ role: roleFilter, q: (debouncedQuery || '').trim() }),
+    () => {
+      // Website ManageAdmins: `role` only when narrowed, `q` only from 2 chars
+      // (the server ignores shorter ones anyway).
+      const q = (debouncedQuery || '').trim();
+      return {
+        ...(roleFilter !== 'all' ? { role: roleFilter } : {}),
+        ...(q.length >= 2 ? { q } : {}),
+      };
+    },
     [roleFilter, debouncedQuery],
   );
 
@@ -244,16 +269,26 @@ const ManageAdminsScreen = ({ route }: any) => {
 
   // Categorised by tier. Empty tiers are dropped so the list never shows a
   // heading with nothing beneath it.
-  const sections = useMemo(() => TIERS
-    .map(tier => ({
-      key: tier.key,
+  // Accounts outside the three tiers (events admin, super admin) are on the
+  // website's roster too; they get their own section rather than vanishing.
+  const sections = useMemo(() => [
+    ...TIERS.map(tier => ({
+      key: tier.key as string,
       title: tier.plural,
       icon: tier.icon,
       color: tier.color,
       light: tier.light,
       data: (admins || []).filter(a => a?.role === tier.key),
-    }))
-    .filter(section => section.data.length > 0),
+    })),
+    {
+      key: 'other',
+      title: 'Other accounts',
+      icon: 'manage-accounts',
+      color: PALETTE.textMuted,
+      light: PALETTE.field,
+      data: (admins || []).filter(a => !isTierRole(a?.role)),
+    },
+  ].filter(section => section.data.length > 0),
   [admins]);
 
   const setField = (key: keyof FormState, value: string) =>
@@ -269,7 +304,7 @@ const ManageAdminsScreen = ({ route }: any) => {
    */
   const setRole = (role: AdminRole) =>
     setForm(prev => {
-      const owned = REGION_FIELDS[role];
+      const owned = regionFieldsFor(role);
       return {
         ...prev,
         role,
@@ -346,6 +381,18 @@ const ManageAdminsScreen = ({ route }: any) => {
     }
   };
 
+  const toggleActive = (next: boolean) => {
+    if (next) { setForm(prev => ({ ...prev, active: true })); return; }
+    Alert.alert(
+      'Deactivate this admin?',
+      'They will not be able to sign in, and any pending applications that only they cover escalate to the tier above until the account is reactivated. Saved when you tap Save changes.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Deactivate', style: 'destructive', onPress: () => setForm(prev => ({ ...prev, active: false })) },
+      ],
+    );
+  };
+
   const closeForm = () => {
     setMode('idle');
     setEditingId(null);
@@ -366,7 +413,7 @@ const ManageAdminsScreen = ({ route }: any) => {
   const openEdit = (admin: AdminRow) => {
     setEditingId(admin?.id || null);
     setForm({
-      role: (TIERS.find(t => t.key === admin?.role)?.key) || 'block_admin',
+      role: String(admin?.role || 'block_admin'),
       fullName: admin?.fullName || '',
       email: admin?.email || '',
       phoneNumber: admin?.phoneNumber || '',
@@ -375,7 +422,9 @@ const ManageAdminsScreen = ({ route }: any) => {
       state: admin?.state || '',
       district: admin?.district || '',
       block: admin?.block || '',
+      active: admin?.active !== false,
     });
+    setOriginalActive(admin?.active !== false);
     setAdded(EMPTY_ADDED);
     setRevealedFields({});
     setMode('edit');
@@ -383,16 +432,22 @@ const ManageAdminsScreen = ({ route }: any) => {
   };
 
   const handleSave = async () => {
-    const payload = {
-      role: form.role,
+    /*
+     * Only the region keys this tier OWNS are sent (website ManageAdmins
+     * `needs`): a state admin carries `state`, a district admin state +
+     * district, a block admin all three. Sending `district: ''` for a state
+     * admin would put an empty string into the region tree.
+     */
+    const needs = regionFieldsFor(form.role);
+    const payload: Record<string, any> = {
       fullName: (form.fullName || '').trim(),
       email: (form.email || '').trim().toLowerCase(),
       phoneNumber: (form.phoneNumber || '').trim(),
-      state: (form.state || '').trim(),
-      district: form.role === 'state_admin' ? '' : (form.district || '').trim(),
-      block: form.role === 'block_admin' ? (form.block || '').trim() : '',
-      ...(form.password ? { password: form.password } : {}),
+      role: form.role,
     };
+    needs.forEach((k) => { payload[k] = String((form as any)?.[k] || '').trim(); });
+    if (form.password) payload.password = form.password;
+    if (mode === 'edit' && isTierRole(form.role) && form.active !== originalActive) payload.active = !!form.active;
 
     // Checked here as well as on the server so the problem shows immediately.
     if (!payload.fullName) return Alert.alert('Missing field', 'Full name is required.');
@@ -407,19 +462,19 @@ const ManageAdminsScreen = ({ route }: any) => {
       return Alert.alert('Password mismatch', 'The passwords you entered do not match.');
     }
 
-    if (!payload.state) return Alert.alert('Missing field', 'State is required.');
-    if (payload.role !== 'state_admin' && !payload.district) {
+    if (needs.includes('state') && !payload.state) return Alert.alert('Missing field', 'State is required.');
+    if (needs.includes('district') && !payload.district) {
       return Alert.alert('Missing field', 'District is required for this tier.');
     }
-    if (payload.role === 'block_admin' && !payload.block) {
+    if (needs.includes('block') && !payload.block) {
       return Alert.alert('Missing field', 'Block is required for a block admin.');
     }
 
     setSaving(true);
     try {
       if (mode === 'edit' && editingId) {
-        await api.put(`/admin/super/admins/${editingId}`, payload);
-        Alert.alert('Changes Saved', `${payload.fullName}'s profile has been successfully updated.`);
+        await api.put(`/admin/super/admins/${encodeURIComponent(editingId)}`, payload);
+        Alert.alert('Admin updated', `${payload.fullName}'s account has been saved.`);
       } else {
         const response = await api.post('/admin/super/admins', payload);
         const created = response.data?.data || response.data || {};
@@ -470,7 +525,7 @@ const ManageAdminsScreen = ({ route }: any) => {
 
     let preview: RemovalPreview | null = null;
     try {
-      const response = await api.get(`/admin/super/admins/${admin?.id}/removal-preview`);
+      const response = await api.get(`/admin/super/admins/${encodeURIComponent(admin?.id || '')}/removal-preview`);
       preview = (response.data?.data || response.data || null) as RemovalPreview;
     } catch {
       // A failed preview must not block the delete; it only makes the warning
@@ -517,7 +572,7 @@ const ManageAdminsScreen = ({ route }: any) => {
           onPress: async () => {
             setBusyId(admin?.id || '');
             try {
-              await api.delete(`/admin/super/admins/${admin?.id}`);
+              await api.delete(`/admin/super/admins/${encodeURIComponent(admin?.id || '')}`);
               setAdmins(prev => (prev || []).filter(row => row.id !== admin?.id));
               invalidateRegionCache();
             } catch (err: any) {
@@ -547,102 +602,100 @@ const ManageAdminsScreen = ({ route }: any) => {
     [],
   );
 
-  const renderItem = useCallback(({ item }: { item: AdminRow }) => {
+  const renderItem = useCallback(({ item, index }: { item: AdminRow; index: number }) => {
     const busy = busyId === item?.id;
     const place = [item?.block, item?.district, item?.state].filter(Boolean).join(', ');
+    const meta = TIERS.find(t => t.key === item?.role);
+    const inactive = item?.active === false;
+    const lastLogin = (item as any)?.lastLoginAt ? shortDate((item as any).lastLoginAt) : '';
 
     return (
-      <View style={styles.adminCard}>
-        <View style={styles.adminHeader}>
-          <View style={styles.adminInfoRow}>
-            <View style={styles.avatarCircle}>
-              <Text style={styles.avatarText}>{getInitials(item?.fullName)}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
+      <FadeInUp delay={Math.min(index, 6) * 40} style={styles.gutter}>
+        <ConsoleCard style={[styles.adminCard, inactive && styles.adminInactive]} accent={inactive ? PALETTE.amber : undefined}>
+          <View style={styles.adminHeader}>
+            <GradientAvatar name={item?.fullName || item?.email} size={48} tone="admin" status={inactive ? 'pending' : 'online'} />
+            <View style={styles.flexText}>
               <Text style={styles.adminName} numberOfLines={1}>{item?.fullName || 'Unnamed admin'}</Text>
               <Text style={styles.adminEmail} numberOfLines={1}>{item?.email || 'No email'}</Text>
+              <View style={styles.chipRow}>
+                <ConsoleChip label={item?.roleLabel || item?.role || 'Admin'} kind={meta?.chip || 'neutral'} icon={meta?.icon || 'manage-accounts'} />
+                {inactive ? <ConsoleChip label="Deactivated" kind="warning" icon="pause-circle-outline" /> : null}
+              </View>
             </View>
           </View>
-          <View style={[styles.roleBadge, { backgroundColor: ACCENTS.lightPurple }]}>
-            <Text style={[styles.roleBadgeText, { color: ACCENTS.purple }]}>{item?.roleLabel || 'Admin'}</Text>
-          </View>
-        </View>
 
-        <View style={styles.adminMetaRow}>
-          {place ? (
-            <View style={styles.metaItem}>
-              <Icon name="location-on" size={13} color={SUPER.textFaint} />
-              <Text style={styles.metaText} numberOfLines={1}>{place}</Text>
-            </View>
-          ) : null}
-          {item?.phoneNumber ? (
-            <View style={styles.metaItem}>
-              <Icon name="phone" size={13} color={SUPER.textFaint} />
-              <Text style={styles.metaText} numberOfLines={1}>{item.phoneNumber}</Text>
-            </View>
-          ) : null}
-          {/* Several admins on one region share a single queue. Showing it here
-              is what turns an invisible duplication risk into a known team. */}
-          {Number(item?.coAdmins || 0) > 0 ? (
-            <View style={styles.metaItem}>
-              <Icon name="groups" size={13} color={ACCENTS.green} />
-              <Text style={[styles.metaText, styles.metaTextShared]} numberOfLines={1}>
-                Shared queue with {item.coAdmins} other admin{item.coAdmins === 1 ? '' : 's'}
-              </Text>
-            </View>
-          ) : null}
-          {item?.active === false ? (
-            <View style={styles.metaItem}>
-              <Icon name="pause-circle-outline" size={13} color={ACCENTS.orange} />
-              <Text style={[styles.metaText, styles.metaTextInactive]} numberOfLines={1}>
-                Deactivated — their region's queue has escalated
-              </Text>
-            </View>
-          ) : null}
-          <View style={superStyles.actionButtonsRow}>
-            <TouchableOpacity onPress={() => openEdit(item)} style={{ flex: 1 }}>
-              <View style={[superStyles.outlineBtn, superStyles.outlineBtnEdit]}>
-                <Icon name="edit" size={16} color={ACCENTS.purple} />
-                <Text style={superStyles.outlineBtnEditText}>Edit</Text>
+          <View style={styles.adminMetaRow}>
+            {place ? (
+              <View style={styles.metaItem}>
+                <View style={styles.metaIcon}><Icon name="location-on" size={14} color={PALETTE.indigo} /></View>
+                <Text style={styles.metaText} numberOfLines={2}>{place}</Text>
               </View>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleDelete(item)} disabled={busy} style={{ flex: 1 }}>
-              <View style={[superStyles.outlineBtn, superStyles.outlineBtnDelete]}>
-                {busy ? (
-                  <ActivityIndicator size="small" color={ACCENTS.red} />
-                ) : (
-                  <>
-                    <Icon name="delete-outline" size={16} color={ACCENTS.red} />
-                    <Text style={superStyles.outlineBtnDeleteText}>Delete</Text>
-                  </>
-                )}
+            ) : null}
+            {item?.phoneNumber ? (
+              <View style={styles.metaItem}>
+                <View style={styles.metaIcon}><Icon name="phone" size={14} color={PALETTE.indigo} /></View>
+                <Text style={styles.metaText} numberOfLines={1}>{item.phoneNumber}</Text>
               </View>
-            </TouchableOpacity>
+            ) : null}
+            {/* Several admins on one region share a single queue. Showing it here
+                is what turns an invisible duplication risk into a known team. */}
+            {Number(item?.coAdmins || 0) > 0 ? (
+              <View style={styles.metaItem}>
+                <View style={[styles.metaIcon, { backgroundColor: PALETTE.successSoft }]}><Icon name="groups" size={14} color={PALETTE.successText} /></View>
+                <Text style={[styles.metaText, styles.metaTextShared]} numberOfLines={2}>
+                  Shared queue with {item.coAdmins} other admin{item.coAdmins === 1 ? '' : 's'}
+                </Text>
+              </View>
+            ) : isTierRole(item?.role) ? (
+              <View style={styles.metaItem}>
+                <View style={styles.metaIcon}><Icon name="person" size={14} color={PALETTE.indigo} /></View>
+                <Text style={styles.metaText} numberOfLines={1}>Sole owner of this region's queue</Text>
+              </View>
+            ) : null}
+            {lastLogin ? (
+              <View style={styles.metaItem}>
+                <View style={styles.metaIcon}><Icon name="login" size={14} color={PALETTE.indigo} /></View>
+                <Text style={styles.metaText} numberOfLines={1}>Last signed in {lastLogin}</Text>
+              </View>
+            ) : null}
+            {inactive ? (
+              <View style={styles.metaItem}>
+                <View style={[styles.metaIcon, { backgroundColor: PALETTE.warningSoft }]}><Icon name="pause-circle-outline" size={14} color={PALETTE.warningText} /></View>
+                <Text style={[styles.metaText, styles.metaTextInactive]} numberOfLines={2}>
+                  Deactivated — their region's queue has escalated
+                </Text>
+              </View>
+            ) : null}
           </View>
-        </View>
-      </View>
+
+          <View style={styles.actions}>
+            <ConsoleButton kind="soft" size="sm" icon="edit" label="Edit" onPress={() => openEdit(item)} style={styles.flex} />
+            <ConsoleButton kind="danger" size="sm" icon="delete-outline" label="Delete" loading={busy} onPress={() => handleDelete(item)} style={styles.flex} />
+          </View>
+        </ConsoleCard>
+      </FadeInUp>
     );
   }, [busyId]);
 
-  const renderSectionHeader = useCallback(({ section }: any) => (
-    <View style={styles.sectionHeader}>
-      <View style={[styles.sectionIcon, { backgroundColor: section?.light }]}>
-        <Icon name={section?.icon} size={16} color={section?.color} />
+  const renderSectionHeader = useCallback(({ section }: any) => {
+    const meta = TIERS.find(t => t.key === section?.key);
+    return (
+      <View style={styles.sectionHeader}>
+        <LinearGradient colors={meta?.grad || CONSOLE_ACCENTS.slate.grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.sectionIcon}>
+          <Icon name={section?.icon} size={15} color={PALETTE.white} />
+        </LinearGradient>
+        <Text style={styles.sectionTitle} numberOfLines={1}>{section?.title}</Text>
+        <ConsoleChip label={String((section?.data || []).length)} kind="info" dot={false} />
       </View>
-      <Text style={styles.sectionTitle}>{section?.title}</Text>
-      <View style={styles.sectionCount}>
-        <Text style={styles.sectionCountText}>{(section?.data || []).length}</Text>
-      </View>
-    </View>
-  ), []);
+    );
+  }, []);
 
   /**
    * A secure field is rendered with a reveal toggle.
    *
    * The Super Admin is typing a password *for somebody else* and then has to
    * pass it on, so being unable to check what was typed is worse than the usual
-   * shoulder-surfing trade-off — a mistyped character is only discovered when
-   * that person cannot sign in. It starts masked and is per-field, so opening
+   * shoulder-surfing trade-off. It starts masked and is per-field, so opening
    * one does not unmask another.
    */
   const renderInput = (
@@ -650,277 +703,275 @@ const ManageAdminsScreen = ({ route }: any) => {
     value: string,
     onChange: (text: string) => void,
     placeholder: string,
-    options: { secure?: boolean; keyboard?: any; capitalize?: any } = {},
+    options: { secure?: boolean; keyboard?: any; capitalize?: any; icon?: string } = {},
   ) => {
     const revealed = !!options.secure && !!revealedFields[label];
 
     return (
-      <View style={styles.formField}>
-        <Text style={superStyles.label}>{label}</Text>
-        <View style={styles.inputRow}>
-          <TextInput
-            style={[superStyles.input, styles.inputFlex, options.secure && styles.inputWithIcon]}
-            placeholder={placeholder}
-            placeholderTextColor={SUPER.textFaint}
-            value={value}
-            onChangeText={onChange}
-            secureTextEntry={!!options.secure && !revealed}
-            keyboardType={options.keyboard || 'default'}
-            autoCapitalize={options.capitalize || 'words'}
-            autoCorrect={false}
-          />
-          {options.secure ? (
-            <TouchableOpacity
-              style={styles.revealBtn}
-              onPress={() => setRevealedFields(prev => ({ ...prev, [label]: !prev[label] }))}
-              activeOpacity={0.7}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityLabel={revealed ? 'Hide password' : 'Show password'}
-            >
-              <Icon
-                name={revealed ? 'visibility-off' : 'visibility'}
-                size={20}
-                color={SUPER.textFaint}
-              />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      </View>
+      <PremiumInput
+        tone="admin"
+        label={label}
+        icon={options.icon}
+        placeholder={placeholder}
+        value={value}
+        onChangeText={onChange}
+        secureTextEntry={!!options.secure && !revealed}
+        keyboardType={options.keyboard || 'default'}
+        autoCapitalize={options.capitalize || 'words'}
+        autoCorrect={false}
+        right={options.secure ? (
+          <TouchableOpacity
+            style={styles.revealBtn}
+            onPress={() => setRevealedFields(prev => ({ ...prev, [label]: !prev[label] }))}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={revealed ? 'Hide password' : 'Show password'}
+          >
+            <Icon
+              name={revealed ? 'visibility-off' : 'visibility'}
+              size={SIZE.icon}
+              color={PALETTE.textFaint}
+            />
+          </TouchableOpacity>
+        ) : undefined}
+      />
     );
   };
 
-  /**
-   * The create / edit form.
-   *
-   * Read top to bottom it is the hierarchy itself: pick a tier, pick the admin
-   * above you, and everything that admin owns is filled in and locked. The only
-   * free-text region on the whole screen is a state admin's state, and that one
-   * is picked from the canonical India list rather than typed.
-   */
   /**
    * The create / edit form.
    *
    * Every field is editable, region included, on create and on edit alike. The
    * Super Admin types region names directly: an unrecognised name is not an
    * error, it is a new region, and saving makes it selectable on the applicant
-   * registration form. That is the remote control this screen is meant to be.
+   * registration form.
    *
    * Only the region fields the chosen tier owns are shown — a state admin has no
-   * district — so nothing is stored that the tier has no use for.
+   * district — so nothing is stored that the tier has no use for. Cancel / Save
+   * live in the sticky footer while the form is open.
    */
   const renderForm = () => {
-    const owned = REGION_FIELDS[form.role];
+    const owned = regionFieldsFor(form.role);
+    const outsideTiers = !isTierRole(form.role);
 
     return (
-      <View style={superStyles.formCard}>
-        <Text style={styles.formTitle}>{mode === 'edit' ? 'Edit admin' : 'New admin'}</Text>
+      <FadeInUp style={styles.gutter}>
+        <ConsoleCard style={styles.formCard}>
+          <View style={styles.formHead}>
+            <LinearGradient colors={CONSOLE_ACCENTS.indigo.grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.formIcon}>
+              <Icon name={mode === 'edit' ? 'edit' : 'person-add'} size={SIZE.icon} color={PALETTE.white} />
+            </LinearGradient>
+            <View style={styles.flexText}>
+              <Text style={styles.formTitle}>{mode === 'edit' ? 'Edit admin' : 'New admin'}</Text>
+              <Text style={styles.formSub}>{mode === 'edit' ? 'Change the tier, region or account' : 'Pick a tier, then the region it governs'}</Text>
+            </View>
+          </View>
 
-        <Text style={[superStyles.label, { marginTop: 16 }]}>Tier</Text>
-        <View style={superStyles.tabsRow}>
-          {TIERS.map(option => {
-            const isActive = form.role === option.key;
-            return (
-              <TouchableOpacity
-                key={option.key}
-                style={[superStyles.tabPill, isActive && superStyles.tabPillActive]}
-                onPress={() => setRole(option.key)}
-                activeOpacity={0.75}
-              >
-                <Text
-                  style={[superStyles.tabPillText, isActive && superStyles.tabPillTextActive]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            );
+          <Text style={styles.groupLabel}>Tier</Text>
+          <ConsoleTabs
+            value={(isTierRole(form.role) ? form.role : '') as string}
+            onChange={(v) => setRole(v as AdminRole)}
+            options={TIERS.map(option => ({ value: option.key as string, label: option.label }))}
+            style={styles.flushTabs}
+          />
+
+          {outsideTiers ? (
+            <Text style={styles.tierNote}>
+              Current role: <Text style={styles.mono}>{form.role}</Text> — it owns no region and keeps its role
+              unless you pick a tier above.
+            </Text>
+          ) : (
+            <Text style={styles.tierNote}>
+              Saved into the <Text style={styles.mono}>{String(form.role || '').replace('_admin', '')}admins</Text> collection.
+            </Text>
+          )}
+
+          {owned.length > 0 ? <Text style={styles.groupLabel}>Region</Text> : null}
+
+          {owned.includes('state') ? (
+            <RegionInput
+              label="State"
+              value={form.state}
+              onChange={value => setRegionField('state', value)}
+              inUse={suggestions.states}
+              suggested={suggestions.referenceStates}
+              extra={added.state}
+              onAdd={name => addRegionOption('state', name)}
+              onRemove={name => removeRegionOption('state', name)}
+              scopeLabel="in India"
+              placeholder="Type or pick a state"
+            />
+          ) : null}
+
+          {owned.includes('district') ? (
+            <RegionInput
+              label="District"
+              value={form.district}
+              onChange={value => setRegionField('district', value)}
+              inUse={suggestions.districts}
+              suggested={suggestions.referenceDistricts}
+              extra={added.district}
+              onAdd={name => addRegionOption('district', name)}
+              onRemove={name => removeRegionOption('district', name)}
+              scopeLabel={form.state ? `in ${form.state}` : ''}
+              placeholder={form.state ? `A district in ${form.state}` : 'Pick the state first'}
+              disabled={!form.state}
+            />
+          ) : null}
+
+          {owned.includes('block') ? (
+            <RegionInput
+              label="Block"
+              value={form.block}
+              onChange={value => setRegionField('block', value)}
+              inUse={suggestions.blocks}
+              suggested={suggestions.referenceBlocks}
+              extra={added.block}
+              onAdd={name => addRegionOption('block', name)}
+              onRemove={name => removeRegionOption('block', name)}
+              scopeLabel={form.district ? `in ${form.district}` : ''}
+              placeholder={form.district ? `A block in ${form.district}` : 'Pick the district first'}
+              disabled={!form.district}
+            />
+          ) : null}
+
+          <View style={styles.rule} />
+          <Text style={styles.groupLabel}>Account</Text>
+
+          {renderInput('Full Name', form.fullName, v => setField('fullName', v), 'Jane Doe', { icon: 'person-outline' })}
+          {renderInput('Email Address', form.email, v => setField('email', v), 'name@activ.com', {
+            keyboard: 'email-address', capitalize: 'none', icon: 'mail-outline',
           })}
-        </View>
+          {renderInput('Phone (optional)', form.phoneNumber, v => setField('phoneNumber', v), '9876543210', {
+            keyboard: 'phone-pad', icon: 'phone',
+          })}
+          {renderInput(
+            mode === 'edit' ? 'New Password (leave blank to keep)' : 'Password',
+            form.password,
+            v => setField('password', v),
+            'At least 8 characters',
+            { secure: true, capitalize: 'none', icon: 'lock-outline' },
+          )}
 
-        <Text style={styles.tierNote}>
-          Saved into the <Text style={styles.mono}>{form.role.replace('_admin', '')}admins</Text> collection.
-        </Text>
+          {(mode === 'create' || form.password.length > 0) ? renderInput(
+            'Confirm Password',
+            form.confirmPassword,
+            v => setField('confirmPassword', v),
+            'Type the password again',
+            { secure: true, capitalize: 'none', icon: 'lock-outline' },
+          ) : null}
 
-        {owned.includes('state') ? (
-          <RegionInput
-            label="State"
-            value={form.state}
-            onChange={value => setRegionField('state', value)}
-            inUse={suggestions.states}
-            suggested={suggestions.referenceStates}
-            extra={added.state}
-            onAdd={name => addRegionOption('state', name)}
-            onRemove={name => removeRegionOption('state', name)}
-            scopeLabel="in India"
-            placeholder="Type or pick a state"
+          {/* Account on/off — `PUT /admin/super/admins/:id { active }`, sent only
+              when it changes. The server records it (reactivated / deactivated)
+              and escalates a deactivated admin's queue to the tier above. */}
+          {mode === 'edit' && isTierRole(form.role) ? (
+            <View style={[styles.activeRow, !form.active && styles.activeRowOff]}>
+              <Icon name={form.active ? 'toggle-on' : 'pause-circle-outline'} size={22} color={form.active ? PALETTE.successText : PALETTE.warningText} />
+              <View style={styles.flexText}>
+                <Text style={styles.activeTitle}>{form.active ? 'Account active' : 'Account deactivated'}</Text>
+                <Text style={styles.activeHint}>
+                  {form.active
+                    ? 'They can sign in and act on their region\'s queue.'
+                    : 'They cannot sign in; their region\'s pending applications escalate to the tier above until reactivated.'}
+                </Text>
+              </View>
+              <Switch
+                value={!!form.active}
+                onValueChange={toggleActive}
+                disabled={saving}
+                trackColor={{ false: PALETTE.borderStrong, true: PALETTE.indigo }}
+                thumbColor={Platform.OS === 'android' ? PALETTE.white : undefined}
+                ios_backgroundColor={PALETTE.borderStrong}
+                accessibilityLabel="Account active"
+              />
+            </View>
+          ) : null}
+
+          <ConsoleNote
+            icon="fence"
+            style={styles.formNote}
+            text="This region is the admin's geofence — they only ever see applications from it. It is also what applicants can choose: a region with no admin does not appear on the registration form, and a region you add here appears the moment you save."
           />
-        ) : null}
-
-        {owned.includes('district') ? (
-          <RegionInput
-            label="District"
-            value={form.district}
-            onChange={value => setRegionField('district', value)}
-            inUse={suggestions.districts}
-            suggested={suggestions.referenceDistricts}
-            extra={added.district}
-            onAdd={name => addRegionOption('district', name)}
-            onRemove={name => removeRegionOption('district', name)}
-            scopeLabel={form.state ? `in ${form.state}` : ''}
-            placeholder={form.state ? `A district in ${form.state}` : 'Pick the state first'}
-            disabled={!form.state}
-          />
-        ) : null}
-
-        {owned.includes('block') ? (
-          <RegionInput
-            label="Block"
-            value={form.block}
-            onChange={value => setRegionField('block', value)}
-            inUse={suggestions.blocks}
-            suggested={suggestions.referenceBlocks}
-            extra={added.block}
-            onAdd={name => addRegionOption('block', name)}
-            onRemove={name => removeRegionOption('block', name)}
-            scopeLabel={form.district ? `in ${form.district}` : ''}
-            placeholder={form.district ? `A block in ${form.district}` : 'Pick the district first'}
-            disabled={!form.district}
-          />
-        ) : null}
-
-        {renderInput('Full Name', form.fullName, v => setField('fullName', v), 'Jane Doe')}
-        {renderInput('Email Address', form.email, v => setField('email', v), 'name@activ.com', {
-          keyboard: 'email-address', capitalize: 'none',
-        })}
-        {renderInput('Phone (optional)', form.phoneNumber, v => setField('phoneNumber', v), '9876543210', {
-          keyboard: 'phone-pad',
-        })}
-        {renderInput(
-          mode === 'edit' ? 'New Password (leave blank to keep)' : 'Password',
-          form.password,
-          v => setField('password', v),
-          'At least 8 characters',
-          { secure: true, capitalize: 'none' },
-        )}
-
-        {(mode === 'create' || form.password.length > 0) ? renderInput(
-          'Confirm Password',
-          form.confirmPassword,
-          v => setField('confirmPassword', v),
-          'Type the password again',
-          { secure: true, capitalize: 'none' },
-        ) : null}
-
-        <Text style={styles.formNote}>
-          This region is the admin's geofence — they only ever see applications from it. It is also
-          what applicants can choose: a region with no admin does not appear on the registration
-          form, and a region you add here appears the moment you save.
-        </Text>
-
-        <View style={styles.formActions}>
-          <TouchableOpacity style={[superStyles.ghostButton, { flex: 1 }]} onPress={closeForm} activeOpacity={0.8}>
-            <Text style={superStyles.ghostButtonText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[superStyles.primaryButton, { flex: 1 }]}
-            onPress={handleSave}
-            disabled={saving}
-            activeOpacity={0.8}
-          >
-            {saving ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={superStyles.primaryButtonText}>
-                {mode === 'edit' ? 'Save changes' : 'Create admin'}
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
+        </ConsoleCard>
+      </FadeInUp>
     );
   };
 
   const listEmpty = () => {
-    if (loading) return <SkeletonList count={4} />;
+    if (loading) return <View style={styles.gutter}><SkeletonList count={4} /></View>;
     if (error) {
-      return <EmptyState icon="cloud-off" accentIcon="refresh" tone="error" title={error} caption="Pull down to try again." />;
+      return <EmptyState tone="error" title={error} caption="Pull down to try again." action="Try again" onAction={() => fetchAdmins()} />;
     }
     return (
       <EmptyState
-        icon="badge"
-        accentIcon="person-add"
         title="No admins match"
-        caption="Tap “Add” to create one for this tier."
+        caption={(query || '').trim() || roleFilter !== 'all'
+          ? 'Try a different filter.'
+          : 'Add one to open a region for registration.'}
       />
     );
   };
 
+  const footer = mode !== 'idle' ? (
+    <BottomActionBar safeBottom={false}>
+      <ConsoleButton kind="soft" label="Cancel" onPress={closeForm} style={styles.flex} />
+      <ConsoleButton
+        icon="check"
+        label={mode === 'edit' ? 'Save changes' : 'Create admin'}
+        loading={saving}
+        onPress={handleSave}
+        style={styles.flex}
+      />
+    </BottomActionBar>
+  ) : undefined;
+
+  const header = (
+    <View>
+      <ConsoleHeader
+        left={<GlassIconButton icon="arrow-back" onPress={goBack} accessibilityLabel="Back" />}
+        topCenter="Super Admin"
+        right={(
+          <GlassIconButton
+            icon={mode === 'idle' ? 'person-add' : 'close'}
+            onPress={() => (mode === 'idle' ? openCreate() : closeForm())}
+            accessibilityLabel={mode === 'idle' ? 'Add admin' : 'Close form'}
+          />
+        )}
+        eyebrow={`${(admins || []).length} accounts`}
+        title="Admins"
+        subtitle="A block admin opens a region for registration."
+        art={<TeamKeys3D size={96} />}
+        badges={[
+          { icon: 'public', label: `${Number(counts.state_admin || 0)} state` },
+          { icon: 'map', label: `${Number(counts.district_admin || 0)} district` },
+          { icon: 'location-city', label: `${Number(counts.block_admin || 0)} block` },
+        ]}
+        waveHeight={62}
+      />
+
+      {mode === 'idle' ? (
+        <FadeInUp style={styles.addWrap}>
+          <ConsoleButton icon="person-add" label="Add an admin" onPress={openCreate} />
+        </FadeInUp>
+      ) : null}
+
+      <ConsoleSearch value={query} onChangeText={setQuery} placeholder="Name, email or region" style={styles.search} />
+
+      <ConsoleTabs
+        value={roleFilter}
+        onChange={setRoleFilter}
+        options={ROLE_TABS.map(tab => ({ value: tab.key, label: tab.label, count: counts[tab.key] || 0 }))}
+        style={styles.roleTabs}
+      />
+
+      {/* Inline expandable form — never a native Modal inside a tab. */}
+      {mode !== 'idle' ? renderForm() : null}
+    </View>
+  );
+
   return (
-    <SafeAreaView style={superStyles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={SUPER.bg} />
-
-      <View style={superStyles.pageHeader}>
-        <TouchableOpacity style={superStyles.backBtn} onPress={goBack} activeOpacity={0.7}>
-          <Icon name="arrow-back" size={24} color={SUPER.text} />
-        </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={superStyles.pageTitle}>Admins</Text>
-          <Text style={superStyles.pageSubtitle}>{(admins || []).length} accounts on the platform</Text>
-        </View>
-        <TouchableOpacity
-          style={[superStyles.actionBtn, mode !== 'idle' && styles.actionBtnCancel]}
-          onPress={() => (mode === 'idle' ? openCreate() : closeForm())}
-          activeOpacity={0.8}
-        >
-          <Icon name={mode === 'idle' ? 'add' : 'close'} size={16} color="#FFFFFF" />
-          <Text style={superStyles.actionBtnText}>{mode === 'idle' ? 'Add' : 'Close'}</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={superStyles.searchBar}>
-        <Icon name="search" size={20} color={SUPER.textFaint} />
-        <TextInput
-          style={superStyles.searchInput}
-          placeholder="Name, email or region"
-          placeholderTextColor={SUPER.textFaint}
-          value={query}
-          onChangeText={setQuery}
-          autoCorrect={false}
-          autoCapitalize="none"
-        />
-        {query ? (
-          <TouchableOpacity onPress={() => setQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Icon name="close" size={20} color={SUPER.textFaint} />
-          </TouchableOpacity>
-        ) : null}
-      </View>
-
-      <View style={styles.tabsWrap}>
-        <View style={superStyles.tabsRow}>
-          {ROLE_TABS.map(tab => {
-            const isActive = roleFilter === tab.key;
-            const count = counts[tab.key] || 0;
-            return (
-              <TouchableOpacity
-                key={tab.key}
-                style={[superStyles.tabPill, isActive && superStyles.tabPillActive]}
-                onPress={() => setRoleFilter(tab.key)}
-                activeOpacity={0.75}
-              >
-                <Text
-                  style={[superStyles.tabPillText, isActive && superStyles.tabPillTextActive]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  {tab.label} ({count})
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
+    <ConsoleFrame footer={footer} avoidKeyboard>
       <SectionList
         ref={listRef}
         sections={sections}
@@ -928,80 +979,70 @@ const ManageAdminsScreen = ({ route }: any) => {
         renderItem={renderItem}
         renderSectionHeader={renderSectionHeader}
         stickySectionHeadersEnabled={false}
-        contentContainerStyle={superStyles.listContent}
+        contentContainerStyle={CONSOLE_LIST}
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={10}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        /* Inline expandable form — never a native Modal inside a tab. */
-        ListHeaderComponent={mode !== 'idle' ? renderForm() : null}
+        ListHeaderComponent={header}
         ListEmptyComponent={listEmpty}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchAdmins(true)} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchAdmins(true)} colors={[PALETTE.indigo]} tintColor={PALETTE.white} />}
       />
-    </SafeAreaView>
+    </ConsoleFrame>
   );
 };
 
 const styles = StyleSheet.create({
-  inputRow: { flexDirection: 'row', alignItems: 'center' },
-  inputFlex: { flex: 1 },
-  inputWithIcon: { paddingRight: 44 },
-  revealBtn: {
-    position: 'absolute', right: 0, top: 0, bottom: 0,
-    width: 44, alignItems: 'center', justifyContent: 'center',
-  },
-  tabsWrap: { paddingHorizontal: 16 },
-  actionBtnCancel: { backgroundColor: SUPER.textMuted },
+  flex: { flex: 1 },
+  flexText: { flex: 1, minWidth: 0 },
+  gutter: { marginHorizontal: SPACE.lg },
+  addWrap: { marginHorizontal: SPACE.lg, marginTop: -26, marginBottom: SPACE.md },
+  search: { marginTop: SPACE.xs },
+  roleTabs: { marginTop: SPACE.md, marginBottom: SPACE.sm },
+  revealBtn: { paddingLeft: SPACE.sm, minHeight: SIZE.touch, justifyContent: 'center' },
 
-  formTitle: { fontSize: 18, fontWeight: '700', color: SUPER.text },
-  formField: { marginBottom: 14 },
-  formNote: { fontSize: 12, color: SUPER.textFaint, lineHeight: 17, marginBottom: 16 },
-  formActions: { flexDirection: 'row', gap: 12 },
+  formCard: { marginTop: SPACE.md, marginBottom: SPACE.lg },
+  formHead: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, marginBottom: SPACE.lg },
+  formIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  formTitle: { ...TYPE.title },
+  formSub: { ...TYPE.caption, marginTop: 1 },
+  groupLabel: { ...TYPE.eyebrow, color: PALETTE.indigoDark, marginBottom: SPACE.sm },
+  flushTabs: { paddingHorizontal: 0 },
+  tierNote: { ...TYPE.caption, fontSize: 11, lineHeight: 15, marginTop: SPACE.sm, marginBottom: SPACE.lg },
+  mono: { fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: PALETTE.textSoft },
+  rule: { height: StyleSheet.hairlineWidth * 2, backgroundColor: PALETTE.divider, marginTop: SPACE.xs, marginBottom: SPACE.lg },
+  formNote: { marginTop: SPACE.xs },
+  activeRow: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACE.md, padding: SPACE.md, marginBottom: SPACE.md,
+    borderRadius: 16, backgroundColor: PALETTE.successSoft,
+  },
+  activeRowOff: { backgroundColor: PALETTE.warningSoft },
+  activeTitle: { ...TYPE.bodyStrong },
+  activeHint: { ...TYPE.caption, marginTop: 2 },
 
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  sectionIcon: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  sectionTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: SUPER.text },
-  sectionCount: {
-    paddingHorizontal: 9, paddingVertical: 2, borderRadius: 999,
-    backgroundColor: SUPER.field,
-  },
-  sectionCountText: { fontSize: 12, fontWeight: '700', color: SUPER.textMuted },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginTop: SPACE.lg, marginBottom: SPACE.md, marginHorizontal: SPACE.lg },
+  sectionIcon: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  sectionTitle: { flex: 1, minWidth: 0, ...TYPE.heading, fontSize: 16 },
 
-  adminCard: {
-    backgroundColor: SUPER.card, borderRadius: 16, padding: 16, marginBottom: 16,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03, shadowRadius: 8, elevation: 1,
-  },
-  adminHeader: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'flex-start', marginBottom: 16, gap: 8,
-  },
-  adminInfoRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatarCircle: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: ACCENTS.lightPurple, justifyContent: 'center', alignItems: 'center',
-  },
-  avatarText: { fontSize: 18, fontWeight: '700', color: ACCENTS.purple },
-  adminName: { fontSize: 16, fontWeight: '700', color: SUPER.text, marginBottom: 2 },
-  adminEmail: { fontSize: 12, color: SUPER.textMuted },
-  roleBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
-  roleBadgeText: { fontSize: 11, fontWeight: '600' },
+  adminCard: { marginBottom: SPACE.md },
+  adminInactive: { opacity: 0.85 },
+  adminHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
+  adminName: { ...TYPE.subheading, fontWeight: '800' },
+  adminEmail: { ...TYPE.caption, marginTop: SPACE.xxs },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: SPACE.sm - 2 },
 
   adminMetaRow: {
-    gap: 10, marginBottom: 16,
-    borderTopWidth: 1, borderTopColor: SUPER.border, paddingTop: 16,
+    gap: SPACE.sm, marginTop: SPACE.md, paddingTop: SPACE.md,
+    borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: PALETTE.divider,
   },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  metaText: { flex: 1, fontSize: 13, color: SUPER.textMuted },
-  metaTextEmpty: { color: SUPER.textFaint, fontStyle: 'italic' },
-  metaTextShared: { color: ACCENTS.green, fontWeight: '600' },
-  metaTextInactive: { color: ACCENTS.orange, fontWeight: '600' },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
+  metaIcon: { width: 26, height: 26, borderRadius: 9, backgroundColor: PALETTE.indigoSoft, alignItems: 'center', justifyContent: 'center' },
+  metaText: { flex: 1, minWidth: 0, ...TYPE.label, fontWeight: '500', color: PALETTE.textMuted },
+  metaTextShared: { color: PALETTE.successText, fontWeight: '600' },
+  metaTextInactive: { color: PALETTE.warningText, fontWeight: '600' },
 
-  tierNote: { fontSize: 11, color: SUPER.textFaint, marginTop: 8, marginBottom: 16 },
-  mono: { fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: SUPER.textMuted },
-
-  adminActions: { flexDirection: 'row', gap: 12 },
+  actions: { flexDirection: 'row', gap: SPACE.sm, marginTop: SPACE.lg },
 });
 
 export default ManageAdminsScreen;

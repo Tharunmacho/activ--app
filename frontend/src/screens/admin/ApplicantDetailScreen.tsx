@@ -3,29 +3,28 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  StatusBar,
   LayoutAnimation,
+  Linking,
   Platform,
   UIManager,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
-import { COLORS, FONTS, SPACING, SHADOWS } from '../../theme/theme';
 import api from '../../services/api';
+import { resolveMediaUrl } from '../../config/api.config';
+import { formatApplicationRef } from '../../services/memberApi';
 import {
-  ACCENTS,
-  SURFACE,
-  displayValue,
-  formatDate,
-  getInitials,
-  getStageStyle,
-} from './applicantStyles';
+  BottomActionBar, PALETTE, SPACE, TYPE, SIZE,
+  ConsoleScroll, ConsoleHeader, ConsoleCard, ConsoleSectionTitle, ConsoleNote, ConsoleButton, ConsoleChip,
+  TierProgressRail, tierTrail, GradientAvatar, GlassIconButton, PremiumInput, FadeInUp,
+  CONSOLE_ACCENTS, ConsoleAccent,
+} from '../../ui';
+import { displayValue, formatDate } from './applicantStyles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ApplicantDetail'>;
 
@@ -50,6 +49,14 @@ const hasValue = (raw: unknown): boolean => {
   return true;
 };
 
+/** `true`/`false` may arrive as a real Boolean or as the string form (website `asBool`). */
+const asBool = (v: unknown): boolean | undefined => {
+  if (typeof v === 'boolean') return v;
+  if (v === 'true' || v === 'yes') return true;
+  if (v === 'false' || v === 'no') return false;
+  return undefined;
+};
+
 const buildRows = (rows: { label: string; raw: unknown; icon?: string }[]): DetailRow[] =>
   rows
     .filter(row => hasValue(row.raw))
@@ -59,6 +66,35 @@ const buildRows = (rows: { label: string; raw: unknown; icon?: string }[]): Deta
       icon: row.icon || 'info-outline',
     }));
 
+const TIER_WORD: Record<string, string> = { block: 'Block', district: 'District', state: 'State' };
+const ADMIN_TYPE: Record<string, string> = {
+  BlockAdmin: 'Block Admin', DistrictAdmin: 'District Admin', StateAdmin: 'State Admin', SuperAdmin: 'ACTIV Head Office',
+};
+
+/** One fact tile in the dossier's grid. */
+function Fact({ icon, label, value, wide }: { icon: string; label: string; value: string; wide?: boolean }) {
+  return (
+    <View style={[styles.fact, wide && styles.factWide]}>
+      <View style={styles.factIcon}><Icon name={icon} size={16} color={PALETTE.indigo} /></View>
+      <View style={styles.flexText}>
+        <Text style={styles.factLabel} numberOfLines={1}>{label}</Text>
+        <Text style={styles.factValue} numberOfLines={2} selectable>{value || '—'}</Text>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * ============================================================================
+ * APPLICANT DOSSIER — the website's application detail, as a premium dossier
+ * ============================================================================
+ *
+ * Hero with the applicant's photo (floating gradient avatar), role and status;
+ * a facts grid; the Block → District → State review trail with each tier's
+ * date; the four submitted forms as collapsible sections; any uploaded
+ * documents; and a sticky decision bar. Rejection is an inline reason card —
+ * never a native Modal (Rule 2). Same fetch, same payloads as before.
+ */
 const ApplicantDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const { applicant } = route.params;
 
@@ -76,62 +112,95 @@ const ApplicantDetailScreen: React.FC<Props> = ({ navigation, route }) => {
 
   useEffect(() => {
     fetchApplicationDetails();
+    // Mount-only: one fetch per opened applicant (the route param never changes).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const [loadError, setLoadError] = useState('');
+
+  /*
+   * GET /applications/:id - the website's `getApplication`, the same record its
+   * detail modal renders. `/applications/user/:userId` is kept only as the
+   * fallback for a row that carries no application id.
+   */
   const fetchApplicationDetails = async () => {
-    const appId = applicant.applicationId || applicant._id || applicant.id;
-    const userId = applicant.userId || applicant.memberId;
+    const appId = applicant?.applicationId || applicant?._id || applicant?.id;
+    const userId = applicant?.userId || applicant?.memberId;
 
     setIsLoadingDetails(true);
+    setLoadError('');
     try {
       if (appId) {
         const res = await api.get(`/applications/${appId}`);
-        if (res.data?.success && res.data?.data) {
-          setFullApp((prev: any) => ({ ...prev, ...res.data.data }));
+        const payload = res?.data?.data || res?.data || null;
+        if (payload && typeof payload === 'object' && (payload._id || payload.data || payload.fullName)) {
+          setFullApp((prev: any) => ({ ...(prev || {}), ...payload }));
           return;
         }
       }
       if (userId) {
         const res = await api.get(`/applications/user/${userId}`);
-        const list = Array.isArray(res.data?.data) ? res.data.data : res.data?.applications || [];
-        if (list.length > 0) {
-          setFullApp((prev: any) => ({ ...prev, ...list[0] }));
+        const list = Array.isArray(res?.data?.data) ? res.data.data : res?.data?.applications || [];
+        if ((list || []).length > 0) {
+          setFullApp((prev: any) => ({ ...(prev || {}), ...list[0] }));
+          return;
         }
       }
-    } catch (err) {
-      console.log('Notice: Could not fetch extra application details:', err);
+      if (!appId && !userId) setLoadError('This row carries no application reference.');
+    } catch (err: any) {
+      setLoadError(err?.response?.data?.message || 'Failed to load application data');
     } finally {
       setIsLoadingDetails(false);
     }
   };
 
-  const stageStyle = getStageStyle(stage) || ACCENTS.slate;
-  const isPending = stage === 'pending';
+  /*
+   * WHETHER THIS ADMIN MAY STILL DECIDE is the server's `canAct` — never
+   * re-derived from the status (CLAUDE.md). The stage is only the fallback for
+   * an older payload that carries no `canAct`. Once this admin decides here,
+   * it is off.
+   */
+  const [decided, setDecided] = useState(false);
+  const serverCanAct = (applicant as any)?.canAct;
+  const isPending = !decided && (typeof serverCanAct === 'boolean' ? serverCanAct : stage === 'pending');
+  const decidesOutcome = (applicant as any)?.decidesOutcome;
+  const endorsementLine = String((applicant as any)?.endorsementLine || fullApp?.endorsementLine || '');
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState('');
 
   const toggleSection = (key: SectionKey) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpanded(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const setAll = (open: boolean) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded({ personal: open, business: open, financial: open, declaration: open });
+  };
+
   const submitReview = async (action: 'approve' | 'reject') => {
     setSubmitting(action);
     const appId = fullApp.applicationId || fullApp._id || fullApp.id;
     try {
-      await api.post(`/applications/${appId}/${action}`, {
-        action,
-        ...(action === 'reject'
-          ? { rejectionReason: 'Rejected by Admin' }
-          : {}),
-      });
+      // Exactly the website's payloads: approve `{}`, reject `{ rejectionReason }`.
+      const res: any = await api.post(
+        `/applications/${appId}/${action}`,
+        action === 'reject' ? { rejectionReason: (reason || '').trim() || 'No reason given' } : {},
+      );
+      const serverMessage = String(res?.data?.message || '');
 
+      setDecided(true);
+      setRejecting(false);
       setStage(action === 'approve' ? 'approved' : 'rejected');
       setStatusLabel(action === 'approve' ? 'Approved' : 'Rejected');
 
       Alert.alert(
         action === 'approve' ? 'Approved' : 'Rejected',
-        action === 'approve'
-          ? `${fullApp.fullName || applicant.fullName}'s application has been approved.`
-          : `${fullApp.fullName || applicant.fullName}'s application has been rejected.`,
+        serverMessage || (action === 'approve'
+          ? (decidesOutcome === false
+            ? `Your approval of ${fullApp.fullName || applicant.fullName} is recorded. The State Admin grants the membership.`
+            : `${fullApp.fullName || applicant.fullName}'s application has been approved.`)
+          : `Your rejection of ${fullApp.fullName || applicant.fullName}'s application is recorded.`),
         [{ text: 'Back to List', onPress: () => navigation.goBack() }],
       );
     } catch (error: any) {
@@ -146,6 +215,9 @@ const ApplicantDetailScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const confirmReview = (action: 'approve' | 'reject') => {
     const name = fullApp.fullName || applicant.fullName;
+    // A rejection needs the reason typed inline first (no native Modal).
+    if (action === 'reject' && !rejecting) { setRejecting(true); return; }
+    // A blank reason is sent as "No reason given", exactly as the website does.
     Alert.alert(
       action === 'approve' ? 'Approve applicant' : 'Reject applicant',
       `${action === 'approve' ? 'Approve' : 'Reject'} the application from ${name}?`,
@@ -160,28 +232,54 @@ const ApplicantDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     );
   };
 
-  const appData = fullApp?.data || fullApp || {};
-  const personal = appData?.personalDetails || appData?.personal || fullApp?.personalDetails || appData;
-  const business = appData?.businessInfo || appData?.business || fullApp?.businessInfo || appData;
-  const financial = appData?.financialInfo || appData?.financial || fullApp?.financialInfo || appData;
-  const declaration = appData?.declaration || fullApp?.declaration || appData;
+  /*
+   * THE WEBSITE'S `getApplicationProfile` FLATTENING.
+   *
+   * Applications are stored two ways: nested (`data.personalDetails`, ...) and
+   * flat on `data` itself (older rows, the registration path). The flat shape
+   * is spread first and the nested sections over it, so both read - the same
+   * precedence the website's detail modal uses. The queue row (`applicant`)
+   * sits underneath everything as the last fallback.
+   */
+  const appData: any = fullApp?.data || {};
+  const p: any = {
+    ...(applicant || {}),
+    ...(fullApp || {}),
+    ...appData,
+    ...(appData?.personalDetails || appData?.personal || (fullApp as any)?.personalDetails || {}),
+    ...(appData?.businessInfo || appData?.business || (fullApp as any)?.businessInfo || {}),
+    ...(appData?.financialInfo || appData?.financial || (fullApp as any)?.financialInfo || {}),
+    ...(appData?.declaration || (fullApp as any)?.declaration || {}),
+  };
+  const personal: any = appData?.personalDetails || appData?.personal || (fullApp as any)?.personalDetails || {};
+  const business: any = appData?.businessInfo || appData?.business || (fullApp as any)?.businessInfo || {};
+  const fullName = fullApp?.fullName || personal?.fullName || applicant?.fullName || '';
+  const phone = fullApp?.phone || personal?.phoneNumber || personal?.phone || applicant?.phone || '';
+  const email = fullApp?.email || personal?.email || applicant?.email || '';
+  const doingBusiness = asBool(business?.doingBusiness ?? appData?.doingBusiness ?? (applicant as any)?.doingBusiness);
+  const registrationType = String(fullApp?.registrationType || (applicant as any)?.registrationType || '').toLowerCase();
+  const memberType = String(fullApp?.memberType || (applicant as any)?.memberType || '').toLowerCase();
+  const abroad = fullApp?.isInternational === true || (applicant as any)?.isInternational === true;
 
-  const isAspirant = (() => {
-    const bizBool = business.doingBusiness !== undefined ? business.doingBusiness : (appData.doingBusiness !== undefined ? appData.doingBusiness : fullApp.doingBusiness);
-    if (bizBool === false) return true;
-    if (bizBool === true || business.organizationName || appData.organizationName || fullApp.organizationName) return false;
-    const str = String(fullApp.registrationType || fullApp.memberType || appData.registrationType || appData.memberType || '').toLowerCase();
-    return str.includes('aspirant');
-  })();
-
-  const userRole = isAspirant ? 'Aspirant' : 'Business Member';
+  /*
+   * The server's rule (admin.service.js), as the website applies it: BOTH
+   * `doingBusiness === false` AND an explicit aspirant/student marker.
+   */
+  const isStudent = doingBusiness === false && (registrationType === 'student' || memberType === 'student');
+  const isAspirant = isStudent || (doingBusiness === false && (registrationType === 'aspirant' || memberType === 'aspirant'));
+  // Looser on purpose: anyone not trading has no sister concerns to show.
+  const notTrading = doingBusiness === false
+    || ['aspirant', 'student'].includes(registrationType)
+    || ['aspirant', 'student'].includes(memberType);
+  const userRole = isStudent ? 'Student' : isAspirant ? 'Aspirant' : 'Business Member';
+  const rejectionReason = String((applicant as any)?.rejectionReason || fullApp?.rejectionReason || '');
 
   const sections: {
     key: SectionKey;
     title: string;
     subtitle: string;
     icon: string;
-    accent: { tint: string; solid: string };
+    accent: ConsoleAccent;
     rows: DetailRow[];
   }[] = [
     {
@@ -189,518 +287,439 @@ const ApplicantDetailScreen: React.FC<Props> = ({ navigation, route }) => {
       title: 'Form 1: Personal & Demographic Details',
       subtitle: 'Basic contact and demographic information',
       icon: 'person',
-      accent: { tint: '#EEF2FF', solid: '#4F46E5' },
+      accent: 'indigo',
       rows: buildRows([
-        { label: 'Full Name', raw: personal.fullName || appData.fullName || fullApp.fullName || applicant.fullName, icon: 'person-outline' },
-        { label: 'Block', raw: personal.block || appData.block || fullApp.block || applicant.block, icon: 'location-city' },
-        { label: 'City / Town', raw: personal.city || appData.city || fullApp.city || applicant.city, icon: 'place' },
-        { label: 'District', raw: personal.district || appData.district || fullApp.district || applicant.district, icon: 'map' },
-        { label: 'State', raw: personal.state || appData.state || fullApp.state || applicant.state, icon: 'public' },
-        { label: 'Phone Number', raw: personal.phoneNumber || personal.phone || appData.phoneNumber || appData.phone || fullApp.phone || applicant.phone, icon: 'phone' },
-        { label: 'Email Address', raw: personal.email || appData.email || fullApp.email || applicant.email, icon: 'email' },
-        { label: 'Date of Birth', raw: personal.dateOfBirth || personal.dob || appData.dateOfBirth || appData.dob ? formatDate(personal.dateOfBirth || personal.dob || appData.dateOfBirth || appData.dob) : '', icon: 'cake' },
-        { label: 'Gender', raw: personal.gender || appData.gender || applicant.gender, icon: 'wc' },
-        { label: 'Aadhaar / ID No', raw: personal.aadhaarNumber || personal.aadhaar || personal.idNumber || appData.aadhaarNumber, icon: 'badge' },
-        { label: 'Street Address', raw: personal.streetName || personal.street || personal.address || appData.streetName || appData.address, icon: 'home' },
-        { label: 'Education', raw: personal.educationalQualification || personal.education || appData.educationalQualification || appData.education, icon: 'school' },
-        { label: 'Religion', raw: personal.religion || appData.religion, icon: 'star-outline' },
-        { label: 'Social Category', raw: personal.socialCategory || appData.socialCategory, icon: 'category' },
+        { label: 'Full Name', raw: fullName || p.name, icon: 'person-outline' },
+        { label: 'Membership Type', raw: fullApp?.memberType || fullApp?.registrationType || (applicant as any)?.memberType || p.role, icon: 'card-membership' },
+        { label: 'Block', raw: fullApp?.block || personal?.block || applicant?.block, icon: 'location-city' },
+        { label: 'City / Town', raw: personal?.city || p.city, icon: 'place' },
+        { label: 'District', raw: fullApp?.district || personal?.district || applicant?.district, icon: 'map' },
+        { label: 'State', raw: fullApp?.state || personal?.state || applicant?.state, icon: 'public' },
+        // An applicant from abroad has no block or district: the country and
+        // place are what they gave (the queue names them the same way).
+        { label: 'Country', raw: abroad ? (fullApp?.country || (applicant as any)?.country) : '', icon: 'flag' },
+        { label: 'Place', raw: abroad ? (fullApp?.place || (applicant as any)?.place) : '', icon: 'pin-drop' },
+        { label: 'Phone Number', raw: phone, icon: 'phone' },
+        { label: 'Email Address', raw: email, icon: 'email' },
+        { label: 'Date of Birth', raw: (p.dateOfBirth || p.dob) ? formatDate(p.dateOfBirth || p.dob) : '', icon: 'cake' },
+        { label: 'Gender', raw: p.gender, icon: 'wc' },
+        { label: 'Aadhaar / ID No', raw: p.aadhaarNumber || p.aadhaar || p.idNumber, icon: 'badge' },
+        { label: 'Street Address', raw: p.streetName || p.street || p.address, icon: 'home' },
+        { label: 'Education', raw: p.educationalQualification || p.education, icon: 'school' },
+        { label: 'Religion', raw: p.religion, icon: 'star-outline' },
+        { label: 'Social Category', raw: p.socialCategory, icon: 'category' },
       ]),
     },
-    ...(!isAspirant
-      ? [
-          {
-            key: 'business' as SectionKey,
-            title: 'Form 2: Business Information',
-            subtitle: 'Company profile and operational details',
-            icon: 'business-center',
-            accent: { tint: '#EFF6FF', solid: '#2563EB' },
-            rows: buildRows([
-              { label: 'Member Type / Role', raw: userRole, icon: 'card-membership' },
-              // Read the declared value. This was the literal 'Yes' - which is
-              // true of every applicant in this branch by construction, but
-              // printed as though it had been looked up.
-              { label: 'Doing Business', raw: business.doingBusiness !== undefined ? (business.doingBusiness ? 'Yes' : 'No') : (appData.doingBusiness !== undefined ? (appData.doingBusiness ? 'Yes' : 'No') : undefined), icon: 'storefront' },
-              { label: 'Organization Name', raw: business.organizationName || business.businessName || appData.organizationName || appData.businessName, icon: 'corporate-fare' },
-              { label: 'Constitution Type', raw: business.constitutionType || appData.constitutionType, icon: 'gavel' },
-              { label: 'Business Type', raw: business.businessTypes || business.businessType || appData.businessTypes || appData.businessType, icon: 'domain' },
-              { label: 'Business Activities', raw: business.businessActivities || appData.businessActivities, icon: 'work' },
-              { label: 'Commencement Year', raw: business.businessCommencementYear || appData.businessCommencementYear, icon: 'event' },
-              { label: 'Employees Count', raw: business.numberOfEmployees || appData.numberOfEmployees, icon: 'groups' },
-              { label: 'Other Chamber Member', raw: business.memberOfOtherChamber !== undefined ? (business.memberOfOtherChamber ? 'Yes' : 'No') : (appData.memberOfOtherChamber !== undefined ? (appData.memberOfOtherChamber ? 'Yes' : 'No') : undefined), icon: 'verified' },
-              { label: 'Other Chamber Details', raw: business.otherChamber || appData.otherChamber, icon: 'groups' },
-              { label: 'Govt. Organizations', raw: business.govtOrganizations || appData.govtOrganizations, icon: 'account-balance' },
-            ]),
-          },
-          {
-            key: 'financial' as SectionKey,
-            title: 'Form 3: Financial & Compliance',
-            subtitle: 'Taxation, scheme benefits and compliance',
-            icon: 'account-balance-wallet',
-            accent: { tint: '#ECFDF5', solid: '#059669' },
-            rows: buildRows([
-              { label: 'PAN Number', raw: financial.panNumber || appData.panNumber, icon: 'subtitles' },
-              { label: 'GST Number', raw: financial.gstNumber || appData.gstNumber, icon: 'receipt' },
-              { label: 'Udyam Number', raw: financial.udyamNumber || appData.udyamNumber, icon: 'confirmation-number' },
-              { label: 'ITR Filed', raw: financial.itrFiled !== undefined ? (financial.itrFiled ? 'Yes' : 'No') : (financial.filedITR !== undefined ? (financial.filedITR ? 'Yes' : 'No') : (appData.itrFiled !== undefined ? (appData.itrFiled ? 'Yes' : 'No') : undefined)), icon: 'check-circle' },
-              { label: 'Turnover Range', raw: financial.turnoverRange || financial.lastYearTurnover || appData.turnoverRange || appData.lastYearTurnover, icon: 'attach-money' },
-              { label: 'Govt. Scheme Benefits', raw: financial.govtSchemeBenefit || financial.govtSchemes || appData.govtSchemeBenefit || appData.govtSchemes, icon: 'card-giftcard' },
-            ]),
-          },
-        ]
-      : []),
+    /*
+     * No hard gate on Forms 2 and 3 (website parity): a section with nothing
+     * filled in drops out on its own.
+     */
+    {
+      key: 'business',
+      title: 'Form 2: Business Information',
+      subtitle: 'Company profile and operational details',
+      icon: 'business-center',
+      accent: 'sky',
+      rows: buildRows([
+        { label: 'Doing Business', raw: doingBusiness, icon: 'storefront' },
+        { label: 'Organization Name', raw: p.organizationName || p.businessName, icon: 'corporate-fare' },
+        { label: 'Constitution Type', raw: p.constitutionType, icon: 'gavel' },
+        { label: 'Business Type', raw: p.businessTypes || p.businessType, icon: 'domain' },
+        { label: 'Business Activities', raw: p.businessActivities, icon: 'work' },
+        { label: 'Commencement Year', raw: p.businessCommencementYear, icon: 'event' },
+        { label: 'Employees Count', raw: p.numberOfEmployees, icon: 'groups' },
+        { label: 'Other Chamber Member', raw: asBool(p.memberOfOtherChamber), icon: 'verified' },
+        { label: 'Other Chamber Details', raw: p.otherChamber, icon: 'groups' },
+        { label: 'Govt. Organizations', raw: p.govtOrganizations, icon: 'account-balance' },
+      ]),
+    },
+    {
+      key: 'financial',
+      title: 'Form 3: Financial & Compliance',
+      subtitle: 'Taxation, scheme benefits and compliance',
+      icon: 'account-balance-wallet',
+      accent: 'green',
+      rows: buildRows([
+        { label: 'PAN Number', raw: p.panNumber, icon: 'subtitles' },
+        { label: 'GST Number', raw: p.gstNumber, icon: 'receipt' },
+        { label: 'Udyam Number', raw: p.udyamNumber, icon: 'confirmation-number' },
+        { label: 'ITR Filed', raw: asBool(p.filedITR ?? p.itrFiled), icon: 'check-circle' },
+        { label: 'Turnover Range', raw: p.turnoverRange || p.lastYearTurnover, icon: 'attach-money' },
+        { label: 'Govt. Scheme Benefits', raw: asBool(p.govtSchemeBenefit), icon: 'card-giftcard' },
+        { label: 'Schemes Availed', raw: p.govtSchemes, icon: 'redeem' },
+        { label: 'Other Scheme Details', raw: p.schemeDetails, icon: 'notes' },
+      ]),
+    },
     {
       key: 'declaration',
       title: 'Form 4: Declaration & Terms',
       subtitle: 'Affiliation and legal agreement',
       icon: 'assignment-turned-in',
-      accent: { tint: '#FEF3C7', solid: '#D97706' },
+      accent: 'amber',
       rows: buildRows([
-        ...(!isAspirant
-          ? [
-              { label: 'Sister Concerns', raw: declaration.sisterConcerns || appData.sisterConcerns, icon: 'hub' },
-              { label: 'Company Names', raw: declaration.companyNames || appData.companyNames, icon: 'business' },
-            ]
-          : []),
-        { label: 'Agreed to Terms', raw: declaration.agreeToDeclaration !== undefined ? (declaration.agreeToDeclaration ? 'Yes (Confirmed)' : 'No') : (appData.agreeToTerms !== undefined ? (appData.agreeToTerms ? 'Yes (Confirmed)' : 'No') : undefined), icon: 'rule' },
-        { label: 'Submitted Date', raw: formatDate(appData.submittedAt || fullApp.createdAt || fullApp.updatedAt), icon: 'today' },
+        ...(isAspirant || notTrading
+          ? []
+          : [
+              { label: 'Sister Concerns', raw: p.sisterConcerns, icon: 'hub' },
+              { label: 'Company Names', raw: p.companyNames, icon: 'business' },
+            ]),
+        // No "assume yes": the agreement is on the record or it is not.
+        { label: 'Agreed to Terms', raw: asBool(p.agreeToDeclaration ?? p.agreeToTerms), icon: 'rule' },
+        { label: 'Submitted Date', raw: formatDate(fullApp?.createdAt || (applicant as any)?.submittedAt || null), icon: 'today' },
       ]),
     },
   ];
 
   const visibleSections = sections.filter(sec => sec.rows.length > 0);
+  const allOpen = visibleSections.every(sec => expanded[sec.key]);
 
-  const displayName = fullApp.fullName || applicant.fullName || 'Applicant';
-  const displayCode = fullApp.memberCode || fullApp.applicationId || applicant.id || 'MEM-2024-001';
+  const displayName = fullName || 'Applicant';
+  const photoPath = String(p?.profilePhoto || '');
+  const photo = photoPath ? resolveMediaUrl(photoPath) : '';
+  const place = abroad
+    ? ['Outside India', fullApp?.place || (applicant as any)?.place, fullApp?.country || (applicant as any)?.country].filter(Boolean).join(' · ')
+    : [
+      fullApp?.block || personal?.block || applicant?.block,
+      fullApp?.district || personal?.district || applicant?.district,
+    ].filter(Boolean).join(', ');
+  const submittedOn = formatDate(fullApp?.createdAt || (applicant as any)?.submittedAt || null);
+  const reference = formatApplicationRef(fullApp || applicant) || '';
+  const showOthersNotice = !!(endorsementLine || (isPending && decidesOutcome === false));
 
-  const renderDetailCard = (row: DetailRow, index: number) => (
-    <View key={row.label + '_' + index} style={styles.detailRowBox}>
-      <View style={styles.detailRowHeader}>
-        <View style={styles.detailIconBox}>
-          <Icon name={row.icon} size={13} color="#64748B" />
-        </View>
-        <Text style={styles.detailLabelText}>{row.label}</Text>
-      </View>
-      <Text style={styles.detailValueText}>{row.value}</Text>
-    </View>
+  // The trail: the full record's `reviews` when loaded, the row's `tierReviews` before.
+  const trailSource = fullApp?.reviews ? fullApp : applicant;
+  const trail = tierTrail(trailSource);
+  const reviewDetail = (tier: string) => (fullApp?.reviews?.[tier] || (applicant as any)?.tierReviews?.[tier] || {}) as any;
+
+  const documents: any[] = Array.isArray(fullApp?.documents) ? fullApp.documents.filter((d: any) => d && (d.url || d.name)) : [];
+  const openDocument = async (doc: any) => {
+    const raw = String(doc?.url || '');
+    if (!raw) return;
+    const url = /^https?:\/\//i.test(raw) ? raw : resolveMediaUrl(raw);
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('Could not open', 'No app on this phone can open this document.');
+    }
+  };
+
+  const footer = isPending ? (
+    <BottomActionBar note={rejecting ? 'Type a reason, then tap Reject again to confirm.' : undefined}>
+      <ConsoleButton
+        kind={rejecting ? 'dangerSolid' : 'danger'}
+        icon="cancel"
+        label="Reject"
+        loading={submitting === 'reject'}
+        disabled={submitting !== null}
+        onPress={() => confirmReview('reject')}
+        style={styles.flex}
+      />
+      <ConsoleButton
+        kind="approve"
+        icon="check-circle"
+        label="Approve"
+        loading={submitting === 'approve'}
+        disabled={submitting !== null}
+        onPress={() => confirmReview('approve')}
+        style={styles.flex}
+      />
+    </BottomActionBar>
+  ) : (
+    <BottomActionBar>
+      <ConsoleButton kind="soft" icon="format-list-bulleted" label="Back to List" onPress={() => navigation.goBack()} style={styles.flex} />
+    </BottomActionBar>
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
-
-      {/* Clean Seamless Top Bar Header */}
-      <View style={styles.topBar}>
-        <TouchableOpacity
-          style={styles.backButton}
-          activeOpacity={0.7}
-          onPress={() => navigation.goBack()}
-        >
-          <Icon name="arrow-back" size={24} color="#1F2937" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>User Details</Text>
-      </View>
-
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Dribbble Style Hero Profile Card */}
-        <View style={styles.heroCard}>
-          <View style={styles.heroHeaderRow}>
-            <View style={styles.heroAvatarCircle}>
-              <Text style={styles.heroAvatarText}>{getInitials(displayName)}</Text>
-            </View>
-            <View style={styles.heroMainInfo}>
-              <Text style={styles.heroName} numberOfLines={1}>{displayName}</Text>
-              <View style={[styles.rolePill, { backgroundColor: isAspirant ? '#ECFDF5' : '#EFF6FF' }]}>
-                <Icon name={isAspirant ? 'school' : 'business'} size={12} color={isAspirant ? '#059669' : '#2563EB'} />
-                <Text style={[styles.rolePillText, { color: isAspirant ? '#059669' : '#2563EB' }]}>
-                  {userRole}
-                </Text>
-              </View>
-            </View>
-            <View style={[styles.statusBadgePill, { backgroundColor: stageStyle.tint }]}>
-              <View style={[styles.statusBadgeDot, { backgroundColor: stageStyle.solid }]} />
-              <Text style={[styles.statusBadgeText, { color: stageStyle.solid }]}>
-                {statusLabel}
-              </Text>
-            </View>
+    <ConsoleScroll footer={footer} avoidKeyboard>
+      <ConsoleHeader
+        left={<GlassIconButton icon="arrow-back" onPress={() => navigation.goBack()} accessibilityLabel="Back" />}
+        topCenter="Application details"
+        eyebrow={reference || 'Application'}
+        title={displayName}
+        subtitle="Complete application information submitted by the member"
+        art={(
+          <View style={styles.heroAvatar}>
+            <GradientAvatar
+              name={displayName}
+              uri={photo}
+              size={92}
+              tone="admin"
+              status={String(stage) === 'approved' ? 'verified' : String(stage) === 'pending' ? 'pending' : undefined}
+            />
           </View>
+        )}
+        badges={[
+          { icon: isAspirant ? 'school' : 'business', label: userRole },
+          { icon: String(stage) === 'approved' ? 'verified' : String(stage) === 'rejected' ? 'block' : 'schedule', label: String(statusLabel || '') },
+        ]}
+        waveHeight={62}
+      />
 
+      {/* Facts grid, lifted over the waves. */}
+      <FadeInUp style={styles.overlap}>
+        <ConsoleCard>
+          <View style={styles.facts}>
+            <Fact icon="phone" label="Phone" value={phone} />
+            <Fact icon="today" label="Submitted" value={submittedOn} />
+            <Fact icon="place" label="Region" value={place} />
+            <Fact icon="badge" label="Membership" value={memberType ? memberType.charAt(0).toUpperCase() + memberType.slice(1) : userRole} />
+            <Fact icon="email" label="Email" value={email} wide />
+          </View>
+        </ConsoleCard>
+      </FadeInUp>
 
+      <View style={styles.stack}>
+        {/* What the OTHER tiers recorded, and what this tier's decision means. */}
+        {showOthersNotice ? (
+          <ConsoleNote
+            icon="info-outline"
+            text={`${endorsementLine}${endorsementLine && isPending && decidesOutcome === false ? ' · ' : ''}${isPending && decidesOutcome === false
+              ? 'Your decision is recorded for the file; the State Admin grants the membership.'
+              : ''}`}
+          />
+        ) : null}
 
-          {/* Action Buttons */}
-          {isPending ? (
-            <View style={styles.actionRow}>
-              <TouchableOpacity
-                style={[styles.actionBtn, styles.approveBtn]}
-                activeOpacity={0.85}
-                disabled={submitting !== null}
-                onPress={() => confirmReview('approve')}
-              >
-                {submitting === 'approve' ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
-                    <Icon name="check-circle" size={18} color="#FFFFFF" />
-                    <Text style={styles.actionBtnText}>Approve</Text>
-                  </>
-                )}
-              </TouchableOpacity>
+        {isPending ? null : String(stage) === 'pending' ? (
+          // Pending but not this seat's to decide (e.g. an orphaned file) —
+          // the website simply shows no buttons; never call it rejected.
+          <ConsoleNote
+            kind="amber"
+            icon="schedule"
+            text={String((applicant as any)?.fallbackReason || '') || 'Awaiting a decision.'}
+          />
+        ) : (
+          <ConsoleNote
+            kind={stage === 'approved' ? 'green' : 'red'}
+            icon={stage === 'approved' ? 'verified' : 'error-outline'}
+            text={stage === 'approved'
+              ? (decidesOutcome === false ? 'Approved by you — the State Admin grants the membership' : 'Approved')
+              : rejectionReason || 'This application was rejected.'}
+          />
+        )}
 
-              <TouchableOpacity
-                style={[styles.actionBtn, styles.rejectBtn]}
-                activeOpacity={0.85}
-                disabled={submitting !== null}
-                onPress={() => confirmReview('reject')}
-              >
-                {submitting === 'reject' ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
-                    <Icon name="cancel" size={18} color="#FFFFFF" />
-                    <Text style={styles.actionBtnText}>Reject</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View
-              style={[
-                styles.noticeCard,
-                {
-                  backgroundColor: stage === 'approved' ? '#ECFDF5' : '#FEF2F2',
-                  borderColor: stage === 'approved' ? '#A7F3D0' : '#FCA5A5',
-                },
-              ]}
-            >
-              <Icon
-                name={stage === 'approved' ? 'verified' : 'error-outline'}
-                size={18}
-                color={stage === 'approved' ? '#059669' : '#DC2626'}
+        {/* Inline rejection reason — never a native Modal (Rule 2). */}
+        {isPending && rejecting ? (
+          <FadeInUp>
+            <ConsoleCard accent={PALETTE.red}>
+              <PremiumInput
+                tone="admin"
+                label="Reason for rejection"
+                icon="edit-note"
+                value={reason}
+                onChangeText={setReason}
+                placeholder="Why is this being rejected?"
+                multiline
+                autoFocus
+                style={styles.fieldFlush}
               />
-              <Text
-                style={[
-                  styles.noticeText,
-                  { color: stage === 'approved' ? '#065F46' : '#991B1B', fontWeight: '600' },
-                ]}
-              >
-                {stage === 'approved'
-                  ? 'Membership Approved & Verified'
-                  : fullApp.rejectionReason || 'This application was rejected.'}
-              </Text>
-            </View>
-          )}
+              <View style={styles.rejectRow}>
+                <Text style={styles.rejectHint}>Sent to the applicant's record. Blank is sent as “No reason given”.</Text>
+                <ConsoleButton
+                  kind="ghost"
+                  size="sm"
+                  label="Cancel"
+                  onPress={() => { setRejecting(false); setReason(''); }}
+                />
+              </View>
+            </ConsoleCard>
+          </FadeInUp>
+        ) : null}
 
-          <TouchableOpacity
-            style={styles.backToListBtn}
-            activeOpacity={0.8}
-            onPress={() => navigation.goBack()}
-          >
-            <Icon name="format-list-bulleted" size={18} color="#334155" />
-            <Text style={styles.backToListText}>Back to List</Text>
-          </TouchableOpacity>
-        </View>
-
-        {isLoadingDetails && (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color="#2563EB" />
-            <Text style={styles.loadingText}>Loading full application data...</Text>
+        {!!rejectionReason && (
+          <View style={styles.reasonCard}>
+            <Text style={styles.reasonEyebrow}>Rejection reason</Text>
+            <Text style={styles.reasonText}>{rejectionReason}</Text>
           </View>
         )}
 
-        {/* Collapsible Form Sections */}
-        {visibleSections.map(section => {
+        {!!loadError && !isLoadingDetails && (
+          <ConsoleNote
+            kind="red"
+            icon="cloud-off"
+            text={loadError}
+            action="Retry"
+            onAction={fetchApplicationDetails}
+          />
+        )}
+      </View>
+
+      {/* Block → District → State: who has decided, and when. */}
+      <ConsoleSectionTitle icon="timeline" title="Review trail" subtitle="Each tier gives its own verdict" />
+      <FadeInUp delay={80} style={styles.gutter}>
+        <ConsoleCard>
+          <TierProgressRail app={trailSource} />
+          <View style={styles.trailList}>
+            {trail.map((step) => {
+              const d = reviewDetail(step.tier);
+              const by = ADMIN_TYPE[String(d?.adminType || '')] || '';
+              const kind = step.decision === 'approved' ? 'approved' : step.decision === 'rejected' ? 'rejected' : 'pending';
+              return (
+                <View key={step.tier} style={styles.trailRow}>
+                  <Text style={styles.trailTier}>{TIER_WORD[step.tier]}</Text>
+                  <View style={styles.flexText}>
+                    <Text style={styles.trailMeta} numberOfLines={2}>
+                      {step.decision === 'pending'
+                        ? 'No verdict yet'
+                        : [step.at ? formatDate(step.at) : '', by ? `by ${by}` : '', d?.auto ? 'recorded automatically' : ''].filter(Boolean).join(' · ') || 'Decided'}
+                    </Text>
+                    {step.reason ? <Text style={styles.trailReason} numberOfLines={3}>{step.reason}</Text> : null}
+                  </View>
+                  <ConsoleChip label={step.decision === 'approved' ? 'Approved' : step.decision === 'rejected' ? 'Rejected' : 'Pending'} kind={kind} />
+                </View>
+              );
+            })}
+          </View>
+        </ConsoleCard>
+      </FadeInUp>
+
+      {isLoadingDetails ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="small" color={PALETTE.indigo} />
+          <Text style={styles.loadingText}>Loading full application data...</Text>
+        </View>
+      ) : null}
+
+      {/* Collapsible form sections */}
+      <ConsoleSectionTitle
+        icon="description"
+        title="Submitted forms"
+        subtitle={`${visibleSections.length} section${visibleSections.length === 1 ? '' : 's'} with answers`}
+        action={visibleSections.length ? (allOpen ? 'Collapse all' : 'Expand all') : undefined}
+        onAction={() => setAll(!allOpen)}
+      />
+      <View style={[styles.gutter, styles.stack]}>
+        {visibleSections.map((section, sIndex) => {
           const isOpen = expanded[section.key];
-
+          const a = CONSOLE_ACCENTS[section.accent];
           return (
-            <View key={section.key} style={styles.formCard}>
-              <TouchableOpacity
-                style={styles.formCardHeader}
-                activeOpacity={0.85}
-                onPress={() => toggleSection(section.key)}
-              >
-                <View style={[styles.formIconBox, { backgroundColor: section.accent.tint }]}>
-                  <Icon name={section.icon} size={20} color={section.accent.solid} />
-                </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.formCardTitle}>{section.title}</Text>
-                  <Text style={styles.formCardSubtitle}>{section.subtitle}</Text>
-                </View>
-                <Icon
-                  name={isOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
-                  size={24}
-                  color="#64748B"
-                />
-              </TouchableOpacity>
+            <FadeInUp key={section.key} delay={100 + sIndex * 60}>
+              <ConsoleCard padded={false}>
+                <TouchableOpacity
+                  style={styles.formHeader}
+                  activeOpacity={0.75}
+                  onPress={() => toggleSection(section.key)}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: !!isOpen }}
+                  accessibilityLabel={section.title}
+                >
+                  <LinearGradient colors={a.grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.formIcon}>
+                    <Icon name={section.icon} size={SIZE.icon} color={PALETTE.white} />
+                  </LinearGradient>
+                  <View style={styles.flexText}>
+                    <Text style={styles.formTitle}>{section.title}</Text>
+                    <Text style={styles.formSubtitle}>{section.subtitle} · {section.rows.length} field{section.rows.length === 1 ? '' : 's'}</Text>
+                  </View>
+                  <View style={[styles.chev, isOpen && { backgroundColor: a.soft }]}>
+                    <Icon name={isOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={22} color={isOpen ? a.fg : PALETTE.textMuted} />
+                  </View>
+                </TouchableOpacity>
 
-              {isOpen && (
-                <View style={styles.formCardBody}>
-                  {section.rows.map((row, idx) => renderDetailCard(row, idx))}
-                </View>
-              )}
-            </View>
+                {isOpen && (
+                  <View style={styles.formBody}>
+                    {section.rows.map((row, idx) => (
+                      <View key={row.label + '_' + idx} style={[styles.detailRow, idx === section.rows.length - 1 && styles.detailRowLast]}>
+                        <View style={[styles.detailIcon, { backgroundColor: a.soft }]}>
+                          <Icon name={row.icon} size={15} color={a.fg} />
+                        </View>
+                        <View style={styles.flexText}>
+                          <Text style={styles.detailLabel}>{row.label}</Text>
+                          <Text style={styles.detailValue} selectable>{row.value}</Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </ConsoleCard>
+            </FadeInUp>
           );
         })}
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+
+      {/* Uploaded documents, when the record carries any. */}
+      {documents.length > 0 ? (
+        <>
+          <ConsoleSectionTitle icon="attach-file" title="Documents" subtitle={`${documents.length} uploaded with the application`} />
+          <View style={styles.gutter}>
+            <ConsoleCard padded={false}>
+              {documents.map((doc, i) => (
+                <TouchableOpacity
+                  key={`${doc?.url || doc?.name}-${i}`}
+                  style={[styles.docRow, i === documents.length - 1 && styles.detailRowLast]}
+                  onPress={() => openDocument(doc)}
+                  disabled={!doc?.url}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${doc?.name || 'document'}`}
+                >
+                  <View style={styles.docIcon}>
+                    <Icon name={String(doc?.type || '').includes('pdf') ? 'picture-as-pdf' : 'insert-drive-file'} size={20} color={PALETTE.indigo} />
+                  </View>
+                  <View style={styles.flexText}>
+                    <Text style={styles.detailValue} numberOfLines={1}>{doc?.name || 'Document'}</Text>
+                    <Text style={styles.detailLabel} numberOfLines={1}>
+                      {[doc?.type, doc?.uploadedAt ? formatDate(doc.uploadedAt) : ''].filter(Boolean).join(' · ') || 'Tap to open'}
+                    </Text>
+                  </View>
+                  <Icon name="open-in-new" size={18} color={PALETTE.textFaint} />
+                </TouchableOpacity>
+              ))}
+            </ConsoleCard>
+          </View>
+        </>
+      ) : null}
+
+      {isPending ? (
+        <View style={styles.backLink}>
+          <ConsoleButton kind="ghost" icon="format-list-bulleted" label="Back to List" onPress={() => navigation.goBack()} />
+        </View>
+      ) : null}
+    </ConsoleScroll>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
+  flex: { flex: 1 },
+  flexText: { flex: 1, minWidth: 0 },
+  gutter: { marginHorizontal: SPACE.lg },
+  stack: { gap: SPACE.md, marginHorizontal: SPACE.lg },
+  overlap: { marginTop: -30, marginHorizontal: SPACE.lg, marginBottom: SPACE.md },
+  heroAvatar: { width: 104, height: 104, alignItems: 'center', justifyContent: 'center' },
+  facts: { flexDirection: 'row', flexWrap: 'wrap', rowGap: SPACE.md, justifyContent: 'space-between' },
+  fact: { width: '48%', flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.sm },
+  factWide: { width: '100%' },
+  factIcon: { width: 30, height: 30, borderRadius: 10, backgroundColor: PALETTE.indigoSoft, alignItems: 'center', justifyContent: 'center' },
+  factLabel: { ...TYPE.eyebrow, fontSize: 10, lineHeight: 13 },
+  factValue: { ...TYPE.bodyStrong, fontSize: 13, lineHeight: 18, marginTop: 1 },
+  fieldFlush: { marginBottom: 0 },
+  rejectRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginTop: SPACE.sm },
+  rejectHint: { ...TYPE.caption, flex: 1, minWidth: 0 },
+  reasonCard: { padding: SPACE.lg, borderRadius: 18, backgroundColor: PALETTE.dangerSoft },
+  reasonEyebrow: { ...TYPE.eyebrow, color: PALETTE.dangerText },
+  reasonText: { ...TYPE.bodyStrong, color: PALETTE.dangerText, marginTop: SPACE.sm - 2 },
+  trailList: { marginTop: SPACE.md, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: PALETTE.divider },
+  trailRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, paddingVertical: SPACE.md - 2, borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: PALETTE.divider },
+  trailTier: { width: 58, ...TYPE.label, fontWeight: '800', color: PALETTE.text },
+  trailMeta: { ...TYPE.caption },
+  trailReason: { ...TYPE.caption, color: PALETTE.dangerText, marginTop: 2 },
+  loadingBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACE.sm, paddingTop: SPACE.lg },
+  loadingText: { ...TYPE.caption },
+  formHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, padding: SPACE.lg, minHeight: SIZE.row + SPACE.lg },
+  formIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  formTitle: { ...TYPE.subheading, fontWeight: '800' },
+  formSubtitle: { ...TYPE.caption, marginTop: 1 },
+  chev: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  formBody: {
+    paddingHorizontal: SPACE.lg, paddingBottom: SPACE.xs,
+    borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: PALETTE.divider,
   },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#F8FAFC',
-  },
-  backButton: {
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginLeft: 12,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 36,
-  },
-  heroCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    ...SHADOWS.sm,
-  },
-  heroHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  heroAvatarCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#2563EB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heroAvatarText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  heroMainInfo: {
-    flex: 1,
-    marginLeft: 12,
-    justifyContent: 'center',
-  },
-  heroName: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  rolePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    gap: 4,
-    marginTop: 4,
-  },
-  rolePillText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  memberIdRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 12,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-  memberIdText: {
-    fontSize: 12,
-    color: '#475569',
-    fontWeight: '600',
-  },
-  statusBadgePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 14,
-    gap: 6,
-  },
-  statusBadgeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 10,
-  },
-  actionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderRadius: 14,
-    gap: 6,
-  },
-  approveBtn: {
-    backgroundColor: '#16A34A',
-    ...SHADOWS.sm,
-  },
-  rejectBtn: {
-    backgroundColor: '#DC2626',
-    ...SHADOWS.sm,
-  },
-  actionBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  noticeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
-    gap: 8,
-  },
-  noticeText: {
-    flex: 1,
-    fontSize: 12,
-    color: '#475569',
-    lineHeight: 16,
-  },
-  backToListBtn: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    paddingVertical: 11,
-    borderRadius: 12,
-    gap: 6,
-  },
-  backToListText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#334155',
-  },
-  loadingBox: {
-    paddingVertical: 12,
-    alignItems: 'center',
-    gap: 4,
-  },
-  loadingText: {
-    fontSize: 12,
-    color: '#64748B',
-  },
-  formCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 14,
-    overflow: 'hidden',
-    ...SHADOWS.sm,
-  },
-  formCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-  },
-  formIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  formCardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  formCardSubtitle: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 1,
-  },
-  formCardBody: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    gap: 10,
-  },
-  detailRowBox: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-  detailRowHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-  },
-  detailIconBox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    backgroundColor: '#E2E8F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  detailLabelText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#64748B',
-    letterSpacing: 0.3,
-  },
-  detailValueText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
+  detailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.md, paddingVertical: SPACE.md - 2, borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: PALETTE.divider },
+  detailRowLast: { borderBottomWidth: 0 },
+  detailIcon: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  detailLabel: { ...TYPE.caption, fontSize: 11 },
+  detailValue: { ...TYPE.bodyStrong, marginTop: 1 },
+  docRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, padding: SPACE.lg, borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: PALETTE.divider },
+  docIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: PALETTE.indigoSoft, alignItems: 'center', justifyContent: 'center' },
+  backLink: { marginHorizontal: SPACE.lg, marginTop: SPACE.lg },
 });
 
 export default ApplicantDetailScreen;

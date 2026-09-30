@@ -1,154 +1,106 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Animated, Easing, ViewStyle, StyleProp } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
-import { SUPER, superStyles } from '../superTheme';
+import React, { useEffect, useRef } from 'react';
+import { Animated, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { PALETTE, SPACE, BRAND, useLoop, ConsoleSkeleton } from '../../../../ui';
 
 /**
- * One shared clock drives every shimmer on screen.
- *
- * A skeleton list can hold forty bars; giving each its own Animated.loop means
- * forty timers competing on the UI thread, which is exactly the stall the
- * loader exists to hide. Instead a single native-driven loop runs while at
- * least one skeleton is mounted, and every bar interpolates from it.
+ * Skeleton placeholders for the Super Admin screens — the premium console's
+ * shimmering cards (ConsoleSkeleton), behind the API these screens already
+ * use. A gentle pulse on the native driver; off under reduce-motion.
  */
-const clock = new Animated.Value(0);
-let mounted = 0;
-let loop: Animated.CompositeAnimation | null = null;
-
-const startClock = () => {
-  mounted += 1;
-  if (loop) return;
-  loop = Animated.loop(
-    Animated.timing(clock, {
-      toValue: 1,
-      duration: 1150,
-      easing: Easing.inOut(Easing.ease),
-      useNativeDriver: true,
-    }),
-  );
-  loop.start();
-};
-
-const stopClock = () => {
-  mounted = Math.max(0, mounted - 1);
-  if (mounted === 0 && loop) {
-    loop.stop();
-    loop = null;
-    clock.setValue(0);
-  }
-};
 
 interface BarProps {
-  width?: number | string;
+  width?: number | `${number}%`;
   height?: number;
   radius?: number;
   style?: StyleProp<ViewStyle>;
 }
 
-/** A single shimmering placeholder bar. */
 export const SkeletonBar: React.FC<BarProps> = ({ width = '100%', height = 12, radius = 6, style }) => {
-  const [measured, setMeasured] = useState(0);
-
-  useEffect(() => {
-    startClock();
-    return stopClock;
-  }, []);
-
-  const translateX = clock.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-(measured || 120), measured || 120],
-  });
-
-  return (
-    <View
-      style={[{ width: width as any, height, borderRadius: radius }, styles.bar, style]}
-      onLayout={event => {
-        const next = event?.nativeEvent?.layout?.width || 0;
-        if (next && Math.abs(next - measured) > 1) setMeasured(next);
-      }}
-    >
-      <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateX }] }]}>
-        <LinearGradient
-          colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.85)', 'rgba(255,255,255,0)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
-    </View>
-  );
+  const pulse = useLoop({ duration: 1400, pingPong: true });
+  const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] });
+  return <Animated.View style={[{ width, height, borderRadius: radius, backgroundColor: PALETTE.divider, opacity }, style]} />;
 };
 
-/** Placeholder matching a tier card on the Hub's entry level. */
+const Card: React.FC<{ children: React.ReactNode; style?: StyleProp<ViewStyle> }> = ({ children, style }) => (
+  <View style={[styles.card, style]}>{children}</View>
+);
+
 export const SkeletonTierCard: React.FC = () => (
-  <View style={[superStyles.card, styles.tierCard]}>
-    <SkeletonBar width={48} height={48} radius={16} />
-    <View style={{ flex: 1, gap: 8 }}>
-      <SkeletonBar width="45%" height={15} />
-      <SkeletonBar width="70%" height={11} />
+  <Card>
+    <View style={styles.row}>
+      <SkeletonBar width={44} height={44} radius={14} />
+      <View style={styles.flex}><SkeletonBar width="55%" height={14} /></View>
     </View>
-  </View>
+    <View style={[styles.row, styles.gapTop]}>
+      <SkeletonBar width="22%" height={22} />
+      <SkeletonBar width="22%" height={22} />
+      <SkeletonBar width="22%" height={22} />
+      <SkeletonBar width="22%" height={22} />
+    </View>
+  </Card>
 );
 
-/** Placeholder matching a region card, including its stat strip. */
 export const SkeletonRegionCard: React.FC = () => (
-  <View style={[superStyles.card, styles.stack]}>
-    <View style={styles.rowGap}>
-      <View style={{ flex: 1, gap: 8 }}>
-        <SkeletonBar width="55%" height={15} />
-        <SkeletonBar width="35%" height={11} />
+  <Card>
+    <View style={styles.row}>
+      <SkeletonBar width={56} height={56} radius={28} />
+      <View style={[styles.flex, { gap: SPACE.sm }]}>
+        <SkeletonBar width="60%" height={14} />
+        <SkeletonBar width="40%" height={11} />
       </View>
-      <SkeletonBar width={70} height={22} radius={999} />
     </View>
-    <View style={styles.statStrip}>
-      {[0, 1, 2, 3].map(i => (
-        <View key={i} style={styles.statCell}>
-          <SkeletonBar width={28} height={16} />
-          <SkeletonBar width={44} height={9} />
-        </View>
-      ))}
-    </View>
-  </View>
+    <SkeletonBar height={30} radius={12} style={styles.gapTop} />
+  </Card>
 );
 
-/** Placeholder matching an applicant or admin row. */
 export const SkeletonRow: React.FC<{ lines?: number }> = ({ lines = 2 }) => (
-  <View style={[superStyles.card, styles.rowGap]}>
-    <SkeletonBar width={38} height={38} radius={19} />
-    <View style={{ flex: 1, gap: 8 }}>
-      <SkeletonBar width="60%" height={14} />
-      {lines > 1 ? <SkeletonBar width="40%" height={11} /> : null}
-      {lines > 2 ? <SkeletonBar width="50%" height={11} /> : null}
+  <Card>
+    <View style={styles.row}>
+      <SkeletonBar width={48} height={48} radius={24} />
+      <View style={[styles.flex, { gap: SPACE.sm }]}>
+        {Array.from({ length: Math.max(1, lines) }).map((_, i) => (
+          <SkeletonBar key={i} width={i === 0 ? '62%' : '40%'} height={i === 0 ? 14 : 11} />
+        ))}
+      </View>
     </View>
-  </View>
+  </Card>
 );
 
 /** Repeat any skeleton `count` times with the list's normal spacing. */
 export const SkeletonList: React.FC<{ count?: number; children?: React.ReactNode; variant?: 'row' | 'region' | 'tier' }> = ({
   count = 4,
   variant = 'row',
-}) => (
-  <View style={{ gap: 10 }}>
-    {Array.from({ length: count }).map((_, index) => (
-      <View key={index}>
-        {variant === 'region' ? <SkeletonRegionCard />
-          : variant === 'tier' ? <SkeletonTierCard />
-          : <SkeletonRow />}
-      </View>
-    ))}
-  </View>
-);
+  children,
+}) => {
+  if (!children && variant === 'row') return <ConsoleSkeleton rows={count} style={styles.flush} />;
+  return (
+    <View style={styles.list}>
+      {Array.from({ length: count }).map((_, index) => (
+        <View key={index}>
+          {children || (variant === 'region' ? <SkeletonRegionCard /> : <SkeletonTierCard />)}
+        </View>
+      ))}
+    </View>
+  );
+};
+
+/** Keeps a mounted-once fade for callers that want one. */
+export const useSkeletonFade = () => {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => { Animated.timing(v, { toValue: 1, duration: 240, useNativeDriver: true }).start(); }, [v]);
+  return v;
+};
 
 const styles = StyleSheet.create({
-  bar: { backgroundColor: '#EDF1F6', overflow: 'hidden' },
-  tierCard: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  stack: { gap: 14 },
-  rowGap: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  statStrip: {
-    flexDirection: 'row', paddingTop: 12,
-    borderTopWidth: 1, borderTopColor: SUPER.border,
+  flex: { flex: 1, minWidth: 0 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, justifyContent: 'space-between' },
+  gapTop: { marginTop: SPACE.lg },
+  list: { gap: SPACE.md },
+  flush: { paddingHorizontal: 0 },
+  card: {
+    backgroundColor: PALETTE.white, borderRadius: 20, padding: SPACE.lg, borderWidth: 1, borderColor: 'rgba(226,232,240,0.9)',
+    shadowColor: BRAND.indigoDeep, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 14, elevation: 2,
   },
-  statCell: { flex: 1, alignItems: 'center', gap: 6 },
 });
 
 export default SkeletonBar;

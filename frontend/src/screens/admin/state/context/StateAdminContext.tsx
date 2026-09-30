@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api, { getUserData, setUserData } from '../../../../services/api';
 import { Applicant } from '../../../../types';
+import { approveApplication, rejectApplication } from '../../../../services/adminApi';
 
 export interface StateStats {
   totalMembers: number;
@@ -44,7 +45,6 @@ interface StateAdminContextType {
   applicants: ApplicantBuckets;
   /** Approved + rejected applicants, Active/Inactive resolved by the server. */
   members: AdminMember[];
-  memberAction: (member: AdminMember, action: 'activate' | 'suspend' | 'delete') => Promise<void>;
   adminName: string;
   adminEmail: string;
   adminPhone: string;
@@ -57,6 +57,8 @@ interface StateAdminContextType {
 
   updateAdminProfile: (fullName: string, email: string, phoneNumber?: string) => void;
   pendingActionId: string | null;
+  /** The server's sentence when this account has no region on record (`scopeUnresolved`). */
+  scopeMessage: string;
 }
 
 const StateAdminContext = createContext<StateAdminContextType | undefined>(undefined);
@@ -71,6 +73,7 @@ export const StateAdminProvider: React.FC<{ children: ReactNode }> = ({ children
   const [adminEmail, setAdminEmail] = useState<string>('');
   const [adminPhone, setAdminPhone] = useState<string>('');
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
+  const [scopeMessage, setScopeMessage] = useState<string>('');
   const [profileImageUri, setProfileImageUriState] = useState<string | null>(null);
 
   const setProfileImageUri = async (uri: string | null) => {
@@ -85,7 +88,9 @@ export const StateAdminProvider: React.FC<{ children: ReactNode }> = ({ children
     if (!isRefresh) setLoading(true);
     try {
       const response = await api.get('/admin/state/dashboard');
-      const payload = response.data.data || response.data;
+      const payload = response?.data?.data || response?.data || {};
+      // Website parity: an account with no region is told so, not shown zeros.
+      setScopeMessage(payload?.scopeUnresolved ? String(payload?.message || 'This account has no region on record. Ask the Super Admin to set it.') : '');
       setStats(payload.stats || null);
       setApplicants({ ...EMPTY_BUCKETS, ...(payload.applicants || {}) });
       setMembers(Array.isArray(payload.members) ? payload.members : []);
@@ -170,13 +175,13 @@ export const StateAdminProvider: React.FC<{ children: ReactNode }> = ({ children
   ) => {
     setPendingActionId(applicant.id);
     try {
-      await api.post(`/applications/${applicant.id}/state-review`, {
-        action,
-        rejectionReason:
-          action === 'reject'
-            ? (reason || '').trim() || `Rejected by ${dynamicRoleTitle}`
-            : undefined,
-      });
+      // The website's tier-agnostic aliases (activApi approve/rejectApplication):
+      // the caller's role selects the seat, and the server's own sentence says
+      // which tier the decision was recorded under.
+      const res: any = action === 'approve'
+        ? await approveApplication(String(applicant?.id || ''))
+        : await rejectApplication(String(applicant?.id || ''), (reason || '').trim() || 'No reason given');
+      const serverMessage = String(res?.data?.message || '');
 
       setApplicants(prev => {
         const nextPending = (prev.pending || []).filter(a => a.id !== applicant.id);
@@ -198,7 +203,10 @@ export const StateAdminProvider: React.FC<{ children: ReactNode }> = ({ children
         };
       });
 
-      Alert.alert('Success', action === 'approve' ? 'Application fully approved!' : 'Application rejected.');
+      Alert.alert(
+        action === 'approve' ? 'Approved' : 'Rejected',
+        serverMessage || (action === 'approve' ? 'Approved — the applicant can now pay for their membership.' : 'Application rejected.'),
+      );
       fetchDashboardData(true);
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.message || `Failed to ${action} applicant`);
@@ -207,38 +215,13 @@ export const StateAdminProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
-  /**
-   * Suspend, reactivate or permanently delete a member.
-   *
-   * The id sent is the application id the row carries. `memberId` on the same
-   * payload is the auth id whenever the applicant has a login — a different
-   * collection from the one the endpoint searched — so passing it returned
-   * "User not found" for a member plainly on screen.
-   *
-   * `delete` cascades on the server: application, credential, member record and
-   * all four additional forms. It cannot be undone, so the caller confirms.
-   */
-  const memberAction = async (member: AdminMember, action: 'activate' | 'suspend' | 'delete') => {
-    const id = member?.applicationId || member?.id;
-    if (!id) return;
-
-    setPendingActionId(String(id));
-    try {
-      await api.post(`/admin/users/${id}/${action}`, {});
-      await fetchDashboardData(true);
-    } catch (error: any) {
-      Alert.alert('Error', error?.response?.data?.message || `Failed to ${action} this member`);
-    } finally {
-      setPendingActionId(null);
-    }
-  };
 
   const value: StateAdminContextType = {
-    loading, refreshing, stats, applicants, members, memberAction,
+    loading, refreshing, stats, applicants, members,
     adminName: adminName && adminName !== 'State Admin' ? adminName : dynamicRoleTitle,
     adminEmail, adminPhone, dynamicRoleTitle, currentState,
     profileImageUri, setProfileImageUri,
-    fetchDashboardData, submitReview, updateAdminProfile, pendingActionId,
+    fetchDashboardData, submitReview, updateAdminProfile, pendingActionId, scopeMessage,
   };
 
   return <StateAdminContext.Provider value={value}>{children}</StateAdminContext.Provider>;

@@ -4,20 +4,25 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   FlatList,
-  StatusBar,
   RefreshControl,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
+import {
+  PALETTE, SPACE, TYPE, SIZE, BRAND,
+  ConsoleFrame, ConsoleHeader, ConsoleGrid, ConsoleStatTile, ConsoleCard, ConsoleSectionTitle, ConsoleNote,
+  ConsoleChip, ConsoleTabs, ConsoleSearch, ConsoleButton, ConsoleSkeleton, CoverageRing, GradientAvatar,
+  GlassIconButton, BrandLogo, PressableScale, FadeInUp, GlobeCommand3D, CONSOLE_LIST, CONSOLE_ACCENTS, consoleGreeting,
+} from '../../../ui';
+import { resolveMediaUrl } from '../../../config/api.config';
 import api from '../../../services/api';
 import { Applicant } from '../../../types';
 import { useSuperAdminData } from './context/SuperAdminContext';
 import { useSuperAdminBack } from './useSuperAdminBack';
-import { SUPER, ACCENTS, superStyles, getGreeting, getInitials } from './superTheme';
+
 import ApplicantRow from './components/ApplicantRow';
 import { SkeletonList } from './components/Skeleton';
 import EmptyState from './components/EmptyState';
@@ -39,10 +44,10 @@ interface Region {
   admins: number;
 }
 
-const TIERS: { key: Tier; title: string; plural: string; icon: string; color: string; light: string }[] = [
-  { key: 'block', title: 'Block', plural: 'Blocks', icon: 'location-city', color: ACCENTS.purple, light: ACCENTS.lightPurple },
-  { key: 'district', title: 'District', plural: 'Districts', icon: 'map', color: ACCENTS.orange, light: ACCENTS.lightOrange },
-  { key: 'state', title: 'State', plural: 'States', icon: 'public', color: ACCENTS.green, light: ACCENTS.lightGreen },
+const TIERS: { key: Tier; title: string; plural: string; icon: string; color: string; light: string; grad: string[] }[] = [
+  { key: 'state', title: 'State', plural: 'States', icon: 'public', color: PALETTE.successText, light: PALETTE.successSoft, grad: [BRAND.indigoDeep, '#2A2178', BRAND.indigoDark] },
+  { key: 'district', title: 'District', plural: 'Districts', icon: 'map', color: PALETTE.warningText, light: PALETTE.warningSoft, grad: ['#8A6A12', '#C9A227', '#E0B93B'] },
+  { key: 'block', title: 'Block', plural: 'Blocks', icon: 'location-city', color: PALETTE.indigo, light: PALETTE.indigoSoft, grad: [BRAND.indigoDark, BRAND.indigo, '#7C6CF0'] },
 ];
 
 const STATUS_TABS: StatusFilter[] = ['all', 'pending', 'approved', 'rejected'];
@@ -61,11 +66,13 @@ const EMPTY_SUMMARY = { states: 0, districts: 0, blocks: 0 };
 const SuperAdminActionHubScreen = ({ navigation }: any) => {
   const {
     adminName,
+    adminProfilePhoto,
     stats,
     tierStats,
     bottlenecks,
     bottleneckAfterDays,
     coverageGaps,
+    overviewFailed,
     proxyReview,
     pendingActionId,
     fetchOverview,
@@ -77,7 +84,7 @@ const SuperAdminActionHubScreen = ({ navigation }: any) => {
   } = useSuperAdminData();
 
   const [level, setLevel] = useState<Level>('tiers');
-  const [tier, setTier] = useState<Tier>('block');
+  const [tier, setTier] = useState<Tier>('state');
   const [region, setRegion] = useState<Region | null>(null);
   const [status, setStatus] = useState<StatusFilter>('all');
 
@@ -136,9 +143,13 @@ const SuperAdminActionHubScreen = ({ navigation }: any) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     try {
-      const params: Record<string, string> = { status: targetStatus, limit: '100' };
-      params[targetTier] = target.name;
-      params.level = targetTier;
+      const params: Record<string, string> = { limit: '50', level: targetTier };
+      if (target?.state) params.state = target.state;
+      if (target?.district) params.district = target.district;
+      if (target?.block) params.block = target.block;
+      // A directory row with no path at all still narrows by its own name.
+      if (!target?.state && !target?.district && !target?.block && target?.name) params[targetTier] = target.name;
+      if (targetStatus !== 'all') params.status = targetStatus;
 
       const response = await api.get('/admin/super/applications', { params });
       const payload = response.data?.data || response.data || {};
@@ -244,8 +255,8 @@ const SuperAdminActionHubScreen = ({ navigation }: any) => {
     }
   };
 
-  const handleReview = useCallback(async (applicant: Applicant, action: 'approve' | 'reject') => {
-    const ok = await proxyReview(applicant, action);
+  const handleReview = useCallback(async (applicant: Applicant, action: 'approve' | 'reject', reason?: string) => {
+    const ok = await proxyReview(applicant, action, reason);
     if (ok && region) {
       const isApprove = action === 'approve';
       setRegion(prev => {
@@ -302,80 +313,81 @@ const SuperAdminActionHubScreen = ({ navigation }: any) => {
 
   const visibleRegions = useMemo(() => {
     const needle = (regionFilter || '').trim().toLowerCase();
-    if (!needle) return regions || [];
-    return (regions || []).filter(r => String(r?.name || '').toLowerCase().includes(needle));
+    if (needle.length < 2) return regions || [];
+    return (regions || []).filter(r => `${r?.name || ''} ${r?.state || ''} ${r?.district || ''} ${r?.block || ''}`
+      .toLowerCase().includes(needle));
   }, [regions, regionFilter]);
 
   // ---- level 1: stat cards + tier cards ----
 
-  const renderStatCard = (label: string, value: number, color: string, light: string, icon: string) => (
-    <View style={superStyles.statCard}>
-      <View style={superStyles.statHeaderRow}>
-        <View style={[superStyles.statIconWrap, { backgroundColor: light }]}>
-          <Icon name={icon} size={18} color={color} />
-        </View>
-        <Text style={[superStyles.statValue, { color }]}>{Number(value || 0)}</Text>
-      </View>
-      <Text style={superStyles.statLabel}>{label}</Text>
-      {/*
-        The same fabricated trend footer the tier dashboards carried - an upward
-        arrow next to a literal "0%" and " vs last 30 days", computed from
-        nothing. Removed for the same reason: it reads as a real metric.
-      */}
-      <View style={[superStyles.waveDecoration, { backgroundColor: light, opacity: 0.5 }]} />
-    </View>
-  );
-
   const renderTiers = () => (
     <View>
-      <View style={{ marginHorizontal: -16 }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12, paddingBottom: 8 }}>
-          {TIERS.map(meta => {
+      {overviewFailed ? (
+        <ConsoleNote
+          kind="amber"
+          icon="warning-amber"
+          style={styles.flushNote}
+          text="The overview could not be loaded, so the figures below are not current. The drill-down still works."
+        />
+      ) : null}
+
+      <ConsoleSectionTitle icon="layers" title="By tier" subtitle="Tap a tier to browse its regions" style={styles.flushSection} />
+      <View style={styles.carouselBleed}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carousel}>
+          {TIERS.map((meta, i) => {
             const tStats = tierStats?.[meta.key] || { total: 0, pending: 0, approved: 0, rejected: 0 };
+            const total = Number(tStats.total || 0);
+            const decided = Number(tStats.approved || 0) + Number(tStats.rejected || 0);
             return (
-              <TouchableOpacity
-                key={meta.key}
-                style={[superStyles.card, { width: 300, padding: 0, overflow: 'hidden' }]}
-                activeOpacity={0.8}
-                onPress={() => openTier(meta.key)}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
-                  <View style={[superStyles.menuIcon, { backgroundColor: meta.light }]}>
-                    <Icon name={meta.icon} size={20} color={meta.color} />
-                  </View>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: SUPER.text, marginLeft: 12 }}>{meta.title} Level</Text>
-                  <View style={{ flex: 1 }} />
-                  <Icon name="chevron-right" size={20} color={SUPER.textFaint} />
-                </View>
-                
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', backgroundColor: '#F8FAFC' }}>
-                  {[
-                    { label: 'Total Members', value: tStats.total, color: SUPER.text },
-                    { label: 'Pending', value: tStats.pending, color: ACCENTS.orange },
-                    { label: 'Approved', value: tStats.approved, color: ACCENTS.green },
-                    { label: 'Rejected', value: tStats.rejected, color: ACCENTS.red },
-                  ].map((stat, i) => (
-                    <View key={stat.label} style={{ width: '50%', padding: 12, borderBottomWidth: i < 2 ? 1 : 0, borderRightWidth: i % 2 === 0 ? 1 : 0, borderColor: '#F1F5F9' }}>
-                      <Text style={{ fontSize: 18, fontWeight: '800', color: stat.color }}>{Number(stat.value || 0)}</Text>
-                      <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B', marginTop: 2 }}>{stat.label}</Text>
+              <FadeInUp key={meta.key} delay={80 + i * 70}>
+                <PressableScale
+                  onPress={() => openTier(meta.key)}
+                  scaleTo={0.97}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${meta.title} level`}
+                >
+                  <View style={styles.tierCard}>
+                    <View style={styles.tierClip}>
+                      <LinearGradient colors={meta.grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.tierHead}>
+                        <View style={styles.tierBlob} />
+                        <View style={styles.flexText}>
+                          <View style={styles.tierIcon}><Icon name={meta.icon} size={18} color={PALETTE.white} /></View>
+                          <Text style={styles.tierTitle} numberOfLines={1}>{meta.title} Level</Text>
+                          <Text style={styles.tierSub} numberOfLines={1}>{decided} of {total} decided</Text>
+                        </View>
+                        <CoverageRing progress={total ? decided / total : 0} size={62} stroke={6} light caption="decided" />
+                      </LinearGradient>
+                      <View style={styles.tierGrid}>
+                        {[
+                          { label: 'Total Members', value: tStats.total, color: PALETTE.text },
+                          { label: 'Pending', value: tStats.pending, color: PALETTE.warningText },
+                          { label: 'Approved', value: tStats.approved, color: PALETTE.successText },
+                          { label: 'Rejected', value: tStats.rejected, color: PALETTE.dangerText },
+                        ].map((stat, idx) => (
+                          <View key={stat.label} style={[styles.tierCell, idx < 2 && styles.tierCellTop, idx % 2 === 0 && styles.tierCellLeft]}>
+                            <Text style={[styles.tierValue, { color: stat.color }]} numberOfLines={1}>{Number(stat.value || 0)}</Text>
+                            <Text style={styles.tierLabel} numberOfLines={1}>{stat.label}</Text>
+                          </View>
+                        ))}
+                      </View>
                     </View>
-                  ))}
-                </View>
-              </TouchableOpacity>
+                  </View>
+                </PressableScale>
+              </FadeInUp>
             );
           })}
         </ScrollView>
       </View>
 
       {(bottlenecks || []).length > 0 ? (
-        <TouchableOpacity style={styles.alertBanner} onPress={() => openTier('block')} activeOpacity={0.8}>
-          <Icon name="schedule" size={16} color={ACCENTS.orange} />
-          <Text style={styles.alertText}>
-            {(bottlenecks || []).length} application{(bottlenecks || []).length === 1 ? '' : 's'} waiting
-            {' '}{bottleneckAfterDays}+ days at a local tier
-          </Text>
-          <Icon name="chevron-right" size={18} color={ACCENTS.orange} />
-        </TouchableOpacity>
+        <ConsoleNote
+          kind="amber"
+          icon="schedule"
+          style={styles.flushNote}
+          text={`${(bottlenecks || []).length} application${(bottlenecks || []).length === 1 ? '' : 's'} waiting ${bottleneckAfterDays}+ days at a local tier`}
+          action="Browse by state"
+          onAction={() => openTier('state')}
+        />
       ) : null}
 
       {/* Unstaffed regions.
@@ -384,194 +396,186 @@ const SuperAdminActionHubScreen = ({ navigation }: any) => {
           replacement is created. This panel exists so the vacancy itself is
           visible, listed worst-first, because filling it is the actual fix. */}
       {(coverageGaps || []).length > 0 ? (
-        <View style={styles.gapCard}>
-          <View style={styles.gapHeader}>
-            <Icon name="person-off" size={18} color={ACCENTS.red} />
-            <Text style={styles.gapTitle}>
-              {(coverageGaps || []).length} region{(coverageGaps || []).length === 1 ? '' : 's'} with no admin
-            </Text>
-          </View>
-
-          <Text style={styles.gapCaption}>
-            Their queues have escalated automatically. Creating a replacement admin hands the
-            applications straight back.
-          </Text>
-
-          {(coverageGaps || []).slice(0, 5).map(gap => (
-            <View key={gap?.id || gap?.region} style={styles.gapRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.gapRegion} numberOfLines={1}>
-                  {gap?.region || 'Unknown region'}
-                </Text>
-                <Text style={styles.gapDetail} numberOfLines={1}>
-                  No {gap?.missingTierLabel || ''} Admin — escalated to {gap?.escalatedToLabel || 'Super'}
-                </Text>
+        <FadeInUp style={styles.gapWrap}>
+          <ConsoleCard accent={PALETTE.red}>
+            <View style={styles.gapHeader}>
+              <View style={styles.gapIcon}>
+                <Icon name="person-off" size={SIZE.icon} color={PALETTE.danger} />
               </View>
-              <View style={styles.gapCount}>
-                <Text style={styles.gapCountText}>{Number(gap?.pending || 0)}</Text>
-              </View>
+              <Text style={styles.gapTitle}>
+                {(coverageGaps || []).length} region{(coverageGaps || []).length === 1 ? '' : 's'} with no admin
+              </Text>
             </View>
-          ))}
 
-          {(coverageGaps || []).length > 5 ? (
-            <Text style={styles.gapMore}>
-              +{(coverageGaps || []).length - 5} more region
-              {(coverageGaps || []).length - 5 === 1 ? '' : 's'}
+            <Text style={styles.gapCaption}>
+              Their queues have escalated automatically. Creating a replacement admin hands the
+              applications straight back.
             </Text>
-          ) : null}
 
-          <TouchableOpacity
-            style={styles.gapAction}
-            onPress={() => navigation.navigate('Admins' as never)}
-            activeOpacity={0.8}
-          >
-            <Icon name="person-add" size={16} color="#FFFFFF" />
-            <Text style={styles.gapActionText}>Staff a region</Text>
-          </TouchableOpacity>
-        </View>
+            {(coverageGaps || []).slice(0, 5).map(gap => (
+              <View key={gap?.id || gap?.region} style={styles.gapRow}>
+                <View style={styles.flexText}>
+                  <Text style={styles.gapRegion} numberOfLines={1}>
+                    {gap?.region || 'Unknown region'}
+                  </Text>
+                  <Text style={styles.gapDetail} numberOfLines={2}>
+                    No {gap?.missingTierLabel || ''} Admin — escalated to {gap?.escalatedToLabel || 'Super'}
+                  </Text>
+                </View>
+                <ConsoleChip label={`${Number(gap?.pending || 0)} pending`} kind="rejected" />
+              </View>
+            ))}
+
+            {(coverageGaps || []).length > 5 ? (
+              <Text style={styles.gapMore}>
+                +{(coverageGaps || []).length - 5} more region
+                {(coverageGaps || []).length - 5 === 1 ? '' : 's'}
+              </Text>
+            ) : null}
+
+            <ConsoleButton
+              size="sm"
+              icon="person-add"
+              label="Staff a region"
+              onPress={() => navigation.navigate('Admins' as never)}
+              style={styles.gapAction}
+            />
+          </ConsoleCard>
+        </FadeInUp>
       ) : null}
 
-      <View style={superStyles.sectionHeaderRow}>
-        <Text style={superStyles.sectionTitle}>Browse applications</Text>
-      </View>
+      <ConsoleSectionTitle icon="travel-explore" title="Browse applications" subtitle="Every tier, every region" style={styles.flushSection} />
 
-      <View style={superStyles.menuCard}>
-        {TIERS.map(meta => {
+      <ConsoleCard padded={false}>
+        {TIERS.map((meta, i) => {
           const count = meta.key === 'block' ? summary.blocks
             : meta.key === 'district' ? summary.districts
             : summary.states;
           return (
-            <TouchableOpacity
+            <BrowseRow
               key={meta.key}
-              style={superStyles.menuRow}
-              activeOpacity={0.7}
+              icon={meta.icon}
+              grad={meta.grad}
+              title={meta.title}
+              subtitle={`${count} ${count === 1 ? meta.title.toLowerCase() : meta.plural.toLowerCase()}`}
               onPress={() => openTier(meta.key)}
-            >
-              <View style={[superStyles.menuIcon, { backgroundColor: meta.light }]}>
-                <Icon name={meta.icon} size={20} color={meta.color} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={superStyles.menuLabel}>{meta.title}</Text>
-                <Text style={superStyles.menuCaption}>
-                  {count} {count === 1 ? meta.title.toLowerCase() : meta.plural.toLowerCase()}
-                </Text>
-              </View>
-              <Icon name="chevron-right" size={22} color={SUPER.textFaint} />
-            </TouchableOpacity>
+              last={false}
+              delay={i * 40}
+            />
           );
         })}
 
         {/* Staff management shortcut */}
-        <TouchableOpacity
-          style={[superStyles.menuRow, superStyles.menuRowLast]}
-          activeOpacity={0.7}
+        <BrowseRow
+          icon="admin-panel-settings"
+          grad={CONSOLE_ACCENTS.green.grad}
+          title="Staff a region"
+          subtitle={`${Number(stats?.totalAdmins || 0)} accounts · adding a block admin opens a region for registration`}
           onPress={() => navigation.navigate('Admins')}
-        >
-          <View style={[superStyles.menuIcon, { backgroundColor: ACCENTS.lightPurple }]}>
-            <Icon name="admin-panel-settings" size={20} color={ACCENTS.purple} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={superStyles.menuLabel}>Admins</Text>
-            <Text style={superStyles.menuCaption}>{stats.totalAdmins} accounts</Text>
-          </View>
-          <Icon name="chevron-right" size={22} color={SUPER.textFaint} />
-        </TouchableOpacity>
-      </View>
+          last
+          delay={140}
+        />
+      </ConsoleCard>
     </View>
   );
 
   // ---- level 2: region cards ----
 
-  const renderRegion = ({ item }: { item: Region }) => (
-    <TouchableOpacity style={styles.regionCard} activeOpacity={0.9} onPress={() => openRegion(item)}>
-      <View style={styles.regionHead}>
-        <View style={styles.regionAvatar}>
-          <Text style={styles.regionAvatarText}>{getInitials(item?.name)}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <View style={styles.regionNameRow}>
-            <Text style={styles.regionName} numberOfLines={1}>{item?.name || 'Unassigned'}</Text>
-            {/* Active = this region actually has an admin assigned to it. */}
-            <View style={[
-              superStyles.statusPill,
-              { backgroundColor: Number(item?.admins || 0) > 0 ? ACCENTS.lightGreen : SUPER.field },
-            ]}>
-              <View style={[
-                superStyles.statusPillDot,
-                { backgroundColor: Number(item?.admins || 0) > 0 ? ACCENTS.green : SUPER.textFaint },
-              ]} />
-              <Text style={[
-                superStyles.statusPillText,
-                { color: Number(item?.admins || 0) > 0 ? ACCENTS.green : SUPER.textMuted },
-              ]}>
-                {Number(item?.admins || 0) > 0 ? 'Active' : 'No admin'}
-              </Text>
+  const renderRegion = ({ item, index }: { item: Region; index: number }) => {
+    const staffed = Number(item?.admins || 0) > 0;
+    const apps = Number(item?.applications || 0);
+    const pendingN = Number(item?.pending || 0);
+    const decided = Number(item?.approved || 0) + Number(item?.rejected || 0);
+    return (
+      <FadeInUp delay={Math.min(index, 6) * 40} style={styles.gutterCell}>
+        <ConsoleCard onPress={() => openRegion(item)} style={styles.regionCard} accessibilityLabel={item?.name || 'Region'}>
+          <View style={styles.regionHead}>
+            <CoverageRing
+              progress={apps ? decided / apps : 0}
+              size={56}
+              stroke={5}
+              accent={pendingN > 0 ? 'amber' : 'green'}
+              center={String(pendingN)}
+              caption="pending"
+            />
+            <View style={styles.flexText}>
+              <Text style={styles.regionName} numberOfLines={1}>{item?.name || 'Unassigned'}</Text>
+              {tier !== 'state' ? (
+                <Text style={styles.regionParent} numberOfLines={1}>
+                  {[item?.district !== item?.name ? item?.district : '', item?.state].filter(Boolean).join(', ') || '—'}
+                </Text>
+              ) : null}
+              {/* Active = this region actually has an admin assigned to it. */}
+              <ConsoleChip
+                label={staffed ? 'Active' : 'No admin'}
+                kind={staffed ? 'approved' : 'neutral'}
+                style={styles.regionChip}
+              />
             </View>
+            <Icon name="chevron-right" size={22} color={PALETTE.textFaint} />
           </View>
-          {tier !== 'state' ? (
-            <Text style={styles.regionParent} numberOfLines={1}>
-              {[item?.district !== item?.name ? item?.district : '', item?.state].filter(Boolean).join(', ') || '—'}
-            </Text>
-          ) : null}
-        </View>
-        <Icon name="chevron-right" size={20} color={SUPER.textFaint} />
-      </View>
 
-      {/* Application data only — staff counts live in the Admins tab. */}
-      <View style={styles.regionStats}>
-        {[
-          { label: 'Total', value: item?.applications, color: SUPER.text },
-          { label: 'Pending', value: item?.pending, color: ACCENTS.orange },
-          { label: 'Approved', value: item?.approved, color: ACCENTS.green },
-          { label: 'Rejected', value: item?.rejected, color: ACCENTS.red },
-        ].map((stat, i) => (
-          <View key={stat.label} style={[styles.regionStat, i > 0 && styles.regionStatDivider]}>
-            <Text style={[styles.regionStatValue, { color: stat.color }]}>{Number(stat.value || 0)}</Text>
-            <Text style={styles.regionStatLabel}>{stat.label}</Text>
+          {/* Application data only — staff counts live in the Admins tab. */}
+          <View style={styles.regionStats}>
+            {[
+              { label: 'Total', value: item?.applications, color: PALETTE.text },
+              { label: 'Pending', value: item?.pending, color: PALETTE.warningText },
+              { label: 'Approved', value: item?.approved, color: PALETTE.successText },
+              { label: 'Rejected', value: item?.rejected, color: PALETTE.dangerText },
+            ].map((stat, i) => (
+              <View key={stat.label} style={[styles.regionStat, i > 0 && styles.regionStatDivider]}>
+                <Text style={[styles.regionStatValue, { color: stat.color }]} numberOfLines={1}>{Number(stat.value || 0)}</Text>
+                <Text style={styles.regionStatLabel} numberOfLines={1}>{stat.label}</Text>
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
-    </TouchableOpacity>
-  );
+        </ConsoleCard>
+      </FadeInUp>
+    );
+  };
 
   // ---- level 3 ----
 
   const renderApplicant = ({ item }: { item: Applicant }) => (
+    <View style={styles.gutterCell}>
     <ApplicantRow
       applicant={item}
       busy={pendingActionId === (item?.id || item?._id)}
       onPress={applicant => navigation.navigate('ApplicantDetail', { applicant })}
       onReview={handleReview}
     />
+    </View>
   );
 
   /** The region's four totals, shown above its application list. */
   const renderRegionSummary = () => (
-    <View style={superStyles.summaryCard}>
-      {[
-        { label: 'Total', value: region?.applications, color: SUPER.text },
-        { label: 'Pending', value: region?.pending, color: ACCENTS.orange },
-        { label: 'Approved', value: region?.approved, color: ACCENTS.green },
-        { label: 'Rejected', value: region?.rejected, color: ACCENTS.red },
-      ].map((cell, index) => (
-        <View
-          key={cell.label}
-          style={[superStyles.summaryCell, index > 0 && superStyles.summaryDivider]}
-        >
-          <Text style={[superStyles.summaryValue, { color: cell.color }]}>
-            {Number(cell.value || 0)}
-          </Text>
-          <Text style={superStyles.summaryLabel}>{cell.label}</Text>
-        </View>
-      ))}
-    </View>
+    <ConsoleCard style={styles.summaryCard} padded={false}>
+      <View style={styles.summaryRow}>
+        {[
+          { label: 'Total', value: region?.applications, color: PALETTE.text },
+          { label: 'Pending', value: region?.pending, color: PALETTE.warningText },
+          { label: 'Approved', value: region?.approved, color: PALETTE.successText },
+          { label: 'Rejected', value: region?.rejected, color: PALETTE.dangerText },
+        ].map((cell, index) => (
+          <View
+            key={cell.label}
+            style={[styles.regionStat, styles.summaryCell, index > 0 && styles.regionStatDivider]}
+          >
+            <Text style={[styles.regionStatValue, { color: cell.color }]} numberOfLines={1}>
+              {Number(cell.value || 0)}
+            </Text>
+            <Text style={styles.regionStatLabel} numberOfLines={1}>{cell.label}</Text>
+          </View>
+        ))}
+      </View>
+    </ConsoleCard>
   );
 
   const renderSearchPanel = () => {
-    const groups: { title: string; kind: 'application' | 'member' | 'admin'; hits: any[] }[] = [
-      { title: 'Applications', kind: 'application', hits: searchResults.applications || [] },
-      { title: 'Members', kind: 'member', hits: searchResults.members || [] },
-      { title: 'Admins', kind: 'admin', hits: searchResults.admins || [] },
+    const groups: { title: string; kind: 'application' | 'member' | 'admin'; icon: string; hits: any[] }[] = [
+      { title: 'Applications', kind: 'application', icon: 'description', hits: searchResults.applications || [] },
+      { title: 'Members', kind: 'member', icon: 'groups', hits: searchResults.members || [] },
+      { title: 'Admins', kind: 'admin', icon: 'admin-panel-settings', hits: searchResults.admins || [] },
     ];
     const total = groups.reduce((sum, g) => sum + (g.hits || []).length, 0);
 
@@ -580,8 +584,6 @@ const SuperAdminActionHubScreen = ({ navigation }: any) => {
     if (total === 0) {
       return (
         <EmptyState
-          icon="search"
-          accentIcon="close"
           title={`No matches for “${(searchQuery || '').trim()}”`}
           caption="Try a name, an email address or a region."
         />
@@ -592,30 +594,31 @@ const SuperAdminActionHubScreen = ({ navigation }: any) => {
       <View>
         {groups.filter(g => (g.hits || []).length > 0).map(group => (
           <View key={group.title} style={styles.hitGroup}>
-            <Text style={styles.hitGroupTitle}>{group.title}</Text>
-            <View style={superStyles.card}>
+            <View style={styles.hitHead}>
+              <Icon name={group.icon} size={15} color={PALETTE.indigo} />
+              <Text style={styles.hitGroupTitle}>{group.title}</Text>
+              <ConsoleChip label={String((group.hits || []).length)} kind="info" dot={false} />
+            </View>
+            <ConsoleCard padded={false}>
               {(group.hits || []).map((hit, index) => (
                 <TouchableOpacity
                   key={`${group.kind}-${hit?.id || hit?.email}`}
                   style={[styles.hitRow, index === (group.hits || []).length - 1 && styles.hitRowLast]}
-                  activeOpacity={0.7}
                   onPress={() => openHit(group.kind, hit)}
+                  accessibilityRole="button"
+                  accessibilityLabel={hit?.fullName || hit?.email || 'Result'}
                 >
-                  <View style={styles.hitAvatar}>
-                    <Text style={styles.hitAvatarText}>{getInitials(hit?.fullName)}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.hitName} numberOfLines={1}>
-                      {hit?.fullName || hit?.email || 'Unnamed'}
-                    </Text>
-                    <Text style={styles.hitMeta} numberOfLines={1}>
+                  <GradientAvatar name={hit?.fullName || hit?.email} size={40} tone="admin" ring={false} />
+                  <View style={styles.flexText}>
+                    <Text style={styles.hitName} numberOfLines={1}>{hit?.fullName || hit?.email || 'Unnamed'}</Text>
+                    <Text style={styles.hitSub} numberOfLines={1}>
                       {[hit?.roleLabel || hit?.status, hit?.location].filter(Boolean).join(' · ') || hit?.email || ''}
                     </Text>
                   </View>
-                  <Icon name="chevron-right" size={18} color={SUPER.textFaint} />
+                  <Icon name="chevron-right" size={20} color={PALETTE.textFaint} />
                 </TouchableOpacity>
               ))}
-            </View>
+            </ConsoleCard>
           </View>
         ))}
       </View>
@@ -627,7 +630,7 @@ const SuperAdminActionHubScreen = ({ navigation }: any) => {
       return <SkeletonList count={level === 'regions' ? 4 : 3} variant={level === 'regions' ? 'region' : 'row'} />;
     }
     if (error) {
-      return <EmptyState icon="cloud-off" accentIcon="refresh" tone="error" title={error} caption="Pull down to try again." />;
+      return <EmptyState tone="error" title={error} caption="Pull down to try again." />;
     }
     return level === 'regions'
       ? <EmptyState title="No regions match" caption="Clear the filter to see every region." />
@@ -644,125 +647,92 @@ const SuperAdminActionHubScreen = ({ navigation }: any) => {
     [],
   );
 
-  return (
-    <SafeAreaView style={superStyles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={SUPER.bg} />
+  const tierPlural = TIERS.find(t => t.key === tier)?.plural || '';
+  const firstName = (adminName || 'Super Admin').split(' ')[0];
 
-      {level === 'tiers' ? (
-        // Dashboard-style header, matching the tier admin dashboards.
-        <View style={superStyles.header}>
-          <View style={superStyles.headerLeft}>
-            <Text style={superStyles.welcomeText}>{getGreeting()}</Text>
-            <Text style={superStyles.headerTitle} numberOfLines={1}>
-              {(adminName || 'Super Admin').split(' ')[0]}!
-            </Text>
-            <Text style={superStyles.headerSubtitle}>Super Admin · Platform-wide</Text>
-          </View>
-          <TouchableOpacity
-            style={superStyles.headerRight}
+  const header = level === 'tiers' ? (
+    <View>
+      <ConsoleHeader
+        left={<BrandLogo size="sm" />}
+        right={(
+          <PressableScale
             onPress={() => navigation.navigate('Settings')}
-            activeOpacity={0.8}
+            scaleTo={0.92}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
           >
-            <View style={superStyles.avatarSmall}>
-              <Text style={superStyles.avatarSmallText}>{getInitials(adminName)}</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
+            <GradientAvatar name={adminName || 'Super Admin'} uri={adminProfilePhoto ? resolveMediaUrl(adminProfilePhoto) : ''} size={44} tone="admin" status="online" />
+          </PressableScale>
+        )}
+        eyebrow={consoleGreeting()}
+        title={`${firstName}!`}
+        subtitle="Super Admin · Platform-wide command centre"
+        art={<GlobeCommand3D size={104} />}
+        badges={[
+          { icon: 'public', label: 'All India' },
+          { icon: 'admin-panel-settings', label: `${Number(stats?.totalAdmins || 0)} admins` },
+        ]}
+        waveHeight={64}
+      />
+      {loading && !stats?.totalApplications ? (
+        <ConsoleSkeleton variant="tiles" style={styles.overlap} />
       ) : (
-        // Drill-down header: back arrow + where you are.
-        <View style={superStyles.pageHeader}>
-          <TouchableOpacity style={superStyles.backBtn} onPress={goBack} activeOpacity={0.7}>
-            <Icon name="arrow-back" size={24} color={SUPER.text} />
-          </TouchableOpacity>
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={superStyles.pageTitle} numberOfLines={1}>
-              {level === 'regions'
-                ? (TIERS.find(t => t.key === tier)?.plural || 'Regions')
-                : (region?.name || 'Region')}
-            </Text>
-            <Text style={superStyles.pageSubtitle} numberOfLines={1}>
-              {level === 'regions'
-                ? `${visibleRegions.length} ${(TIERS.find(t => t.key === tier)?.plural || '').toLowerCase()}`
-                : [region?.district !== region?.name ? region?.district : '', region?.state]
-                    .filter(Boolean).join(', ') || `${(applicants || []).length} applications`}
-            </Text>
-          </View>
-        </View>
+        /* Platform totals (website Hub `data.stats`). "Applicants": the server
+           sets this to the application count, pending included. No trend
+           footer: no endpoint returns one. */
+        <ConsoleGrid overlap>
+          <ConsoleStatTile label="Total applicants" hint="Across the association" value={Number(stats?.totalApplications ?? stats?.totalMembers ?? 0)} icon="groups" accent="indigo" delay={40} />
+          <ConsoleStatTile label="Pending" hint="With all three tiers" value={Number(stats?.pendingApplications || 0)} icon="schedule" accent="amber" delay={100} />
+          <ConsoleStatTile label="Approved" hint="Members created" value={Number(stats?.approvedApplications || 0)} icon="check-circle" accent="green" delay={160} />
+          <ConsoleStatTile label="Rejected" hint="Turned down" value={Number(stats?.rejectedApplications || 0)} icon="cancel" accent="red" delay={220} />
+        </ConsoleGrid>
       )}
-
-      {level === 'tiers' ? (
-        <View style={superStyles.searchBar}>
-          <Icon name="search" size={20} color={SUPER.textFaint} />
-          <TextInput
-            style={superStyles.searchInput}
-            placeholder="Search members, applications, admins"
-            placeholderTextColor={SUPER.textFaint}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCorrect={false}
-            autoCapitalize="none"
-            returnKeyType="search"
-          />
-          {showingSearch ? (
-            <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Icon name="close" size={20} color={SUPER.textFaint} />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      ) : null}
-
+      <ConsoleSearch
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder="Search members, applications, admins"
+        style={styles.search}
+      />
+    </View>
+  ) : (
+    <View>
+      {/* Drill-down header: back arrow + where you are. */}
+      <ConsoleHeader
+        compact
+        left={<GlassIconButton icon="arrow-back" onPress={goBack} accessibilityLabel="Back" />}
+        topCenter="Super Admin · Hub"
+        eyebrow={level === 'regions' ? `${visibleRegions.length} ${tierPlural.toLowerCase()}` : ([region?.district !== region?.name ? region?.district : '', region?.state].filter(Boolean).join(', ') || `${(applicants || []).length} applications`)}
+        title={level === 'regions' ? (tierPlural || 'Regions') : (region?.name || 'Region')}
+        subtitle={level === 'regions' ? 'Pick a region to open its applications' : 'Decide in the State seat, or open a file'}
+      />
       {level === 'regions' ? (
-        <View style={superStyles.searchBar}>
-          <Icon name="search" size={20} color={SUPER.textFaint} />
-          <TextInput
-            style={superStyles.searchInput}
-            placeholder={`Filter ${(TIERS.find(t => t.key === tier)?.plural || '').toLowerCase()}`}
-            placeholderTextColor={SUPER.textFaint}
-            value={regionFilter}
-            onChangeText={setRegionFilter}
-            autoCorrect={false}
-            autoCapitalize="none"
-          />
-          {regionFilter ? (
-            <TouchableOpacity onPress={() => setRegionFilter('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Icon name="close" size={20} color={SUPER.textFaint} />
-            </TouchableOpacity>
-          ) : null}
-        </View>
+        <ConsoleSearch
+          value={regionFilter}
+          onChangeText={setRegionFilter}
+          placeholder={`Filter ${tierPlural.toLowerCase()}`}
+        />
       ) : null}
-
       {level === 'applications' ? (
-        <View style={styles.tabsWrap}>
-          <View style={superStyles.tabsRow}>
-            {STATUS_TABS.map(tab => {
-              const isActive = status === tab;
-              // Counts come from the region row the drill-down was opened
-              // from — the same figures its card showed a moment ago.
-              const count = tab === 'all' ? region?.applications
-                : tab === 'pending' ? region?.pending
-                : tab === 'approved' ? region?.approved
-                : region?.rejected;
-              return (
-                <TouchableOpacity
-                  key={tab}
-                  style={[superStyles.tabPill, isActive && superStyles.tabPillActive]}
-                  onPress={() => setStatus(tab)}
-                  activeOpacity={0.75}
-                >
-                  <Text
-                    style={[superStyles.tabPillText, isActive && superStyles.tabPillTextActive]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                  >
-                    {tab.charAt(0).toUpperCase() + tab.slice(1)} ({Number(count || 0)})
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
+        // Counts come from the region row the drill-down was opened from —
+        // the same figures its card showed a moment ago.
+        <ConsoleTabs
+          value={status}
+          onChange={setStatus}
+          options={STATUS_TABS.map(tab => ({
+            value: tab,
+            label: tab.charAt(0).toUpperCase() + tab.slice(1),
+            count: Number((tab === 'all' ? region?.applications
+              : tab === 'pending' ? region?.pending
+              : tab === 'approved' ? region?.approved
+              : region?.rejected) || 0),
+          }))}
+        />
       ) : null}
+    </View>
+  );
 
+  return (
+    <ConsoleFrame>
       <FlatList
         data={
           showingSearch || level === 'tiers' ? []
@@ -777,112 +747,131 @@ const SuperAdminActionHubScreen = ({ navigation }: any) => {
               ? (renderApplicant as any)
               : () => null
         }
-        contentContainerStyle={superStyles.listContent}
+        contentContainerStyle={CONSOLE_LIST}
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={10}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        ListHeaderComponent={
-          showingSearch ? renderSearchPanel()
-            : level === 'tiers'
-              ? (loading ? <SkeletonList count={3} variant="tier" /> : renderTiers())
-              : level === 'applications'
-                ? renderRegionSummary()
-                : null
-        }
-        ListEmptyComponent={showingSearch || level === 'tiers' ? null : listEmpty}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListHeaderComponent={(
+          <View>
+            {header}
+            <View style={styles.body}>
+              {showingSearch ? renderSearchPanel()
+                : level === 'tiers'
+                  ? (loading ? <SkeletonList count={3} variant="tier" /> : renderTiers())
+                  : level === 'applications'
+                    ? renderRegionSummary()
+                    : null}
+            </View>
+          </View>
+        )}
+        ListEmptyComponent={showingSearch || level === 'tiers' ? null : <View style={styles.body}>{listEmpty()}</View>}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[PALETTE.indigo]} tintColor={PALETTE.white} />}
       />
-    </SafeAreaView>
+    </ConsoleFrame>
   );
 };
 
+/** One row of the "Browse applications" card: gradient chip, title, count. */
+function BrowseRow({ icon, grad, title, subtitle, onPress, last, delay }: {
+  icon: string; grad: string[]; title: string; subtitle: string; onPress: () => void; last: boolean; delay: number;
+}) {
+  return (
+    <FadeInUp delay={delay}>
+      <TouchableOpacity onPress={onPress} style={[styles.browseRow, last && styles.hitRowLast]} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel={`${title}, ${subtitle}`}>
+        <LinearGradient colors={grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.browseIcon}>
+          <Icon name={icon} size={20} color={PALETTE.white} />
+        </LinearGradient>
+        <View style={styles.flexText}>
+          <Text style={styles.browseTitle} numberOfLines={1}>{title}</Text>
+          <Text style={styles.browseSub} numberOfLines={2}>{subtitle}</Text>
+        </View>
+        <Icon name="chevron-right" size={22} color={PALETTE.textFaint} />
+      </TouchableOpacity>
+    </FadeInUp>
+  );
+}
+
+const TIER_CARD_WIDTH = 272;
+
 const styles = StyleSheet.create({
-  tabsWrap: { paddingHorizontal: 16 },
+  flexText: { flex: 1, minWidth: 0 },
+  body: { paddingHorizontal: SPACE.lg },
+  gutterCell: { paddingHorizontal: SPACE.lg },
+  overlap: { marginTop: -30 },
+  search: { marginBottom: SPACE.xs },
+  flushNote: { marginBottom: SPACE.lg },
+  flushSection: { marginHorizontal: 0, marginTop: SPACE.lg },
 
-  alertBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingVertical: 14, paddingHorizontal: 16, marginBottom: 24,
-    borderRadius: 16, backgroundColor: ACCENTS.lightOrange,
-  },
-  alertText: { flex: 1, fontSize: 13, fontWeight: '600', color: '#B45309', lineHeight: 18 },
-
-  gapCard: {
-    backgroundColor: SUPER.card, borderRadius: 16, padding: 16, marginBottom: 24,
-    borderWidth: 1, borderColor: ACCENTS.lightRed,
-  },
-  gapHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  gapTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: SUPER.text },
-  gapCaption: { fontSize: 12, color: SUPER.textMuted, lineHeight: 17, marginBottom: 12 },
-  gapRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingVertical: 10, borderTopWidth: 1, borderTopColor: SUPER.border,
-  },
-  gapRegion: { fontSize: 13, fontWeight: '600', color: SUPER.text },
-  gapDetail: { fontSize: 11, color: SUPER.textFaint, marginTop: 2 },
-  gapCount: {
-    minWidth: 34, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999,
-    backgroundColor: ACCENTS.lightRed, alignItems: 'center',
-  },
-  gapCountText: { fontSize: 12, fontWeight: '700', color: ACCENTS.red },
-  gapMore: { fontSize: 11, color: SUPER.textFaint, marginTop: 8, textAlign: 'center' },
-  gapAction: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    marginTop: 14, paddingVertical: 12, borderRadius: 12, backgroundColor: SUPER.accent,
-  },
-  gapActionText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
-
+  carouselBleed: { marginHorizontal: -SPACE.lg, marginBottom: SPACE.lg },
+  carousel: { paddingHorizontal: SPACE.lg, gap: SPACE.md, paddingBottom: SPACE.md, paddingTop: SPACE.xxs },
   tierCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: SUPER.card, borderRadius: 16, padding: 16, marginBottom: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03, shadowRadius: 8, elevation: 1,
+    width: TIER_CARD_WIDTH, backgroundColor: PALETTE.card, borderRadius: 22, borderWidth: 1, borderColor: 'rgba(226,232,240,0.9)',
+    shadowColor: BRAND.indigoDeep, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.12, shadowRadius: 18, elevation: 4,
   },
-  tierIconWrap: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  tierTitle: { fontSize: 16, fontWeight: '700', color: SUPER.text, marginBottom: 2 },
-  tierCaption: { fontSize: 12, color: SUPER.textMuted },
+  tierClip: { borderRadius: 22, overflow: 'hidden' },
+  tierHead: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, padding: SPACE.lg, overflow: 'hidden' },
+  tierBlob: { position: 'absolute', width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(255,255,255,0.10)', top: -70, right: -40 },
+  tierIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginBottom: SPACE.sm },
+  tierTitle: { ...TYPE.heading, color: PALETTE.white },
+  tierSub: { ...TYPE.caption, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
+  tierGrid: { flexDirection: 'row', flexWrap: 'wrap', backgroundColor: PALETTE.white },
+  tierCell: { width: '50%', padding: SPACE.md },
+  tierCellTop: { borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: PALETTE.divider },
+  tierCellLeft: { borderRightWidth: StyleSheet.hairlineWidth * 2, borderRightColor: PALETTE.divider },
+  tierValue: { ...TYPE.number, fontSize: 20, lineHeight: 26 },
+  tierLabel: { ...TYPE.caption, fontWeight: '600', marginTop: SPACE.xxs },
 
-  regionCard: {
-    backgroundColor: SUPER.card, borderRadius: 16, padding: 16, marginBottom: 16,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03, shadowRadius: 8, elevation: 1,
+  gapWrap: { marginBottom: SPACE.lg },
+  gapHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, marginBottom: SPACE.sm },
+  gapIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: PALETTE.dangerSoft, alignItems: 'center', justifyContent: 'center' },
+  gapTitle: { flex: 1, minWidth: 0, ...TYPE.heading },
+  gapCaption: { ...TYPE.caption, lineHeight: 17, marginBottom: SPACE.md },
+  gapRow: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACE.md,
+    paddingVertical: SPACE.md - 2, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: PALETTE.divider,
   },
-  regionHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  regionAvatar: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: ACCENTS.lightPurple, alignItems: 'center', justifyContent: 'center',
+  gapRegion: { ...TYPE.bodyStrong, fontSize: 13, lineHeight: 18 },
+  gapDetail: { ...TYPE.caption, fontSize: 11, lineHeight: 15, marginTop: SPACE.xxs },
+  gapMore: { ...TYPE.caption, fontSize: 11, marginTop: SPACE.sm, textAlign: 'center' },
+  gapAction: { marginTop: SPACE.md },
+
+  browseRow: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACE.md, paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md,
+    minHeight: SIZE.row + SPACE.sm, borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: PALETTE.divider,
   },
-  regionAvatarText: { fontSize: 16, fontWeight: '700', color: ACCENTS.purple },
-  regionNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 },
-  regionName: { flexShrink: 1, fontSize: 16, fontWeight: '700', color: SUPER.text },
-  regionParent: { fontSize: 12, color: SUPER.textMuted },
+  browseIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  browseTitle: { ...TYPE.subheading, fontWeight: '800' },
+  browseSub: { ...TYPE.caption, marginTop: 1 },
+
+  regionCard: { marginBottom: SPACE.md },
+  regionHead: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
+  regionName: { ...TYPE.heading },
+  regionParent: { ...TYPE.caption, marginTop: 1 },
+  regionChip: { marginTop: SPACE.sm - 2 },
   regionStats: {
-    flexDirection: 'row', marginTop: 16, paddingTop: 16,
-    borderTopWidth: 1, borderTopColor: SUPER.border,
+    flexDirection: 'row', marginTop: SPACE.md, paddingTop: SPACE.md,
+    borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: PALETTE.divider,
   },
-  regionStat: { flex: 1, alignItems: 'center' },
-  regionStatDivider: { borderLeftWidth: 1, borderLeftColor: SUPER.border },
-  regionStatValue: { fontSize: 18, fontWeight: '800' },
-  regionStatLabel: { fontSize: 11, color: SUPER.textFaint, marginTop: 4 },
+  regionStat: { flex: 1, minWidth: 0, alignItems: 'center' },
+  regionStatDivider: { borderLeftWidth: StyleSheet.hairlineWidth * 2, borderLeftColor: PALETTE.divider },
+  regionStatValue: { ...TYPE.number, fontSize: 18, lineHeight: 24 },
+  regionStatLabel: { ...TYPE.caption, fontSize: 11, lineHeight: 15, marginTop: SPACE.xxs },
+  summaryCard: { marginTop: SPACE.md, marginBottom: SPACE.md },
+  summaryRow: { flexDirection: 'row', paddingVertical: SPACE.md },
+  summaryCell: {},
 
-  hitGroup: { marginBottom: 8 },
-  hitGroupTitle: {
-    fontSize: 13, fontWeight: '700', color: SUPER.textMuted,
-    marginBottom: 10, marginLeft: 4,
-  },
+  hitGroup: { marginTop: SPACE.md },
+  hitHead: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm, marginLeft: SPACE.xs },
+  hitGroupTitle: { ...TYPE.eyebrow, color: PALETTE.indigoDark, flex: 1 },
   hitRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: SUPER.border,
+    flexDirection: 'row', alignItems: 'center', gap: SPACE.md, paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md,
+    minHeight: SIZE.row, borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: PALETTE.divider,
   },
-  hitRowLast: { borderBottomWidth: 0, paddingBottom: 0 },
-  hitAvatar: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: ACCENTS.lightPurple, alignItems: 'center', justifyContent: 'center',
-  },
-  hitAvatarText: { fontSize: 14, fontWeight: '700', color: ACCENTS.purple },
-  hitName: { fontSize: 14, fontWeight: '600', color: SUPER.text },
-  hitMeta: { fontSize: 12, color: SUPER.textMuted, marginTop: 2 },
+  hitRowLast: { borderBottomWidth: 0 },
+  hitName: { ...TYPE.bodyStrong },
+  hitSub: { ...TYPE.caption, marginTop: 1 },
 });
 
 export default SuperAdminActionHubScreen;
