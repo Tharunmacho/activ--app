@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { getNotifications, markAllNotificationsRead, markNotificationRead } from '@/services/activApi';
 import { listAnnouncements, listMemberEvents } from '@/services/memberHubApi';
+import { memberEventPath } from '@/lib/eventPath';
 
 /**
  * The member area's icon strip: messages and alerts.
@@ -228,7 +229,7 @@ export default function MemberTopBar({ className = '' }: { className?: string })
                         || 'A new event has been published',
                     at,
                     unread: time(at) > seenAt,
-                    to: `/member/events/${event.id}`,
+                    to: memberEventPath(event),
                 });
             });
         }

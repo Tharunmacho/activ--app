@@ -19,6 +19,7 @@ import { getMyProfile, errorMessage } from '@/services/activApi';
 import { resolveMediaUrl } from '@/config/api.config';
 
 import { CARD_TITLE } from '@/components/layout/appTypography';
+import { memberEventPath } from '@/lib/eventPath';
 /**
  * Registering for an event — its own screen (EVT-002 / EVT-004).
  *
@@ -542,7 +543,7 @@ export default function EventRegistration() {
                                 <div className="flex flex-wrap gap-2 mt-6">
                                     <button
                                         type="button"
-                                        onClick={() => navigate(`/member/events/${event.id}`)}
+                                        onClick={() => navigate(memberEventPath(event))}
                                         className="flex-1 h-11 rounded-xl bg-blue-600 text-white text-[1.1875rem]
                                                    font-bold hover:bg-blue-700 transition-colors"
                                     >
@@ -664,7 +665,7 @@ export default function EventRegistration() {
                         {step !== 'done' ? (
                             <button
                                 type="button"
-                                onClick={() => navigate(`/member/events/${event.id}`)}
+                                onClick={() => navigate(memberEventPath(event))}
                                 className="w-full h-10 rounded-xl text-[1.0625rem] font-semibold
                                            text-slate-500 hover:text-slate-700 inline-flex items-center
                                            justify-center gap-1"

@@ -19,6 +19,7 @@ import {
 } from '@/services/memberHubApi';
 import { errorMessage } from '@/services/activApi';
 import { resolveMediaUrl } from '@/config/api.config';
+import { eventKey, memberEventPath } from '@/lib/eventPath';
 
 /**
  * One event, in full: poster, agenda, speakers, venue and a seat (EVT-001/002).
@@ -84,7 +85,7 @@ export default function MemberEventDetail() {
      * page — the legacy /register screen and its cancel call know nothing of it.
      */
     const fromBooking = registration?.source === 'booking';
-    const ticketHref = event && registration ? registrationHref(event.id, registration) : '';
+    const ticketHref = event && registration ? registrationHref(eventKey(event), registration) : '';
 
     /**
      * What THIS member will be charged — resolved by the server.
@@ -410,7 +411,7 @@ export default function MemberEventDetail() {
                                       */}
                                     <button
                                         type="button"
-                                        onClick={() => navigate(fromBooking ? ticketHref : `/member/events/${event.id}/register`)}
+                                        onClick={() => navigate(fromBooking ? ticketHref : memberEventPath(event, '/register'))}
                                         className="w-full h-12 rounded-xl bg-emerald-600 text-white text-[1.1875rem]
                                                    font-bold hover:bg-emerald-700
                                                    transition-colors inline-flex items-center justify-center gap-2
@@ -723,7 +724,7 @@ export default function MemberEventDetail() {
                                       */}
                                     <button
                                         type="button"
-                                        onClick={() => navigate(`/member/events/${event.id}/book`)}
+                                        onClick={() => navigate(memberEventPath(event, '/book'))}
                                         className="w-full h-11 rounded-xl bg-blue-600 text-white text-[1.1875rem]
                                                    font-bold hover:bg-blue-700 transition-colors
                                                    inline-flex items-center justify-center gap-1.5"

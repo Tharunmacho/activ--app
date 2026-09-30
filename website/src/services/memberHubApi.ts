@@ -206,6 +206,8 @@ export const registrationHref = (eventId: string, reg: EventRegistration | null 
 
 export interface MemberEvent {
     id: string;
+    /** Readable URL key ("nlc-business-opportunities-2026-09-27"); the server accepts it wherever it takes an id. */
+    slug?: string;
     title: string;
     description: string;
     startAt: string | null;

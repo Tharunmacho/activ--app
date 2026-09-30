@@ -17,6 +17,8 @@ import {
 } from './components/LeadershipSections';
 import { RegionStateMap } from './components/RegionStateMap';
 import { setShareMeta } from '@/lib/shareMeta';
+import { publicUrl } from '@/lib/share';
+import { ShareMenu } from '@/components/shared/ShareMenu';
 import { resolveMediaUrl } from '@/config/api.config';
 
 /**
@@ -343,6 +345,14 @@ export default function RegionPage() {
                          */
                         title={label}
                         blurb={page.hero.blurb || page.shortDescription}
+                        actions={(
+                            <ShareMenu
+                                tone="onDark"
+                                align="right"
+                                title={(page.seo?.metaTitle || '').trim() || `ACTIV ${label}`}
+                                url={publicUrl(`/regions/${page.slug || slug || ''}`)}
+                            />
+                        )}
                         /*
                          * NO "REGION AT A GLANCE", for the same reason the state
                          * page has no "State at a Glance": the association asked

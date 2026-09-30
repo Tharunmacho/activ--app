@@ -310,7 +310,14 @@ export default function EventBookingPage({ chrome = 'public' }: {
     // the public confirmation rather than the member area.
     const [signedIn, setSignedIn] = useState(() => isMemberSession());
 
-    const [step, setStep] = useState<Step>('choice');
+    /*
+     * A MEMBER WHO IS ALREADY SIGNED IN GOES STRAIGHT TO THE FORM.
+     *
+     * The choice step is "book as a guest, or sign in" — a question a signed-in
+     * member has already answered. Showing it anyway asked a paid member, on
+     * their own dashboard, to type their password again to book.
+     */
+    const [step, setStep] = useState<Step>(() => (isMemberSession() ? 'form' : 'choice'));
 
     // ---- the draft booking
     const [booker, setBooker] = useState<BookingParticipant>(emptyPerson);

@@ -1,7 +1,8 @@
-import { publicUrl, shareLink } from '@/lib/share';
+import { publicUrl } from '@/lib/share';
+import { ShareMenu } from '@/components/shared/ShareMenu';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowUpRight, Calendar, MapPin, Newspaper, Share2 } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Calendar, MapPin, Newspaper } from 'lucide-react';
 import { HeaderSection } from '../../components/layout/HeaderSection';
 import { FooterSection } from '../../components/layout/FooterSection';
 import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
@@ -82,7 +83,6 @@ export default function NewsDetailPage() {
     }, [slug]);
 
     // One share behaviour site-wide — see lib/share.
-    const share = () => shareLink({ title: article?.title, url: publicUrl(window.location.pathname) });
 
     const date = article?.displayDate || (article?.publishedAt
         ? new Date(article.publishedAt).toLocaleDateString('en-IN', {
@@ -304,15 +304,13 @@ export default function NewsDetailPage() {
                                             {article.category && <Fact label="Category" value={article.category} />}
                                         </dl>
                                         <div className="mt-6 flex gap-3 border-t border-gray-100 pt-5">
-                                            <button
-                                                type="button"
-                                                onClick={share}
-                                                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border
-                                                           border-gray-200 px-4 py-2.5 text-[1.0625rem] font-bold text-brand-700
-                                                           transition-colors hover:border-brand-300 hover:bg-brand-50"
-                                            >
-                                                <Share2 size={16} /> Share
-                                            </button>
+                                            <ShareMenu
+                                                title={article.title || 'ACTIV news'}
+                                                text={article.summary ? `${article.title} — ${article.summary}` : undefined}
+                                                url={publicUrl(`/news/${article.slug || slug || ''}`)}
+                                                className="flex-1"
+                                                buttonClassName="w-full justify-center"
+                                            />
                                             <Link
                                                 to="/news"
                                                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border

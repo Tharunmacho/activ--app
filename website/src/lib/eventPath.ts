@@ -7,7 +7,19 @@
  * reads as the event rather than as 24 hex characters.
  */
 export const eventPath = (event?: { id?: string; slug?: string } | null): string =>
-    `/events/${encodeURIComponent(event?.slug || event?.id || '')}`;
+    `/events/${encodeURIComponent(eventKey(event))}`;
+
+/** What goes in an event URL: the readable slug, the id when there is none. */
+export const eventKey = (event?: { id?: string; slug?: string } | null): string =>
+    String(event?.slug || event?.id || '');
+
+/**
+ * The same event inside the member area: `/member/events/<slug>[/book]`.
+ * Member links were built from the id and read as 24 hex characters while the
+ * public site's read as the event; both now use the slug.
+ */
+export const memberEventPath = (event?: { id?: string; slug?: string } | null, suffix = ''): string =>
+    `/member/events/${encodeURIComponent(eventKey(event))}${suffix}`;
 
 /**
  * A gallery item's public address: `/gallery/activ-inked-mou-with-gem`.

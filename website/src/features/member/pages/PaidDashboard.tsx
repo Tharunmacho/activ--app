@@ -36,6 +36,7 @@ import {
     resolveApplicantKind, resolvePlan, planLabel,
     type MemberPlan,
 } from '@/features/member/memberAccess';
+import { memberEventPath } from '@/lib/eventPath';
 
 /**
  * The dashboard a member sees once their payment has been recorded.
@@ -1051,7 +1052,7 @@ export default function PaidDashboard() {
                                             <span className="flex w-full sm:w-auto shrink-0 items-center self-center">
                                                 <button
                                                     type="button"
-                                                    onClick={() => navigate(`/member/events/${event.id}`)}
+                                                    onClick={() => navigate(memberEventPath(event))}
                                                     className={`inline-flex w-full sm:w-auto justify-center items-center gap-1.5 rounded-xl px-4 py-2.5
                                                                 text-[1.25rem] font-bold transition-colors ${registered
                                                             ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'

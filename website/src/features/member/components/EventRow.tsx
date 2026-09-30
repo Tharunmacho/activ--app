@@ -3,6 +3,7 @@ import { ArrowRight, BadgeCheck, Clock, Lock, MapPin, Ticket, Users } from 'luci
 import { resolveMediaUrl } from '@/config/api.config';
 import { registrationHref, type MemberEvent } from '@/services/memberHubApi';
 import { calendarTile, formatTime, isPast } from './eventFormat';
+import { eventKey, memberEventPath } from '@/lib/eventPath';
 
 /**
  * ONE EVENT AS A ROW — the member events list.
@@ -28,7 +29,7 @@ export default function EventRow({ event }: { event: MemberEvent }) {
     const seatLabel = !reg ? '' : awaitingPayment ? 'Payment due' : waitlisted ? 'Waiting list' : 'Registered';
     const seats = Number(reg?.seats || 0);
 
-    const href = reg ? registrationHref(event.id, reg) : `/member/events/${encodeURIComponent(event.id)}`;
+    const href = reg ? registrationHref(eventKey(event), reg) : memberEventPath(event);
     const action = !reg ? (past ? 'View event' : 'View details')
         : awaitingPayment ? 'Complete payment'
             : reg.source === 'booking' ? 'View ticket' : 'View seat';

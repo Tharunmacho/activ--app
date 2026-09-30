@@ -232,7 +232,7 @@ export function AllLeaders({ leaders }: { leaders: RegionLeader[] }) {
  */
 export function StateHeroBand({
     hero, title, blurb, backLabel, backHref, glanceTitle = 'State at a Glance', aside,
-    showGlance = true,
+    showGlance = true, actions,
 }: {
     hero: RegionHero;
     title: string;
@@ -275,6 +275,8 @@ export function StateHeroBand({
      * one page choosing not to.
      */
     showGlance?: boolean;
+    /** Buttons on the band's top row, opposite the back link (the Share menu). */
+    actions?: React.ReactNode;
 }) {
     const headline = hero.headline || title;
     const lede = blurb || hero.tagline;
@@ -320,7 +322,9 @@ export function StateHeroBand({
             <div className="relative z-10 grid gap-5 sm:gap-6 px-4 py-5 sm:px-8 sm:py-7
                             lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] lg:items-center">
                 <div className="min-w-0">
-                    {backHref && (
+                    {(backHref || actions) && (
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                    {backHref ? (
                         <Link
                             to={backHref}
                             /* No `backdrop-blur`: five blurred surfaces over a
@@ -334,6 +338,9 @@ export function StateHeroBand({
                         >
                             <MapPin size={12} /> {backLabel} <ChevronRight size={12} />
                         </Link>
+                    ) : <span />}
+                    {actions}
+                    </div>
                     )}
 
                     <h1 className="mt-3 break-words text-[1.75rem] sm:text-4xl font-black tracking-tight text-white

@@ -1,11 +1,12 @@
-import { publicUrl, shareLink } from '@/lib/share';
+import { publicUrl } from '@/lib/share';
+import { ShareMenu } from '@/components/shared/ShareMenu';
 import { setShareMeta } from '@/lib/shareMeta';
 import { resolveMediaUrl, sizedMediaUrl } from '@/config/api.config';
 import { galleryPath } from '@/lib/eventPath';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
-    ArrowLeft, ArrowRight, Calendar, MapPin, Check, Share2,
+    ArrowLeft, ArrowRight, Calendar, MapPin, Check,
 } from 'lucide-react';
 import {
     getGalleryItem, getGallery, getGallerySettings,
@@ -283,19 +284,11 @@ export default function GalleryDetailPage() {
                             >
                                 <ArrowLeft size={15} /> {backLabel}
                             </Link>
-                            <button
-                                type="button"
-                                onClick={() => shareLink({
-                                    title: item.title || 'ACTIV gallery',
-                                    text: item.title || undefined,
-                                    url: publicUrl(galleryPath(item)),
-                                })}
-                                className="inline-flex h-10 items-center gap-2 rounded-full border border-brand-200 bg-white
-                                           px-4 text-[0.95rem] font-bold text-brand-800 shadow-sm transition
-                                           hover:border-brand-500 hover:bg-brand-50 active:scale-95"
-                            >
-                                <Share2 size={16} /> Share
-                            </button>
+                            <ShareMenu
+                                title={item.title || 'ACTIV gallery'}
+                                url={publicUrl(galleryPath(item))}
+                                align="right"
+                            />
                         </div>
 
                         {/*

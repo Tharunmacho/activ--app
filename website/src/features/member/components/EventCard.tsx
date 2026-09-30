@@ -5,6 +5,7 @@ import type { MemberEvent } from '@/services/memberHubApi';
 import { calendarTile, formatWhen, isPast, seatsLeft, registrationGate } from './eventFormat';
 
 import { CARD_TITLE } from '@/components/layout/appTypography';
+import { memberEventPath } from '@/lib/eventPath';
 /**
  * One event, as a card.
  *
@@ -51,7 +52,7 @@ export default function EventCard({
 
     return (
         <Link
-            to={`/member/events/${event.id}`}
+            to={memberEventPath(event)}
             className={`group flex h-full flex-col bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] overflow-hidden
                         hover:border-blue-400 hover:shadow-md transition-all ${past ? 'opacity-75' : ''}`}
         >

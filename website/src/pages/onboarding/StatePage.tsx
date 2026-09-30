@@ -17,6 +17,8 @@ import {
 } from './components/LeadershipSections';
 import { StateDistrictMap } from './components/StateDistrictMap';
 import { setShareMeta } from '@/lib/shareMeta';
+import { publicUrl } from '@/lib/share';
+import { ShareMenu } from '@/components/shared/ShareMenu';
 import { resolveMediaUrl } from '@/config/api.config';
 
 /**
@@ -313,6 +315,14 @@ export default function StatePage() {
                         hero={page.hero}
                         title={page.stateName}
                         blurb={page.hero.blurb || page.shortDescription}
+                        actions={(
+                            <ShareMenu
+                                tone="onDark"
+                                align="right"
+                                title={(page.seo?.metaTitle || '').trim() || `ACTIV ${page.stateName || ''}`.trim()}
+                                url={publicUrl(`/states/${page.slug || slug || ''}`)}
+                            />
+                        )}
                         backLabel={page.region ? `${page.region.label} Zone` : 'Zones'}
                         backHref={page.region ? `/regions/${page.region.slug}` : undefined}
                         showGlance={false}
