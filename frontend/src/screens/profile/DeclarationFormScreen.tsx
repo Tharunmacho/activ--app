@@ -1,653 +1,371 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  StatusBar,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, Alert, TouchableOpacity, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
+import { PremiumInput as Field, Loading, Notice, PALETTE, SIZE, SPACE, TYPE, Declaration3D, PressableScale } from '../../ui';
+import { errorText } from '../../ui/data';
+import {
+  getMyProfile, getBusinessInfo, getFinancialInfo, getDeclarationInfo, updateProfile, getMyApplications,
+} from '../../services/memberApi';
 import api from '../../services/api';
+import { ENDPOINTS } from '../../config/api.config';
+import { FormScreen, FormFooter, FormSection, FieldLabel, CheckRow } from './formKit';
+import { normaliseStatus } from '../member/dashboard/memberRules';
 
-type DeclarationFormScreenProps = NativeStackScreenProps<RootStackParamList, 'DeclarationForm'>;
+/**
+ * ============================================================================
+ * STEP 3 OF 3 — DECLARATION & SUBMIT (website: pages/member/DeclarationForm.tsx)
+ * ============================================================================
+ *
+ *   1. PUT /members/profile { sisterConcerns: Number, companyNames: string[],
+ *                             agreeToDeclaration }   (0 / [] for a non-business
+ *                             applicant, who is never shown the question)
+ *   2. read BACK from the server — my-profile, business-info, financial-info,
+ *      declaration-info — so the application carries what was stored, not
+ *      whatever this screen remembers
+ *   3. region guard (India only): no state/district/block → back to step 1
+ *   4. POST /applications { applicationType: 'membership', fullName, email,
+ *      phone, state, district, block, registrationType, memberType,
+ *      data: { personalDetails, businessInfo, financialInfo, declaration } }
+ *   5. keep the server's own _id (never an invented one)
+ *
+ * The admin review screens read `data.*`; a flat body arrives as a blank file.
+ */
 
-const DeclarationFormScreen: React.FC<DeclarationFormScreenProps> = ({ navigation, route }) => {
-  const { userData } = route.params || {};
+type Props = NativeStackScreenProps<RootStackParamList, 'DeclarationForm'> & {
+  /** Website /member/profile?step=3 from the profile view: save and return. */
+  editMode?: boolean;
+};
 
-  const [formData, setFormData] = useState({
-    sisterConcerns: '',
-  });
+/**
+ * ALREADY APPLIED → save and stop (website Profile.tsx `alreadyApplied`).
+ * Lodging a second application for somebody already approved or rejected puts
+ * a duplicate row in every admin queue; the server only de-duplicates PENDING
+ * rows. The website's tests (an application on file, an active membership),
+ * except that a file which was only ever REJECTED does not count — the website's /member/forms/declaration lets
+ * that applicant apply again, and so does this screen.
+ */
+const hasApplied = (apps: any, profile: any) =>
+  (Array.isArray(apps) && apps.some((a: any) => normaliseStatus(a?.status) !== 'Rejected'))
+  || String(profile?.membershipStatus || '').toLowerCase() === 'active';
+
+const STEPS = ['Personal', 'Business', 'Declaration'];
+
+/** Where the submitted application's server id is kept (the website's `applicationId`). */
+export const APPLICATION_ID_KEY = '@activ_application_id';
+
+const DECLARATION_POINTS = [
+  'All the information provided by me is true and correct to the best of my knowledge.',
+  'I understand that any false information may lead to rejection of my application.',
+  'I agree to abide by the rules and regulations of the organization.',
+  'I authorize the organization to verify the information provided.',
+];
+
+const isNonBusiness = (business: any) =>
+  business?.doingBusiness === false
+  || business?.doingBusiness === 'no'
+  || business?.registrationType === 'aspirant'
+  || business?.registrationType === 'student';
+
+const DeclarationFormScreen: React.FC<Props> = ({ navigation, editMode = false }) => {
+  const [alreadyApplied, setAlreadyApplied] = useState(false);
+  const [sisterConcerns, setSisterConcerns] = useState('');
   const [companies, setCompanies] = useState<string[]>(['']);
-  const [agreeToTerms, setAgreeToTerms] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [agree, setAgree] = useState(false);
+  /** null until read — the business-only card shows only on an explicit true. */
+  const [isBusinessApplicant, setIsBusinessApplicant] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchDeclarationInfo();
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      const [saved, business, apps, me] = await Promise.all([
+        getDeclarationInfo(),
+        getBusinessInfo().catch(() => ({} as any)),
+        getMyApplications().catch(() => [] as any[]),
+        getMyProfile().catch(() => ({} as any)),
+      ]);
+      setIsBusinessApplicant(!isNonBusiness(business));
+      setAlreadyApplied(hasApplied(apps, me));
+      if (saved && typeof saved === 'object') {
+        const count = saved?.sisterConcerns;
+        setSisterConcerns(count === undefined || count === null ? '' : String(count));
+        const list = Array.isArray(saved?.companyNames)
+          ? (saved.companyNames as any[]).map((c) => String(c || '')).filter((c) => c.trim())
+          : typeof saved?.companyNames === 'string'
+            ? String(saved.companyNames).split(',').map((c) => c.trim()).filter(Boolean)
+            : [];
+        setCompanies(list.length ? list : ['']);
+        // The stored answer, so a returning applicant sees their tick.
+        setAgree(saved?.agreeToDeclaration === true);
+      }
+    } catch (err) {
+      setLoadError(errorText(err, 'Failed to load form data'));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const fetchDeclarationInfo = async () => {
-    setIsLoading(true);
-    try {
-      const response = await api.get('/members/declaration-info');
-      if (response.data.success && response.data.data) {
-        const data = response.data.data;
-        setFormData({
-          sisterConcerns: data.sisterConcerns ? String(data.sisterConcerns) : '',
-        });
-        if (data.companyNames) {
-          const splitCompanies = typeof data.companyNames === 'string'
-            ? data.companyNames.split(',').map((c: string) => c.trim()).filter(Boolean)
-            : Array.isArray(data.companyNames) ? data.companyNames : [''];
-          setCompanies(splitCompanies.length > 0 ? splitCompanies : ['']);
-        }
-        if (data.agreeToTerms !== undefined) setAgreeToTerms(data.agreeToTerms);
-      }
-    } catch (error: any) {
-      console.log('Notice loading declaration info:', error?.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleCompanyChange = (index: number, value: string) => {
-    const updated = [...companies];
-    updated[index] = value;
-    setCompanies(updated);
-  };
-
-  const addCompany = () => {
-    setCompanies([...companies, '']);
-  };
-
-  const removeCompany = (index: number) => {
-    if (companies.length > 1) {
-      setCompanies(companies.filter((_, i) => i !== index));
-    }
-  };
-
-  const handlePrevious = () => {
-    navigation.goBack();
-  };
+  const setCompany = (index: number, value: string) =>
+    setCompanies((prev) => (prev || []).map((c, i) => (i === index ? value : c)));
+  const addCompany = () => setCompanies((prev) => [...(prev || []), '']);
+  const removeCompany = (index: number) =>
+    setCompanies((prev) => {
+      const next = (prev || []).filter((_, i) => i !== index);
+      return next.length ? next : [''];
+    });
 
   const handleSubmit = async () => {
-    if (!agreeToTerms) {
-      Alert.alert('Agreement Required', 'Please accept the declaration terms to submit your application.');
+    if (!agree) {
+      Alert.alert('Declaration required', 'Please accept the declaration to proceed.');
       return;
     }
 
-    setIsSubmitting(true);
+    setSubmitting(true);
     try {
-      const companyNames = companies.filter((c) => c.trim() !== '').join(', ');
-
-      const declarationData = {
-        sisterConcerns: formData.sisterConcerns,
-        companyNames,
-        agreeToTerms,
-        submittedAt: new Date().toISOString(),
-      };
-
-      await api.put('/members/profile', declarationData);
-      await api.post('/applications', {
-        ...userData?.registrationForm,
-        ...declarationData,
+      const business = isBusinessApplicant === true;
+      const companyNames = (companies || []).map((c) => (c || '').trim()).filter(Boolean);
+      await updateProfile({
+        sisterConcerns: business ? Number(sisterConcerns || 0) : 0,
+        companyNames: business ? companyNames : [],
+        agreeToDeclaration: true,
       });
 
-      Alert.alert(
-        'Application Submitted!',
-        'Your profile has been completed! Your application is now under review by Block, District & State admins.',
-        [
-          {
-            text: 'OK',
-            onPress: () =>
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'ApplicationSubmitted' }],
-              }),
+      if (editMode || alreadyApplied) {
+        Alert.alert('Saved', 'Your details have been updated.', [
+          { text: 'OK', onPress: () => { if (navigation.canGoBack()) navigation.goBack(); } },
+        ]);
+        return;
+      }
+
+      const [profile, businessInfo, financial, declaration] = await Promise.all([
+        getMyProfile().catch(() => ({} as any)),
+        getBusinessInfo().catch(() => ({} as any)),
+        getFinancialInfo().catch(() => ({} as any)),
+        getDeclarationInfo().catch(() => ({} as any)),
+      ]);
+
+      // The region gate refuses an application with no routable region. A
+      // member outside India has none by design and routes to the head office.
+      const abroad = profile?.isInternational === true;
+      if (!abroad && (!profile?.state || !profile?.district || !profile?.block)) {
+        Alert.alert(
+          'Personal details needed',
+          'Please complete your personal details first — we need your region to route the application.',
+          [
+            { text: 'Open personal details', onPress: () => navigation.navigate('PersonalDetailsForm', { userData: {} }) },
+            { text: 'Cancel', style: 'cancel' },
+          ],
+        );
+        return;
+      }
+
+      const isStudent = String(businessInfo?.registrationType || '').toLowerCase() === 'student';
+      const isAspirant = isNonBusiness(businessInfo) || isStudent;
+      const applicantKind = isStudent ? 'student' : isAspirant ? 'aspirant' : 'business';
+
+      const res = await api.post(ENDPOINTS.APPLICATIONS.CREATE, {
+        applicationType: 'membership',
+        fullName: profile?.fullName || '',
+        email: profile?.email || '',
+        phone: profile?.phoneNumber || '',
+        state: profile?.state,
+        district: profile?.district,
+        block: profile?.block,
+        registrationType: applicantKind,
+        memberType: applicantKind,
+        data: {
+          personalDetails: {
+            fullName: profile?.fullName || '',
+            email: profile?.email || '',
+            phone: profile?.phoneNumber || '',
+            phoneNumber: profile?.phoneNumber || '',
+            state: profile?.state,
+            district: profile?.district,
+            block: profile?.block,
+            city: profile?.city || '',
+            socialCategory: profile?.socialCategory || '',
+            religion: profile?.religion || '',
+            gender: profile?.gender || '',
           },
-        ]
-      );
-    } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to submit application');
+          businessInfo: businessInfo || {},
+          financialInfo: financial || {},
+          declaration: declaration || { sisterConcerns, companyNames, agreeToDeclaration: true },
+        },
+      });
+
+      const application = res?.data?.data || res?.data || {};
+      const applicationId = String(application?._id || application?.id || '');
+      if (applicationId) {
+        try {
+          await AsyncStorage.setItem(APPLICATION_ID_KEY, applicationId);
+        } catch (e) {
+          console.warn('Storing application id safely caught:', e);
+        }
+      }
+
+      navigation.reset({ index: 0, routes: [{ name: 'ApplicationSubmitted' }] });
+    } catch (err) {
+      Alert.alert('Could not submit', errorText(err, 'Failed to submit your application'));
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
-  const renderStepper = () => (
-    <View style={styles.stepperWrapper}>
-      <View style={styles.stepperRow}>
-        <View style={styles.stepItem}>
-          <View style={styles.stepCircleCompleted}>
-            <Icon name="check" size={18} color="#FFFFFF" />
-          </View>
-        </View>
-        <View style={[styles.stepLine, styles.stepLineActive]} />
-
-        <View style={styles.stepItem}>
-          <View style={styles.stepCircleCompleted}>
-            <Icon name="check" size={18} color="#FFFFFF" />
-          </View>
-        </View>
-        <View style={[styles.stepLine, styles.stepLineActive]} />
-
-        <View style={styles.stepItem}>
-          <View style={styles.stepCircleCompleted}>
-            <Icon name="check" size={18} color="#FFFFFF" />
-          </View>
-        </View>
-        <View style={[styles.stepLine, styles.stepLineActive]} />
-
-        <View style={styles.stepItem}>
-          <View style={[styles.stepCircle, styles.stepCircleActive]}>
-            <Text style={styles.stepCircleTextActive}>4</Text>
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1E50E6" />
-      </View>
+      <FormScreen
+        title="Declaration"
+        subtitle="Final step"
+        onBack={() => navigation.goBack()}
+        step={editMode ? undefined : 3}
+        steps={STEPS}
+        art={<Declaration3D size={88} />}
+      >
+        <Loading label="Loading…" />
+      </FormScreen>
     );
   }
 
+  const showCompanies = Number(sisterConcerns || 0) > 0;
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F0F4F8" />
+    <FormScreen
+      title="Declaration"
+      subtitle="Final step"
+      onBack={() => navigation.goBack()}
+      step={editMode ? undefined : 3}
+      steps={STEPS}
+      art={<Declaration3D size={88} />}
+      footerNote={agree ? undefined : 'Tick the declaration below to continue.'}
+      footer={(
+        <FormFooter
+          secondaryLabel="Back"
+          onSecondary={() => navigation.goBack()}
+          primaryLabel={editMode || alreadyApplied ? 'Save changes' : 'Submit application'}
+          primaryIcon={editMode || alreadyApplied ? 'check' : 'send'}
+          onPrimary={handleSubmit}
+          loading={submitting}
+          disabled={!agree}
+        />
+      )}
+    >
+      {alreadyApplied && !editMode ? (
+        <Notice
+          kind="info"
+          style={s.notice}
+          text="Your application has already been submitted. Saving here updates your declaration without lodging a new application."
+        />
+      ) : null}
 
-      {/* Nav Header - Back button only */}
-      <View style={styles.navHeader}>
-        <TouchableOpacity onPress={handlePrevious} style={styles.backButton} activeOpacity={0.7}>
-          <Icon name="arrow-back" size={24} color="#1E293B" />
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Complete Your Profile</Text>
-        </View>
-        <View style={{ width: 40 }} />
-      </View>
+      {loadError ? (
+        <Notice kind="danger" text={loadError} action="Retry" onAction={load} style={s.notice} />
+      ) : null}
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          style={styles.scrollContainer}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Stepper (Circle 4 active) */}
-          {renderStepper()}
-
-          {/* SECTION 1: Business Associations */}
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <Icon name="domain" size={22} color="#1E50E6" style={styles.cardHeaderIcon} />
-              <Text style={styles.cardHeaderTitle}>Sister Concerns & Firms</Text>
-            </View>
-
-            {/* Sister Concerns Count */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Number of Sister Concerns</Text>
-              <View style={styles.inputContainer}>
-                <Icon name="business" size={20} color="#1E50E6" style={styles.fieldLeftIcon} />
-                <TextInput
-                  style={styles.textInput}
-                  value={formData.sisterConcerns}
-                  onChangeText={(val) => handleInputChange('sisterConcerns', val)}
-                  placeholder="Enter number (0 if none)"
-                  placeholderTextColor="#94A3B8"
-                  keyboardType="number-pad"
-                />
-              </View>
-            </View>
-
-            {/* Company / Firm Names */}
-            <View style={styles.fieldGroup}>
-              <View style={styles.labelRow}>
-                <Text style={styles.fieldLabel}>Company / Firm Names</Text>
-                <TouchableOpacity onPress={addCompany} style={styles.addButton} activeOpacity={0.8}>
-                  <Icon name="add-circle" size={18} color="#1E50E6" />
-                  <Text style={styles.addButtonText}>Add Firm</Text>
-                </TouchableOpacity>
-              </View>
-
-              {companies.map((comp, idx) => (
-                <View key={idx} style={styles.companyInputRow}>
-                  <View style={[styles.inputContainer, { flex: 1 }]}>
-                    <Icon name="storefront" size={20} color="#1E50E6" style={styles.fieldLeftIcon} />
-                    <TextInput
-                      style={styles.textInput}
-                      value={comp}
-                      onChangeText={(val) => handleCompanyChange(idx, val)}
-                      placeholder={`Company / Firm Name ${idx + 1}`}
-                      placeholderTextColor="#94A3B8"
-                    />
-                  </View>
-                  {companies.length > 1 && (
+      {isBusinessApplicant === true ? (
+        <FormSection icon="business-center" title="Sister concerns & firms" subtitle="Other businesses under the same ownership">
+          <Field
+            label="Number of sister concerns"
+            value={sisterConcerns}
+            onChangeText={(v) => setSisterConcerns((v || '').replace(/[^0-9]/g, ''))}
+            placeholder="Enter number (0 if none)"
+            keyboardType="number-pad"
+            maxLength={3}
+            icon="numbers"
+            style={showCompanies ? undefined : { marginBottom: 0 }}
+          />
+          {showCompanies ? (
+            <View>
+              <FieldLabel label="Company names" />
+              {(companies || []).map((value, index) => (
+                <View key={`company-${index}`} style={s.companyRow}>
+                  <Field
+                    style={{ flex: 1, marginBottom: 0 }}
+                    value={value}
+                    onChangeText={(v) => setCompany(index, v)}
+                    placeholder={`Company ${index + 1}`}
+                    icon="business"
+                    accessibilityLabel={`Company ${index + 1}`}
+                  />
+                  {(companies || []).length > 1 ? (
                     <TouchableOpacity
-                      onPress={() => removeCompany(idx)}
-                      style={styles.removeButton}
-                      activeOpacity={0.7}
+                      style={s.remove}
+                      onPress={() => removeCompany(index)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove company ${index + 1}`}
                     >
-                      <Icon name="remove-circle" size={22} color="#EF4444" />
+                      <Icon name="delete-outline" size={SIZE.icon} color={PALETTE.red} />
                     </TouchableOpacity>
-                  )}
+                  ) : null}
                 </View>
               ))}
+              <PressableScale onPress={addCompany} scaleTo={0.97} contentStyle={s.add} accessibilityRole="button" accessibilityLabel="Add another company">
+                <Icon name="add-circle-outline" size={SIZE.icon} color={PALETTE.blue} />
+                <Text style={s.addText}>Add another company</Text>
+              </PressableScale>
             </View>
-          </View>
+          ) : null}
+        </FormSection>
+      ) : null}
 
-          {/* SECTION 2: Member Declaration Agreement */}
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <Icon name="gavel" size={22} color="#1E50E6" style={styles.cardHeaderIcon} />
-              <Text style={styles.cardHeaderTitle}>Member Declaration</Text>
+      <FormSection icon="gavel" title="Member declaration" subtitle="Read and accept before submitting">
+        <View style={s.terms}>
+          <Text style={s.termsTitle}>I hereby declare that:</Text>
+          {DECLARATION_POINTS.map((point, i) => (
+            <View key={point} style={s.point}>
+              <View style={s.num}><Text style={s.numText} maxFontSizeMultiplier={1}>{i + 1}</Text></View>
+              <Text style={s.pointText}>{point}</Text>
             </View>
-
-            <View style={styles.declarationList}>
-              <View style={styles.declarationItemRow}>
-                <Icon name="check-circle" size={18} color="#10B981" style={{ marginRight: 8, marginTop: 2 }} />
-                <Text style={styles.declarationItemText}>
-                  All information provided across all sections is true and accurate.
-                </Text>
-              </View>
-              <View style={styles.declarationItemRow}>
-                <Icon name="check-circle" size={18} color="#10B981" style={{ marginRight: 8, marginTop: 2 }} />
-                <Text style={styles.declarationItemText}>
-                  I understand false statements may lead to application rejection or termination.
-                </Text>
-              </View>
-              <View style={styles.declarationItemRow}>
-                <Icon name="check-circle" size={18} color="#10B981" style={{ marginRight: 8, marginTop: 2 }} />
-                <Text style={styles.declarationItemText}>
-                  I agree to abide by the rules, constitution, and code of ethics of the Chamber.
-                </Text>
-              </View>
-              <View style={styles.declarationItemRow}>
-                <Icon name="check-circle" size={18} color="#10B981" style={{ marginRight: 8, marginTop: 2 }} />
-                <Text style={styles.declarationItemText}>
-                  I consent to verification of my details by Block, District, and State Authorities.
-                </Text>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={styles.checkboxRow}
-              onPress={() => setAgreeToTerms(!agreeToTerms)}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.checkboxCircle, agreeToTerms && styles.checkboxCircleActive]}>
-                {agreeToTerms && <Icon name="check" size={16} color="#FFFFFF" />}
-              </View>
-              <Text style={styles.checkboxText}>
-                I accept and agree to the above declaration terms and conditions.
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Action Buttons Row */}
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={styles.prevButton}
-              onPress={handlePrevious}
-              disabled={isSubmitting}
-              activeOpacity={0.85}
-            >
-              <Icon name="arrow-back" size={18} color="#1E50E6" style={{ marginRight: 6 }} />
-              <Text style={styles.prevButtonText}>Previous</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.submitButton, !agreeToTerms && styles.submitButtonDisabled]}
-              onPress={handleSubmit}
-              disabled={!agreeToTerms || isSubmitting}
-              activeOpacity={0.85}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <View style={styles.nextButtonContent}>
-                  <Text style={styles.nextButtonText}>Submit Application</Text>
-                  <Icon name="send" size={18} color="#FFFFFF" style={styles.nextArrowIcon} />
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          ))}
+        </View>
+        <CheckRow checked={agree} onToggle={() => setAgree((v) => !v)}>
+          <Text style={s.agreeText}>
+            I have read and agree to the above declaration. I understand that this submission is final
+            and any false information may result in termination of membership.
+            <Text style={{ color: PALETTE.red }}> *</Text>
+          </Text>
+        </CheckRow>
+      </FormSection>
+    </FormScreen>
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    // Matches the login screen so sign-in and the profile forms read as one
-    // continuous surface.
-    backgroundColor: '#F0F4F8',
+const s = StyleSheet.create({
+  // A page-level Notice already sits on the gutter; here it only needs the section rhythm.
+  notice: { marginTop: 0, marginBottom: SPACE.lg },
+  companyRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm },
+  remove: {
+    width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: PALETTE.dangerSoft,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+  add: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACE.sm, minHeight: 52,
+    borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: PALETTE.blue,
+    backgroundColor: PALETTE.blueTint, marginTop: SPACE.xs,
   },
-
-  // Nav Header
-  navHeader: {
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    backgroundColor: '#F0F4F8',
+  addText: { ...TYPE.bodyStrong, color: PALETTE.blue },
+  terms: {
+    backgroundColor: PALETTE.blueTint, borderRadius: 18, borderWidth: 1, borderColor: PALETTE.blueSoft,
+    padding: SPACE.lg, marginBottom: SPACE.sm,
   },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
+  termsTitle: { ...TYPE.bodyStrong, marginBottom: SPACE.xs },
+  point: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.md, marginTop: SPACE.sm },
+  num: {
+    width: 22, height: 22, borderRadius: 11, backgroundColor: PALETTE.blue,
+    alignItems: 'center', justifyContent: 'center', marginTop: -1,
   },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Stepper
-  stepperWrapper: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  stepperRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  stepItem: {
-    alignItems: 'center',
-  },
-  stepCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#E2E8F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  stepCircleActive: {
-    backgroundColor: '#1E50E6',
-    shadowColor: '#1E50E6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  stepCircleCompleted: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#10B981',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  stepCircleText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  stepCircleTextActive: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  stepLine: {
-    flex: 1,
-    height: 2,
-    backgroundColor: '#E2E8F0',
-    marginHorizontal: 8,
-  },
-  stepLineActive: {
-    backgroundColor: '#10B981',
-  },
-
-  // Scroll Content
-  scrollContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 60,
-  },
-
-  // Card
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 18,
-    gap: 10,
-  },
-  cardHeaderIcon: {
-    marginRight: 2,
-  },
-  cardHeaderTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1E293B',
-    letterSpacing: 0.2,
-  },
-
-  // Fields
-  fieldGroup: {
-    marginBottom: 16,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#334155',
-    marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: '#EFF6FF',
-  },
-  addButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1E50E6',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 52,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.2,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-  },
-  companyInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    gap: 8,
-  },
-  removeButton: {
-    padding: 6,
-  },
-  fieldLeftIcon: {
-    marginRight: 10,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#1E293B',
-    height: '100%',
-    paddingVertical: 0,
-  },
-
-  // Declaration List
-  declarationList: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 10,
-  },
-  declarationItemRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  declarationItemText: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#334155',
-    lineHeight: 18,
-  },
-
-  // Checkbox
-  checkboxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  checkboxCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: '#94A3B8',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-    backgroundColor: '#FFFFFF',
-  },
-  checkboxCircleActive: {
-    backgroundColor: '#1E50E6',
-    borderColor: '#1E50E6',
-  },
-  checkboxText: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1E293B',
-    lineHeight: 18,
-  },
-
-  // Buttons Row
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  prevButton: {
-    flex: 1,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#1E50E6',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  prevButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E50E6',
-  },
-  submitButton: {
-    flex: 1.2,
-    height: 52,
-    backgroundColor: '#10B981',
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  submitButtonDisabled: {
-    backgroundColor: '#94A3B8',
-    shadowColor: 'transparent',
-    opacity: 0.7,
-  },
-  nextButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  nextButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  nextArrowIcon: {
-    marginTop: 1,
-  },
+  numText: { fontSize: 12, lineHeight: 16, fontWeight: '800', color: PALETTE.white },
+  pointText: { ...TYPE.body, flex: 1, minWidth: 0, fontSize: 13, lineHeight: 19 },
+  agreeText: { ...TYPE.body },
 });
 
 export default DeclarationFormScreen;

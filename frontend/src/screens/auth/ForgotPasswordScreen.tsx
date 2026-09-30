@@ -1,23 +1,13 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  ActivityIndicator,
-  StatusBar,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import React, { useLayoutEffect, useState } from 'react';
+import { Text } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../types';
-import { COLORS, FONTS, SPACING } from '../../theme/theme';
 import api from '../../services/api';
 import { ENDPOINTS } from '../../config/api.config';
+import { SPACE, Tone, toneOf, PremiumInput, GradientButton, KeyMail3D } from '../../ui';
+import { authStyles as styles } from './authStyles';
+import { PremiumAuthScreen, StatusPanel, TextLink } from './authKit';
 
 /**
  * Ask for a password reset link.
@@ -30,29 +20,44 @@ import { ENDPOINTS } from '../../config/api.config';
  * so does this screen. Saying "no account with that email" would turn the form
  * into a way of discovering which addresses have accounts, which is worth more
  * to someone guessing than the small convenience is to a member who mistyped.
+ *
+ * TWO SCREENS IN ONE, like the website's /forgot-password and
+ * /admin/forgot-password: `route.params.portal` ('member' | 'admin') is sent to
+ * the server, which then looks the address up ONLY among the accounts that
+ * screen serves — an admin reset reaches only active admins the Super Admin
+ * created; a member reset only members.
  */
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ForgotPassword'>;
 
 interface Props {
   navigation: Nav;
+  route: RouteProp<RootStackParamList, 'ForgotPassword'>;
 }
 
-const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
+const ForgotPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
+  const portal: 'member' | 'admin' = route?.params?.portal === 'admin' ? 'admin' : 'member';
+  const forAdmins = portal === 'admin';
+  const signIn = forAdmins ? 'AdminLogin' : 'Login';
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
 
+  // The stack registers this route with the default native header; the screen
+  // draws its own brand header, so the native one is hidden (no double back bar).
+  useLayoutEffect(() => {
+    try { navigation.setOptions({ headerShown: false }); } catch { /* not in a stack */ }
+  }, [navigation]);
+
   const handleSubmit = async () => {
     const address = email.trim().toLowerCase();
 
-    if (!address) {
-      setError('Enter the email address you registered with.');
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
-      setError('That does not look like an email address.');
+    // The website's rule and sentences (pages/auth/ForgotPassword.tsx).
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(address)) {
+      setError(address.includes('@')
+        ? 'That email address is not complete — check for a typo.'
+        : 'Enter the email address on your account.');
       return;
     }
 
@@ -60,7 +65,7 @@ const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
     setLoading(true);
 
     try {
-      await api.post(ENDPOINTS.AUTH.FORGOT_PASSWORD, { email: address });
+      await api.post(ENDPOINTS.AUTH.FORGOT_PASSWORD, { email: address, portal });
       setSent(true);
     } catch (err: any) {
       // A network failure is the member's problem to act on; anything else the
@@ -74,215 +79,98 @@ const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
+  const tone: Tone = forAdmins ? 'admin' : 'member';
+  const eyebrow = `Account recovery · ${forAdmins ? 'Administrator' : 'Member'} account`;
+  const art = <KeyMail3D size={100} admin={forAdmins} />;
+
   // ---- sent ---------------------------------------------------------------
   if (sent) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-
-        <View style={styles.doneWrap}>
-          <View style={styles.doneIcon}>
-            <Icon name="mark-email-read" size={44} color={COLORS.primary} />
-          </View>
-
-          <Text style={styles.doneTitle}>Check your email</Text>
-          <Text style={styles.doneText}>
-            If {email.trim().toLowerCase()} is registered, a reset link is on its way. The
-            link expires in one hour.
+      <PremiumAuthScreen
+        tone={tone}
+        onBack={() => navigation.goBack()}
+        eyebrow={eyebrow}
+        title="Check your email"
+        subtitle="A reset link is on its way if the address has an account."
+        art={art}
+        badge={forAdmins ? 'Admin account' : undefined}
+      >
+        <StatusPanel
+          icon="mark-email-read"
+          kind={forAdmins ? 'admin' : 'info'}
+          title="Link sent"
+          actions={(
+            <>
+              <GradientButton
+                tone={tone}
+                label="I have a reset code"
+                icon="vpn-key"
+                size="lg"
+                onPress={() => navigation.navigate('ResetPassword', { portal })}
+              />
+              <TextLink tone={tone} muted label="Back to sign in" onPress={() => navigation.navigate(signIn)} />
+            </>
+          )}
+        >
+          <Text style={styles.statusText}>
+            If <Text style={styles.statusStrong}>{email.trim().toLowerCase()}</Text> belongs to{' '}
+            {forAdmins ? 'an administrator account' : 'a member account'}, a reset link is on its way. It expires in
+            one hour and can be used once.
           </Text>
-
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => navigation.navigate('ResetPassword')}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.primaryButtonText}>I have a reset code</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => navigation.navigate('Login')} activeOpacity={0.7}>
-            <Text style={styles.linkText}>Back to sign in</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+          <Text style={[styles.statusText, { marginTop: SPACE.md }]}>
+            Nothing arrived? Check your spam folder, or{' '}
+            <Text style={[styles.statusStrong, { color: toneOf(tone).accent }]} onPress={() => setSent(false)} accessibilityRole="link">
+              try another address
+            </Text>.
+          </Text>
+        </StatusPanel>
+      </PremiumAuthScreen>
     );
   }
 
   // ---- form ---------------------------------------------------------------
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-        >
-          <TouchableOpacity
-            style={styles.back}
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-          >
-            <Icon name="arrow-back" size={24} color={COLORS.textSecondary} />
-          </TouchableOpacity>
-
-          <Text style={styles.title}>Reset your password</Text>
-          <Text style={styles.subtitle}>
-            Enter the email address you registered with and we will send you a link to set a
-            new password.
-          </Text>
-
-          <Text style={styles.label}>Email address</Text>
-          <View style={[styles.inputWrap, !!error && styles.inputWrapError]}>
-            <Icon name="mail-outline" size={20} color={COLORS.textSecondary} />
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                if (error) setError('');
-              }}
-              placeholder="you@example.com"
-              placeholderTextColor="#9CA3AF"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!loading}
-              returnKeyType="send"
-              onSubmitEditing={handleSubmit}
-            />
-          </View>
-
-          {!!error && <Text style={styles.errorText}>{error}</Text>}
-
-          <TouchableOpacity
-            style={[styles.primaryButton, loading && styles.buttonDisabled]}
-            onPress={handleSubmit}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Send reset link</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ResetPassword')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.linkText}>I already have a reset code</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+    <PremiumAuthScreen
+      tone={tone}
+      onBack={() => navigation.goBack()}
+      eyebrow={eyebrow}
+      title="Reset your password"
+      subtitle={forAdmins
+        ? 'Enter the email of your administrator account. Only admin accounts created by the ACTIV Super Admin can be reset here.'
+        : 'Enter the email address you registered with and we will send you a link to set a new password.'}
+      art={art}
+      badge={forAdmins ? 'Admin account' : undefined}
+      below={(
+        <>
+          <TextLink tone={tone} label="I already have a reset code" onPress={() => navigation.navigate('ResetPassword', { portal })} />
+          <TextLink tone={tone} muted label="Back to sign in" onPress={() => navigation.navigate(signIn)} />
+          {forAdmins ? <Text style={styles.footNote}>Member accounts cannot be reset here.</Text> : null}
+          <Text style={styles.footNote}>Reset links expire in one hour and work only once.</Text>
+        </>
+      )}
+    >
+      <PremiumInput
+        tone={tone}
+        label="Email address"
+        value={email}
+        onChangeText={(text) => {
+          setEmail(text);
+          if (error) setError('');
+        }}
+        placeholder={forAdmins ? 'admin@activ.org.in' : 'you@example.com'}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoCorrect={false}
+        autoComplete="email"
+        editable={!loading}
+        returnKeyType="send"
+        onSubmitEditing={handleSubmit}
+        icon="mail-outline"
+        error={error}
+      />
+      <GradientButton tone={tone} label="Send reset link" icon="send" size="lg" onPress={handleSubmit} loading={loading} style={{ marginTop: SPACE.xs }} />
+    </PremiumAuthScreen>
   );
 };
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  flex: { flex: 1 },
-  scroll: { flexGrow: 1, padding: SPACING.lg, paddingTop: SPACING.md },
-
-  back: { width: 40, height: 40, justifyContent: 'center', marginBottom: SPACING.md },
-
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: SPACING.sm,
-    fontFamily: FONTS.bold,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
-    lineHeight: 22,
-    marginBottom: SPACING.xl,
-  },
-
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
-  },
-  inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: SPACING.md,
-    height: 54,
-    backgroundColor: '#F8FAFC',
-  },
-  inputWrapError: { borderColor: '#EF4444' },
-  input: {
-    flex: 1,
-    marginLeft: SPACING.sm,
-    fontSize: 15,
-    color: COLORS.text,
-    padding: 0,
-  },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 13,
-    marginTop: SPACING.xs,
-  },
-
-  primaryButton: {
-    backgroundColor: COLORS.primary,
-    height: 54,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: SPACING.xl,
-  },
-  buttonDisabled: { opacity: 0.6 },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-
-  linkText: {
-    color: COLORS.primary,
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: SPACING.lg,
-  },
-
-  doneWrap: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.xl,
-  },
-  doneIcon: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: '#EFF6FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SPACING.lg,
-  },
-  doneTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: SPACING.sm,
-  },
-  doneText: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-});
 
 export default ForgotPasswordScreen;

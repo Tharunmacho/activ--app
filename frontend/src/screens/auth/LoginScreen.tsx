@@ -1,28 +1,18 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-  StatusBar,
-  Image,
-  Keyboard,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Alert, Linking, StyleSheet } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList, UserRole } from '../../types';
-import { COLORS, FONTS, SPACING } from '../../theme/theme';
-import { validateEmail, validatePassword } from '../../utils/validators';
-import api, { setUserData } from '../../services/api';
-import { ENDPOINTS } from '../../config/api.config';
+import { RootStackParamList } from '../../types';
+import api from '../../services/api';
+import { homeForRole, clearSession, sanitizeUser, isAdminRole, UNSUPPORTED_ACCOUNT_MESSAGE } from '../../services/session';
+import { ENDPOINTS, API_BASE_URL } from '../../config/api.config';
 import { useAuthStore } from '../../stores/exampleStore';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import {
+  PALETTE, SPACE, TYPE,
+  PremiumScreen, PREMIUM_OVERLAP, PremiumSheet, PremiumHeading, PremiumInput, PremiumDivider,
+  GradientButton, SocialButton, SocialMark, PortalSwitchCard, BrandLogo, FloatingIllustration, SecureLogin3D, FadeInUp,
+} from '../../ui';
+import { EyeToggle } from '../profile/formKit';
+import { TextLink } from './authKit';
 
 type LoginScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
@@ -31,7 +21,6 @@ type LoginScreenProps = {
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -42,7 +31,20 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const validateForm = (): boolean => {
     let isValid = true;
 
-    const emailErr = validateEmail(email);
+    /*
+     * The website's rules, exactly: both fields required, and the email only
+     * checked for SHAPE. No minimum password length here — that rule belongs to
+     * choosing a password, and applying it at sign-in would lock out an
+     * account whose password predates it.
+     */
+    const id = (email || '').trim();
+    let emailErr = '';
+    if (!id) emailErr = 'Please enter both your email and password';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(id)) {
+      emailErr = id.includes('@')
+        ? 'That email address is not complete — check for a typo.'
+        : 'Enter the email address you registered with.';
+    }
     if (emailErr) {
       setEmailError(emailErr);
       isValid = false;
@@ -50,7 +52,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       setEmailError('');
     }
 
-    const passwordErr = validatePassword(password);
+    const passwordErr = password ? '' : 'Please enter both your email and password';
     if (passwordErr) {
       setPasswordError(passwordErr);
       isValid = false;
@@ -67,42 +69,44 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     setIsLoading(true);
 
     try {
+      /*
+       * THE MEMBER SIGN-IN. `portal: 'member'` makes the server refuse an
+       * admin account here ("Admins sign in on the admin login page.") before
+       * any token is issued — exactly the website's /login. Admins use the
+       * Admin sign-in screen, linked at the bottom.
+       */
+      await clearSession();
       const response = await api.post(ENDPOINTS.AUTH.LOGIN, {
-        email: email.toLowerCase().trim(),
+        email: (email || '').toLowerCase().trim(),
         password,
+        portal: 'member',
       });
 
-      if (response.data.success) {
-        const { token, user, role } = response.data.data;
-        const fullUserData = { ...user, password };
-        await setUserData(fullUserData);
-        await login(fullUserData, token, role);
+      const payload = response?.data?.data || response?.data || {};
+      const token: string = payload?.token || '';
+      const role: string = String(payload?.role || payload?.user?.role || 'member');
+      if (!token) throw new Error(response?.data?.message || 'Login failed');
 
-        switch (role) {
-          case UserRole.MEMBER:
-          case 'member':
-            navigation.replace('MemberMain');
-            break;
-          case UserRole.BLOCK_ADMIN:
-          case 'block_admin':
-            navigation.replace('BlockDashboard');
-            break;
-          case UserRole.DISTRICT_ADMIN:
-          case 'district_admin':
-            navigation.replace('DistrictDashboard');
-            break;
-          case UserRole.STATE_ADMIN:
-          case 'state_admin':
-            navigation.replace('StateDashboard');
-            break;
-          case UserRole.SUPER_ADMIN:
-          case 'super_admin':
-            navigation.replace('SuperAdminDashboard');
-            break;
-          default:
-            navigation.replace('MemberMain');
-        }
+      // A backstop for an older server that does not know `portal`.
+      if (isAdminRole(role)) {
+        await clearSession();
+        Alert.alert('Admin account', 'Admins sign in on the admin login screen.', [
+          { text: 'Open admin login', onPress: () => navigation.replace('AdminLogin') },
+          { text: 'Cancel', style: 'cancel' },
+        ]);
+        return;
       }
+
+      // Never store the password — only who is signed in.
+      await login(sanitizeUser(payload?.user || {}), token, role as any);
+
+      const home = await homeForRole(role, payload?.memberDetails);
+      if (!home) {
+        await clearSession();
+        Alert.alert('Use the website', UNSUPPORTED_ACCOUNT_MESSAGE);
+        return;
+      }
+      navigation.reset({ index: 0, routes: [{ name: home }] });
     } catch (error: any) {
       let errorMessage = 'Login failed. Please try again.';
       if (error.response?.data?.message) {
@@ -130,441 +134,195 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     navigation.navigate('RegistrationStep1');
   };
 
-  const handleSocialLogin = (provider: string) => {
+  /*
+   * SIGN IN WITH GOOGLE / FACEBOOK / LINKEDIN — the website's flow, members only.
+   *
+   *   GET /auth/oauth/providers                 which buttons have keys set
+   *   GET /auth/oauth/:p/start?client=app       opened in the SYSTEM browser;
+   *                                             the server runs the provider
+   *                                             redirect and, because of
+   *                                             `client=app`, returns to
+   *                                             activ://auth/social?code=…
+   *   POST /auth/oauth/exchange { code }        in SocialSignInScreen
+   */
+  const [providers, setProviders] = useState<Record<string, boolean> | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    api.get('/auth/oauth/providers')
+      .then((res) => {
+        const rows = res?.data?.data || res?.data || [];
+        const map: Record<string, boolean> = {};
+        (Array.isArray(rows) ? rows : []).forEach((row: any) => {
+          const key = String(row?.key || '').toLowerCase();
+          if (key) map[key] = row?.enabled === true;
+        });
+        if (!cancelled) setProviders(map);
+      })
+      .catch(() => { if (!cancelled) setProviders(null); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleSocialLogin = async (provider: string) => {
+    const key = String(provider || '').toLowerCase();
+    const label = provider || 'Social';
     try {
-      Alert.alert(
-        `${provider || 'Social'} Login`,
-        `${provider || 'Social'} sign-in is coming soon.`,
-        [{ text: 'OK' }]
-      );
+      // The website's rule: only a provider the server reports as enabled
+      // starts; an unknown answer (the list failed to load) counts as not yet.
+      if (!providers || providers[key] !== true) {
+        Alert.alert(`${label} sign-in`, `${label} sign-in is being set up — use your email for now.`);
+        return;
+      }
+      const url = `${API_BASE_URL}/auth/oauth/${encodeURIComponent(key)}/start?client=app`;
+      if (typeof Linking?.openURL === 'function') {
+        await Linking.openURL(url);
+      }
     } catch (err) {
       console.warn('Social login handler safely caught:', err);
+      Alert.alert(`${label} sign-in`, 'Could not open the sign-in page. Please try again.');
     }
   };
 
   const handleForgotPassword = () => {
     // Was an Alert telling the member to enter their email, with nowhere to
     // enter it. The screen it should always have opened now exists.
-    navigation.navigate('ForgotPassword');
+    navigation.navigate('ForgotPassword', { portal: 'member' });
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F0F4F8" />
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          onScrollBeginDrag={Keyboard.dismiss}
-        >
-          {/* Pure White Circular Logo Container */}
-          <View style={styles.heroCircleContainer}>
-            <View style={styles.heroCircle}>
-              <Image
-                source={require('../../assets/images/activlogo.png')}
-                style={styles.heroLogo}
-                resizeMode="contain"
+    <PremiumScreen
+      tone="member"
+      header={(
+        <View>
+          <FadeInUp distance={10}>
+            <BrandLogo />
+          </FadeInUp>
+          <View style={styles.heroRow}>
+            <FadeInUp delay={80} style={styles.heroText}>
+              <PremiumHeading
+                eyebrow="Welcome back"
+                title="Log in to your account"
+                subtitle="Members sign in here."
               />
-            </View>
+            </FadeInUp>
+            <FadeInUp delay={160} scaleFrom={0.85} distance={10}>
+              <FloatingIllustration size={108}>
+                <SecureLogin3D size={108} />
+              </FloatingIllustration>
+            </FadeInUp>
+          </View>
+        </View>
+      )}
+    >
+      <FadeInUp delay={220} style={styles.sheetWrap}>
+        <PremiumSheet>
+          <PremiumInput
+            label="Email address"
+            placeholder="you@example.com"
+            value={email}
+            onChangeText={(text) => {
+              setEmail(text);
+              setEmailError('');
+            }}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            textContentType="username"
+            autoComplete="email"
+            editable={!isLoading}
+            returnKeyType="next"
+            icon="mail-outline"
+            error={emailError}
+          />
+
+          <PremiumInput
+            label="Password"
+            placeholder="Enter your password"
+            value={password}
+            onChangeText={(text) => {
+              setPassword(text);
+              setPasswordError('');
+            }}
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            autoCorrect={false}
+            textContentType="password"
+            editable={!isLoading}
+            returnKeyType="go"
+            onSubmitEditing={handleLogin}
+            icon="lock-outline"
+            error={passwordError}
+            style={styles.lastField}
+            right={<EyeToggle shown={showPassword} onToggle={() => setShowPassword(!showPassword)} />}
+          />
+
+          {/* Forgot password — the website's link beside the password label. */}
+          <View style={styles.optionsRow}>
+            <TextLink label="Forgot password?" onPress={handleForgotPassword} />
           </View>
 
-          {/* Heading & Subtitle */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Login to access your account</Text>
+          <GradientButton label="Sign in" onPress={handleLogin} loading={isLoading} size="lg" iconRight="arrow-forward" />
+
+          {/* Don't have an account? Register as member */}
+          <View style={styles.promptRow}>
+            <Text style={styles.promptText} maxFontSizeMultiplier={1.3}>New to ACTIV? </Text>
+            <TextLink label="Create an account" onPress={handleRegister} disabled={isLoading} />
           </View>
+        </PremiumSheet>
+      </FadeInUp>
 
-          {/* Form */}
-          <View style={styles.form}>
-            {/* Email Field */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Email address</Text>
-              <View style={[styles.inputCard, emailError ? styles.inputCardError : null]}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your email"
-                  placeholderTextColor="#A1A1AA"
-                  value={email}
-                  onChangeText={(text) => {
-                    setEmail(text);
-                    setEmailError('');
-                  }}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!isLoading}
-                />
-              </View>
-              {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-            </View>
+      <FadeInUp delay={300} style={styles.below}>
+        <PremiumDivider label="Or continue with" />
 
-            {/* Password Field */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Password</Text>
-              <View style={[styles.inputCard, passwordError ? styles.inputCardError : null]}>
-                <TextInput
-                  style={[styles.input, styles.passwordInput]}
-                  placeholder="Enter your password"
-                  placeholderTextColor="#A1A1AA"
-                  value={password}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    setPasswordError('');
-                  }}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  editable={!isLoading}
-                />
-                <TouchableOpacity
-                  style={styles.eyeIconButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                  activeOpacity={0.6}
-                >
-                  <Icon
-                    name={showPassword ? 'visibility' : 'visibility-off'}
-                    size={22}
-                    color="#9CA3AF"
-                  />
-                </TouchableOpacity>
-              </View>
-              {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
-            </View>
-
-            {/* Remember Me & Forget Password Row */}
-            <View style={styles.optionsRow}>
-              <TouchableOpacity
-                style={styles.rememberMeContainer}
-                onPress={() => setRememberMe(!rememberMe)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-                  {rememberMe && <Icon name="check" size={14} color="#FFFFFF" />}
-                </View>
-                <Text style={styles.rememberMeText}>Remember me</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={handleForgotPassword} activeOpacity={0.7}>
-                <Text style={styles.forgotPasswordText}>Forget password?</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Main Action Button (Light Blue Theme Color) */}
-            <TouchableOpacity
-              style={[styles.loginButton, isLoading && styles.buttonDisabled]}
-              onPress={handleLogin}
+        {/* Google, LinkedIn, Facebook — the same order as before. Full-width
+            stacked "Continue with …" buttons (Google's light-theme spec, same
+            neutral treatment for all three): 52px, mark fixed left, label
+            centred, vector brand marks. */}
+        <View style={styles.socialStack}>
+          {SOCIAL.map((name) => (
+            <SocialButton
+              key={name}
+              label={`Continue with ${name}`}
+              mark={<SocialMark provider={name} size={20} />}
               disabled={isLoading}
-              activeOpacity={0.85}
-            >
-              {isLoading ? (
-                <ActivityIndicator color={COLORS.white} />
-              ) : (
-                <Text style={styles.loginButtonText}>Login</Text>
-              )}
-            </TouchableOpacity>
+              onPress={() => handleSocialLogin(name)}
+              accessibilityLabel={`Sign in with ${name}`}
+            />
+          ))}
+        </View>
 
-            {/* Don't have an account? Register as member */}
-            <View style={styles.registerRow}>
-              <Text style={styles.registerPrompt}>Don't have an account? </Text>
-              <TouchableOpacity onPress={handleRegister} disabled={isLoading} activeOpacity={0.7}>
-                <Text style={styles.signUpText}>Register as member</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Divider */}
-            <View style={styles.dividerContainer}>
-              <View style={styles.divider} />
-              <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
-              <View style={styles.divider} />
-            </View>
-
-            {/* 3 Social Buttons in 1 Row — logos only, no labels */}
-            <View style={styles.socialRow}>
-              {/* Google */}
-              <TouchableOpacity
-                style={styles.socialCardButton}
-                activeOpacity={0.8}
-                disabled={isLoading}
-                onPress={() => handleSocialLogin('Google')}
-                accessibilityRole="button"
-                accessibilityLabel="Continue with Google"
-              >
-                <Image
-                  source={require('../../assets/images/google.png')}
-                  style={styles.socialLogo}
-                  resizeMode="contain"
-                />
-              </TouchableOpacity>
-
-              {/* Facebook */}
-              <TouchableOpacity
-                style={styles.socialCardButton}
-                activeOpacity={0.8}
-                disabled={isLoading}
-                onPress={() => handleSocialLogin('Facebook')}
-                accessibilityRole="button"
-                accessibilityLabel="Continue with Facebook"
-              >
-                <Image
-                  source={require('../../assets/images/facebook.png')}
-                  style={styles.socialLogo}
-                  resizeMode="contain"
-                />
-              </TouchableOpacity>
-
-              {/* LinkedIn */}
-              <TouchableOpacity
-                style={styles.socialCardButton}
-                activeOpacity={0.8}
-                disabled={isLoading}
-                onPress={() => handleSocialLogin('LinkedIn')}
-                accessibilityRole="button"
-                accessibilityLabel="Continue with LinkedIn"
-              >
-                <Image
-                  source={require('../../assets/images/linkedin.png')}
-                  style={styles.socialLogo}
-                  resizeMode="contain"
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        {/* The way to the admin sign-in, below everything a member needs.
+            Pads itself clear of the Android navigation bar. */}
+        <PortalSwitchCard
+          tone="admin"
+          icon="admin-panel-settings"
+          question="Are you an administrator?"
+          action="Admin sign in"
+          accessibilityLabel="Admin login"
+          onPress={() => navigation.navigate('AdminLogin')}
+          disabled={isLoading}
+          style={styles.portal}
+        />
+      </FadeInUp>
+    </PremiumScreen>
   );
 };
 
+/** Google, LinkedIn, Facebook — in that order, as before. */
+const SOCIAL = ['Google', 'LinkedIn', 'Facebook'];
+
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F0F4F8', // Light blue soft background tint
+  heroRow: { flexDirection: 'row', alignItems: 'flex-end', marginTop: SPACE.lg, gap: SPACE.sm },
+  heroText: { flex: 1, minWidth: 0, paddingBottom: SPACE.lg },
+  sheetWrap: { marginTop: -PREMIUM_OVERLAP },
+  lastField: { marginBottom: SPACE.xs },
+  optionsRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: SPACE.md },
+  promptRow: {
+    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', marginTop: SPACE.md,
   },
-  container: {
-    flex: 1,
-    backgroundColor: '#F0F4F8',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.sm,
-    paddingBottom: SPACING.md,
-    justifyContent: 'center',
-  },
-  heroCircleContainer: {
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  heroCircle: {
-    width: 122,
-    height: 122,
-    borderRadius: 61,
-    backgroundColor: '#FFFFFF', // Pure White Background only as requested
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  heroLogo: {
-    // Source art is 899x277 (~3.25:1) — width drives the fit under `contain`
-    width: 100,
-    height: 34,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 18,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1E293B',
-    letterSpacing: -0.4,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#64748B',
-    textAlign: 'center',
-  },
-  form: {
-    width: '100%',
-  },
-  fieldGroup: {
-    marginBottom: 12,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#334155',
-    marginBottom: 6,
-  },
-  inputCard: {
-    height: 48,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  inputCardError: {
-    borderColor: '#EF4444',
-  },
-  input: {
-    flex: 1,
-    fontSize: 14,
-    color: '#0F172A',
-    height: '100%',
-  },
-  passwordInput: {
-    paddingRight: 36,
-  },
-  eyeIconButton: {
-    position: 'absolute',
-    right: 12,
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-  },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 11,
-    marginTop: 3,
-    marginLeft: 4,
-  },
-  optionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 2,
-    marginBottom: 16,
-  },
-  rememberMeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  checkbox: {
-    width: 18,
-    height: 18,
-    borderRadius: 5,
-    borderWidth: 1.5,
-    borderColor: '#94A3B8',
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 6,
-  },
-  checkboxChecked: {
-    backgroundColor: '#1E88E5',
-    borderColor: '#1E88E5',
-  },
-  rememberMeText: {
-    fontSize: 13,
-    color: '#475569',
-  },
-  forgotPasswordText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1E88E5',
-  },
-  loginButton: {
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#1E88E5', // Light blue primary color
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#1E88E5',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
-    marginBottom: 12,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  loginButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  registerRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  registerPrompt: {
-    fontSize: 13,
-    color: '#64748B',
-  },
-  signUpText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1E88E5',
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 10,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#CBD5E1',
-  },
-  dividerText: {
-    marginHorizontal: 12,
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#94A3B8',
-    letterSpacing: 0.5,
-  },
-  socialRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  socialCardButton: {
-    // Sized to the logo instead of stretching to a full third of the row
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  socialLogo: {
-    // Source art is square 96x96 — square box keeps the marks at native proportions
-    width: 26,
-    height: 26,
-  },
+  promptText: { ...TYPE.body, color: PALETTE.textMuted },
+  below: { paddingHorizontal: SPACE.lg, paddingTop: SPACE.sm },
+  socialStack: { gap: SPACE.md - 2 },
+  portal: { marginTop: SPACE.xl },
 });
 
 export default LoginScreen;

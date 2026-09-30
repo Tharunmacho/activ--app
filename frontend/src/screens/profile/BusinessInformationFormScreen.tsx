@@ -1,929 +1,254 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  StatusBar,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, Alert, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
-import api from '../../services/api';
+import { Loading, Notice, SPACE, SIZE, RADIUS, PALETTE, TYPE, Storefront3D } from '../../ui';
+import { errorText } from '../../ui/data';
+import { getBusinessInfo, updateProfile } from '../../services/memberApi';
+import {
+  FormScreen, FormFooter, FormSection, SelectField, FieldLabel, ChoicePills, k,
+} from './formKit';
+import { commencementYears } from './memberFormOptions';
+import PlatinumApplicationCard from './PlatinumApplicationCard';
 
-type BusinessInformationFormScreenProps = NativeStackScreenProps<RootStackParamList, 'BusinessInformationForm'>;
+/**
+ * ============================================================================
+ * STEP 2 OF 3 — BUSINESS STATUS (website: pages/member/BusinessForm.tsx)
+ * ============================================================================
+ *
+ * Two questions and no more: do you trade, and (if so) since which year; if
+ * not, aspirant or student. Organisation, constitution, activities, employees,
+ * chambers and the whole Financial step moved to the Business Account, because
+ * they describe a COMPANY and a member may have several.
+ *
+ *   GET /members/business-info
+ *   PUT /members/profile  { doingBusiness: Boolean,
+ *                           registrationType: 'business'|'aspirant'|'student',
+ *                           businessCommencementYear? }   (omitted when not trading
+ *                           — a blank would overwrite the stored year and the
+ *                           price band with it)
+ *
+ * EVERYONE continues to the declaration. The old aspirant shortcut submitted an
+ * application from here with a different declaration and nothing recorded in
+ * the declaration collection.
+ *
+ * No price under the year: the website deliberately stopped showing one (its
+ * PlanHint is kept unrendered). The band is resolved server-side at payment.
+ */
 
-const CONSTITUTION_TYPES = ['OPC', 'TRUST', 'SOCIETY', 'Proprietorship', 'Partnership', 'Private Limited'];
-const BUSINESS_TYPES = ['Manufacturing', 'Trader', 'Service Provider', 'Others'];
-const GOVT_ORGANIZATIONS = ['MSME', 'KVIC', 'NABARD', 'None', 'Others'];
+type Props = NativeStackScreenProps<RootStackParamList, 'BusinessInformationForm'> & {
+  /** Website /member/profile?step=2 from the profile view: save and return. */
+  editMode?: boolean;
+};
 
-const BusinessInformationFormScreen: React.FC<BusinessInformationFormScreenProps> = ({ navigation, route }) => {
-  const { userData } = route.params || {};
+const STEPS = ['Personal', 'Business', 'Declaration'];
 
-  const [doingBusiness, setDoingBusiness] = useState<boolean | null>(null);
-  const [formData, setFormData] = useState({
-    organizationName: '',
-    constitutionType: '',
-    businessActivities: '',
-    businessCommencementYear: '',
-    numberOfEmployees: '',
-    otherChamber: '',
-  });
-  const [selectedBusinessTypes, setSelectedBusinessTypes] = useState<string[]>([]);
-  const [memberOfOtherChamber, setMemberOfOtherChamber] = useState<boolean | null>(null);
-  const [selectedGovtOrgs, setSelectedGovtOrgs] = useState<string[]>([]);
-  const [agreeToDeclaration, setAgreeToDeclaration] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+type Choice = 'yes' | 'no' | '';
+type Kind = 'aspirant' | 'student' | '';
 
-  useEffect(() => {
-    fetchBusinessInfo();
+/** Boolean, or the legacy 'yes'/'no' strings, as the control's value. */
+const toChoice = (value: unknown): Choice => {
+  if (value === true || value === 'yes') return 'yes';
+  if (value === false || value === 'no') return 'no';
+  return '';
+};
+
+const toKind = (saved: any): Kind => {
+  if (String(saved?.registrationType || '').toLowerCase() === 'student') return 'student';
+  if (saved?.doingBusiness === false || saved?.doingBusiness === 'no') return 'aspirant';
+  return '';
+};
+
+const BusinessInformationFormScreen: React.FC<Props> = ({ navigation, route, editMode = false }) => {
+  const [doingBusiness, setDoingBusiness] = useState<Choice>('');
+  const [kind, setKind] = useState<Kind>('');
+  const [year, setYear] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const years = useMemo(() => commencementYears(), []);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      const saved = await getBusinessInfo();
+      if (saved && typeof saved === 'object' && Object.keys(saved).length > 0) {
+        setDoingBusiness(toChoice(saved?.doingBusiness));
+        setKind(toKind(saved));
+        const y = saved?.businessCommencementYear;
+        setYear(y === undefined || y === null ? '' : String(y));
+      }
+    } catch (err) {
+      setLoadError(errorText(err, 'Failed to load form data'));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const fetchBusinessInfo = async () => {
-    setIsLoading(true);
-    try {
-      const response = await api.get('/members/business-info');
-      if (response.data.success && response.data.data) {
-        const data = response.data.data;
-        if (data.doingBusiness !== undefined) setDoingBusiness(data.doingBusiness);
-        setFormData({
-          organizationName: data.organizationName || '',
-          constitutionType: data.constitutionType || '',
-          businessActivities: data.businessActivities || '',
-          businessCommencementYear: data.businessCommencementYear ? String(data.businessCommencementYear) : '',
-          numberOfEmployees: data.numberOfEmployees ? String(data.numberOfEmployees) : '',
-          otherChamber: data.otherChamber || '',
-        });
-        setSelectedBusinessTypes(data.businessTypes || []);
-        if (data.memberOfOtherChamber !== undefined) setMemberOfOtherChamber(data.memberOfOtherChamber);
-        setSelectedGovtOrgs(data.govtOrganizations || []);
-      }
-    } catch (error: any) {
-      console.log('Notice loading business info:', error?.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+  const isAspirant = doingBusiness === 'no';
 
-  const toggleBusinessType = (type: string) => {
-    setSelectedBusinessTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
-    );
-  };
-
-  const toggleGovtOrg = (org: string) => {
-    setSelectedGovtOrgs((prev) =>
-      prev.includes(org) ? prev.filter((o) => o !== org) : [...prev, org]
-    );
-  };
-
-  const handlePrevious = () => {
-    navigation.goBack();
+  const choose = (value: Choice) => {
+    setDoingBusiness(value);
+    // An aspirant has no commencement year — leaving one would price them into
+    // a band for a business they just said they do not have.
+    if (value === 'no') setYear('');
+    if (value === 'yes') setKind('');
   };
 
   const handleNext = async () => {
-    if (doingBusiness === null) {
+    if (!doingBusiness) {
       Alert.alert('Required', 'Please select whether you are currently doing business.');
       return;
     }
-
-    // Aspirant Mode (Not doing business)
-    if (doingBusiness === false) {
-      if (!agreeToDeclaration) {
-        Alert.alert('Declaration Required', 'Please accept the declaration to continue.');
-        return;
-      }
-      setIsSaving(true);
-      try {
-        const aspirantData = {
-          doingBusiness: false,
-          registrationType: 'aspirant',
-          memberOfOtherChamber: false,
-          govtOrganizations: [],
-          submittedAt: new Date().toISOString(),
-        };
-
-        await api.put('/members/profile', aspirantData);
-        await api.post('/applications', {
-          ...userData?.registrationForm,
-          ...aspirantData,
-        });
-
-        navigation.navigate('ApplicationSubmitted');
-      } catch (error: any) {
-        Alert.alert('Error', error.response?.data?.message || 'Failed to submit aspirant registration');
-      } finally {
-        setIsSaving(false);
-      }
+    if (isAspirant && !kind) {
+      Alert.alert('Required', 'Please choose whether you are an aspirant or a student.');
+      return;
+    }
+    if (!isAspirant && !year) {
+      Alert.alert('Required', 'Please select the year your business commenced.');
       return;
     }
 
-    // Active Business Mode Validation
-    if (!formData.organizationName.trim()) {
-      Alert.alert('Required', 'Organization name is required');
-      return;
-    }
-
-    if (!formData.constitutionType) {
-      Alert.alert('Required', 'Please select a Constitution Type');
-      return;
-    }
-
-    setIsSaving(true);
+    setSaving(true);
     try {
-      const businessData = {
-        doingBusiness: true,
-        organizationName: formData.organizationName,
-        constitutionType: formData.constitutionType,
-        businessTypes: selectedBusinessTypes,
-        businessActivities: formData.businessActivities,
-        businessCommencementYear: formData.businessCommencementYear,
-        numberOfEmployees: formData.numberOfEmployees,
-        memberOfOtherChamber,
-        otherChamber: formData.otherChamber,
-        govtOrganizations: selectedGovtOrgs,
+      const payload: Record<string, any> = {
+        doingBusiness: !isAspirant,
+        registrationType: isAspirant ? (kind === 'student' ? 'student' : 'aspirant') : 'business',
       };
+      if (!isAspirant) payload.businessCommencementYear = year;
 
-      await api.put('/members/profile', businessData);
-
-      navigation.navigate('FinancialComplianceForm', {
-        userData: { ...userData, registrationForm: { ...userData?.registrationForm, ...businessData } },
-      });
-    } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to save business information');
+      await updateProfile(payload);
+      if (editMode) {
+        Alert.alert('Saved', 'Business information saved.', [
+          { text: 'OK', onPress: () => { if (navigation.canGoBack()) navigation.goBack(); } },
+        ]);
+      } else {
+        navigation.navigate('DeclarationForm', { userData: route?.params?.userData || {} });
+      }
+    } catch (err) {
+      Alert.alert('Could not save', errorText(err, 'Failed to save your business details'));
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   };
 
-  const renderStepper = () => (
-    <View style={styles.stepperWrapper}>
-      <View style={styles.stepperRow}>
-        <View style={styles.stepItem}>
-          <View style={styles.stepCircleCompleted}>
-            <Icon name="check" size={18} color="#FFFFFF" />
-          </View>
-        </View>
-        <View style={[styles.stepLine, styles.stepLineActive]} />
-
-        <View style={styles.stepItem}>
-          <View style={[styles.stepCircle, styles.stepCircleActive]}>
-            <Text style={styles.stepCircleTextActive}>2</Text>
-          </View>
-        </View>
-        <View style={styles.stepLine} />
-
-        <View style={styles.stepItem}>
-          <View style={styles.stepCircle}>
-            <Text style={styles.stepCircleText}>3</Text>
-          </View>
-        </View>
-        <View style={styles.stepLine} />
-
-        <View style={styles.stepItem}>
-          <View style={styles.stepCircle}>
-            <Text style={styles.stepCircleText}>4</Text>
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1E50E6" />
-      </View>
+      <FormScreen
+        title="Business Information"
+        subtitle="Business status"
+        onBack={() => navigation.goBack()}
+        step={editMode ? undefined : 2}
+        steps={STEPS}
+        art={<Storefront3D size={88} />}
+      >
+        <Loading label="Loading…" />
+      </FormScreen>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F0F4F8" />
+    <FormScreen
+      title="Business Information"
+      subtitle="Business status"
+      onBack={() => navigation.goBack()}
+      step={editMode ? undefined : 2}
+      steps={STEPS}
+      art={<Storefront3D size={88} />}
+      footer={(
+        <FormFooter
+          secondaryLabel="Back"
+          onSecondary={() => navigation.goBack()}
+          primaryLabel={editMode ? 'Save changes' : 'Next'}
+          onPrimary={handleNext}
+          loading={saving}
+        />
+      )}
+    >
+      {loadError ? (
+        <Notice kind="danger" text={loadError} action="Retry" onAction={load} style={{ marginTop: 0, marginBottom: SPACE.lg }} />
+      ) : null}
 
-      {/* Nav Header - Back button only */}
-      <View style={styles.navHeader}>
-        <TouchableOpacity onPress={handlePrevious} style={styles.backButton} activeOpacity={0.7}>
-          <Icon name="arrow-back" size={24} color="#1E293B" />
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Complete Your Profile</Text>
+      <FormSection icon="work-outline" title="Business status" subtitle="This decides how your application is reviewed">
+        <View style={k.fieldWrap}>
+          <FieldLabel label="Are you currently doing business?" required />
+          <ChoicePills
+            options={[
+              { value: 'yes' as const, label: 'Yes', icon: 'storefront' },
+              { value: 'no' as const, label: 'No', icon: 'lightbulb-outline' },
+            ]}
+            value={doingBusiness}
+            onChange={choose}
+          />
         </View>
-        <View style={{ width: 40 }} />
-      </View>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          style={styles.scrollContainer}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Stepper (Circle 2 active) */}
-          {renderStepper()}
-
-          {/* SECTION 1: Business Status */}
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <Icon name="business-center" size={22} color="#1E50E6" style={styles.cardHeaderIcon} />
-              <Text style={styles.cardHeaderTitle}>Business Status</Text>
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Are you currently doing business? *</Text>
-              <View style={styles.radioRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.radioOption,
-                    doingBusiness === true && styles.radioOptionSelected,
-                  ]}
-                  onPress={() => setDoingBusiness(true)}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.radioCircle, doingBusiness === true && styles.radioCircleActive]}>
-                    {doingBusiness === true && <View style={styles.radioInnerCircle} />}
-                  </View>
-                  <Text style={[styles.radioText, doingBusiness === true && styles.radioTextActive]}>
-                    Yes
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.radioOption,
-                    doingBusiness === false && styles.radioOptionSelected,
-                  ]}
-                  onPress={() => setDoingBusiness(false)}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.radioCircle, doingBusiness === false && styles.radioCircleActive]}>
-                    {doingBusiness === false && <View style={styles.radioInnerCircle} />}
-                  </View>
-                  <Text style={[styles.radioText, doingBusiness === false && styles.radioTextActive]}>
-                    No (Aspirant)
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+        {isAspirant ? (
+          <View style={k.fieldWrap}>
+            <FieldLabel label="Which describes you?" required />
+            <ChoicePills
+              options={[
+                { value: 'aspirant' as const, label: 'Aspirant', icon: 'trending-up' },
+                { value: 'student' as const, label: 'Student', icon: 'school' },
+              ]}
+              value={kind}
+              onChange={setKind}
+            />
+            <Text style={k.hint}>Aspirant — planning to start a business. Student — currently studying.</Text>
           </View>
+        ) : null}
 
-          {/* SECTION 2: Organization Details (If doing business) */}
-          {doingBusiness === true && (
-            <>
-              <View style={styles.card}>
-                <View style={styles.cardHeaderRow}>
-                  <Icon name="store" size={22} color="#1E50E6" style={styles.cardHeaderIcon} />
-                  <Text style={styles.cardHeaderTitle}>Organization Details</Text>
-                </View>
+        {isAspirant && kind ? (
+          <Notice
+            kind="info"
+            style={{ marginHorizontal: 0, marginTop: 0 }}
+            text={`You are registering as ${kind === 'student' ? 'a student' : 'an aspirant'}. You will be offered the ${kind === 'student' ? 'Student' : 'Aspirant'} membership. Continue to the declaration to submit your application.`}
+          />
+        ) : null}
+      </FormSection>
 
-                {/* Organization Name */}
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Organization Name *</Text>
-                  <View style={styles.inputContainer}>
-                    <Icon name="domain" size={20} color="#1E50E6" style={styles.fieldLeftIcon} />
-                    <TextInput
-                      style={styles.textInput}
-                      value={formData.organizationName}
-                      onChangeText={(val) => handleInputChange('organizationName', val)}
-                      placeholder="Enter organization name"
-                      placeholderTextColor="#94A3B8"
-                    />
-                  </View>
-                </View>
-
-                {/* Constitution Type */}
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Constitution Type *</Text>
-                  <View style={styles.pillWrapContainer}>
-                    {CONSTITUTION_TYPES.map((type) => {
-                      const isActive = formData.constitutionType === type;
-                      return (
-                        <TouchableOpacity
-                          key={type}
-                          style={[styles.pillButton, isActive && styles.pillButtonActive]}
-                          onPress={() => handleInputChange('constitutionType', type)}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={[styles.pillButtonText, isActive && styles.pillButtonTextActive]}>
-                            {type}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-              </View>
-
-              {/* SECTION 3: Business Operations */}
-              <View style={styles.card}>
-                <View style={styles.cardHeaderRow}>
-                  <Icon name="assessment" size={22} color="#1E50E6" style={styles.cardHeaderIcon} />
-                  <Text style={styles.cardHeaderTitle}>Business Operations</Text>
-                </View>
-
-                {/* Business Type */}
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Business Type</Text>
-                  <View style={styles.pillWrapContainer}>
-                    {BUSINESS_TYPES.map((type) => {
-                      const isActive = selectedBusinessTypes.includes(type);
-                      return (
-                        <TouchableOpacity
-                          key={type}
-                          style={[styles.pillButton, isActive && styles.pillButtonActive]}
-                          onPress={() => toggleBusinessType(type)}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={[styles.pillButtonText, isActive && styles.pillButtonTextActive]}>
-                            {type}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-
-                {/* Business Activities */}
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Business Activities</Text>
-                  <View style={[styles.inputContainer, styles.textAreaContainer]}>
-                    <Icon name="description" size={20} color="#1E50E6" style={styles.fieldLeftIconTop} />
-                    <TextInput
-                      style={[styles.textInput, styles.textAreaInput]}
-                      value={formData.businessActivities}
-                      onChangeText={(val) => handleInputChange('businessActivities', val)}
-                      placeholder="Describe your primary business products or services"
-                      placeholderTextColor="#94A3B8"
-                      multiline
-                      numberOfLines={3}
-                      textAlignVertical="top"
-                    />
-                  </View>
-                </View>
-
-                {/* Commencement Year & Employees Row */}
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Commencement Year</Text>
-                  <View style={styles.inputContainer}>
-                    <Icon name="event" size={20} color="#1E50E6" style={styles.fieldLeftIcon} />
-                    <TextInput
-                      style={styles.textInput}
-                      value={formData.businessCommencementYear}
-                      onChangeText={(val) => handleInputChange('businessCommencementYear', val)}
-                      placeholder="e.g. 2020"
-                      placeholderTextColor="#94A3B8"
-                      keyboardType="number-pad"
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Number of Employees</Text>
-                  <View style={styles.inputContainer}>
-                    <Icon name="groups" size={20} color="#1E50E6" style={styles.fieldLeftIcon} />
-                    <TextInput
-                      style={styles.textInput}
-                      value={formData.numberOfEmployees}
-                      onChangeText={(val) => handleInputChange('numberOfEmployees', val)}
-                      placeholder="e.g. 25"
-                      placeholderTextColor="#94A3B8"
-                      keyboardType="number-pad"
-                    />
-                  </View>
-                </View>
-              </View>
-
-              {/* SECTION 4: Affiliations & Registrations */}
-              <View style={styles.card}>
-                <View style={styles.cardHeaderRow}>
-                  <Icon name="verified" size={22} color="#1E50E6" style={styles.cardHeaderIcon} />
-                  <Text style={styles.cardHeaderTitle}>Affiliations & Registrations</Text>
-                </View>
-
-                {/* Member of Other Chamber */}
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Member of Other Chamber?</Text>
-                  <View style={styles.radioRow}>
-                    <TouchableOpacity
-                      style={[
-                        styles.radioOption,
-                        memberOfOtherChamber === true && styles.radioOptionSelected,
-                      ]}
-                      onPress={() => setMemberOfOtherChamber(true)}
-                      activeOpacity={0.8}
-                    >
-                      <View style={[styles.radioCircle, memberOfOtherChamber === true && styles.radioCircleActive]}>
-                        {memberOfOtherChamber === true && <View style={styles.radioInnerCircle} />}
-                      </View>
-                      <Text style={[styles.radioText, memberOfOtherChamber === true && styles.radioTextActive]}>
-                        Yes
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={[
-                        styles.radioOption,
-                        memberOfOtherChamber === false && styles.radioOptionSelected,
-                      ]}
-                      onPress={() => setMemberOfOtherChamber(false)}
-                      activeOpacity={0.8}
-                    >
-                      <View style={[styles.radioCircle, memberOfOtherChamber === false && styles.radioCircleActive]}>
-                        {memberOfOtherChamber === false && <View style={styles.radioInnerCircle} />}
-                      </View>
-                      <Text style={[styles.radioText, memberOfOtherChamber === false && styles.radioTextActive]}>
-                        No
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                {memberOfOtherChamber === true && (
-                  <View style={styles.fieldGroup}>
-                    <Text style={styles.fieldLabel}>Chamber Name</Text>
-                    <View style={styles.inputContainer}>
-                      <Icon name="account-balance" size={20} color="#1E50E6" style={styles.fieldLeftIcon} />
-                      <TextInput
-                        style={styles.textInput}
-                        value={formData.otherChamber}
-                        onChangeText={(val) => handleInputChange('otherChamber', val)}
-                        placeholder="Enter existing chamber name"
-                        placeholderTextColor="#94A3B8"
-                      />
-                    </View>
-                  </View>
-                )}
-
-                {/* Govt Organizations */}
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Registered with Govt. Organization</Text>
-                  <View style={styles.pillWrapContainer}>
-                    {GOVT_ORGANIZATIONS.map((org) => {
-                      const isActive = selectedGovtOrgs.includes(org);
-                      return (
-                        <TouchableOpacity
-                          key={org}
-                          style={[styles.pillButton, isActive && styles.pillButtonActive]}
-                          onPress={() => toggleGovtOrg(org)}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={[styles.pillButtonText, isActive && styles.pillButtonTextActive]}>
-                            {org}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-              </View>
-            </>
-          )}
-
-          {/* Aspirant Note & Declaration (If not doing business) */}
-          {doingBusiness === false && (
-            <View style={styles.card}>
-              <View style={styles.infoBox}>
-                <Icon name="school" size={28} color="#1E50E6" style={{ marginRight: 10 }} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.infoTitle}>Registering as Aspirant</Text>
-                  <Text style={styles.infoText}>
-                    You are registering as an Aspirant / Student. Financial & Compliance steps are skipped.
-                  </Text>
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={styles.checkboxRow}
-                onPress={() => setAgreeToDeclaration(!agreeToDeclaration)}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.checkboxCircle, agreeToDeclaration && styles.checkboxCircleActive]}>
-                  {agreeToDeclaration && <Icon name="check" size={16} color="#FFFFFF" />}
-                </View>
-                <Text style={styles.checkboxText}>
-                  I hereby declare that all information provided is true and correct.
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Action Buttons Row */}
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={styles.prevButton}
-              onPress={handlePrevious}
-              disabled={isSaving}
-              activeOpacity={0.85}
-            >
-              <Icon name="arrow-back" size={18} color="#1E50E6" style={{ marginRight: 6 }} />
-              <Text style={styles.prevButtonText}>Previous</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.nextButton}
-              onPress={handleNext}
-              disabled={isSaving}
-              activeOpacity={0.85}
-            >
-              {isSaving ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <View style={styles.nextButtonContent}>
-                  <Text style={styles.nextButtonText}>
-                    {doingBusiness === false ? 'Submit' : 'Next'}
-                  </Text>
-                  <Icon name="arrow-forward" size={18} color="#FFFFFF" style={styles.nextArrowIcon} />
-                </View>
-              )}
-            </TouchableOpacity>
+      {doingBusiness === 'yes' ? (
+        <FormSection icon="event" title="Business commencement" subtitle="The year your business started trading">
+          <SelectField
+            label="Commencement year"
+            required
+            value={year}
+            options={years}
+            onChange={setYear}
+            placeholder="Select year"
+            icon="calendar-today"
+          />
+          <View style={s.aside}>
+            <Icon name="info-outline" size={SIZE.iconSm} color={PALETTE.textMuted} style={{ marginTop: 1 }} />
+            <Text style={s.asideText}>
+              Everything else about your company — constitution, activities, GSTIN, turnover and
+              government registrations — is asked once in your Business Account, which you can set up
+              after your application is submitted.
+            </Text>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </FormSection>
+      ) : null}
+
+      {/* Website PlatinumNotice: for anyone joining as a business, at the foot of the step. */}
+      {doingBusiness !== 'no' ? (
+        <PlatinumApplicationCard onApply={() => (navigation as any).navigate('PlatinumRequest')} />
+      ) : null}
+    </FormScreen>
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    // Matches the login screen so sign-in and the profile forms read as one
-    // continuous surface.
-    backgroundColor: '#F0F4F8',
+const s = StyleSheet.create({
+  aside: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.sm,
+    backgroundColor: PALETTE.fieldBg, borderRadius: RADIUS.md, padding: SPACE.md,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-  },
-
-  // Nav Header
-  navHeader: {
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    backgroundColor: '#F0F4F8',
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Stepper
-  stepperWrapper: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  stepperRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  stepItem: {
-    alignItems: 'center',
-  },
-  stepCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#E2E8F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  stepCircleActive: {
-    backgroundColor: '#1E50E6',
-    shadowColor: '#1E50E6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  stepCircleCompleted: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#10B981',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  stepCircleText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  stepCircleTextActive: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  stepLine: {
-    flex: 1,
-    height: 2,
-    backgroundColor: '#E2E8F0',
-    marginHorizontal: 8,
-  },
-  stepLineActive: {
-    backgroundColor: '#10B981',
-  },
-
-  // Scroll Content
-  scrollContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 60,
-  },
-
-  // Card
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 18,
-    gap: 10,
-  },
-  cardHeaderIcon: {
-    marginRight: 2,
-  },
-  cardHeaderTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1E293B',
-    letterSpacing: 0.2,
-  },
-
-  // Fields
-  fieldGroup: {
-    marginBottom: 16,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#334155',
-    marginBottom: 8,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 52,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.2,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-  },
-  textAreaContainer: {
-    height: 100,
-    alignItems: 'flex-start',
-    paddingVertical: 10,
-  },
-  fieldLeftIcon: {
-    marginRight: 10,
-  },
-  fieldLeftIconTop: {
-    marginRight: 10,
-    marginTop: 4,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#1E293B',
-    height: '100%',
-    paddingVertical: 0,
-  },
-  textAreaInput: {
-    textAlignVertical: 'top',
-  },
-
-  // Radio Options
-  radioRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  radioOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 48,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1.2,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-  },
-  radioOptionSelected: {
-    borderColor: '#1E50E6',
-    backgroundColor: '#EFF6FF',
-  },
-  radioCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#94A3B8',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  radioCircleActive: {
-    borderColor: '#1E50E6',
-  },
-  radioInnerCircle: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#1E50E6',
-  },
-  radioText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  radioTextActive: {
-    color: '#1E50E6',
-  },
-
-  // Pill Wrap Container
-  pillWrapContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  pillButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 20,
-    backgroundColor: '#F1F5F9',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  pillButtonActive: {
-    backgroundColor: '#1E50E6',
-    borderColor: '#1E50E6',
-  },
-  pillButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#475569',
-  },
-  pillButtonTextActive: {
-    color: '#FFFFFF',
-  },
-
-  // Info Box
-  infoBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#EFF6FF',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-  },
-  infoTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1E50E6',
-    marginBottom: 4,
-  },
-  infoText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#3B82F6',
-    lineHeight: 18,
-  },
-
-  // Checkbox
-  checkboxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  checkboxCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: '#94A3B8',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-    backgroundColor: '#FFFFFF',
-  },
-  checkboxCircleActive: {
-    backgroundColor: '#1E50E6',
-    borderColor: '#1E50E6',
-  },
-  checkboxText: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#334155',
-    lineHeight: 18,
-  },
-
-  // Buttons Row
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  prevButton: {
-    flex: 1,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#1E50E6',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  prevButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E50E6',
-  },
-  nextButton: {
-    flex: 1,
-    height: 52,
-    backgroundColor: '#1E50E6',
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#1E50E6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  nextButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  nextButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  nextArrowIcon: {
-    marginTop: 1,
-  },
+  asideText: { ...TYPE.caption, flex: 1, lineHeight: 18 },
 });
 
 export default BusinessInformationFormScreen;

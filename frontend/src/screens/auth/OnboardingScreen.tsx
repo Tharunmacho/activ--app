@@ -1,20 +1,45 @@
-// Onboarding Screen - Conditional Single Title Rendering for Non-Duplicated Graphics
+// Onboarding Screen — the premium brand pager (four slides, custom vector art)
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Dimensions,
-  FlatList,
-  TouchableOpacity,
-  Image,
+  Animated,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../../services/api';
+import { ENDPOINTS } from '../../config/api.config';
+import { homeForRole, clearSession } from '../../services/session';
 import { RootStackParamList } from '../../types';
-import { COLORS, SPACING } from '../../theme/theme';
+import {
+  PALETTE, SPACE,
+  BRAND, BrandBackdrop, BrandLogo, GradientButton, PressableScale, FloatingIllustration, FadeInUp, useReduceMotion,
+  MembershipBenefits3D, EventCalendar3D, UdyamVerify3D, NetworkGrowth3D,
+} from '../../ui';
+
+/**
+ * ============================================================================
+ * ONBOARDING — four slides on the brand gradient
+ * ============================================================================
+ *
+ * Visual layer only: the session restore, the slide list, Skip / Next /
+ * Get Started and their targets are unchanged.
+ *
+ *   top ~55%  navy→blue backdrop with drifting waves into white, logo + Skip
+ *             on it, each slide's own vector illustration floating in the middle
+ *   bottom    white: step count, title, description; animated pager dots;
+ *             Skip + gradient Next / Get Started
+ *
+ * Paging: the illustration and the copy move at different speeds from the
+ * page (parallax) and fade across the swipe; the active dot is a pill that
+ * slides with the scroll. All on the native driver; under reduce-motion the
+ * parallax and scale are dropped (the page still swipes).
+ */
 
 type OnboardingScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Onboarding'>;
@@ -26,7 +51,7 @@ interface OnboardingSlide {
   id: string;
   title: string;
   description: string;
-  image: any;
+  art: React.ComponentType<{ size?: number }>;
 }
 
 const RAW_SLIDES: OnboardingSlide[] = [
@@ -34,63 +59,87 @@ const RAW_SLIDES: OnboardingSlide[] = [
     id: 'slide-membership',
     title: 'Membership Benefits',
     description: 'Join to access multi-level memberships and commercial opportunities.',
-    image: require('../../assets/images/membership.png'),
+    art: MembershipBenefits3D,
   },
   {
     id: 'slide-event',
     title: 'Event Management',
     description: 'Register for business events, workshops, and receive updates.',
-    image: require('../../assets/images/event.png'),
+    art: EventCalendar3D,
   },
   {
     id: 'slide-udyam',
     title: 'Udyam Integration',
     description: 'Highlight optional Udyam validation for MSME entrepreneurs.',
-    image: require('../../assets/images/udayam.png'),
+    art: UdyamVerify3D,
   },
   {
     id: 'slide-networking',
     title: 'Networking & Growth',
     description: 'Connect, collaborate, and expand your enterprise network.',
-    image: require('../../assets/images/networking.png'),
+    art: NetworkGrowth3D,
   },
 ];
+
+/** Share of the screen the gradient takes (waves included). */
+const HERO_RATIO = 0.55;
+const WAVE_H = 64;
+const TOP_BAR = 56;
+const DOT = 8;
+// Wide enough that the active pill (2.5 dots wide) never touches a neighbour.
+const DOT_GAP = 16;
 
 const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<any>(null);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
+    /*
+     * RESTORE A SIGNED-IN SESSION — the same routing as a fresh sign-in
+     * (services/session.ts): members to the paid or unpaid dashboard by their
+     * CURRENT payment state, admins to their own dashboard. The token is
+     * checked with the server first (GET /auth/me); a session that is no
+     * longer valid goes to the sign-in screen it belongs to, and an account
+     * the app does not serve (events admin, CMS) is signed out.
+     */
     const checkAuth = async () => {
       try {
         const token = await AsyncStorage.getItem('@activ_auth_token');
         const role = await AsyncStorage.getItem('@activ_user_role');
-        
-        if (token && role) {
-          // Auto-navigate based on role
-          switch (role) {
-            case 'super_admin':
-              navigation.replace('SuperAdminDashboard');
-              break;
-            case 'state_admin':
-              navigation.replace('StateDashboard');
-              break;
-            case 'district_admin':
-              navigation.replace('DistrictDashboard');
-              break;
-            case 'block_admin':
-              navigation.replace('BlockDashboard');
-              break;
-            case 'member':
-            default:
-              navigation.replace('MemberMain');
-              break;
-          }
-        } else {
+        // Older builds kept the password in plain text: never leave it behind.
+        await AsyncStorage.removeItem('@activ_user_password').catch(() => null);
+
+        if (!token || !role) {
           setIsCheckingAuth(false);
+          return;
         }
-      } catch (err) {
+
+        try {
+          await api.get(ENDPOINTS.AUTH.PROFILE);
+        } catch (err: any) {
+          if (err?.response?.status === 401) {
+            // The API layer has already cleared it and redirected.
+            return;
+          }
+          // Offline / server unreachable: keep the session and continue — the
+          // screens show their own retry states.
+        }
+
+        const home = await homeForRole(role);
+        // A deep link (social sign-in, password reset) opened another screen
+        // over this one while the check ran — leave the member there.
+        if (typeof navigation.isFocused === 'function' && !navigation.isFocused()) return;
+        if (!home) {
+          await clearSession();
+          setIsCheckingAuth(false);
+          return;
+        }
+        navigation.reset({ index: 0, routes: [{ name: home }] });
+      } catch {
         setIsCheckingAuth(false);
       }
     };
@@ -109,7 +158,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
   }, []);
 
   const handleMomentumScrollEnd = (event: any) => {
-    const scrollPosition = event.nativeEvent.contentOffset.x;
+    const scrollPosition = event?.nativeEvent?.contentOffset?.x || 0;
     const index = Math.round(scrollPosition / width);
     if (index >= 0 && index < slides.length) {
       setCurrentIndex(index);
@@ -136,193 +185,211 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
     }
   };
 
-  const renderSlide = ({ item }: { item: OnboardingSlide }) => {
+  const top = Number(insets?.top || 0);
+  const bottom = Number(insets?.bottom || 0);
+  const heroH = Math.round(height * HERO_RATIO);
+  // The art fits the space between the top bar and the waves.
+  const artSize = Math.max(150, Math.min(width * 0.7, heroH - top - TOP_BAR - WAVE_H + 24, 280));
+
+  const onScroll = useMemo(
+    () => Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: true }),
+    [scrollX],
+  );
+
+  const renderSlide = ({ item, index }: { item: OnboardingSlide; index: number }) => {
+    const Art = item?.art;
+    const range = [(index - 1) * width, index * width, (index + 1) * width];
+    const fade = scrollX.interpolate({ inputRange: range, outputRange: [0, 1, 0], extrapolate: 'clamp' });
+    const artMotion = reduceMotion ? [] : [
+      { translateX: scrollX.interpolate({ inputRange: range, outputRange: [width * 0.45, 0, -width * 0.45], extrapolate: 'clamp' }) },
+      { scale: scrollX.interpolate({ inputRange: range, outputRange: [0.8, 1, 0.8], extrapolate: 'clamp' }) },
+    ];
+    const textMotion = reduceMotion ? [] : [
+      { translateX: scrollX.interpolate({ inputRange: range, outputRange: [width * 0.25, 0, -width * 0.25], extrapolate: 'clamp' }) },
+    ];
+    const total = slides.length;
     return (
       <View style={styles.slide}>
-        <View style={styles.imageContainer}>
-          <Image source={item.image} style={styles.image} resizeMode="contain" />
+        <View style={[styles.hero, { height: heroH, paddingTop: top + TOP_BAR, paddingBottom: WAVE_H - 16 }]}>
+          <Animated.View style={{ opacity: fade, transform: artMotion }}>
+            <FloatingIllustration size={artSize} amplitude={10} delay={index * 200}>
+              {Art ? <Art size={artSize} /> : null}
+            </FloatingIllustration>
+          </Animated.View>
         </View>
-        <View style={styles.textContainer}>
-          <Text style={styles.title}>{item.title}</Text>
-          <Text style={styles.description}>{item.description}</Text>
+        <Animated.View style={[styles.textContainer, { opacity: fade, transform: textMotion }]}>
+          <Text style={styles.count} maxFontSizeMultiplier={1.3}>
+            {String(index + 1).padStart(2, '0')}
+            <Text style={styles.countOf}> / {String(total).padStart(2, '0')}</Text>
+          </Text>
+          <Text style={styles.title} maxFontSizeMultiplier={1.25} accessibilityRole="header">{item?.title || ''}</Text>
+          <Text style={styles.description} maxFontSizeMultiplier={1.3}>{item?.description || ''}</Text>
+        </Animated.View>
+      </View>
+    );
+  };
+
+  const renderPagination = () => {
+    const step = DOT + DOT_GAP;
+    const indicatorX = scrollX.interpolate({
+      inputRange: [0, Math.max(1, (slides.length - 1) * width)],
+      outputRange: [0, Math.max(0, (slides.length - 1) * step)],
+      extrapolate: 'clamp',
+    });
+    return (
+      <View
+        style={styles.paginationContainer}
+        accessibilityRole="progressbar"
+        accessibilityLabel={`Slide ${currentIndex + 1} of ${slides.length}`}
+      >
+        <View style={styles.dotsRow}>
+          {slides.map((_, index) => (
+            <View key={index} style={styles.dot} />
+          ))}
+          <Animated.View style={[styles.activeDot, { transform: [{ translateX: indicatorX }] }]} />
         </View>
       </View>
     );
   };
 
-  const renderPagination = () => (
-    <View style={styles.paginationContainer}>
-      {slides.map((_, index) => (
-        <View
-          key={index}
-          style={[
-            styles.dot,
-            index === currentIndex && styles.activeDot,
-          ]}
-        />
-      ))}
-    </View>
-  );
-
   if (isCheckingAuth) {
     return (
-      <SafeAreaView style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-        <Text style={{ fontSize: 16, color: '#475569' }}>Loading...</Text>
-      </SafeAreaView>
+      <View style={styles.loadingRoot}>
+        <StatusBar barStyle="light-content" backgroundColor={BRAND.navyDeep} />
+        <BrandBackdrop tone="member" waveColor={BRAND.navyDeep} waveHeight={0} style={StyleSheet.absoluteFill} />
+        <FadeInUp scaleFrom={0.9} style={styles.loadingCenter}>
+          <BrandLogo variant="disc" />
+          <ActivityIndicator color={PALETTE.white} style={{ marginTop: SPACE.xl }} />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </FadeInUp>
+      </View>
     );
   }
 
-  return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      <View style={styles.container}>
-        <FlatList
-          ref={flatListRef}
-          data={slides}
-          renderItem={renderSlide}
-          keyExtractor={(item) => item.id}
-          horizontal
-          pagingEnabled
-          bounces={false}
-          showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={handleMomentumScrollEnd}
-          getItemLayout={getItemLayout}
-          initialNumToRender={1}
-          maxToRenderPerBatch={2}
-          windowSize={3}
-          style={{ flex: 1 }}
-        />
+  const last = currentIndex === slides.length - 1;
 
+  return (
+    <View style={styles.root}>
+      <StatusBar barStyle="light-content" backgroundColor={BRAND.navyDeep} />
+      <BrandBackdrop
+        tone="member"
+        waveColor={PALETTE.white}
+        waveHeight={WAVE_H}
+        style={[styles.backdrop, { height: heroH }]}
+      />
+
+      <Animated.FlatList
+        ref={flatListRef}
+        data={slides}
+        renderItem={renderSlide}
+        keyExtractor={(item: OnboardingSlide, index: number) => String(item?.id || index)}
+        horizontal
+        pagingEnabled
+        bounces={false}
+        showsHorizontalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        onMomentumScrollEnd={handleMomentumScrollEnd}
+        getItemLayout={getItemLayout}
+        initialNumToRender={1}
+        maxToRenderPerBatch={2}
+        windowSize={3}
+        style={styles.list}
+      />
+
+      {/* The logo sits on the gradient, above the pager. */}
+      <View style={[styles.topBar, { top: top + SPACE.sm }]} pointerEvents="none">
+        <BrandLogo size="sm" />
+      </View>
+
+      <View style={[styles.controls, { paddingBottom: Math.max(bottom, SPACE.lg) + SPACE.md }]}>
         {renderPagination()}
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.skipButton}
+          <PressableScale
             onPress={handleSkip}
-            activeOpacity={0.7}
+            style={styles.skipButton}
+            contentStyle={styles.skipInner}
+            accessibilityRole="button"
+            accessibilityLabel="Skip"
           >
-            <Text style={styles.skipButtonText}>Skip</Text>
-          </TouchableOpacity>
+            <Text style={styles.skipButtonText} maxFontSizeMultiplier={1.3}>Skip</Text>
+          </PressableScale>
 
-          <TouchableOpacity
-            style={styles.nextButton}
+          <GradientButton
+            label={last ? 'Get Started' : 'Next'}
+            iconRight={last ? 'arrow-forward' : 'chevron-right'}
             onPress={handleNext}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.nextButtonText}>
-              {currentIndex === slides.length - 1 ? 'Get Started' : 'Next'}
-            </Text>
-          </TouchableOpacity>
+            style={styles.nextButton}
+          />
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  slide: {
-    width: width,
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 16,
-  },
-  imageContainer: {
-    height: height * 0.40,
-    width: width * 0.86,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
+  root: { flex: 1, backgroundColor: PALETTE.white },
+  backdrop: { position: 'absolute', top: 0, left: 0, right: 0 },
+  list: { flex: 1 },
+  slide: { width, flex: 1 },
+  hero: { alignItems: 'center', justifyContent: 'center' },
   textContainer: {
     alignItems: 'center',
-    paddingHorizontal: 20,
-    justifyContent: 'center',
-    marginTop: 4,
+    paddingHorizontal: SPACE.xxl,
+    paddingTop: SPACE.sm,
   },
+  count: { fontSize: 13, lineHeight: 18, fontWeight: '800', letterSpacing: 1.5, color: BRAND.blue, marginBottom: SPACE.sm },
+  countOf: { color: PALETTE.textFaint, fontWeight: '700' },
   title: {
-    fontSize: 26,
+    fontSize: 27,
+    lineHeight: 33,
     fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 10,
+    color: PALETTE.text,
+    marginBottom: SPACE.sm + 2,
     textAlign: 'center',
-    letterSpacing: -0.5,
+    letterSpacing: -0.7,
   },
   description: {
     fontSize: 16,
-    color: '#475569',
+    color: PALETTE.textMuted,
     textAlign: 'center',
     lineHeight: 24,
     fontWeight: '500',
-    paddingHorizontal: 12,
   },
-  paginationContainer: {
+
+  topBar: {
+    position: 'absolute',
+    left: SPACE.lg,
+    right: SPACE.lg,
+    height: 44,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 14,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E2E8F0',
-    marginHorizontal: 4,
-  },
+
+  controls: { paddingHorizontal: SPACE.xl, backgroundColor: PALETTE.white },
+  paginationContainer: { alignItems: 'center', paddingVertical: SPACE.lg },
+  dotsRow: { flexDirection: 'row', gap: DOT_GAP },
+  dot: { width: DOT, height: DOT, borderRadius: DOT / 2, backgroundColor: '#E2E8F0' },
   activeDot: {
-    width: 24,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#2563EB',
+    position: 'absolute',
+    left: -DOT * 0.75,
+    top: 0,
+    width: DOT * 2.5,
+    height: DOT,
+    borderRadius: DOT / 2,
+    backgroundColor: BRAND.blue,
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  skipButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  skipButtonText: {
-    color: '#2563EB',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  nextButton: {
-    backgroundColor: '#2563EB',
-    paddingVertical: 13,
-    paddingHorizontal: 34,
-    borderRadius: 12,
-    elevation: 3,
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-  },
-  nextButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
+  buttonContainer: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
+  skipButton: { minWidth: 72 },
+  skipInner: { minHeight: 52, justifyContent: 'center', alignItems: 'center', paddingHorizontal: SPACE.md },
+  skipButtonText: { color: BRAND.blue, fontSize: 15, fontWeight: '700' },
+  nextButton: { flex: 1 },
+
+  loadingRoot: { flex: 1, backgroundColor: BRAND.navyDeep, alignItems: 'center', justifyContent: 'center' },
+  loadingCenter: { alignItems: 'center' },
+  loadingText: { marginTop: SPACE.sm, fontSize: 15, color: BRAND.onBrandSoft, fontWeight: '600' },
 });
 
 export default OnboardingScreen;

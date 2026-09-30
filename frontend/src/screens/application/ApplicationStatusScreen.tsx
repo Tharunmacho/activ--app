@@ -1,1197 +1,418 @@
-// Application Status Screen
-//
-// Presentation is a gradient status hero + an animated review timeline.
-//
-// THE REVIEW IS ONE STAGE, NOT THREE. An application is submitted to the Block,
-// District and State admin of the member's own area at the same time, and the
-// first of them to decide decides it - see `buildStagesFromData` below, which
-// is where the four-rung rail this screen used to draw came apart.
-//
-// Motion uses the RN Animated API on the native driver, with every animation
-// stopped on unmount so a backgrounded screen never keeps the UI thread busy.
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  TouchableOpacity,
-  BackHandler,
-  Animated,
-  Easing,
-  StatusBar,
-  RefreshControl,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList, ApplicationStatus, normalizeApplicationStatus } from '../../types';
-import api, { getUserData } from '../../services/api';
+import { RootStackParamList } from '../../types';
+import {
+  BottomActionBar, Skeleton, PALETTE, SIZE, SPACE, TYPE, shortDate,
+  PremiumScrollScreen, PREMIUM_OVERLAP, PremiumHeading, GlassIconButton, FloatingIllustration, FadeInUp,
+  GradientButton, PremiumCard, PremiumSectionHeader, GradientIconChip, PremiumEmptyState, AnimatedProgressBar,
+  StatusTracker3D, BRAND, ChipTone,
+} from '../../ui';
+import { errorText } from '../../ui/data';
+import { getMyApplications, getMyProfile, formatApplicationRef, isPaidMember } from '../../services/memberApi';
+import {
+  pickMostAdvancedApplication, deriveApprovalFlags, timelineStageStatus, tierDecidedByLabel, tierDecidedAt,
+  applicantKindLabel, StageState, Tier,
+} from '../member/dashboard/memberRules';
+import { JourneyTrack, JourneyNode } from '../member/dashboard/DashboardPremium';
 
-type ApplicationStatusProps = {
+/**
+ * ============================================================================
+ * APPLICATION STATUS (website: pages/member/ApplicationStatus.tsx)
+ * ============================================================================
+ *
+ *   GET /applications/my-applications   the MOST ADVANCED row — approved, then
+ *                                       rejected, then the newest — so a
+ *                                       duplicate untouched row can never hide
+ *                                       a decision (pickMostAdvancedApplication)
+ *   GET /members/my-profile             paid? A paid member has nothing
+ *                                       outstanding and is sent to their dashboard.
+ *
+ * All three reviews run at the same time; the State Admin's approval is the one
+ * that grants the membership, then payment. Each tier row names who signed it
+ * (`tierReviews`, resolved by the server). Members abroad: head office only.
+ *
+ * Premium: the brand header carries the verdict, a document-and-dial
+ * illustration and — as the website's hero does — the stage track (Block →
+ * District → State → Payment) with the percentage. Pull to refresh.
+ */
+
+type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ApplicationStatus'>;
 };
 
-// Shared with the login screen, the profile forms and the submitted screen.
-const BG = '#F0F4F8';
-const INK = '#0F172A';
-const MUTED = '#64748B';
-const PRIMARY = '#1E50E6';
+type StageKey = Tier | 'payment';
 
-const TONE = {
-  approved: { color: '#16A34A', soft: '#DCFCE7', icon: 'check', label: 'Approved' },
-  in_progress: { color: '#1E50E6', soft: '#E0E7FF', icon: 'hourglass-empty', label: 'In Review' },
-  rejected: { color: '#DC2626', soft: '#FEE2E2', icon: 'close', label: 'Rejected' },
-  pending: { color: '#94A3B8', soft: '#F1F5F9', icon: 'schedule', label: 'Waiting' },
-} as const;
+const STAGES: { key: StageKey; name: string; short: string; grants: boolean }[] = [
+  { key: 'block', name: 'Block Admin Review', short: 'Block', grants: false },
+  { key: 'district', name: 'District Admin Review', short: 'District', grants: false },
+  { key: 'state', name: 'State Admin Approval', short: 'State', grants: true },
+  { key: 'payment', name: 'Membership Payment', short: 'Payment', grants: false },
+];
 
-type ToneKey = keyof typeof TONE;
+const ABROAD_STAGES: typeof STAGES = [
+  { key: 'state', name: 'ACTIV Head Office Approval', short: 'Head Office', grants: true },
+  { key: 'payment', name: 'Membership Payment', short: 'Payment', grants: false },
+];
 
-const toneFor = (status?: string): (typeof TONE)[ToneKey] =>
-  TONE[(status || 'pending') as ToneKey] || TONE.pending;
-
-// Short label under each node of the progress rail.
-const SHORT_LABEL: Record<string, string> = {
-  block_admin: 'Block',
-  district_admin: 'District',
-  state_admin: 'State',
-  payment: 'Payment',
+const STATE_UI: Record<StageState, { fg: string; bg: string; label: string; icon: string; grad: ChipTone }> = {
+  approved: { fg: PALETTE.successText, bg: PALETTE.successSoft, label: 'Approved', icon: 'check', grad: 'green' },
+  in_progress: { fg: PALETTE.blueDark, bg: PALETTE.blueSoft, label: 'In review', icon: 'hourglass-empty', grad: 'blue' },
+  rejected: { fg: PALETTE.dangerText, bg: PALETTE.dangerSoft, label: 'Rejected', icon: 'close', grad: 'rose' },
+  pending: { fg: PALETTE.textMuted, bg: PALETTE.field, label: 'Waiting', icon: 'schedule', grad: 'slate' },
 };
 
-const formatDate = (value?: string): string => {
-  if (!value) return '';
-  try {
-    const parsed = new Date(value);
-    if (isNaN(parsed.getTime())) return '';
-    return parsed.toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  } catch (err) {
-    console.warn('Date format safely caught:', err);
-    return '';
+/** The website's per-stage copy: Block/District endorse, the State admits. */
+const stageMessage = (key: StageKey, grants: boolean, status: StageState, reason?: string): string => {
+  const tier = key === 'block' ? 'Block' : key === 'district' ? 'District' : 'State';
+  if (status === 'approved') {
+    return grants ? 'Approved. Your membership has been granted.' : `Your ${tier} Admin has approved your application.`;
   }
+  if (status === 'rejected') {
+    return reason || (grants
+      ? 'Your application was not approved.'
+      : `Your ${tier} Admin did not approve your application. The State Admin decides the outcome.`);
+  }
+  if (status === 'in_progress') {
+    return grants
+      ? 'Your State Admin has still to review your application. Theirs is the approval that grants the membership.'
+      : `Your ${tier} Admin has still to review your application.`;
+  }
+  return '';
 };
 
-// TypeScript Interfaces
-interface AdminData {
-  _id: string;
-  fullName: string;
-  email: string;
+function InfoLine({ icon, label, value, last }: { icon: string; label: string; value: string; last?: boolean }) {
+  return (
+    <View style={[s.info, !last && s.divider]}>
+      <GradientIconChip icon={icon} tone="blue" size={32} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={s.infoLabel} numberOfLines={1}>{label}</Text>
+        <Text style={s.infoValue} selectable>{value || '—'}</Text>
+      </View>
+    </View>
+  );
 }
 
-interface ApplicationData {
-  _id: string;
-  userId: string;
-  fullName: string;
-  email: string;
-  phoneNumber: string;
-  state: string;
-  district: string;
-  block: string;
-  city: string;
-  status: string;
-  assignedBlockAdmin?: AdminData;
-  assignedDistrictAdmin?: AdminData;
-  assignedStateAdmin?: AdminData;
-  blockApprovedAt?: string;
-  districtApprovedAt?: string;
-  stateApprovedAt?: string;
-  blockReviewMessage?: string;
-  districtReviewMessage?: string;
-  stateReviewMessage?: string;
-  rejectionReason?: string;
-  createdAt: string;
-  updatedAt: string;
-  isBlockApproved: boolean;
-  isDistrictApproved: boolean;
-  isStateApproved: boolean;
-  isRejected: boolean;
-}
+const ApplicationStatusScreen: React.FC<Props> = ({ navigation }) => {
+  const [application, setApplication] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
 
-interface ApplicationStage {
-  name: string;
-  displayName: string;
-  status: 'pending' | 'in_progress' | 'approved' | 'rejected';
-  reviewer?: string;
-  reviewDate?: string;
-  message?: string;
-  statusColor: string;
-  icon: string;
-  isCompleted: boolean;
-  isActive: boolean;
-}
-
-const ApplicationStatusScreen: React.FC<ApplicationStatusProps> = ({ navigation }) => {
-  const [applicationData, setApplicationData] = useState<ApplicationData | null>(null);
-  const [stages, setStages] = useState<ApplicationStage[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  // One value per animated concern so nothing fights over the same driver.
-  const heroFade = useRef(new Animated.Value(0)).current;
-  const heroLift = useRef(new Animated.Value(20)).current;
-  const barGrow = useRef(new Animated.Value(0)).current;
-  const activePulse = useRef(new Animated.Value(0)).current;
-  const cardValues = useRef<Animated.Value[]>([]).current;
-
-  const handleGoBack = () => {
+  const load = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true); else setLoading(true);
     try {
-      navigation.navigate('MemberMain');
+      const [apps, me] = await Promise.all([getMyApplications(), getMyProfile().catch(() => null)]);
+      setApplication(pickMostAdvancedApplication(apps));
+      setProfile(me);
+      setError('');
     } catch (err) {
-      console.warn('Navigation safely caught:', err);
-    }
-  };
-
-  useEffect(() => {
-    fetchApplicationStatus();
-
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      handleGoBack();
-      return true;
-    });
-
-    return () => subscription.remove();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Intro runs once the stages exist, so the bar animates to a real figure
-  // rather than snapping from an empty state.
-  useEffect(() => {
-    if ((stages || []).length === 0) return;
-
-    // Reuse existing values where possible so a refresh doesn't replay from 0.
-    while (cardValues.length < stages.length) {
-      cardValues.push(new Animated.Value(0));
-    }
-
-    const intro = Animated.parallel([
-      Animated.timing(heroFade, {
-        toValue: 1,
-        duration: 320,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(heroLift, {
-        toValue: 0,
-        duration: 320,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(barGrow, {
-        toValue: 1,
-        duration: 900,
-        easing: Easing.out(Easing.cubic),
-        // Width can't run on the native driver.
-        useNativeDriver: false,
-      }),
-      Animated.stagger(
-        90,
-        cardValues.slice(0, stages.length).map((value) =>
-          Animated.timing(value, {
-            toValue: 1,
-            duration: 300,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
-          })
-        )
-      ),
-    ]);
-
-    // Slow breathing halo behind whichever stage is currently under review.
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(activePulse, {
-          toValue: 1,
-          duration: 1100,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(activePulse, {
-          toValue: 0,
-          duration: 1100,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
-    );
-
-    intro.start();
-    pulse.start();
-
-    return () => {
-      intro.stop();
-      pulse.stop();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stages.length]);
-
-  const onRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    await fetchApplicationStatus();
-    setIsRefreshing(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const fetchApplicationStatus = async () => {
-    try {
-      setIsLoading(true);
-      setErrorMessage(null);
-
-      // Get user data from local storage
-      const userData = await getUserData();
-      if (!userData) {
-        setErrorMessage('User data not found. Please login again.');
-        setIsLoading(false);
-        return;
-      }
-
-      // Extract user ID (handle different property names)
-      const userId = userData.id || userData.memberId || userData._id;
-      if (!userId) {
-        setErrorMessage('User ID not found. Please login again.');
-        setIsLoading(false);
-        return;
-      }
-
-      // API Request to Backend
-      const response = await api.get(`/applications/user/${userId}`);
-      const appsList = Array.isArray(response.data.data)
-        ? response.data.data
-        : (response.data.applications || []);
-
-      if (response.data.success && appsList.length > 0) {
-        /*
-         * The most advanced application, not the newest.
-         *
-         * A member can hold more than one row - a resubmission, or a legacy
-         * duplicate - and date order can put an untouched record ahead of one
-         * that has already been decided, which would tell someone nobody had
-         * looked at their application when it had been approved.
-         *
-         * Two ranks now, not four: decided beats undecided. Every spelling of
-         * "not decided" - `Pending`, `PENDING`, `Pending-District` and the
-         * snake_case ones in older rows - folds through
-         * `normalizeApplicationStatus`.
-         */
-        const rank = (a: any) => normalizeApplicationStatus(a?.status);
-        const app =
-          appsList.find((a: any) => rank(a) === ApplicationStatus.APPROVED) ||
-          appsList.find((a: any) => rank(a) === ApplicationStatus.REJECTED) ||
-          appsList[0];
-
-        /*
-         * THE THREE TIER FLAGS ALL MEAN "APPROVED" NOW.
-         *
-         * They used to record how far up the relay a file had travelled. The
-         * relay is gone: the application goes to the Block, District and State
-         * admin of the member's own area together and the first of them to
-         * decide decides it, so "the block has signed but the district has not"
-         * is no longer a state an application can be in.
-         *
-         * The three are kept rather than removed because the stage-building
-         * code below and the screens that read `ApplicationData` all use them,
-         * and one of them being true while the application was not approved is
-         * exactly what those screens print as progress.
-         */
-        const normalized = normalizeApplicationStatus(app.status);
-        const isApproved =
-          normalized === ApplicationStatus.APPROVED || !!app.stateApprovedAt;
-
-        const transformedApp: ApplicationData = {
-          ...app,
-          _id: app._id,
-          isBlockApproved: isApproved,
-          isDistrictApproved: isApproved,
-          isStateApproved: isApproved,
-          isRejected: normalized === ApplicationStatus.REJECTED,
-        };
-
-        setApplicationData(transformedApp);
-
-        // Build stages array
-        const builtStages = buildStagesFromData(transformedApp);
-        setStages(builtStages);
-      } else {
-        setErrorMessage('No application found. Please submit your profile first.');
-      }
-    } catch (error: any) {
-      console.error('Error fetching application status:', error);
-      setErrorMessage(
-        error.response?.data?.message || 'Failed to load application status. Please try again.'
-      );
+      setError(errorText(err, 'Failed to load application status. Please try again.'));
     } finally {
-      setIsLoading(false);
+      setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
 
-  /**
-   * =======================================================================
-   * ONE REVIEW, THEN THE PAYMENT
-   * =======================================================================
-   *
-   * This built four stages - Block Admin Review, District Admin Review, State
-   * Admin Review, Ready for Payment - because an application used to clear one
-   * tier at a time. It does not. It is put in front of all three admins for the
-   * member's area at once and the first of them to decide decides it.
-   *
-   * Four rows would now be wrong in both directions: before any decision, two
-   * of them read "Waiting" for a turn that was never coming, and after an
-   * approval by (say) the block admin, two would stay grey forever on a
-   * membership that had already been granted. The member would read their own
-   * status screen as half-finished work.
-   *
-   * WHO decided it comes off `approvedBy` / `rejectedBy`, which the server
-   * stamps with the acting tier. It cannot be inferred from the region, because
-   * all three tiers hold the file and only one of them signs.
-   */
-  const REVIEWER_LABELS: Record<string, string> = {
-    BlockAdmin: 'Block Admin',
-    DistrictAdmin: 'District Admin',
-    StateAdmin: 'State Admin',
-    SuperAdmin: 'ACTIV Head Office',
-  };
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const decidedBy = (app: ApplicationData): string => {
-    const anyApp = app as any;
-    if (app.isRejected) return REVIEWER_LABELS[String(anyApp?.rejectedBy?.adminType || '')] || '';
-    if (app.isStateApproved) return REVIEWER_LABELS[String(anyApp?.approvedBy?.adminType || '')] || '';
-    return '';
-  };
+  const isPaid = isPaidMember(profile);
 
-  const buildStagesFromData = (app: ApplicationData): ApplicationStage[] => {
-    const reviewStatus = getStageStatus('review', app);
+  // A full member has no application outstanding.
+  useEffect(() => {
+    if (isPaid) navigation.reset({ index: 0, routes: [{ name: 'PaidDashboard' }] });
+  }, [isPaid, navigation]);
 
-    return [
-      {
-        name: 'review',
-        displayName: 'Application Review',
-        status: reviewStatus,
-        // Before a decision there is no one reviewer, and saying "Not assigned
-        // yet" would be wrong twice over - three admins have it, and nobody is
-        // going to be assigned.
-        reviewer: decidedBy(app) || 'Block, District and State Admin',
-        // `stateApprovedAt` is stamped by every approval whichever tier signed
-        // it, so this is the approval date without having to ask which.
-        reviewDate: app.stateApprovedAt,
-        message: getStageMessage('review', app),
-        statusColor: getStageColor(reviewStatus),
-        icon: getStageIcon(reviewStatus),
-        isCompleted: app.isStateApproved,
-        isActive: reviewStatus === 'in_progress',
-      },
-      {
-        name: 'payment',
-        displayName: 'Ready for Payment',
-        status: app.isStateApproved ? 'approved' : 'pending',
-        reviewer: 'ACTIV System',
-        reviewDate: app.stateApprovedAt,
-        message: app.isStateApproved
-          ? 'Your application is approved! Please proceed with membership payment.'
-          : '',
-        statusColor: app.isStateApproved ? '#4CAF50' : '#90CAF9',
-        icon: app.isStateApproved ? '\u{1F4B3}' : '\u25CB',
-        isCompleted: app.isStateApproved,
-        isActive: app.isStateApproved,
-      },
-    ];
-  };
+  const flags = useMemo(() => deriveApprovalFlags(application), [application]);
+  const isAbroad = profile?.isInternational === true || application?.isInternational === true;
 
-  /**
-   * The review's state. One answer, whichever key is passed.
-   *
-   * The tier keys are still accepted because other code passes them, and every
-   * one of them gets the same answer - which is the honest one: no tier is
-   * waiting on another.
-   */
-  const getStageStatus = (
-    _stage: 'review' | 'block' | 'district' | 'state',
-    app: ApplicationData
-  ): 'pending' | 'in_progress' | 'approved' | 'rejected' => {
-    if (app.isRejected) return 'rejected';
-    if (app.isStateApproved) return 'approved';
-    return 'in_progress';
-  };
+  const stages = useMemo(() => (isAbroad ? ABROAD_STAGES : STAGES).map((stage) => {
+    const isPayment = stage.key === 'payment';
+    const status: StageState = isPayment
+      ? (isPaid ? 'approved' : flags.isApproved ? 'in_progress' : 'pending')
+      : (application ? timelineStageStatus(stage.key as Tier, application) : 'pending');
+    return {
+      ...stage,
+      status,
+      badge: isPayment && status === 'in_progress' ? 'Action needed' : '',
+      reviewer: isPayment ? 'ACTIV System' : tierDecidedByLabel(application, stage.key as Tier),
+      date: isPayment ? '' : shortDate(tierDecidedAt(application, stage.key as Tier)),
+      message: isPayment
+        ? (isPaid
+          ? 'Your membership payment has been received.'
+          : flags.isApproved
+            ? 'Your application is approved. Please proceed with membership payment.'
+            : 'This opens once your State Admin has approved your application.')
+        : stageMessage(stage.key, stage.grants, status, application?.rejectionReason),
+    };
+  }), [application, flags.isApproved, isPaid, isAbroad]);
 
-  const getStageColor = (status: string): string => {
-    switch (status) {
-      case 'approved':
-        return '#4CAF50'; // Green
-      case 'in_progress':
-        return '#2196F3'; // Blue
-      case 'rejected':
-        return '#F44336'; // Red
-      case 'pending':
-      default:
-        return '#90CAF9'; // Light blue
-    }
-  };
+  const completed = stages.filter((st) => st.status === 'approved').length;
+  const progress = stages.length ? Math.round((completed / stages.length) * 100) : 0;
+  const track: JourneyNode[] = stages.map((st) => ({ key: st.key, label: st.short, state: st.status, at: st.date || undefined }));
 
-  const getStageIcon = (status: string): string => {
-    switch (status) {
-      case 'approved':
-        return '✓';
-      case 'in_progress':
-        return '⏳';
-      case 'rejected':
-        return '✗';
-      case 'pending':
-      default:
-        return '○';
-    }
-  };
+  const goBack = () => (navigation.canGoBack() ? navigation.goBack() : navigation.reset({ index: 0, routes: [{ name: 'MemberMain' }] }));
+  const toDashboard = () => navigation.reset({ index: 0, routes: [{ name: 'MemberMain' }] });
 
-  /**
-   * The per-stage copy.
-   *
-   * "at this stage" is gone from both sentences. There is one stage, so the
-   * qualifier implied a next one and left an approved applicant looking for the
-   * rest of a process that had already finished.
-   */
-  const getStageMessage = (
-    stage: 'review' | 'block' | 'district' | 'state',
-    app: ApplicationData
-  ): string => {
-    const status = getStageStatus(stage, app);
+  const heroTitle = !application
+    ? (loading ? 'Application Status' : 'No application yet')
+    : flags.isRejected ? 'Application Rejected' : flags.isApproved ? 'Application Approved' : 'Under Review';
+  const heroSub = !application
+    ? (loading ? 'Fetching your latest status…' : 'Complete your profile to submit it.')
+    : flags.isRejected
+      ? 'See the reviewer note below for details.'
+      : flags.isApproved
+        ? 'You can now complete your membership payment.'
+        : `${completed} of ${stages.length} stages completed`;
 
-    if (status === 'approved') {
-      return 'Your application has been approved.';
-    }
-
-    if (status === 'in_progress') {
-      return 'Your Block, District and State Admin can all see your application. '
-        + 'Any of them can approve it, and you will be notified as soon as one does.';
-    }
-
-    if (status === 'rejected') {
-      return app.rejectionReason || 'Your application was not approved.';
-    }
-
-    return ''; // Pending - no message
-  };
-
-  const handlePaymentNavigation = () => {
-    // Through the derived flag, not the raw status: live rows carry `approved`
-    // in lower case and other legacy spellings besides.
-    if (applicationData?.isStateApproved) {
-      navigation.navigate('CompleteMembership');
-    }
-  };
-
-  const calculateProgress = (): number => {
-    const list = stages || [];
-    if (list.length === 0) return 0;
-    const completedStages = list.filter((stage) => stage?.isCompleted).length;
-    return (completedStages / list.length) * 100;
-  };
-
-  const completedCount = (stages || []).filter((s) => s?.isCompleted).length;
-  const totalCount = (stages || []).length;
-  const progress = calculateProgress();
-
-  const isRejected = applicationData?.isRejected === true;
-  const isApproved = applicationData?.status === 'Approved';
-
-  // Hero gradient reflects the overall outcome at a glance.
-  const heroColors: string[] = isRejected
-    ? ['#EF4444', '#B91C1C']
-    : isApproved
-    ? ['#22C55E', '#15803D']
-    : ['#3B6FF5', '#1E3FA8'];
-
-  const heroHeadline = isRejected
-    ? 'Application Rejected'
-    : isApproved
-    ? 'Application Approved'
-    : 'Under Review';
-
-  const heroCaption = isRejected
-    ? 'See the reviewer note below for details.'
-    : isApproved
-    ? 'You can now complete your membership payment.'
-    : `${completedCount} of ${totalCount} stages completed`;
-
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <StatusBar barStyle="dark-content" backgroundColor={BG} />
-        <View style={styles.centeredBox}>
-          <ActivityIndicator size="large" color={PRIMARY} />
-          <Text style={styles.centeredCaption}>Loading application status…</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (errorMessage || !applicationData) {
-    const isMissing = !errorMessage;
-
-    return (
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <StatusBar barStyle="dark-content" backgroundColor={BG} />
-
-        <View style={styles.navHeader}>
-          <TouchableOpacity
-            onPress={handleGoBack}
-            style={styles.backButton}
-            activeOpacity={0.7}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Icon name="arrow-back" size={24} color={INK} />
-          </TouchableOpacity>
-          <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>Application Status</Text>
+  const header = (
+    <View>
+      <View style={s.topRow}>
+        <GlassIconButton icon={Platform.OS === 'ios' ? 'arrow-back-ios-new' : 'arrow-back'} onPress={goBack} accessibilityLabel="Go back" />
+        <Text style={s.topTitle} numberOfLines={1} maxFontSizeMultiplier={1.2}>Track your membership approval</Text>
+        <GlassIconButton icon="refresh" onPress={() => load(true)} accessibilityLabel="Refresh" />
+      </View>
+      <View style={s.heroRow}>
+        <FadeInUp delay={60} style={s.heroText}>
+          <PremiumHeading
+            size="md"
+            eyebrow={application ? String(application?.status || 'Pending') : 'Application status'}
+            title={heroTitle}
+            subtitle={heroSub}
+          />
+        </FadeInUp>
+        <FadeInUp delay={140} scaleFrom={0.85} distance={10}>
+          <FloatingIllustration size={92}>
+            <StatusTracker3D size={92} />
+          </FloatingIllustration>
+        </FadeInUp>
+      </View>
+      {application ? (
+        <FadeInUp delay={200} style={s.trackBox}>
+          <JourneyTrack nodes={track} />
+          <View style={s.trackFoot}>
+            <AnimatedProgressBar percent={progress} onDark style={{ flex: 1 }} />
+            <Text style={s.pct} maxFontSizeMultiplier={1.2}>{progress}%</Text>
           </View>
-          <View style={{ width: 40 }} />
-        </View>
-
-        <View style={styles.centeredBox}>
-          <View style={styles.emptyIconRing}>
-            <Icon
-              name={isMissing ? 'description' : 'error-outline'}
-              size={38}
-              color={isMissing ? MUTED : '#DC2626'}
-            />
-          </View>
-          <Text style={styles.emptyTitle}>
-            {isMissing ? 'No Application Found' : 'Something Went Wrong'}
+          <Text style={s.trackNote} maxFontSizeMultiplier={1.2}>
+            {isAbroad ? 'Reviewed by the ACTIV head office' : 'All three reviews run at the same time'}
           </Text>
-          <Text style={styles.emptyCaption}>
-            {errorMessage ||
-              "You haven't submitted an application yet. Complete your profile to get started."}
-          </Text>
+        </FadeInUp>
+      ) : null}
+      <View style={{ height: SPACE.xl }} />
+    </View>
+  );
 
-          {!isMissing ? (
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={fetchApplicationStatus}
-              activeOpacity={0.85}
-            >
-              <Icon name="refresh" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-              <Text style={styles.primaryButtonText}>Try Again</Text>
-            </TouchableOpacity>
-          ) : null}
-
-          <TouchableOpacity style={styles.ghostButton} onPress={handleGoBack} activeOpacity={0.85}>
-            <Text style={styles.ghostButtonText}>Back to Dashboard</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const needsPayment = !!application && flags.isApproved && !isPaid;
+  const personal = application?.data?.personalDetails || application?.data?.personal || {};
+  const regionText = isAbroad
+    ? String(application?.place || profile?.place || application?.country || 'Outside India')
+    : [application?.block || personal?.block, application?.district || personal?.district, application?.state || personal?.state]
+      .filter(Boolean).join(', ');
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor={BG} />
-
-      <View style={styles.navHeader}>
-        <TouchableOpacity
-          onPress={handleGoBack}
-          style={styles.backButton}
-          activeOpacity={0.7}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Icon name="arrow-back" size={24} color={INK} />
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Application Status</Text>
+    <PremiumScrollScreen
+      header={header}
+      refreshing={refreshing}
+      onRefresh={() => load(true)}
+      footer={needsPayment ? (
+        <BottomActionBar note="Your application is approved — one step left.">
+          <GradientButton
+            label="Proceed to payment"
+            icon="credit-card"
+            style={{ flex: 1 }}
+            onPress={() => navigation.navigate('MembershipPlans')}
+          />
+        </BottomActionBar>
+      ) : undefined}
+    >
+      {loading ? (
+        <View style={[s.overlap, s.gutter]}>
+          <Skeleton width="100%" height={180} radius={22} />
+          <Skeleton width="100%" height={260} radius={22} style={{ marginTop: SPACE.lg }} />
         </View>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[PRIMARY]} />
-        }
-      >
-        {/* Gradient status hero */}
-        <Animated.View style={{ opacity: heroFade, transform: [{ translateY: heroLift }] }}>
-          <LinearGradient
-            colors={heroColors}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.hero}
-          >
-            <View style={styles.heroTopRow}>
-              <View style={styles.heroBadge}>
-                <Icon
-                  name={isRejected ? 'cancel' : isApproved ? 'verified' : 'hourglass-empty'}
-                  size={14}
-                  color="#FFFFFF"
-                />
-                <Text style={styles.heroBadgeText}>{applicationData.status || 'Pending'}</Text>
-              </View>
-
-              <Text style={styles.heroPercent}>{Math.round(progress)}%</Text>
-            </View>
-
-            <Text style={styles.heroHeadline}>{heroHeadline}</Text>
-            <Text style={styles.heroCaption}>{heroCaption}</Text>
-
-            {/* Progress track */}
-            <View style={styles.heroTrack}>
-              <Animated.View
-                style={[
-                  styles.heroTrackFill,
-                  {
-                    width: barGrow.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['0%', `${Math.max(0, Math.min(100, progress))}%`],
-                    }),
-                  },
-                ]}
+      ) : !application ? (
+        <FadeInUp delay={200} style={[s.overlap, s.gutter]}>
+          <PremiumCard>
+            {error ? (
+              <PremiumEmptyState icon="cloud-off" title="Could not load this" text={error} action="Try again" onAction={() => load()} />
+            ) : (
+              <PremiumEmptyState
+                art={(
+                  <View style={s.emptyArt}>
+                    <FloatingIllustration size={96} halo={false}><StatusTracker3D size={96} /></FloatingIllustration>
+                  </View>
+                )}
+                title="No application found"
+                text="You haven't submitted an application yet. Complete your profile to get started."
               />
-            </View>
+            )}
+            {!error ? (
+              <GradientButton label="Complete your profile" iconRight="arrow-forward" onPress={() => navigation.navigate('PersonalDetailsForm', { userData: {} })} />
+            ) : null}
+            <GradientButton label="Back to dashboard" variant="outline" icon="dashboard" onPress={toDashboard} style={{ marginTop: SPACE.sm }} />
+          </PremiumCard>
+        </FadeInUp>
+      ) : (
+        <>
+          <View style={s.overlap} />
+          {error ? (
+            <FadeInUp style={s.gutter}>
+              <PremiumCard style={s.errorCard}>
+                <Icon name="error-outline" size={20} color={PALETTE.dangerText} />
+                <Text style={s.errorText}>{error}</Text>
+                <GradientButton label="Try again" variant="outline" onPress={() => load(true)} />
+              </PremiumCard>
+            </FadeInUp>
+          ) : null}
 
-            {/* Node rail */}
-            <View style={styles.heroNodeRow}>
-              {(stages || []).map((stage) => (
-                <View key={`node-${stage?.name}`} style={styles.heroNode}>
-                  <View
-                    style={[
-                      styles.heroNodeDot,
-                      stage?.isCompleted && styles.heroNodeDotDone,
-                      stage?.isActive && !stage?.isCompleted && styles.heroNodeDotActive,
-                    ]}
-                  >
-                    {stage?.isCompleted ? <Icon name="check" size={11} color="#FFFFFF" /> : null}
-                  </View>
-                  <Text style={styles.heroNodeLabel}>
-                    {SHORT_LABEL[stage?.name || ''] || 'Stage'}
-                  </Text>
+          {flags.isRejected && application?.rejectionReason ? (
+            <FadeInUp delay={200} style={s.gutter}>
+              <View style={s.reviewer}>
+                <GradientIconChip icon="rate-review" tone="rose" size={36} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={s.reviewerTitle}>Reviewer note</Text>
+                  <Text style={s.reviewerText}>{String(application.rejectionReason)}</Text>
                 </View>
-              ))}
-            </View>
-          </LinearGradient>
-        </Animated.View>
-
-        {/* Reference strip */}
-        <Animated.View
-          style={[styles.metaRow, { opacity: heroFade, transform: [{ translateY: heroLift }] }]}
-        >
-          <View style={styles.metaCell}>
-            <Text style={styles.metaLabel}>Application ID</Text>
-            <Text style={styles.metaValue}>
-              #{((applicationData._id || '').slice(-8) || '—').toUpperCase()}
-            </Text>
-          </View>
-          <View style={styles.metaDivider} />
-          <View style={styles.metaCell}>
-            <Text style={styles.metaLabel}>Submitted</Text>
-            <Text style={styles.metaValue}>{formatDate(applicationData.createdAt) || '—'}</Text>
-          </View>
-        </Animated.View>
-
-        {/* Reviewer note on a rejection */}
-        {isRejected && applicationData.rejectionReason ? (
-          <View style={styles.rejectionCard}>
-            <View style={styles.rejectionIconBox}>
-              <Icon name="report-problem" size={18} color="#DC2626" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rejectionTitle}>Reviewer Note</Text>
-              <Text style={styles.rejectionText}>{applicationData.rejectionReason}</Text>
-            </View>
-          </View>
-        ) : null}
-
-        <Text style={styles.sectionLabel}>Review Timeline</Text>
-
-        {/* Timeline */}
-        {(stages || []).map((stage, index) => {
-          const tone = toneFor(stage?.status);
-          const isLast = index === (stages || []).length - 1;
-          const value = cardValues[index];
-          const isActive = stage?.isActive === true && !stage?.isCompleted;
-          const reviewDate = formatDate(stage?.reviewDate);
-
-          const animatedStyle = value
-            ? {
-                opacity: value,
-                transform: [
-                  {
-                    translateX: value.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [18, 0],
-                    }),
-                  },
-                ],
-              }
-            : undefined;
-
-          return (
-            <Animated.View
-              key={String(stage?.name || index)}
-              style={[styles.timelineRow, animatedStyle]}
-            >
-              {/* Rail */}
-              <View style={styles.timelineRail}>
-                {isActive ? (
-                  <Animated.View
-                    style={[
-                      styles.timelineHalo,
-                      {
-                        backgroundColor: tone.color,
-                        opacity: activePulse.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [0.08, 0.28],
-                        }),
-                        transform: [
-                          {
-                            scale: activePulse.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [1, 1.45],
-                            }),
-                          },
-                        ],
-                      },
-                    ]}
-                  />
-                ) : null}
-
-                <View style={[styles.timelineDot, { backgroundColor: tone.color }]}>
-                  <Icon name={tone.icon} size={14} color="#FFFFFF" />
-                </View>
-
-                {!isLast ? (
-                  <View
-                    style={[
-                      styles.timelineConnector,
-                      stage?.isCompleted && { backgroundColor: TONE.approved.color },
-                    ]}
-                  />
-                ) : null}
               </View>
+            </FadeInUp>
+          ) : null}
 
-              {/* Card */}
-              <View style={[styles.timelineCard, isActive && styles.timelineCardActive]}>
-                <View style={styles.timelineCardHead}>
-                  <Text style={styles.timelineTitle} numberOfLines={1}>
-                    {stage?.displayName || 'Stage'}
-                  </Text>
-                  <View style={[styles.tonePill, { backgroundColor: tone.soft }]}>
-                    <Text style={[styles.tonePillText, { color: tone.color }]}>{tone.label}</Text>
+          <FadeInUp delay={240}>
+            <PremiumSectionHeader title="Application details" style={{ marginTop: flags.isRejected || error ? SPACE.xl : SPACE.sm }} />
+            <PremiumCard style={s.gutter}>
+              <InfoLine icon="tag" label="Application ID" value={formatApplicationRef(application) || '—'} />
+              <InfoLine icon="event" label="Submitted" value={shortDate(application?.createdAt || application?.submittedAt) || '—'} />
+              <InfoLine icon="badge" label="Member type" value={applicantKindLabel(application) || '—'} />
+              <InfoLine icon={isAbroad ? 'public' : 'place'} label={isAbroad ? 'Place' : 'Region'} value={regionText || '—'} last />
+            </PremiumCard>
+          </FadeInUp>
+
+          <PremiumSectionHeader title="Review timeline" subtitle={`${completed} of ${stages.length} complete`} />
+          <PremiumCard style={s.gutter}>
+            {stages.map((stage, i) => {
+              const ui = STATE_UI[stage.status] || STATE_UI.pending;
+              const last = i === stages.length - 1;
+              return (
+                <FadeInUp key={stage.key} delay={280 + i * 80} distance={10} style={s.stepRow}>
+                  <View style={s.rail}>
+                    <GradientIconChip icon={ui.icon} tone={ui.grad} size={32} />
+                    {!last ? <View style={[s.line, stage.status === 'approved' && { backgroundColor: PALETTE.green }]} /> : null}
                   </View>
-                </View>
-
-                {stage?.reviewer ? (
-                  <View style={styles.timelineMetaRow}>
-                    <Icon name="person-outline" size={13} color={MUTED} />
-                    <Text style={styles.timelineMetaText} numberOfLines={1}>
-                      {stage.reviewer}
-                    </Text>
+                  <View style={[s.stepBody, !last && { paddingBottom: SPACE.lg }]}>
+                    <View style={s.stepHead}>
+                      <Text style={s.stepName} numberOfLines={2}>{stage.name}</Text>
+                      <View style={[s.badge, { backgroundColor: ui.bg }]}><Text style={[s.badgeText, { color: ui.fg }]}>{stage.badge || ui.label}</Text></View>
+                    </View>
+                    {stage.grants ? (
+                      <View style={s.grantsRow}>
+                        <Icon name="workspace-premium" size={13} color={PALETTE.goldDark} />
+                        <Text style={s.grants}>Grants the membership</Text>
+                      </View>
+                    ) : null}
+                    {stage.message ? <Text style={s.stepMsg}>{stage.message}</Text> : null}
+                    {stage.reviewer || stage.date ? (
+                      <Text style={s.stepMeta}>{[stage.reviewer, stage.date].filter(Boolean).join(' · ')}</Text>
+                    ) : null}
                   </View>
-                ) : null}
+                </FadeInUp>
+              );
+            })}
+          </PremiumCard>
 
-                {reviewDate ? (
-                  <View style={styles.timelineMetaRow}>
-                    <Icon name="event" size={13} color={MUTED} />
-                    <Text style={styles.timelineMetaText}>{reviewDate}</Text>
-                  </View>
-                ) : null}
+          {/* ---------------- the applicant (website "Applicant" panel) */}
+          <PremiumSectionHeader title="Applicant" />
+          <PremiumCard style={s.gutter}>
+            <InfoLine icon="person-outline" label="Full name" value={application?.fullName || personal?.fullName || '—'} />
+            <InfoLine icon="mail-outline" label="Email" value={application?.email || personal?.email || '—'} />
+            <InfoLine icon="phone" label="Phone" value={application?.phone || personal?.phoneNumber || personal?.phone || '—'} />
+            <InfoLine icon={isAbroad ? 'public' : 'place'} label={isAbroad ? 'Place' : 'Location'} value={regionText || '—'} last />
+          </PremiumCard>
 
-                {stage?.message ? (
-                  <Text style={styles.timelineMessage}>{stage.message}</Text>
-                ) : null}
-              </View>
-            </Animated.View>
-          );
-        })}
+          {/* ---------------- what happens next — a different sentence per outcome */}
+          <PremiumSectionHeader title="What happens next" />
+          <View style={s.gutter}>
+            <View style={s.nextCard}>
+              <GradientIconChip icon="info-outline" tone="blue" size={34} />
+              <Text style={s.nextText}>
+                {flags.isRejected
+                  ? 'Your application was not approved. The reviewer note above explains why — you can correct your details and speak to your Block Admin.'
+                  : flags.isApproved
+                    ? (isPaid
+                      ? 'Your membership is active. Your certificate and member directory entry are available from the dashboard.'
+                      : 'Your State Admin has approved you. Complete the membership payment to activate your account.')
+                    : isAbroad
+                      ? 'The ACTIV head office holds your file and is reviewing it. Their approval grants the membership.'
+                      : "Your Block, District and State Admins each hold your file and are reviewing it at the same time — nobody is queued behind anybody. Only the State Admin's approval grants the membership; the other two are recorded as endorsements."}
+              </Text>
+            </View>
 
-        {isApproved ? (
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={handlePaymentNavigation}
-            activeOpacity={0.85}
-          >
-            <Icon name="payment" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-            <Text style={styles.primaryButtonText}>Proceed to Payment</Text>
-          </TouchableOpacity>
-        ) : null}
-
-        <TouchableOpacity style={styles.ghostButton} onPress={handleGoBack} activeOpacity={0.85}>
-          <Text style={styles.ghostButtonText}>Back to Dashboard</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+            <GradientButton
+              label="Back to dashboard"
+              variant="outline"
+              icon="dashboard"
+              style={{ marginTop: SPACE.md }}
+              onPress={toDashboard}
+            />
+          </View>
+        </>
+      )}
+    </PremiumScrollScreen>
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: BG,
+const s = StyleSheet.create({
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
+  topTitle: { ...TYPE.label, color: BRAND.onBrandSoft, flex: 1, textAlign: 'center' },
+  heroRow: { flexDirection: 'row', alignItems: 'center', marginTop: SPACE.lg, gap: SPACE.sm },
+  heroText: { flex: 1, minWidth: 0 },
+  trackBox: {
+    marginTop: SPACE.lg, padding: SPACE.md, paddingTop: 0, borderRadius: 20, backgroundColor: BRAND.glass,
+    borderWidth: 1, borderColor: BRAND.glassBorder,
   },
+  trackFoot: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, marginTop: SPACE.md },
+  pct: { fontSize: 15, fontWeight: '800', color: PALETTE.white, fontVariant: ['tabular-nums'], minWidth: 44, textAlign: 'right' },
+  trackNote: { ...TYPE.caption, color: BRAND.onBrandSoft, marginTop: SPACE.xs },
 
-  navHeader: {
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    backgroundColor: BG,
+  overlap: { marginTop: -PREMIUM_OVERLAP },
+  gutter: { marginHorizontal: SPACE.lg },
+  emptyArt: { width: 128, height: 128, borderRadius: 64, backgroundColor: BRAND.navy, alignItems: 'center', justifyContent: 'center' },
+  errorCard: { gap: SPACE.sm, marginBottom: SPACE.md },
+  errorText: { ...TYPE.body, color: PALETTE.dangerText },
+  reviewer: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.md, backgroundColor: PALETTE.dangerSoft, borderRadius: 20,
+    padding: SPACE.lg, borderWidth: 1, borderColor: '#FECACA',
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: INK,
-  },
+  reviewerTitle: { ...TYPE.bodyStrong, color: PALETTE.dangerText },
+  reviewerText: { ...TYPE.body, fontSize: 13, lineHeight: 19, color: PALETTE.dangerText, marginTop: 2 },
 
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 6,
-    paddingBottom: 32,
-  },
+  info: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, paddingVertical: SPACE.sm + 2, minHeight: SIZE.touch + 8 },
+  infoLabel: { ...TYPE.eyebrow, fontSize: 10, lineHeight: 13 },
+  infoValue: { ...TYPE.bodyStrong, marginTop: 2 },
+  divider: { borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: PALETTE.divider },
 
-  // Loading / empty / error
-  centeredBox: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  centeredCaption: {
-    fontSize: 13,
-    color: MUTED,
-    marginTop: 14,
-  },
-  emptyIconRing: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: '#E8EEF6',
-  },
-  emptyTitle: {
-    fontSize: 19,
-    fontWeight: '800',
-    color: INK,
-    textAlign: 'center',
-  },
-  emptyCaption: {
-    fontSize: 13,
-    color: MUTED,
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 26,
-    lineHeight: 19,
-  },
+  stepRow: { flexDirection: 'row' },
+  rail: { width: 34, alignItems: 'center' },
+  line: { flex: 1, width: 2, backgroundColor: PALETTE.border, marginVertical: SPACE.xs, borderRadius: 999 },
+  stepBody: { flex: 1, minWidth: 0, marginLeft: SPACE.md },
+  stepHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.sm, minHeight: 32 },
+  stepName: { ...TYPE.subheading, flex: 1, minWidth: 0 },
+  badge: { borderRadius: 999, paddingHorizontal: SPACE.sm + 2, minHeight: 24, justifyContent: 'center' },
+  badgeText: { fontSize: 11.5, fontWeight: '800' },
+  grantsRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs, marginTop: 2 },
+  grants: { ...TYPE.caption, fontWeight: '700', color: PALETTE.goldDark },
+  stepMsg: { ...TYPE.body, fontSize: 13, lineHeight: 19, marginTop: SPACE.xs },
+  stepMeta: { ...TYPE.caption, color: PALETTE.textFaint, marginTop: SPACE.xs },
 
-  // Gradient hero
-  hero: {
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 14,
-    shadowColor: '#1E3FA8',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.22,
-    shadowRadius: 18,
-    elevation: 8,
+  nextCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.md, backgroundColor: PALETTE.blueTint, borderRadius: 20,
+    padding: SPACE.lg, borderWidth: 1, borderColor: PALETTE.blueSoft,
   },
-  heroTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  heroBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 11,
-    backgroundColor: 'rgba(255, 255, 255, 0.22)',
-  },
-  heroBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  heroPercent: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.6,
-  },
-  heroHeadline: {
-    fontSize: 23,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginTop: 14,
-    letterSpacing: -0.4,
-  },
-  heroCaption: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.86)',
-    marginTop: 4,
-  },
-  heroTrack: {
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.24)',
-    marginTop: 18,
-    overflow: 'hidden',
-  },
-  heroTrackFill: {
-    height: '100%',
-    borderRadius: 4,
-    backgroundColor: '#FFFFFF',
-  },
-  heroNodeRow: {
-    flexDirection: 'row',
-    marginTop: 14,
-  },
-  heroNode: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  heroNodeDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: 'rgba(255, 255, 255, 0.28)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.45)',
-  },
-  heroNodeDotDone: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderColor: '#FFFFFF',
-  },
-  heroNodeDotActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.55)',
-    borderColor: '#FFFFFF',
-  },
-  heroNodeLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginTop: 6,
-  },
-
-  // Reference strip
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    paddingVertical: 14,
-    marginBottom: 22,
-    borderWidth: 1,
-    borderColor: '#E8EEF6',
-  },
-  metaCell: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  metaDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: '#E8EEF6',
-  },
-  metaLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: MUTED,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-  },
-  metaValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: INK,
-    marginTop: 3,
-  },
-
-  // Rejection note
-  rejectionCard: {
-    flexDirection: 'row',
-    backgroundColor: '#FEF2F2',
-    borderRadius: 18,
-    padding: 14,
-    marginBottom: 22,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-  },
-  rejectionIconBox: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  rejectionTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#B91C1C',
-  },
-  rejectionText: {
-    fontSize: 12.5,
-    color: '#7F1D1D',
-    marginTop: 3,
-    lineHeight: 18,
-  },
-
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: MUTED,
-    letterSpacing: 0.9,
-    textTransform: 'uppercase',
-    marginBottom: 14,
-  },
-
-  // Timeline
-  timelineRow: {
-    flexDirection: 'row',
-  },
-  timelineRail: {
-    width: 30,
-    alignItems: 'center',
-  },
-  timelineHalo: {
-    position: 'absolute',
-    top: 0,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-  },
-  timelineDot: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  timelineConnector: {
-    flex: 1,
-    width: 2,
-    backgroundColor: '#E2E8F0',
-    marginVertical: 4,
-  },
-  timelineCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 14,
-    marginLeft: 12,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: '#E8EEF6',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  timelineCardActive: {
-    borderColor: PRIMARY,
-    shadowColor: PRIMARY,
-    shadowOpacity: 0.14,
-    elevation: 4,
-  },
-  timelineCardHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  timelineTitle: {
-    flex: 1,
-    fontSize: 14.5,
-    fontWeight: '700',
-    color: INK,
-    marginRight: 8,
-  },
-  tonePill: {
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 9,
-  },
-  tonePillText: {
-    fontSize: 10.5,
-    fontWeight: '800',
-  },
-  timelineMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 7,
-  },
-  timelineMetaText: {
-    flex: 1,
-    fontSize: 12,
-    color: MUTED,
-    marginLeft: 6,
-  },
-  timelineMessage: {
-    fontSize: 12.5,
-    color: '#475569',
-    lineHeight: 18,
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-
-  // Actions
-  primaryButton: {
-    height: 54,
-    borderRadius: 16,
-    backgroundColor: PRIMARY,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-    shadowColor: PRIMARY,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.28,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  ghostButton: {
-    height: 52,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  ghostButtonText: {
-    color: PRIMARY,
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  nextText: { ...TYPE.body, flex: 1, minWidth: 0, fontSize: 13, lineHeight: 19 },
 });
 
 export default ApplicationStatusScreen;

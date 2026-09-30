@@ -1,25 +1,54 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import {
+  PALETTE, SPACE, TYPE,
+  PremiumScreen, PREMIUM_OVERLAP, PremiumSheet, BrandLogo, FloatingIllustration, FadeInUp, WelcomeDoor3D,
+  PREMIUM_TYPE, BRAND,
+} from '../../ui';
 
+/**
+ * A welcome card — the brand mark and the association's name, in the premium
+ * language: the brand header with an open door spilling warm light (original
+ * art), and the association's full name on the sheet below.
+ */
 const WelcomeScreen = () => {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Welcome to Activ</Text>
-    </View>
+    <PremiumScreen
+      minHeaderHeight={360}
+      header={(
+        <View style={styles.header}>
+          <FadeInUp distance={10}><BrandLogo /></FadeInUp>
+          <FadeInUp delay={120} scaleFrom={0.8} distance={12} style={styles.art}>
+            <FloatingIllustration size={170}>
+              <WelcomeDoor3D size={170} />
+            </FloatingIllustration>
+          </FadeInUp>
+          <FadeInUp delay={200}>
+            <Text style={styles.eyebrow} maxFontSizeMultiplier={1.2}>Welcome</Text>
+            <Text style={styles.title} accessibilityRole="header" maxFontSizeMultiplier={1.25}>Welcome to Activ</Text>
+          </FadeInUp>
+          <View style={{ height: SPACE.xl }} />
+        </View>
+      )}
+    >
+      <FadeInUp delay={280} style={styles.sheet}>
+        <PremiumSheet>
+          <Text style={styles.name}>Adidravidar Confederation of Trade &amp; Industrial Vision</Text>
+          <Text style={styles.tag}>Building Future</Text>
+        </PremiumSheet>
+      </FadeInUp>
+    </PremiumScreen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
+  header: { alignItems: 'center' },
+  art: { marginTop: SPACE.xl },
+  eyebrow: { ...PREMIUM_TYPE.eyebrow, color: BRAND.onBrandFaint, textAlign: 'center', marginTop: SPACE.lg },
+  title: { ...PREMIUM_TYPE.hero, color: PALETTE.white, textAlign: 'center', marginTop: SPACE.xs },
+  sheet: { marginTop: -PREMIUM_OVERLAP },
+  name: { ...TYPE.heading, textAlign: 'center' },
+  tag: { ...TYPE.body, color: PALETTE.textMuted, textAlign: 'center', marginTop: SPACE.xs },
 });
 
 export default WelcomeScreen;

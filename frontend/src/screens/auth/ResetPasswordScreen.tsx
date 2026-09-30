@@ -1,37 +1,39 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  ActivityIndicator,
-  StatusBar,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../types';
-import { COLORS, FONTS, SPACING } from '../../theme/theme';
 import api from '../../services/api';
 import { ENDPOINTS } from '../../config/api.config';
+import {
+  Notice, PALETTE, RADIUS, SIZE, SPACE, TYPE, Tone, toneOf, PremiumInput, GradientButton, NewPassword3D,
+} from '../../ui';
+import { EyeToggle } from '../profile/formKit';
+import { authStyles as styles } from './authStyles';
+import { PremiumAuthScreen, StatusPanel, TextLink } from './authKit';
 
 /**
  * Set a new password using the code from the reset email.
  *
- * The code is pasted rather than picked up automatically because this app has
- * no deep-link handler registered — the reset email carries a web URL, and
- * without an `activ://` scheme claimed by the app there is nothing for the
- * system to hand back to it. Asking the member to paste the code is honest
- * about that and needs no native configuration to work.
+ * The reset email carries the WEBSITE's https link (unchanged), which the app
+ * does not claim — so the member pastes the link or code here. An
+ * activ://reset-password?token=… (or activ://admin/reset-password?token=…)
+ * link fills it in automatically (navigation/deepLinks.ts), including when this
+ * screen is already open.
  *
- * A `token` route param is still accepted, so the moment deep linking is set up
- * the screen works from a link with no further change.
+ * `route.params.portal` ('member' | 'admin') is sent with the reset, as the
+ * website's /reset-password and /admin/reset-password do: the server looks the
+ * code up only among the accounts that side serves. The whole reset LINK may
+ * be pasted too — the code is read out of its `token=` parameter.
  */
+
+/** A pasted link or a bare code → the code. */
+const extractToken = (raw: string) => {
+  const text = (raw || '').trim();
+  const m = /[?&]token=([^&\s#]+)/.exec(text);
+  try { return m ? decodeURIComponent(m[1]) : text; } catch { return m ? m[1] : text; }
+};
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ResetPassword'>;
 type Route = RouteProp<RootStackParamList, 'ResetPassword'>;
@@ -42,25 +44,82 @@ interface Props {
 }
 
 const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
+  const portal: 'member' | 'admin' = route?.params?.portal === 'admin' ? 'admin' : 'member';
+  const signIn = portal === 'admin' ? 'AdminLogin' : 'Login';
   const [token, setToken] = useState(route?.params?.token || '');
+  // A reset link opened while this screen is already showing (activ://reset-password?token=…).
+  const linkToken = route?.params?.token || '';
+  useEffect(() => {
+    if (linkToken) setToken(linkToken);
+  }, [linkToken]);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
+  /*
+   * The website checks the link the moment the page opens and names the
+   * account it is for, or says it has expired. The app does the same as soon
+   * as it has a code — from a deep link, or when the pasted field loses focus.
+   */
+  const [account, setAccount] = useState('');
+  const [expired, setExpired] = useState(false);
+  const [checking, setChecking] = useState(false);
+
+  // The stack registers this route with the default native header; the screen
+  // draws its own brand header, so the native one is hidden (no double back bar).
+  useLayoutEffect(() => {
+    try { navigation.setOptions({ headerShown: false }); } catch { /* not in a stack */ }
+  }, [navigation]);
+
+  const verify = async (raw: string) => {
+    const code = extractToken(raw);
+    if (!code) { setAccount(''); setExpired(false); return; }
+    setChecking(true);
+    try {
+      const res = await api.get(ENDPOINTS.AUTH.VERIFY_RESET_TOKEN, { params: { token: code, portal } });
+      const payload = res?.data?.data || res?.data || {};
+      setExpired(!payload?.valid);
+      setAccount(payload?.valid ? String(payload?.email || '') : '');
+    } catch {
+      setExpired(true);
+      setAccount('');
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  useEffect(() => {
+    if (linkToken) verify(linkToken);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkToken, portal]);
+
+  // The website's strength meter (pages/auth/ResetPassword.tsx), rule for rule.
+  const rules = useMemo(() => {
+    const p = password || '';
+    return {
+      length: p.length >= 8,
+      mixed: /[a-z]/.test(p) && /[A-Z]/.test(p),
+      number: /\d/.test(p),
+      symbol: /[^A-Za-z0-9]/.test(p),
+    };
+  }, [password]);
+  const score = Object.values(rules).filter(Boolean).length;
+  const strength = !password ? '' : score <= 1 ? 'Weak' : score === 2 ? 'Fair' : score === 3 ? 'Good' : 'Strong';
+  const barColour = score <= 1 ? PALETTE.red : score === 2 ? PALETTE.amberDark : score === 3 ? PALETTE.blue : PALETTE.green;
+  const matches = !!confirm && password === confirm;
 
   const handleSubmit = async () => {
-    const code = token.trim();
+    const code = extractToken(token);
 
     if (!code) {
-      setError('Paste the reset code from your email.');
+      setError('Paste the reset link or code from your email.');
       return;
     }
-    // Matches the server's own minimum, so a password it will refuse is never
-    // sent and the member is told before waiting on a request.
-    if (password.length < 6) {
-      setError('Your new password must be at least 6 characters.');
+    // The website asks for 8 (the server's own floor is 6).
+    if ((password || '').length < 8) {
+      setError('Use at least 8 characters.');
       return;
     }
     if (password !== confirm) {
@@ -72,264 +131,209 @@ const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
     setLoading(true);
 
     try {
-      await api.post(ENDPOINTS.AUTH.RESET_PASSWORD, { token: code, password });
+      // Checked first so an expired or other-side code gets a clear answer.
+      const check = await api.get(ENDPOINTS.AUTH.VERIFY_RESET_TOKEN, { params: { token: code, portal } });
+      const verdict = check?.data?.data || check?.data || {};
+      if (!verdict?.valid) {
+        setExpired(true);
+        return;
+      }
+      await api.post(ENDPOINTS.AUTH.RESET_PASSWORD, { token: code, password, portal });
       setDone(true);
     } catch (err: any) {
       setError(
         err?.response?.data?.message ||
-          'That code is not valid, or it has expired. Request a new link and try again.',
+          'That link is no longer valid. Request a new one.',
       );
     } finally {
       setLoading(false);
     }
   };
 
+  const tone: Tone = portal === 'admin' ? 'admin' : 'member';
+  const t = toneOf(tone);
+  const forAdmins = portal === 'admin';
+  const eyebrow = `Account recovery · ${forAdmins ? 'Administrator' : 'Member'} account`;
+  const art = <NewPassword3D size={100} admin={forAdmins} />;
+  const shell = {
+    tone,
+    onBack: () => navigation.goBack(),
+    eyebrow,
+    art,
+    badge: forAdmins ? 'Admin account' : undefined,
+  };
+
   // ---- done ---------------------------------------------------------------
   if (done) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <PremiumAuthScreen {...shell} title="Password changed" subtitle="You are all set.">
+        <StatusPanel
+          icon="check-circle"
+          kind="success"
+          title="Password updated"
+          actions={(
+            <GradientButton
+              tone={tone}
+              label="Sign in"
+              iconRight="arrow-forward"
+              size="lg"
+              onPress={() => navigation.reset({ index: 0, routes: [{ name: signIn }] })}
+            />
+          )}
+        >
+          Your password has been updated. Sign in with your new password.
+        </StatusPanel>
+      </PremiumAuthScreen>
+    );
+  }
 
-        <View style={styles.doneWrap}>
-          <View style={styles.doneIcon}>
-            <Icon name="check-circle" size={48} color="#16A34A" />
-          </View>
-
-          <Text style={styles.doneTitle}>Password changed</Text>
-          <Text style={styles.doneText}>
-            You can now sign in with your new password.
-          </Text>
-
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => navigation.navigate('Login')}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.primaryButtonText}>Sign in</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+  // ---- expired ------------------------------------------------------------
+  if (expired) {
+    return (
+      <PremiumAuthScreen {...shell} title="Link expired" subtitle="Reset links last one hour and work once.">
+        <StatusPanel
+          icon="link-off"
+          kind="warning"
+          title="This link no longer works"
+          actions={(
+            <>
+              <GradientButton
+                tone={tone}
+                label="Request a new link"
+                icon="send"
+                size="lg"
+                onPress={() => navigation.navigate('ForgotPassword', { portal })}
+              />
+              <GradientButton tone={tone} variant="outline" label="Paste a different code" onPress={() => { setExpired(false); setToken(''); }} />
+              <TextLink tone={tone} muted label="Back to sign in" onPress={() => navigation.navigate(signIn)} />
+            </>
+          )}
+        >
+          Request a new one and it will work straight away.
+        </StatusPanel>
+      </PremiumAuthScreen>
     );
   }
 
   // ---- form ---------------------------------------------------------------
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <PremiumAuthScreen
+      {...shell}
+      title="Set a new password"
+      subtitle={account
+        ? `For the account ${account}.`
+        : 'Paste the link (or code) from your reset email, then choose a new password.'}
+      below={(
+        <>
+          <TextLink tone={tone} label="Send me a new link" onPress={() => navigation.navigate('ForgotPassword', { portal })} />
+          <TextLink tone={tone} muted label="Back to sign in" onPress={() => navigation.navigate(signIn)} />
+          <Text style={styles.footNote}>Your new password is stored encrypted. Nobody at ACTIV can read it.</Text>
+        </>
+      )}
+    >
+      <PremiumInput
+        tone={tone}
+        label="Reset code"
+        value={token}
+        onChangeText={(text) => {
+          setToken(text);
+          if (error) setError('');
+        }}
+        placeholder="Paste the code from your email"
+        autoCapitalize="none"
+        autoCorrect={false}
+        editable={!loading}
+        onBlur={() => { verify(token); }}
+        icon="vpn-key"
+        right={checking
+          ? <ActivityIndicator size="small" color={t.accent} />
+          : account ? <Icon name="check-circle" size={SIZE.icon} color={PALETTE.green} /> : null}
+      />
 
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-        >
-          <TouchableOpacity
-            style={styles.back}
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-          >
-            <Icon name="arrow-back" size={24} color={COLORS.textSecondary} />
-          </TouchableOpacity>
+      <PremiumInput
+        tone={tone}
+        label="New password"
+        value={password}
+        onChangeText={(text) => {
+          setPassword(text);
+          if (error) setError('');
+        }}
+        placeholder="At least 8 characters"
+        secureTextEntry={!show}
+        autoCapitalize="none"
+        autoCorrect={false}
+        textContentType="newPassword"
+        editable={!loading}
+        icon="lock-outline"
+        right={<EyeToggle shown={show} onToggle={() => setShow(!show)} />}
+        style={password ? { marginBottom: SPACE.sm } : undefined}
+      />
 
-          <Text style={styles.title}>Set a new password</Text>
-          <Text style={styles.subtitle}>
-            Paste the code from your reset email, then choose a new password.
-          </Text>
-
-          <Text style={styles.label}>Reset code</Text>
-          <View style={styles.inputWrap}>
-            <Icon name="vpn-key" size={20} color={COLORS.textSecondary} />
-            <TextInput
-              style={styles.input}
-              value={token}
-              onChangeText={(text) => {
-                setToken(text);
-                if (error) setError('');
-              }}
-              placeholder="Paste the code from your email"
-              placeholderTextColor="#9CA3AF"
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!loading}
-            />
+      {password ? (
+        <View style={local.meter}>
+          <View style={local.meterRow}>
+            <View style={local.meterBars}>
+              {[1, 2, 3, 4].map((i) => (
+                <View key={i} style={[local.meterBar, { backgroundColor: i <= score ? barColour : PALETTE.disabled }]} />
+              ))}
+            </View>
+            <Text style={[local.meterLabel, { color: barColour }]}>{strength}</Text>
           </View>
-
-          <Text style={[styles.label, styles.spaced]}>New password</Text>
-          <View style={styles.inputWrap}>
-            <Icon name="lock-outline" size={20} color={COLORS.textSecondary} />
-            <TextInput
-              style={styles.input}
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                if (error) setError('');
-              }}
-              placeholder="At least 6 characters"
-              placeholderTextColor="#9CA3AF"
-              secureTextEntry={!show}
-              autoCapitalize="none"
-              editable={!loading}
-            />
-            <TouchableOpacity onPress={() => setShow(!show)} activeOpacity={0.7}>
-              <Icon
-                name={show ? 'visibility-off' : 'visibility'}
-                size={20}
-                color={COLORS.textSecondary}
-              />
-            </TouchableOpacity>
+          <View style={local.rules}>
+            {([
+              [rules.length, 'At least 8 characters'],
+              [rules.mixed, 'Upper and lower case'],
+              [rules.number, 'A number'],
+              [rules.symbol, 'A symbol'],
+            ] as [boolean, string][]).map(([ok, text]) => (
+              <View key={text} style={local.ruleRow}>
+                <Icon name={ok ? 'check-circle' : 'radio-button-unchecked'} size={15} color={ok ? PALETTE.greenDark : PALETTE.textFaint} />
+                <Text style={[local.ruleText, ok && { color: PALETTE.greenDark }]}>{text}</Text>
+              </View>
+            ))}
           </View>
+        </View>
+      ) : null}
 
-          <Text style={[styles.label, styles.spaced]}>Confirm new password</Text>
-          <View style={styles.inputWrap}>
-            <Icon name="lock-outline" size={20} color={COLORS.textSecondary} />
-            <TextInput
-              style={styles.input}
-              value={confirm}
-              onChangeText={(text) => {
-                setConfirm(text);
-                if (error) setError('');
-              }}
-              placeholder="Type it again"
-              placeholderTextColor="#9CA3AF"
-              secureTextEntry={!show}
-              autoCapitalize="none"
-              editable={!loading}
-              returnKeyType="done"
-              onSubmitEditing={handleSubmit}
-            />
-          </View>
+      <PremiumInput
+        tone={tone}
+        label="Confirm new password"
+        value={confirm}
+        onChangeText={(text) => {
+          setConfirm(text);
+          if (error) setError('');
+        }}
+        placeholder="Type it again"
+        secureTextEntry={!show}
+        autoCapitalize="none"
+        autoCorrect={false}
+        editable={!loading}
+        returnKeyType="done"
+        onSubmitEditing={handleSubmit}
+        icon="lock-outline"
+        right={confirm ? (
+          <Icon name={matches ? 'check-circle' : 'error-outline'} size={SIZE.icon} color={matches ? PALETTE.green : PALETTE.amber} />
+        ) : null}
+        hint={confirm ? (matches ? 'Passwords match.' : 'Passwords do not match yet.') : undefined}
+      />
 
-          {!!error && <Text style={styles.errorText}>{error}</Text>}
+      {error ? <Notice kind="danger" text={error} style={local.error} /> : null}
 
-          <TouchableOpacity
-            style={[styles.primaryButton, loading && styles.buttonDisabled]}
-            onPress={handleSubmit}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Change password</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ForgotPassword')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.linkText}>Send me a new link</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      <GradientButton tone={tone} label="Change password" icon="check" size="lg" onPress={handleSubmit} loading={loading} style={{ marginTop: SPACE.xs }} />
+    </PremiumAuthScreen>
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  flex: { flex: 1 },
-  scroll: { flexGrow: 1, padding: SPACING.lg, paddingTop: SPACING.md },
-
-  back: { width: 40, height: 40, justifyContent: 'center', marginBottom: SPACING.md },
-
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: SPACING.sm,
-    fontFamily: FONTS.bold,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
-    lineHeight: 22,
-    marginBottom: SPACING.xl,
-  },
-
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
-  },
-  spaced: { marginTop: SPACING.lg },
-
-  inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: SPACING.md,
-    height: 54,
-    backgroundColor: '#F8FAFC',
-  },
-  input: {
-    flex: 1,
-    marginHorizontal: SPACING.sm,
-    fontSize: 15,
-    color: COLORS.text,
-    padding: 0,
-  },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 13,
-    marginTop: SPACING.sm,
-  },
-
-  primaryButton: {
-    backgroundColor: COLORS.primary,
-    height: 54,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: SPACING.xl,
-  },
-  buttonDisabled: { opacity: 0.6 },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-
-  linkText: {
-    color: COLORS.primary,
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: SPACING.lg,
-  },
-
-  doneWrap: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.xl,
-  },
-  doneIcon: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: '#F0FDF4',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SPACING.lg,
-  },
-  doneTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: SPACING.sm,
-  },
-  doneText: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
+const local = StyleSheet.create({
+  meter: { marginBottom: SPACE.md },
+  meterRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
+  meterBars: { flex: 1, flexDirection: 'row', gap: SPACE.xs },
+  meterBar: { flex: 1, height: 6, borderRadius: RADIUS.pill },
+  meterLabel: { ...TYPE.caption, minWidth: 52, textAlign: 'right', fontWeight: '700' },
+  rules: { flexDirection: 'row', flexWrap: 'wrap', marginTop: SPACE.sm, rowGap: SPACE.xs },
+  ruleRow: { width: '50%', flexDirection: 'row', alignItems: 'center', gap: 6, paddingRight: SPACE.xs },
+  ruleText: { ...TYPE.caption, flexShrink: 1 },
+  error: { marginHorizontal: 0, marginTop: 0, marginBottom: SPACE.md },
 });
 
 export default ResetPasswordScreen;
