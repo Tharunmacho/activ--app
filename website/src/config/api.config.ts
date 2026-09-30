@@ -542,6 +542,10 @@ export const ENDPOINTS = {
         LOGS: '/notifications/logs',
         DELIVERY_STATUS: '/notifications/delivery-status',
         RETRY: (id: string) => `/notifications/retry/${id}`,
+        /* Automation delivery: every message about one booking, and the
+           latest email / WhatsApp state for a page of bookings at once. */
+        BOOKING_LOGS: (bookingRef: string) => `/notifications/logs/booking/${encodeURIComponent(bookingRef)}`,
+        DELIVERY_SUMMARY: '/notifications/delivery-summary',
         ROUTING_PREVIEW: '/notifications/routing-preview',
         TEST_SEND: '/notifications/test-send',
     },

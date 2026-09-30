@@ -12,6 +12,7 @@ import {
     errorMessage,
     type NotificationLogRow, type NotificationHealth, type DeliveryStatus,
 } from '@/services/activApi';
+import NotificationsAutomation from './NotificationsAutomation';
 
 /**
  * Delivery oversight — is the platform actually reaching anybody?
@@ -65,6 +66,14 @@ const when = (value: string) => {
 
 export default function Notifications() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    /*
+     * Two views. AUTOMATION (default) answers "did each automated message
+     * reach the person" — delivered, read, failed and why, per event and per
+     * booking. The DELIVERY LOG is the raw record plus configuration and the
+     * test send. The configuration banner shows on both.
+     */
+    const [view, setView] = useState<'automation' | 'log'>('automation');
+    const [automationNonce, setAutomationNonce] = useState(0);
 
     const [status, setStatus] = useState<DeliveryStatus | null>(null);
     const [logs, setLogs] = useState<NotificationLogRow[]>([]);
@@ -175,8 +184,8 @@ export default function Notifications() {
                     actions={
                         <button
                             type="button"
-                            onClick={load}
-                            disabled={loading}
+                            onClick={() => { if (view === 'automation') setAutomationNonce((n) => n + 1); else load(); }}
+                            disabled={loading && view === 'log'}
                             className={ADMIN_SECONDARY_BTN}
                         >
                             {loading
@@ -226,6 +235,30 @@ export default function Notifications() {
                         </div>
                     )}
 
+                    {/* ============================================ view switch */}
+                    <div className="flex gap-1 p-1 rounded-xl bg-slate-100 w-full sm:w-auto sm:inline-flex">
+                        {([
+                            ['automation', 'Automation'],
+                            ['log', 'Delivery log & setup'],
+                        ] as const).map(([value, label]) => (
+                            <button
+                                key={value}
+                                type="button"
+                                onClick={() => setView(value)}
+                                aria-pressed={view === value}
+                                className={`flex-1 sm:flex-none min-w-0 h-11 px-3 sm:px-5 rounded-xl text-[1.1875rem] font-semibold
+                                            whitespace-nowrap transition-colors ${view === value
+                                    ? 'bg-white text-blue-600 shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-800'}`}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {view === 'automation' ? <NotificationsAutomation refreshKey={automationNonce} /> : null}
+
+                    {view === 'log' && (<>
                     {/* ================================================ health */}
                     {/*
                       * `AdminStat`, not a local `Stat`.
@@ -432,6 +465,7 @@ export default function Notifications() {
                             })}
                         </div>
                     )}
+                    </>)}
                 </main>
             </div>
         </div>

@@ -21,6 +21,8 @@ import { AdminTable, AdminChip, type AdminColumn }
     from '@/features/admin/components/AdminTable';
 import type { EventBooking } from '@/services/eventBookingApi';
 import { errorMessage } from '@/services/api';
+import { getDeliverySummaries, type BookingDeliverySummary } from '@/services/notificationDeliveryApi';
+import { DeliveryChips, BookingDeliveryPanel } from '@/features/admin/components/DeliveryUI';
 
 import { CARD_TITLE } from '@/components/layout/appTypography';
 import { adminBasePath } from '@/features/admin/components/tierConfig';
@@ -258,6 +260,28 @@ export default function SuperAdminBookings() {
 
     useEffect(() => { load(); }, [load]);
 
+    /*
+     * THE MESSAGES COLUMN: the latest email and WhatsApp state of every booking
+     * on this page, in ONE request per page — not one per row. A failure here
+     * only blanks the column; the bookings themselves are unaffected.
+     */
+    const [delivery, setDelivery] = useState<Record<string, BookingDeliverySummary>>({});
+    const [deliveryLoading, setDeliveryLoading] = useState(false);
+    const [deliveryNonce, setDeliveryNonce] = useState(0);
+    const [messagesFor, setMessagesFor] = useState<EventBooking | null>(null);
+    const pageRefs = (data?.bookings || []).map((b) => b?.bookingRef || '').filter(Boolean).join(',');
+
+    useEffect(() => {
+        if (!pageRefs) { setDelivery({}); return; }
+        let cancelled = false;
+        setDeliveryLoading(true);
+        getDeliverySummaries(pageRefs.split(','))
+            .then((map) => { if (!cancelled) setDelivery(map || {}); })
+            .catch(() => { if (!cancelled) setDelivery({}); })
+            .finally(() => { if (!cancelled) setDeliveryLoading(false); });
+        return () => { cancelled = true; };
+    }, [pageRefs, deliveryNonce]);
+
     /**
      * The door list, fetched only when its tab is open.
      *
@@ -346,6 +370,8 @@ export default function SuperAdminBookings() {
             setOpen(updated);
             load();
             invalidateAttendees();
+            // The confirmation goes out in the background; look again shortly.
+            setTimeout(() => setDeliveryNonce((n) => n + 1), 4000);
         } catch (err) {
             setError(errorMessage(err, 'The payment could not be recorded'));
         } finally {
@@ -359,6 +385,7 @@ export default function SuperAdminBookings() {
             await cancelEventBooking(eventId, booking.bookingRef, reason);
             setOpen(null);
             load();
+            setTimeout(() => setDeliveryNonce((n) => n + 1), 4000);
             // A cancelled booking frees its seats, so the door list is now one
             // party shorter — see the note on the nonce.
             invalidateAttendees();
@@ -389,6 +416,15 @@ export default function SuperAdminBookings() {
                                 className={ADMIN_SECONDARY_BTN}
                             >
                                 <ArrowLeft className="w-4 h-4" /> All events
+                            </button>
+                            {/* Who has been let in at the door (QR check-in). */}
+                            <button
+                                type="button"
+                                onClick={() => navigate(`${adminBasePath()}/attendance/${eventId}`)}
+                                className={ADMIN_SECONDARY_BTN}
+                                disabled={!eventId}
+                            >
+                                <UserCheck className="w-4 h-4" /> Attendance
                             </button>
                             {/*
                               * The spreadsheet.
@@ -593,12 +629,12 @@ export default function SuperAdminBookings() {
                               Wide enough to overflow is what makes the scroll bar
                               appear and every column readable.
                             */}
-                            <table className="w-full text-left border-collapse min-w-[76rem]">
+                            <table className="w-full text-left border-collapse min-w-[88rem]">
                                 <thead>
                                     <tr className="bg-slate-50">
                                         {[
                                             'S.No', 'Name', 'Email', 'Mobile', 'Payment Mode',
-                                            'Payment Status', 'No Of Participants', 'Total Amount', 'Action',
+                                            'Payment Status', 'No Of Participants', 'Total Amount', 'Messages', 'Action',
                                         ].map((head) => (
                                             <th
                                                 key={head}
@@ -619,7 +655,7 @@ export default function SuperAdminBookings() {
                                 <tbody>
                                     {loading && (
                                         <tr>
-                                            <td colSpan={9} className="px-4 py-16 text-center text-slate-400">
+                                            <td colSpan={10} className="px-4 py-16 text-center text-slate-400">
                                                 <Loader2 className="w-5 h-5 animate-spin inline" />
                                             </td>
                                         </tr>
@@ -627,7 +663,7 @@ export default function SuperAdminBookings() {
 
                                     {!loading && !rows.length && (
                                         <tr>
-                                            <td colSpan={9} className="px-4 py-16 text-center">
+                                            <td colSpan={10} className="px-4 py-16 text-center">
                                                 <p className="text-[1.25rem] font-semibold text-slate-500">
                                                     {search || paymentStatus
                                                         ? 'No bookings match that filter.'
@@ -704,6 +740,13 @@ export default function SuperAdminBookings() {
                                                             && ` · saved ${rupees(booking.memberSaving)}`}
                                                     </div>
                                                 )}
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                <DeliveryChips
+                                                    summary={delivery[booking.bookingRef]}
+                                                    loading={deliveryLoading && !delivery[booking.bookingRef]}
+                                                    onOpen={() => setMessagesFor(booking)}
+                                                />
                                             </td>
                                             <td className="px-5 py-4">
                                                 <button
@@ -789,6 +832,16 @@ export default function SuperAdminBookings() {
                     </>)}
                 </div>
             </div>
+
+            {/* ------------------------------------------- messages panel */}
+            {messagesFor && (
+                <BookingDeliveryPanel
+                    bookingRef={messagesFor.bookingRef}
+                    title={messagesFor.bookedBy?.name || messagesFor.eventTitle || ''}
+                    onClose={() => setMessagesFor(null)}
+                    onChanged={() => setDeliveryNonce((n) => n + 1)}
+                />
+            )}
 
             {/* ------------------------------------------------ detail panel */}
             {open && (

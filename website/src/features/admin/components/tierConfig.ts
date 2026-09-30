@@ -215,6 +215,8 @@ export const TIERS: Record<AdminTier, TierConfig> = {
                     // more often — so it is a peer of the editor, not a tab
                     // buried inside it.
                     { to: '/super-admin/bookings', label: 'Bookings', icon: 'ticket' },
+                    // Who was let in at the door (QR passes scanned in the app).
+                    { to: '/super-admin/attendance', label: 'Attendance', icon: 'check' },
                 ],
             },
             // What a membership costs, and which commencement-year band earns
@@ -261,6 +263,9 @@ export const TIERS: Record<AdminTier, TierConfig> = {
                 children: [
                     { to: '/events-admin/events', label: 'All events', icon: 'list' },
                     { to: '/events-admin/events/categories', label: 'Categories', icon: 'tags' },
+                    // Attendance: this role runs the door (names only,
+                    // no contact details — see ATTENDANCE_VIEWERS).
+                    { to: '/events-admin/attendance', label: 'Attendance', icon: 'check' },
                     // No Bookings: attendees and takings are the super
                     // admin's alone (`BOOKING_VIEWERS` in event.routes.js).
                 ],

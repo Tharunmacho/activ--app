@@ -114,6 +114,9 @@ const MembershipPage = lazy(() => import("./pages/onboarding/MembershipPage"));
 const LegalPage = lazy(() => import("./pages/onboarding/LegalPage"));
 /* The public Book Now flow. Lazy for the same reason the detail page is. */
 const EventBookingPage = lazy(() => import("./pages/onboarding/EventBookingPage"));
+// The harmless page an entry-pass QR opens in an ordinary phone camera.
+const EventPassPage = lazy(() => import("./pages/onboarding/EventPassPage"));
+const SuperAttendance = lazy(() => import("./features/admin/super-admin/pages/Attendance"));
 const EnhancedLoginPage = lazy(() => import("./shared/components/EnhancedLoginPage"));
 
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -370,6 +373,10 @@ const App = () => (
               <Route path="/donate/thank-you" element={<DonateThankYou />} />
               <Route path="/donate/receipt/:token" element={<DonationReceiptPage />} />
               <Route path="/donate/statement/:token" element={<DonationStatementPage />} />
+              {/* An event entry pass (QR in the booking email). Public and harmless:
+                  event name and date only, never marks attendance — the staff's
+                  ACTIV app does that. See EventPassPage. */}
+              <Route path="/checkin/:token" element={<EventPassPage />} />
 
               {/*
                 The four legal documents, at the literal paths the footer links
@@ -594,6 +601,9 @@ const App = () => (
                   returns to the table, and a reload lands on the same event. */}
               <Route path="/super-admin/bookings" element={<SuperBookingEvents />} />
               <Route path="/super-admin/bookings/:eventId" element={<SuperBookings />} />
+              {/* Who came through the door (QR check-in), per event. */}
+              <Route path="/super-admin/attendance" element={<SuperAttendance />} />
+              <Route path="/super-admin/attendance/:eventId" element={<SuperAttendance />} />
               <Route path="/super-admin/membership" element={<SuperMembership />} />
               <Route path="/super-admin/donations" element={<SuperDonations />} />
               <Route path="/super-admin/donations/:id" element={<SuperDonorDetail />} />
@@ -619,6 +629,10 @@ const App = () => (
                   link lands on the dashboard rather than a 403 screen. */}
               <Route path="/events-admin/bookings" element={<Navigate to="/events-admin/dashboard" replace />} />
               <Route path="/events-admin/bookings/:eventId" element={<Navigate to="/events-admin/dashboard" replace />} />
+              {/* Attendance IS this portal's: the events admin runs the door.
+                  Names only — contact details stay with the super admin. */}
+              <Route path="/events-admin/attendance" element={<SuperAttendance />} />
+              <Route path="/events-admin/attendance/:eventId" element={<SuperAttendance />} />
               {/* The CMS's own Gallery, News and Schemes editors, in this
                   portal's shell — one write path per collection. */}
               <Route path="/events-admin/gallery" element={<EventsAdminGallery />} />
