@@ -1,22 +1,48 @@
 // Navigation Types
-export type RootStackParamList = {
-  ForgotPassword: undefined;
+import type { MemberRoutes } from './routes/member';
+import type { PaymentRoutes } from './routes/payment';
+import type { BusinessRoutes } from './routes/business';
+import type { AdminRoutes } from './routes/admin';
+import type { SuperRoutes } from './routes/super';
+
+/** Every area's own routes merge here — add new screens in types/routes/<area>.ts. */
+export type RootStackParamList = BaseStackParamList & MemberRoutes & PaymentRoutes & BusinessRoutes & AdminRoutes & SuperRoutes;
+
+type BaseStackParamList = {
+  /** `portal` picks the member or the admin reset, exactly like the website. */
+  ForgotPassword: { portal?: 'member' | 'admin' } | undefined;
   /**
-   * `token` is optional because there is no deep-link handler yet: the member
-   * pastes the code from the email. The param is declared so the screen works
-   * unchanged the moment a link handler is registered.
+   * `token` arrives from a deep link (activ://reset-password?token=… or the
+   * emailed https link, when the member opens it with the app); otherwise the
+   * member pastes the link or code from the email.
    */
-  ResetPassword: { token?: string } | undefined;
+  ResetPassword: { token?: string; portal?: 'member' | 'admin' } | undefined;
+  /**
+   * Where the social sign-in deep link lands (activ://auth/social?…): the
+   * server's one-time `code`, or an `error` (and for `no_account`, the verified
+   * `email`/`name` to prefill registration with).
+   */
+  SocialSignIn: { code?: string; error?: string; provider?: string; email?: string; name?: string } | undefined;
   // Auth Stack
   Onboarding: undefined;
   Welcome: undefined;
   Login: undefined;
-  RegistrationStep1: undefined;
-  RegistrationStep2: { 
+  /** The admin sign-in (website /admin/login): no social, no register. */
+  AdminLogin: undefined;
+  /**
+   * `email`/`name` prefill from a social sign-in with no account yet; `taken`
+   * is set when step 2's register call found a duplicate.
+   */
+  RegistrationStep1: { email?: string; name?: string; taken?: 'email' | 'phoneNumber' } | undefined;
+  RegistrationStep2: {
     fullName: string;
     email: string;
+    /** Normalised: 10 digits for India, '+<code><number>' abroad. */
     phoneNumber: string;
+    whatsappNumber?: string;
     password: string;
+    /** Set (non-empty) only for a member abroad — step 2 then asks for a place. */
+    countryName?: string;
   };
   
   // Member Stack
@@ -113,6 +139,11 @@ export type RootStackParamList = {
   StateAdminDashboard: undefined;
   StateAdminApproval: undefined;
   SuperAdminDashboard: undefined;
+
+  // Events Admin (QR check-in at the event door)
+  EventsAdminHome: undefined;
+  EventCheckinScanner: { eventId?: string; eventTitle?: string } | undefined;
+  EventAttendance: { eventId: string; eventTitle?: string };
   
   // Admin Common Screens
   UserManagement: undefined;

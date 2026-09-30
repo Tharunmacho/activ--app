@@ -12,7 +12,7 @@ const API_CONFIG = {
     timeout: 12000,
   },
   production: {
-    baseURL: 'https://activ-activbackend-8xwlvv-df073b-178-16-137-247.sslip.io/api/v1',
+    baseURL: 'https://activ.org.in/api/v1',
     timeout: 75000, // Cold start handling
   },
 };
@@ -75,10 +75,18 @@ export const ENDPOINTS = {
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',
     VERIFY_RESET_TOKEN: '/auth/reset-password/verify',
+    // Registration step 1 asks before moving on (same as the website).
+    CHECK_AVAILABILITY: '/auth/check-availability',
+    CHANGE_PASSWORD: '/auth/change-password',
   },
 
   // Members
   MEMBERS: {
+    // The signed-in member's own profile — membershipStatus + renewal decide
+    // the paid vs unpaid dashboard (services/session.ts).
+    MY_PROFILE: '/members/my-profile',
+    UPDATE_PROFILE: '/members/profile',
+    PROFILE_PHOTO: '/members/profile-photo',
     GET_BY_ID: (id: string) => `/members/${id}`,
     UPDATE: (id: string) => `/members/${id}`,
     GET_STATUS: (id: string) => `/members/${id}/status`,
@@ -120,13 +128,10 @@ export const ENDPOINTS = {
     // that exist.
   },
 
-  // Companies
-  COMPANIES: {
-    LIST: '/companies',
-    CREATE: '/companies',
-    UPDATE: (id: string) => `/companies/${id}`,
-    DELETE: (id: string) => `/companies/${id}`,
-  },
+  // `COMPANIES` (/companies…) and `PRODUCTS.UPLOAD_IMAGES` (/products/:id/images)
+  // were removed: neither route is mounted and nothing called them. Companies
+  // live at BUSINESS.* (/business-profiles), product images go in the
+  // multipart `image` part of POST/PUT /products.
 
   // Products
   PRODUCTS: {
@@ -137,7 +142,6 @@ export const ENDPOINTS = {
     DELETE: (id: string) => `/products/${id}`,
     STATS: '/products/stats',
     ACTIVITIES: '/products/activities',
-    UPLOAD_IMAGES: (id: string) => `/products/${id}/images`,
   },
 
   // Membership & Payment
@@ -148,10 +152,6 @@ export const ENDPOINTS = {
     CREATE_REQUEST: '/payment/create-request',
     CHECK_STATUS: (paymentRequestId: string) => `/payment/status/${paymentRequestId}`,
     RENEW: '/payment/renew',
-    // Legacy endpoints
-    CREATE_ORDER: '/payment/create-order',
-    VERIFY: '/payment/verify',
-    GET_DETAILS: (orderId: string) => `/payment/${orderId}`,
   },
   WEBHOOK: {
     INSTAMOJO: '/webhook/instamojo',

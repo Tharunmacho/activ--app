@@ -38,27 +38,43 @@ api.interceptors.request.use(
 );
 
 // Response interceptor
+/*
+ * A 401 on anything but a sign-in attempt means the session is gone (expired,
+ * signed out elsewhere, or the account was blocked). Forget it and send the
+ * person to the sign-in screen THEY use — admins to the admin sign-in, members
+ * to the member one — instead of leaving a screen whose every request fails.
+ * Guarded so a burst of parallel 401s resets once.
+ */
+let redirectingToLogin = false;
+const AUTH_ATTEMPT = /\/auth\/(login|register|forgot-password|reset-password|check-availability|oauth)/;
+
 api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   async (error: AxiosError) => {
-    // Handle errors globally
-    if (error.response) {
-      // Server responded with error
-      const status = error.response.status;
-      const requestUrl = error.config?.url || '';
-      
-      // Handle unauthorized - clear token and redirect to login
-      // BUT NOT during login/register attempts
-      if (status === 401 && !requestUrl.includes('/auth/login') && !requestUrl.includes('/auth/register')) {
+    try {
+      const status = error?.response?.status;
+      const requestUrl = error?.config?.url || '';
+      if (status === 401 && !AUTH_ATTEMPT.test(requestUrl)) {
+        const hadToken = !!(await AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN));
+        const role = (await AsyncStorage.getItem(STORAGE_KEYS.USER_ROLE)) || '';
         await AsyncStorage.multiRemove([
           STORAGE_KEYS.AUTH_TOKEN,
           STORAGE_KEYS.USER_DATA,
           STORAGE_KEYS.USER_ROLE,
+          '@activ_user_password',
         ]);
-        // You can dispatch a navigation action here if needed
+        if (hadToken && !redirectingToLogin) {
+          redirectingToLogin = true;
+          // Lazy require: navigationRef imports types only, but keep this
+          // module free of navigation at load time.
+          const { resetTo } = require('../navigation/navigationRef');
+          const isAdmin = ['block_admin', 'district_admin', 'state_admin', 'super_admin'].includes(role);
+          resetTo(isAdmin ? 'AdminLogin' : 'Login');
+          setTimeout(() => { redirectingToLogin = false; }, 3000);
+        }
       }
+    } catch (err) {
+      console.warn('401 handling safely caught:', err);
     }
     return Promise.reject(error);
   }
@@ -113,23 +129,6 @@ export const setUserRole = async (role: string): Promise<void> => {
     await AsyncStorage.setItem(STORAGE_KEYS.USER_ROLE, role);
   } catch (error) {
     console.error('Error saving user role:', error);
-  }
-};
-
-export const setUserPassword = async (password: string): Promise<void> => {
-  try {
-    await AsyncStorage.setItem('@activ_user_password', password);
-  } catch (error) {
-    console.error('Error saving user password:', error);
-  }
-};
-
-export const getUserPassword = async (): Promise<string | null> => {
-  try {
-    return await AsyncStorage.getItem('@activ_user_password');
-  } catch (error) {
-    console.error('Error getting user password:', error);
-    return null;
   }
 };
 

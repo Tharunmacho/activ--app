@@ -16,9 +16,20 @@ LogBox.ignoreAllLogs();
 // Auth Screens
 import OnboardingScreen from './src/screens/auth/OnboardingScreen';
 import LoginScreen from './src/screens/auth/LoginScreen';
+import AdminLoginScreen from './src/screens/auth/AdminLoginScreen';
+import { navigationRef } from './src/navigation/navigationRef';
+// Each area registers its NEW screens in its own file (no shared edits).
+import { memberScreens } from './src/navigation/routes/memberRoutes';
+import { paymentScreens } from './src/navigation/routes/paymentRoutes';
+import { businessScreens } from './src/navigation/routes/businessRoutes';
+import { adminScreens } from './src/navigation/routes/adminRoutes';
+import { superScreens } from './src/navigation/routes/superRoutes';
+import { eventsAdminScreens } from './src/navigation/routes/eventsAdminRoutes';
 import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
 import ResetPasswordScreen from './src/screens/auth/ResetPasswordScreen';
 import WelcomeScreen from './src/screens/auth/WelcomeScreen';
+import SocialSignInScreen from './src/screens/auth/SocialSignInScreen';
+import { useDeepLinks, flushPendingDeepLink } from './src/navigation/deepLinks';
 
 // Registration Screens
 import RegistrationStep1Screen from './src/screens/registration/RegistrationStep1Screen';
@@ -94,11 +105,13 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
+  // activ:// links: social sign-in hand-off and password-reset tokens.
+  useDeepLinks();
 
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <NavigationContainer>
+        <NavigationContainer ref={navigationRef} onReady={flushPendingDeepLink}>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
         <Stack.Navigator initialRouteName="Onboarding">
           {/* Auth Stack */}
@@ -117,10 +130,18 @@ function App() {
             component={LoginScreen}
             options={{ headerShown: false }}
           />
+          {/* The admin sign-in: same design, no social, no register. */}
+          <Stack.Screen
+            name="AdminLogin"
+            component={AdminLoginScreen}
+            options={{ headerShown: false }}
+          />
         {/* Reachable from the "Forget password?" link on the login
             screen, which used to open an Alert with nowhere to go. */}
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+        {/* Where activ://auth/social lands after Google / Facebook / LinkedIn. */}
+        <Stack.Screen name="SocialSignIn" component={SocialSignInScreen} options={{ headerShown: false }} />
           
           {/* Registration Stack */}
           <Stack.Screen 
@@ -290,6 +311,13 @@ function App() {
 
           {/* Super Admin Screens */}
           <Stack.Screen name="SuperAdminDashboard" component={SuperAdminBottomTabs} options={{ headerShown: false }} />
+          {memberScreens(Stack)}
+          {paymentScreens(Stack)}
+          {businessScreens(Stack)}
+          {adminScreens(Stack)}
+          {superScreens(Stack)}
+          {/* Events Admin: QR check-in at the event door. */}
+          {eventsAdminScreens(Stack)}
 
           {/* Payment Screens */}
           <Stack.Screen 
