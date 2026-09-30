@@ -1,537 +1,329 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  StatusBar,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Share, TouchableOpacity, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { RootStackParamList } from '../../types';
-import { COLORS, FONTS, SPACING, SHADOWS } from '../../theme/theme';
+import {
+  BottomActionBar, Notice, Skeleton, PALETTE, SPACE, TYPE, BRAND, PREMIUM_TYPE, money, dateTime,
+  PremiumPage, PremiumPageHeader, Receipt3D, GradientButton, GlassIconButton, BrandLogo, SurfaceCard, LinkRow,
+  GroupTitle, ReceiptLine, TornEdge, FadeInUp,
+} from '../../ui';
+import { Overlap, ResultHeader, TotalBar, ReceiptDivider } from './paymentUi';
+import { getOrder, getMyProfile } from '../../services/paymentFlow';
+import { getMyApplications, formatApplicationRef } from '../../services/memberApi';
+import { pickMostAdvancedApplication } from '../member/dashboard/memberRules';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'PaymentSuccess'>;
+const longDate = (value?: string | Date | null): string => {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+};
 
-const PaymentSuccessScreen: React.FC<Props> = ({ navigation, route }) => {
-  const params = route.params || {};
+const titleCase = (v: string) => (v || '').replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
-  const membershipId = params.orderId || `ACTIV-2024-${String(Math.floor(Math.random() * 899999 + 100000))}`;
-  const memberName = params.memberName || 'Member';
-  const planType = params.planType || 'Membership Plan';
-  const totalAmount = params.totalAmount || params.planAmount || 2000;
-  const transactionId = params.transactionId || `TXN_${Date.now()}`;
-  const paymentDate = params.paymentDate
-    ? new Date(params.paymentDate).toLocaleDateString('en-IN', {
-        weekday: 'short',
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      })
-    : new Date().toLocaleDateString('en-IN', {
-        weekday: 'short',
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      });
+/**
+ * ============================================================================
+ * PAYMENT RECEIPT — every figure is the server's
+ * ============================================================================
+ *
+ *   GET /payment/order/:orderId   amount, plan, status, paidAt of THIS order
+ *   GET /members/my-profile       name, Member ID (membershipNumber)
+ *
+ * A receipt is the page a member screenshots, so nothing is guessed: an amount
+ * the server did not record prints as a dash, never a plausible number. (This
+ * screen used to fall back to ₹2,000 and a random member ID.)
+ *
+ * Route: `PaymentSuccess { orderId?, planType? … }` — the legacy params are
+ * accepted, but only `orderId` is trusted.
+ *
+ * WITHOUT an orderId (the Plan / Documents screens' "Payment receipt") it is
+ * the website's `/member/payment-success?view=receipt`: the member's own
+ * record — lastPaymentAmount ?? paymentAmount, lastPaymentDate ||
+ * membershipActivatedAt, paymentId — still a dash for anything not recorded.
+ */
+const PaymentSuccessScreen: React.FC<any> = ({ navigation, route }) => {
+  const orderId: string = String(route?.params?.orderId || '');
+  const planHint: string = String(route?.params?.planType || '');
+  const renewed: boolean = route?.params?.renewed === true;
 
-  const handleDownloadReceipt = () => {
-    const receiptText = `
-ACTIV MEMBERSHIP RECEIPT
-==============================
-Membership ID: ${membershipId}
-Member Name: ${memberName}
-Plan Type: ${planType}
-Amount Paid: ₹${totalAmount}
-Transaction ID: ${transactionId}
-Payment Date: ${paymentDate}
-Status: COMPLETED
-Validity: 1 Year
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [order, setOrder] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [application, setApplication] = useState<any>(null);
 
-Thank you for joining ACTIV!
-==============================
-    `.trim();
-
-    Alert.alert('Payment Receipt', receiptText, [
-      { text: 'Close', style: 'cancel' },
+  const load = useCallback(async () => {
+    setLoading(true);
+    const [o, pr, apps] = await Promise.all([
+      orderId ? getOrder(orderId).catch(() => null) : Promise.resolve(null),
+      getMyProfile().catch(() => null),
+      getMyApplications().catch(() => [] as any[]),
     ]);
+    setOrder(o);
+    setProfile(pr);
+    setApplication(pickMostAdvancedApplication(apps || []));
+    setLoading(false);
+  }, [orderId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  /* Pull-to-refresh re-reads quietly (the receipt stays on screen). */
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const [o, pr] = await Promise.all([
+        orderId ? getOrder(orderId).catch(() => null) : Promise.resolve(null),
+        getMyProfile().catch(() => null),
+      ]);
+      if (o) setOrder(o);
+      if (pr) setProfile(pr);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [orderId]);
+
+
+  // No order to read → the receipt is the member's own payment record.
+  const fromProfile = !orderId || !order;
+  const profilePaid = ['active', 'completed'].includes(String(profile?.membershipStatus || '').toLowerCase());
+  const profileAmount = profile?.lastPaymentAmount ?? profile?.paymentAmount;
+  const amount = typeof order?.amount === 'number'
+    ? order.amount
+    : fromProfile && profileAmount !== null && profileAmount !== undefined && Number.isFinite(Number(profileAmount)) ? Number(profileAmount) : null;
+  const status = String(order?.status || (orderId ? 'pending' : profilePaid ? 'paid' : '')).toLowerCase();
+  const paid = status === 'paid';
+  /* The website's receipt: Member ID falls back to memberCode, then the application reference. */
+  const memberNo = String(profile?.membershipNumber || profile?.memberCode || formatApplicationRef(application) || '');
+  const name = String(profile?.fullName || application?.fullName || '');
+  const paidAt = order?.paidAt || (fromProfile ? (profile?.lastPaymentDate || profile?.membershipActivatedAt || '') : '');
+  const txnRef = String(order?.gatewayPaymentId || (fromProfile ? profile?.paymentId || '' : ''));
+  /* Plan wording, period and validity — the website's PaymentSuccess rules. */
+  const kind = String(profile?.memberType || application?.memberType || '').toLowerCase();
+  const kindLabel = kind === 'student' ? 'Student' : kind === 'aspirant' ? 'Aspirant' : kind === 'business' ? 'Business' : '';
+  const platinum = String(profile?.membershipTier || '').toLowerCase() === 'platinum';
+  const typeRaw = String(profile?.membershipType || '').toLowerCase();
+  const lifetime = platinum || typeRaw === 'lifetime';
+  const derivedPlan = platinum ? 'Platinum Lifetime' : [kindLabel, 'membership'].filter(Boolean).join(' ') || 'ACTIV membership';
+  const planName = String(order?.planName || planHint || derivedPlan);
+  const period = lifetime ? 'Lifetime' : typeRaw === 'annual' ? 'Annual' : '';
+  const method = String(order?.paymentMethod || profile?.paymentMethod || '');
+  const validUntil = (() => {
+    if (lifetime) return 'Lifetime — no renewal';
+    if (profile?.membershipExpiresAt) return longDate(profile.membershipExpiresAt);
+    const start = profile?.membershipActivatedAt || paidAt;
+    if (!start) return '';
+    const d = new Date(start);
+    if (Number.isNaN(d.getTime())) return '';
+    d.setFullYear(d.getFullYear() + 1);
+    return longDate(d);
+  })();
+  const firstName = name.split(' ').filter(Boolean)[0] || 'member';
+
+  const shareRef = async () => {
+    try { await Share.share({ message: txnRef }); } catch (err) { console.warn('Share safely caught:', err); }
   };
 
-  const handleDownloadCertificate = () => {
-    Alert.alert(
-      'Digital Certificate',
-      'Your ACTIV Membership Certificate has been generated and queued for download.',
-      [{ text: 'OK' }]
-    );
+  const share = async () => {
+    try {
+      await Share.share({
+        message: [
+          'ACTIV membership payment receipt',
+          name ? `Member: ${name}` : '',
+          memberNo ? `Member ID: ${memberNo}` : '',
+          `Paid for: ${planName || '—'}${period && !lifetime ? ` · ${period}` : ''}`,
+          validUntil ? `Valid until: ${validUntil}` : '',
+          method ? `Payment method: ${titleCase(method)}` : '',
+          `Amount: ${money(amount)}`,
+          orderId ? `Order: ${orderId}` : '',
+          txnRef ? `Transaction: ${txnRef}` : '',
+          paidAt ? `Paid on: ${dateTime(paidAt)}` : '',
+        ].filter(Boolean).join('\n'),
+      });
+    } catch (err) {
+      console.warn('Share safely caught:', err);
+    }
   };
+
+  const onBack = navigation.canGoBack() ? () => navigation.goBack() : undefined;
+  const shareButton = !loading ? <GlassIconButton icon="share" onPress={share} accessibilityLabel="Share receipt" /> : undefined;
+
+  if (loading) {
+    return (
+      <PremiumPage header={<PremiumPageHeader onBack={onBack} eyebrow="Payment" title="Your receipt" art={<Receipt3D size={88} />} />}>
+        <Overlap>
+          <View style={s.skel}>
+            <Skeleton height={380} radius={22} />
+            <Skeleton height={140} radius={22} />
+          </View>
+        </Overlap>
+      </PremiumPage>
+    );
+  }
+
+  const paidFor = [planName, period && !lifetime ? `· ${period}` : ''].filter(Boolean).join(' ');
+  const stamp = paid ? 'PAID' : status ? status.toUpperCase() : 'PENDING';
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+    <PremiumPage
+      refreshing={refreshing}
+      onRefresh={refresh}
+      header={(
+        <ResultHeader
+          outcome={paid ? 'success' : 'pending'}
+          onBack={onBack}
+          right={shareButton}
+          eyebrow={paid ? 'Payment received' : 'Payment'}
+          title={paid ? (orderId ? (renewed ? `Thank you for renewing, ${firstName}!` : `Welcome to ACTIV, ${firstName}!`) : 'Payment receipt') : 'Payment status'}
+          subtitle={paid
+            ? (orderId
+              ? (renewed
+                ? `Your ${planName.toLowerCase()} is renewed${profile?.membershipExpiresAt ? ` until ${longDate(profile.membershipExpiresAt)}` : ''}. Every member benefit carries on.`
+                : `Your ${planName.toLowerCase()} is now active. Everything a member gets is open to you.`)
+              : 'Your membership fee, as recorded')
+            : 'This order has not been confirmed as paid yet.'}
+          amount={money(amount)}
+          amountNote={paidFor}
+        />
+      )}
+      footer={(
+        <BottomActionBar>
+          {paid ? (
+            <GradientButton variant="outline" label="Plan details" icon="workspace-premium" onPress={() => navigation.navigate('MembershipPlanDetails')} style={s.flex} />
+          ) : (
+            <GradientButton variant="outline" label="Share" icon="share" onPress={share} style={s.flex} />
+          )}
+          <GradientButton
+            label="Dashboard"
+            icon="dashboard"
+            onPress={() => navigation.reset({ index: 0, routes: [{ name: paid ? 'PaidDashboard' : 'MemberMain' }] })}
+            style={s.flex}
+          />
+        </BottomActionBar>
+      )}
+    >
+      <Overlap>
+        {!orderId && !profilePaid ? <Notice kind="warning" style={s.notice} text="No payment is recorded on your membership yet. Your payments and certificates appear here once it is active." /> : null}
 
-      {/* Seamless Top Bar Header */}
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color="#1F2937" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Payment Confirmation</Text>
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Dribbble Style Hero Celebration Header */}
-        <View style={styles.successHeroCard}>
-          <View style={styles.heroGlowCircle}>
-            <View style={styles.heroIconCircle}>
-              <Icon name="check-circle" size={54} color="#10B981" />
+        {/* ------------------------------------------------ the paper receipt */}
+        <View style={s.paperWrap} accessibilityLabel="Payment receipt">
+          <TornEdge color={PALETTE.white} height={10} />
+          <View style={s.paper}>
+            <View style={s.paperHead}>
+              <BrandLogo size="sm" />
+              <View style={s.paperHeadText}>
+                <Text style={s.paperEyebrow} maxFontSizeMultiplier={1.2}>Payment receipt</Text>
+                <Text style={s.paperOrg} numberOfLines={2} maxFontSizeMultiplier={1.2}>Adidravidar Confederation of Trade and Industrial Vision</Text>
+              </View>
             </View>
-          </View>
 
-          <View style={styles.verifiedBadge}>
-            <Icon name="verified" size={14} color="#059669" />
-            <Text style={styles.verifiedBadgeText}>PAYMENT CONFIRMED</Text>
-          </View>
-
-          <Text style={styles.successTitle}>Payment Successful!</Text>
-          <Text style={styles.successSubtitle}>
-            Welcome to ACTIV! Your membership is officially active.
-          </Text>
-
-          {/* Amount Callout Pill */}
-          <View style={styles.heroAmountCard}>
-            <Text style={styles.heroAmountLabel}>Total Paid</Text>
-            <Text style={styles.heroAmountValue}>₹{totalAmount.toLocaleString()}</Text>
-          </View>
-        </View>
-
-        {/* Dribbble Membership Receipt Card */}
-        <View style={styles.detailsCard}>
-          <View style={styles.cardHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Icon name="card-membership" size={20} color="#2563EB" />
-              <Text style={styles.cardHeaderTitle}>Membership Details</Text>
+            <View style={s.idRow}>
+              <View style={s.flexMin}>
+                <Text style={s.idLabel} maxFontSizeMultiplier={1.2}>Your member ID</Text>
+                <Text style={s.idValue} selectable numberOfLines={2} maxFontSizeMultiplier={1.2}>{memberNo || '—'}</Text>
+              </View>
+              <View style={[s.stamp, paid ? s.stampPaid : s.stampWait]} accessibilityLabel={`Status ${stamp}`}>
+                <Text style={[s.stampText, { color: paid ? PALETTE.greenDark : PALETTE.amberDark }]} maxFontSizeMultiplier={1.1}>{stamp}</Text>
+              </View>
             </View>
-            <View style={styles.activePill}>
-              <View style={styles.activeDot} />
-              <Text style={styles.activePillText}>Active</Text>
-            </View>
-          </View>
 
-          <View style={styles.cardBody}>
-            {/* Grid Row 1 */}
-            <View style={styles.gridRow}>
-              <View style={styles.metricBox}>
-                <View style={[styles.metricIconCircle, { backgroundColor: '#EFF6FF' }]}>
-                  <Icon name="badge" size={16} color="#2563EB" />
+            <ReceiptDivider notch={PALETTE.canvas} />
+
+            <ReceiptLine label="Paid for" value={paidFor} />
+            {validUntil ? <ReceiptLine label="Valid until" value={validUntil} /> : null}
+            <ReceiptLine label="Member name" value={name} />
+            <ReceiptLine label="Paid on" value={longDate(paidAt) || dateTime(paidAt)} />
+            {method ? <ReceiptLine label="Payment method" value={titleCase(method)} /> : null}
+            {orderId ? <ReceiptLine label="Order" value={orderId} selectable /> : null}
+
+            <TotalBar label="Amount paid" value={money(amount)} />
+
+            {txnRef ? (
+              <View style={s.ref}>
+                <View style={s.flexMin}>
+                  <Text style={s.idLabel} maxFontSizeMultiplier={1.2}>Transaction reference</Text>
+                  <Text style={s.refValue} selectable maxFontSizeMultiplier={1.2}>{txnRef}</Text>
                 </View>
-                <Text style={styles.metricLabel}>MEMBERSHIP ID</Text>
-                <Text style={styles.metricValue}>{membershipId}</Text>
+                <TouchableOpacity onPress={shareRef} style={s.copyBtn} accessibilityRole="button" accessibilityLabel="Copy or share the transaction reference">
+                  <Icon name="content-copy" size={16} color={PALETTE.blue} />
+                  <Text style={s.copyText} maxFontSizeMultiplier={1.3}>Copy</Text>
+                </TouchableOpacity>
               </View>
+            ) : null}
 
-              <View style={styles.metricBox}>
-                <View style={[styles.metricIconCircle, { backgroundColor: '#F0FDF4' }]}>
-                  <Icon name="person" size={16} color="#10B981" />
-                </View>
-                <Text style={styles.metricLabel}>MEMBER NAME</Text>
-                <Text style={styles.metricValue}>{memberName}</Text>
-              </View>
-            </View>
-
-            {/* Grid Row 2 */}
-            <View style={styles.gridRow}>
-              <View style={styles.metricBox}>
-                <View style={[styles.metricIconCircle, { backgroundColor: '#F3E8FF' }]}>
-                  <Icon name="workspace-premium" size={16} color="#8B5CF6" />
-                </View>
-                <Text style={styles.metricLabel}>PLAN TYPE</Text>
-                <Text style={styles.metricValue}>{planType}</Text>
-              </View>
-
-              <View style={styles.metricBox}>
-                <View style={[styles.metricIconCircle, { backgroundColor: '#FEF3C7' }]}>
-                  <Icon name="event-available" size={16} color="#D97706" />
-                </View>
-                <Text style={styles.metricLabel}>VALIDITY</Text>
-                <Text style={styles.metricValue}>1 Year</Text>
-              </View>
-            </View>
-
-            {/* Transaction Ref Box */}
-            <View style={styles.txnBox}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <Icon name="receipt" size={14} color="#64748B" />
-                <Text style={styles.txnLabel}>TRANSACTION REFERENCE</Text>
-              </View>
-              <Text style={styles.txnValue}>{transactionId}</Text>
-              <Text style={styles.txnDate}>Paid on {paymentDate}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Downloads Section */}
-        <View style={styles.downloadsSection}>
-          <Text style={styles.sectionHeading}>Member Documents</Text>
-          <View style={styles.downloadGrid}>
-            <TouchableOpacity
-              style={styles.docCard}
-              onPress={handleDownloadCertificate}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.docIconBox, { backgroundColor: '#EEF2FF' }]}>
-                <Icon name="workspace-premium" size={26} color="#4F46E5" />
-              </View>
-              <Text style={styles.docTitle}>Membership Certificate</Text>
-              <Text style={styles.docSubtext}>Digital PDF</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.docCard}
-              onPress={handleDownloadReceipt}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.docIconBox, { backgroundColor: '#ECFDF5' }]}>
-                <Icon name="receipt-long" size={26} color="#059669" />
-              </View>
-              <Text style={styles.docTitle}>Payment Receipt</Text>
-              <Text style={styles.docSubtext}>Tax Invoice</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Confirmation Info Note */}
-        <View style={styles.infoCard}>
-          <View style={styles.infoIconBox}>
-            <Icon name="mark-email-read" size={20} color="#0284C7" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.infoTitle}>Confirmation Sent</Text>
-            <Text style={styles.infoText}>
-              Receipt & login credentials sent to your Email & WhatsApp.
+            <Text style={s.paperFoot} maxFontSizeMultiplier={1.3}>
+              {paid && orderId
+                ? 'Sent to your registered email and WhatsApp. This is a computer-generated receipt.'
+                : 'This is a computer-generated receipt.'}
             </Text>
           </View>
+          <TornEdge color={PALETTE.white} height={10} flip />
         </View>
+      </Overlap>
 
-        {/* Dashboard CTA Button */}
-        <TouchableOpacity
-          style={styles.dashboardBtn}
-          onPress={() => navigation.replace('PaidDashboard')}
-          activeOpacity={0.85}
-        >
-          <Icon name="dashboard" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-          <Text style={styles.dashboardBtnText}>Go to Member Dashboard</Text>
-          <Icon name="arrow-forward" size={20} color="#FFFFFF" style={{ marginLeft: 6 }} />
-        </TouchableOpacity>
+      {paid ? (
+        <FadeInUp delay={200}>
+          <GroupTitle title="Your documents" subtitle="Ready now — open or share." />
+          <SurfaceCard style={s.gutter} padded={false}>
+            {[
+              { icon: 'workspace-premium', title: 'Membership certificate', note: 'With your Member ID', kind: 'membership', tone: 'gold' as const },
+              { icon: 'receipt-long', title: '80G tax certificate', note: 'For your income-tax filing', kind: 'tax-exemption', tone: 'green' as const },
+            ].map((d, i, arr) => (
+              <LinkRow
+                key={d.kind}
+                icon={d.icon}
+                tone={d.tone}
+                title={d.title}
+                subtitle={d.note}
+                onPress={() => navigation.navigate('MemberCertificate', { kind: d.kind })}
+                last={i === arr.length - 1}
+              />
+            ))}
+          </SurfaceCard>
 
-        <View style={{ height: SPACING.xl * 2 }} />
-      </ScrollView>
-    </SafeAreaView>
+          <GroupTitle title="What you can do now" />
+          <SurfaceCard style={s.gutter} padded={false}>
+            <LinkRow icon="dashboard" title="Your member dashboard" onPress={() => navigation.reset({ index: 0, routes: [{ name: 'PaidDashboard' }] })} />
+            <LinkRow icon="groups" tone="teal" title="Find and message members" onPress={() => navigation.navigate('MemberDirectory')} />
+            <LinkRow icon="event" tone="sky" title="Members-only events" onPress={() => navigation.navigate('MemberEvents')} last />
+          </SurfaceCard>
+        </FadeInUp>
+      ) : null}
+
+      <View style={s.shareWrap}>
+        <GradientButton variant="outline" label="Share receipt" icon="share" onPress={share} />
+      </View>
+    </PremiumPage>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
+const s = StyleSheet.create({
+  flex: { flex: 1 },
+  flexMin: { flex: 1, minWidth: 0 },
+  gutter: { marginHorizontal: SPACE.lg },
+  notice: { marginHorizontal: SPACE.lg, marginBottom: SPACE.md },
+  skel: { paddingHorizontal: SPACE.lg, gap: SPACE.md },
+  paperWrap: {
+    marginHorizontal: SPACE.lg,
+    shadowColor: BRAND.shadowNavy, shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.12, shadowRadius: 22, elevation: 0,
   },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#F8FAFC',
-  },
-  backButton: {
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginLeft: 12,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 18,
-  },
-  successHeroCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 24,
-    alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    ...SHADOWS.md,
-  },
-  heroGlowCircle: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: '#D1FAE5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  heroIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#ECFDF5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  verifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
-    gap: 6,
-    marginBottom: 10,
-  },
-  verifiedBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#059669',
-    letterSpacing: 0.5,
-  },
-  successTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  successSubtitle: {
-    fontSize: 13,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 16,
-  },
-  heroAmountCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    width: '100%',
-  },
-  heroAmountLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  heroAmountValue: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#059669',
-  },
-  detailsCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 16,
-    overflow: 'hidden',
-    ...SHADOWS.sm,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  cardHeaderTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  activePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 6,
-  },
-  activeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10B981',
-  },
-  activePillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#059669',
-  },
-  cardBody: {
-    padding: 16,
-    gap: 12,
-  },
-  gridRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  metricBox: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-  metricIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  metricLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#94A3B8',
-    marginBottom: 2,
-    letterSpacing: 0.5,
-  },
-  metricValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  txnBox: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-  txnLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#64748B',
-    letterSpacing: 0.5,
-  },
-  txnValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1E293B',
-    fontFamily: 'monospace',
-    marginBottom: 2,
-  },
-  txnDate: {
-    fontSize: 11,
-    color: '#64748B',
-  },
-  downloadsSection: {
-    marginBottom: 16,
-  },
-  sectionHeading: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 12,
-  },
-  downloadGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  docCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 18,
-    padding: 16,
-    alignItems: 'center',
-    ...SHADOWS.sm,
-  },
-  docIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  docTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0F172A',
-    textAlign: 'center',
-    marginBottom: 2,
-  },
-  docSubtext: {
-    fontSize: 11,
-    color: '#64748B',
-  },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0F9FF',
-    borderColor: '#BAE6FD',
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 20,
-    gap: 12,
-  },
-  infoIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#E0F2FE',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  infoTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0369A1',
-  },
-  infoText: {
-    fontSize: 11,
-    color: '#0284C7',
-    marginTop: 2,
-    lineHeight: 16,
-  },
-  dashboardBtn: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#2563EB',
-    paddingVertical: 16,
-    borderRadius: 16,
-    marginBottom: 16,
-    ...SHADOWS.md,
-  },
-  dashboardBtnText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
+  paper: { backgroundColor: PALETTE.white, paddingHorizontal: SPACE.lg, paddingTop: SPACE.sm, paddingBottom: SPACE.lg },
+  paperHead: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
+  paperHeadText: { flex: 1, minWidth: 0 },
+  paperEyebrow: { ...PREMIUM_TYPE.eyebrow, fontSize: 10, color: PALETTE.blue },
+  paperOrg: { ...TYPE.caption, fontSize: 11, lineHeight: 15, marginTop: 2 },
+  idRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, marginTop: SPACE.lg },
+  idLabel: { ...PREMIUM_TYPE.eyebrow, fontSize: 10, color: PALETTE.textFaint },
+  idValue: { fontSize: 22, lineHeight: 28, fontWeight: '800', letterSpacing: 1.5, color: BRAND.navy, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', marginTop: 2 },
+  stamp: { borderWidth: 2.5, borderRadius: 10, paddingHorizontal: SPACE.sm + 2, paddingVertical: 4, transform: [{ rotate: '-10deg' }] },
+  stampPaid: { borderColor: PALETTE.green, backgroundColor: '#ECFDF5' },
+  stampWait: { borderColor: PALETTE.amber, backgroundColor: '#FFFBEB' },
+  stampText: { fontSize: 16, lineHeight: 20, fontWeight: '900', letterSpacing: 2 },
+  ref: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, marginTop: SPACE.md, padding: SPACE.md, borderRadius: 14, backgroundColor: PALETTE.field },
+  refValue: { ...TYPE.bodyStrong, fontSize: 13, marginTop: 2, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  copyBtn: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs, minHeight: 44, paddingHorizontal: SPACE.md, borderRadius: 999, backgroundColor: PALETTE.white, borderWidth: 1, borderColor: PALETTE.border },
+  copyText: { ...TYPE.label, color: PALETTE.blue, fontWeight: '700' },
+  paperFoot: { ...TYPE.caption, fontSize: 11, textAlign: 'center', marginTop: SPACE.lg, color: PALETTE.textFaint },
+  shareWrap: { paddingHorizontal: SPACE.lg, marginTop: SPACE.xl },
 });
 
 export default PaymentSuccessScreen;

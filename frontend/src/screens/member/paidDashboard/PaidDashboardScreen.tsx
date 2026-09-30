@@ -1,692 +1,559 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  StatusBar,
-  Alert,
-  Image,
-  TextInput,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { RootStackParamList } from '../../../types';
 import LinearGradient from 'react-native-linear-gradient';
-import api, { getUserData } from '../../../services/api';
-import { useAuthStore } from '../../../stores/exampleStore';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import {
+  PALETTE, SPACE, RADIUS, SIZE, TYPE, GRADIENTS, asArray, shortDate,
+  PremiumScrollScreen, PREMIUM_OVERLAP, FadeInUp, PressableScale, GradientButton,
+  PremiumCard, PremiumSectionHeader, GradientIconChip, ActionTile, ActionGrid, StatPill, StatRow, PremiumEmptyState,
+  MemberBadge3D, ChipTone,
+} from '../../../ui';
+import { GradientPanel } from '../dashboard/DashboardKit';
+import {
+  DashboardHeader, MembershipCard3D, PremiumDashboardSkeleton, greetingFor, greetingEmoji, todayLabel,
+} from '../dashboard/DashboardPremium';
+import ExploreActiv from '../dashboard/ExploreActiv';
+import {
+  getMyProfile, getBusinessInfo, listMyCompanies, getMyApplications, getRecentActivity,
+  listAnnouncements, listMemberEvents, formatApplicationRef, isPaidMember, getUnreadMessages,
+} from '../../../services/memberApi';
+import { resolveMediaUrl } from '../../../config/api.config';
+import { invalidateWebsiteContent } from '../../../services/websiteContent';
+import { feedUnreadCount } from '../NotificationScreen';
+import { categoryStyle } from '../updates/updateFormat';
+import { clockTime, longDate } from '../events/eventFormat';
+import { pickMostAdvancedApplication, resolveApplicantKind, planLabelFor } from '../dashboard/memberRules';
+import RenewalBanner from '../dashboard/RenewalBanner';
 
-type PaidDashboardProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'PaidDashboard'>;
+/**
+ * ============================================================================
+ * THE PAID DASHBOARD — website `features/member/pages/PaidDashboard.tsx`
+ * ============================================================================
+ *
+ * Identity (allSettled): getMyProfile · getBusinessInfo · getMyCompanies ·
+ * getMyApplication; sections: announcements(6) · events · recent activity(6).
+ *
+ * Real data only: Member ID = membershipNumber (ACTIV-YYYY-NNN), member since =
+ * membershipActivatedAt || approvedAt, valid until = membershipExpiresAt (or a
+ * year from activation for an annual row with no stored expiry — the website's
+ * rule), Lifetime / Platinum never expire. Renewal banner only when the server
+ * says `renewal.canRenew`. An unpaid member is sent to the unpaid dashboard.
+ *
+ * Premium layout: brand header (greeting with avatar and time of day) → the
+ * membership as a 3D card with a light sweep → facts → stats → quick actions
+ * → My Documents (+ View all) → Upcoming Events (poster, venue) → Explore
+ * ACTIV → Association Updates → Recent Activity → plan band → Platinum.
+ */
+
+const MONTHS3 = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+/** Website timeAgo on the paid dashboard: "2 hours ago", dated after a month. */
+const ago = (iso?: string | null) => {
+  if (!iso) return '';
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return '';
+  const mins = Math.max(0, Math.round((Date.now() - then) / 60000));
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.round(hours / 24);
+  if (days < 30) return `${days} day${days === 1 ? '' : 's'} ago`;
+  return shortDate(iso);
 };
 
-const PaidDashboardScreen: React.FC<PaidDashboardProps> = ({ navigation }) => {
-  const { logout } = useAuthStore();
-  const insets = useSafeAreaInsets();
-  const [isLoading, setIsLoading] = useState(true);
-  const [userData, setUserData] = useState<any>(null);
+/** Website activityIcon. */
+const activityIcon = (type: string) => {
+  const k = String(type || '').toLowerCase();
+  if (k.includes('event') || k.includes('register')) return 'event';
+  if (k.includes('payment') || k.includes('paid')) return 'credit-card';
+  if (k.includes('document') || k.includes('certificate')) return 'description';
+  if (k.includes('profile')) return 'manage-accounts';
+  return 'history';
+};
+const activityTone = (type: string): ChipTone => {
+  const k = String(type || '').toLowerCase();
+  if (k.includes('event') || k.includes('register')) return 'rose';
+  if (k.includes('payment') || k.includes('paid')) return 'green';
+  if (k.includes('document') || k.includes('certificate')) return 'amber';
+  return 'blue';
+};
 
-  useFocusEffect(
-    useCallback(() => {
-      loadUserData();
-    }, [])
+const isPast = (e: any) => {
+  const end = e?.endAt || e?.startAt;
+  return !!end && new Date(end).getTime() < Date.now();
+};
+
+function Fact({ label, value, icon, wide }: { label: string; value: string; icon: string; wide?: boolean }) {
+  return (
+    // `wide` for long identifiers: a half cell cut them mid-ID, and Android's
+    // selectable text ignores numberOfLines and spilled under the button below.
+    <View style={[styles.fact, wide && styles.factWide]}>
+      <View style={styles.factLabelRow}>
+        <Icon name={icon} size={12} color={PALETTE.textFaint} />
+        <Text style={styles.factLabel} numberOfLines={1}>{label}</Text>
+      </View>
+      <Text style={styles.factValue} numberOfLines={wide ? 2 : 1} selectable={!!wide}>{value || '—'}</Text>
+    </View>
   );
+}
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to log out of your account?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Log Out',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Login' as any }],
-            });
-          },
-        },
-      ]
-    );
-  };
+/** A tappable row inside a padded={false} card: leading visual, text block, trailing. */
+function Row({ onPress, last, children, accessibilityLabel }: {
+  onPress: () => void; last?: boolean; children: React.ReactNode; accessibilityLabel?: string;
+}) {
+  return (
+    <PressableScale onPress={onPress} scaleTo={0.985} contentStyle={[styles.row, !last && styles.divider]} accessibilityRole="button" accessibilityLabel={accessibilityLabel}>
+      {children}
+    </PressableScale>
+  );
+}
 
-  const loadUserData = async () => {
-    try {
-      setIsLoading(true);
-      const storedUser = await getUserData();
-      const userId = storedUser?.id || storedUser?.memberId || storedUser?._id;
+const PaidDashboardScreen = ({ navigation }: any) => {
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+  const [application, setApplication] = useState<any>(null);
+  const [hasBusinessRecord, setHasBusinessRecord] = useState(false);
+  const [businessType, setBusinessType] = useState('');
+  const [updates, setUpdates] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+  const [activity, setActivity] = useState<any[]>([]);
+  const [bell, setBell] = useState(0);
+  const [unreadMsgs, setUnreadMsgs] = useState(0);
+  const [exploreKey, setExploreKey] = useState(0);
 
-      let memberName = storedUser?.fullName || storedUser?.name || 'Member';
-      let memberEmail = storedUser?.email || 'member@activ.org';
-      let planType = 'Aspirant Membership';
-      let profilePhoto = storedUser?.profilePhoto || '';
-      let isBusinessUser = false;
-      // The Member ID the server assigned (ACTIV-2026-001). Never made up here.
-      let membershipId = String(storedUser?.membershipNumber || '');
-
-      if (userId) {
-        const [appResResult, profileResResult] = await Promise.allSettled([
-          api.get(`/applications/user/${userId}`),
-          api.get('/members/my-profile')
-        ]);
-
-        if (appResResult.status === 'fulfilled' && appResResult.value) {
-          const appRes = appResResult.value;
-          const appsList = Array.isArray(appRes.data.data)
-            ? appRes.data.data
-            : (appRes.data.applications || []);
-          if (appsList.length > 0) {
-            const app = appsList[0];
-            memberName = app.fullName || app.memberName || memberName;
-            memberEmail = app.email || app.memberEmail || memberEmail;
-
-            const isDoingBusiness =
-              app.doingBusiness === true ||
-              app.data?.doingBusiness === true ||
-              !!app.businessInfo?.companyName ||
-              !!app.data?.businessInfo?.companyName ||
-              app.memberType === 'business' ||
-              app.registrationType === 'business';
-
-            if (isDoingBusiness) {
-              planType = 'Business Membership';
-              isBusinessUser = true;
-            } else {
-              planType = 'Aspirant Membership';
-              isBusinessUser = false;
-            }
-          }
-        } else {
-          console.log('Error loading application data:', appResResult.status === 'rejected' ? appResResult.reason : 'empty response');
-        }
-
-        if (profileResResult.status === 'fulfilled' && profileResResult.value) {
-          const profileRes = profileResResult.value;
-          if (profileRes.data?.success && profileRes.data?.data) {
-            const prof = profileRes.data.data;
-            memberName = prof.fullName || memberName;
-            memberEmail = prof.email || memberEmail;
-            if (prof.profilePhoto) profilePhoto = prof.profilePhoto;
-            membershipId = String(prof.membershipNumber || membershipId || '');
-          }
-        } else {
-          console.log('Error loading profile:', profileResResult.status === 'rejected' ? profileResResult.reason : 'empty response');
-        }
-      }
-
-      setUserData({
-        name: memberName,
-        email: memberEmail,
-        planType,
-        isBusinessUser,
-        status: 'Active',
-        membershipId,
-        profilePhoto,
-      });
-    } catch (error) {
-      console.error('Error loading paid dashboard user data:', error);
-      // No invented member on failure: the screen shows what is known and a
-      // dash for the Member ID rather than somebody else's name and number.
-      setUserData({
-        name: 'Member',
-        email: '',
-        planType: 'Membership',
-        isBusinessUser: false,
-        status: 'Active',
-        membershipId: '',
-        profilePhoto: '',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDownloadCertificate = () => {
-    Alert.alert(
-      'Membership Certificate',
-      `Official ACTIV Membership Certificate for ${userData?.name} (${userData?.membershipId || "—"}) is ready!`,
-      [{ text: 'Download PDF', onPress: () => console.log('Downloading Certificate...') }, { text: 'Close', style: 'cancel' }]
-    );
-  };
-
-  const handleDownloadTaxExemption = () => {
-    const textContent = `
-TAX EXEMPTION CERTIFICATE
-================================
-Member ID: ${userData?.membershipId || "—"}
-Member Name: ${userData?.name}
-Plan Type: ${userData?.planType}
-Status: ACTIVE
-
-This certifies that the member is eligible for
-tax exemption benefits under ACTIV Membership.
-
-Issue Date: ${new Date().toLocaleDateString()}
-================================
-    `.trim();
-
-    Alert.alert('Tax Exemption Certificate', textContent, [
-      { text: 'Close', style: 'cancel' },
+  const load = useCallback(async (mode: 'load' | 'refresh' = 'load') => {
+    if (mode === 'refresh') setRefreshing(true);
+    const [p, biz, comps, apps, ann, evs, acts] = await Promise.allSettled([
+      getMyProfile(), getBusinessInfo(), listMyCompanies(), getMyApplications(),
+      listAnnouncements({ limit: 6 }), listMemberEvents(), getRecentActivity(6),
     ]);
+    const prof = p.status === 'fulfilled' ? p.value : null;
+    if (prof && !isPaidMember(prof)) {
+      navigation.reset({ index: 0, routes: [{ name: 'MemberMain' }] });
+      return;
+    }
+    setProfile(prof);
+    setApplication(apps.status === 'fulfilled' ? pickMostAdvancedApplication(apps.value) : null);
+    let type = '';
+    if (biz.status === 'fulfilled') {
+      const info: any = biz.value || {};
+      setHasBusinessRecord(!!info && (info.doingBusiness === true || !!info.organizationName));
+      const types = asArray<string>(info?.businessTypes).filter(Boolean);
+      if (types.length) type = types.join(', ');
+    }
+    if (!type && comps.status === 'fulfilled') {
+      const first: any = asArray<any>(comps.value)[0];
+      type = [first?.businessType, first?.constitutionType].map((v) => String(v || '').trim()).filter(Boolean).join(' · ');
+    }
+    setBusinessType(type);
+    setUpdates(ann.status === 'fulfilled' ? asArray<any>(ann.value?.announcements) : []);
+    setEvents(evs.status === 'fulfilled' ? asArray<any>(evs.value?.events) : []);
+    setActivity(acts.status === 'fulfilled' ? acts.value : []);
+    setLoading(false);
+    setRefreshing(false);
+  }, [navigation]);
+
+  useFocusEffect(useCallback(() => {
+    load();
+    let cancelled = false;
+    feedUnreadCount().then((n) => { if (!cancelled) setBell(n); });
+    getUnreadMessages().then((n) => { if (!cancelled) setUnreadMsgs(n); }).catch(() => null);
+    return () => { cancelled = true; };
+  }, [load]));
+
+  const refresh = () => {
+    invalidateWebsiteContent();
+    setExploreKey((k) => k + 1);
+    load('refresh');
   };
 
-  const recentActivities = [
-    { title: 'Attended Virtual Networking Event', time: '2 days ago', icon: 'event', color: '#2563EB', bg: '#EFF6FF' },
-    { title: 'Downloaded Tax Exemption', time: '5 days ago', icon: 'description', color: '#059669', bg: '#ECFDF5' },
-    { title: 'Updated Profile Information', time: '1 week ago', icon: 'person', color: '#7C3AED', bg: '#F3E8FF' },
-    { title: 'Joined Industry Workshop', time: '2 weeks ago', icon: 'star', color: '#D97706', bg: '#FEF3C7' },
+  const name = String(profile?.fullName || '').trim() || 'Member';
+  const firstName = name.split(' ').filter(Boolean)[0] || 'Member';
+  const memberId = String(profile?.membershipNumber || '');
+  const applicationRef = formatApplicationRef(application);
+  const membershipType = String(profile?.membershipType || '').trim();
+  const memberSince = profile?.membershipActivatedAt || profile?.approvedAt || '';
+  // Website isPlatinumProfile: case-insensitive.
+  const platinum = String(profile?.membershipTier || '').trim().toLowerCase() === 'platinum';
+  const lifetime = platinum || membershipType.toLowerCase() === 'lifetime';
+  const planTitle = platinum ? 'Platinum Lifetime Membership' : (planLabelFor(resolveApplicantKind(application), hasBusinessRecord) || 'Member');
+  const expiresAt = useMemo(() => {
+    if (lifetime) return '';
+    if (profile?.membershipExpiresAt) return profile.membershipExpiresAt;
+    if (membershipType.toLowerCase() === 'annual' && memberSince) {
+      const d = new Date(memberSince);
+      if (!Number.isNaN(d.getTime())) { d.setFullYear(d.getFullYear() + 1); return d.toISOString(); }
+    }
+    return '';
+  }, [lifetime, profile?.membershipExpiresAt, membershipType, memberSince]);
+
+  const upcoming = useMemo(() => events.filter((e) => !isPast(e))
+    .sort((a, b) => (a?.startAt ? new Date(a.startAt).getTime() : 0) - (b?.startAt ? new Date(b.startAt).getTime() : 0)), [events]);
+  const myEventCount = useMemo(() => events.filter((e) => e?.myRegistration && e.myRegistration.status !== 'cancelled' && !isPast(e)).length, [events]);
+  const block = String(profile?.block || '').trim();
+  const district = String(profile?.district || '').trim();
+  const state = String(profile?.state || '').trim();
+  const abroad = profile?.isInternational === true;
+  const photo = resolveMediaUrl(profile?.profilePhoto);
+  const renewal = profile?.renewal || null;
+  const statusLabel = String(profile?.membershipStatus || 'active').toUpperCase();
+  const activeNow = String(profile?.membershipStatus || 'active').toLowerCase() === 'active';
+  const hour = new Date().getHours();
+  const validUntilLabel = expiresAt ? longDate(expiresAt) : '';
+  const pinnedFirst = useMemo(() => [...updates].sort((a, b) => Number(!!b?.pinned) - Number(!!a?.pinned)), [updates]);
+
+  const documents: { icon: string; label: string; detail: string; tone: ChipTone; verified?: boolean; go: () => void }[] = [
+    { icon: 'workspace-premium', label: 'Membership Certificate', detail: 'View / download', tone: 'blue', verified: true, go: () => navigation.navigate('MemberCertificate', { kind: 'membership' }) },
+    { icon: 'verified-user', label: 'Tax Exemption Certificate', detail: 'View / download', tone: 'green', verified: true, go: () => navigation.navigate('MemberCertificate', { kind: 'tax-exemption' }) },
+    { icon: 'receipt-long', label: 'Payment Receipt', detail: 'View / download', tone: 'sky', go: () => navigation.navigate('PaymentSuccess') },
+    { icon: 'card-membership', label: 'Membership Plan', detail: platinum ? 'Platinum Lifetime' : (planTitle || 'Your plan'), tone: 'amber', go: () => navigation.navigate('MembershipPlanDetails') },
   ];
 
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#352367" />
-        <Text style={styles.loadingText}>Loading Dashboard...</Text>
-      </View>
-    );
-  }
-
-
+  const header = (
+    <DashboardHeader
+      name={name}
+      photo={photo}
+      status={activeNow ? 'verified' : 'pending'}
+      eyebrow={`${greetingFor(hour)} ${greetingEmoji(hour)} · ${todayLabel()}`}
+      title={`Hi, ${firstName} 👋`}
+      subtitle={activeNow ? 'Your membership is active.' : `Membership ${statusLabel.toLowerCase()}`}
+      art={<MemberBadge3D size={92} />}
+      onMenu={() => navigation.navigate('MemberMenu')}
+      onMessages={() => navigation.navigate('MemberMessages')}
+      onBell={() => navigation.navigate('MemberNotifications')}
+      messages={unreadMsgs}
+      bell={bell}
+    >
+      <View style={{ height: SPACE.xl }} />
+    </DashboardHeader>
+  );
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#352367" />
-      
-      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Top Header Section */}
-        <View style={styles.topHeader}>
-          <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }} />
-          <View style={styles.headerInner}>
-            <TouchableOpacity 
-              style={styles.userInfoRow}
-              onPress={() => navigation.navigate('PaidProfile' as any)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.avatarWrap}>
-                {userData?.profilePhoto ? (
-                  <Image source={{ uri: userData.profilePhoto }} style={styles.avatarImage} />
+    <PremiumScrollScreen header={header} refreshing={refreshing} onRefresh={refresh}>
+      {loading ? <PremiumDashboardSkeleton style={styles.overlap} /> : (
+        <>
+          {/* ---------------- membership card */}
+          <FadeInUp delay={180} style={[styles.overlap, styles.gutter]}>
+            <MembershipCard3D
+              name={name}
+              photo={photo}
+              planTitle={planTitle}
+              subtitle={platinum ? 'Lifetime · never renews' : membershipType ? `${membershipType} membership` : 'Membership'}
+              memberId={memberId}
+              since={shortDate(memberSince)}
+              validLabel={lifetime ? 'Validity' : 'Valid until'}
+              validValue={lifetime ? 'Lifetime' : shortDate(expiresAt)}
+              statusLabel={activeNow ? 'Active' : statusLabel}
+              active={activeNow}
+              platinum={platinum}
+              onPress={() => navigation.navigate('MembershipPlanDetails')}
+            />
+          </FadeInUp>
+
+          {/* ---------------- the card's facts */}
+          <FadeInUp delay={240}>
+            <PremiumCard style={[styles.gutter, { marginTop: SPACE.md }]}>
+              <View style={styles.factGrid}>
+                {abroad ? (
+                  <>
+                    <Fact icon="place" label="Place" value={String(profile?.place || profile?.city || '')} />
+                    <Fact icon="public" label="Country" value={String(profile?.country || '')} />
+                  </>
                 ) : (
-                  <Text style={styles.avatarInitial}>
-                    {(userData?.name || 'S').charAt(0).toUpperCase()}
-                  </Text>
+                  <>
+                    <Fact icon="place" label="State" value={state} />
+                    <Fact icon="place" label="District" value={district} />
+                    <Fact icon="place" label="Block" value={block} />
+                  </>
                 )}
+                <Fact icon="work-outline" label="Business type" value={businessType} />
+                <Fact icon="tag" label="Application ID" value={applicationRef} wide />
+                {platinum ? <Fact icon="diamond" label="Tier" value="Platinum Lifetime Member" />
+                  : lifetime ? <Fact icon="all-inclusive" label="Tier" value="Lifetime" /> : null}
               </View>
-              <View style={styles.welcomeTextWrap}>
-                <Text style={styles.welcomeText}>
-                  Welcome back, {(userData?.name || '').split(' ')[0] || 'Member'}
-                </Text>
-                {/*
-                  `planType` is a membership tier — starter, lifetime — and it
-                  was falling back to "TechCorp Solution", a company name, for
-                  anyone whose tier had not loaded. Two unrelated things in one
-                  slot, one of them invented. An unset tier renders nothing.
-                */}
-                {!!userData?.planType && (
-                  <Text style={styles.companyText}>{userData.planType}</Text>
-                )}
-              </View>
-            </TouchableOpacity>
-            
-            <View style={styles.searchWrap}>
-              <TextInput 
-                style={styles.searchInput}
-                placeholder="Search by location..."
-                placeholderTextColor="#6B7280"
+              <GradientButton
+                label="View plan details"
+                iconRight="chevron-right"
+                variant="outline"
+                onPress={() => navigation.navigate('MembershipPlanDetails')}
+                style={{ marginTop: SPACE.lg }}
               />
-            </View>
-          </View>
-        </View>
+            </PremiumCard>
+          </FadeInUp>
 
-        {/* Membership Card */}
-        <View style={styles.cardWrapper}>
-          <LinearGradient
-            colors={['#D283ED', '#F670B3']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.membershipCard}
-          >
-            <View style={styles.cardTopRow}>
-              <View style={styles.pillGroup}>
-                <View style={styles.lifetimePill}>
-                  <Text style={styles.lifetimePillText}>Lifetime</Text>
+          <RenewalBanner renewal={profile?.renewal} onRenew={() => navigation.navigate('MembershipPlans', { renew: true })} />
+
+          {/* ---------------- stats */}
+          <FadeInUp delay={300}>
+            <StatRow style={{ marginTop: SPACE.lg }}>
+              <StatPill value={myEventCount} label="Events booked" icon="event-available" tone="rose" onPress={() => navigation.navigate('MemberEvents')} />
+              <StatPill value={unreadMsgs} label="Unread messages" icon="chat" tone="blue" onPress={() => navigation.navigate('MemberMessages')} />
+              <StatPill value={bell} label="New alerts" icon="notifications" tone="amber" onPress={() => navigation.navigate('MemberNotifications')} />
+            </StatRow>
+          </FadeInUp>
+
+          {/* ---------------- quick actions */}
+          <PremiumSectionHeader title="Quick Actions" subtitle="Access your most used features" />
+          <ActionGrid>
+            <ActionTile icon="event-available" label="Register for Event" detail={myEventCount ? `${myEventCount} booked` : 'Book your seat'} tone="rose" onPress={() => navigation.navigate('MemberEvents')} />
+            <ActionTile icon="manage-accounts" label="Update Profile" detail="Keep details current" tone="green" onPress={() => navigation.navigate('PaidProfile')} />
+            <ActionTile icon="groups" label="Explore Directory" detail="Find fellow members" tone="blue" onPress={() => navigation.navigate('MemberDirectory')} />
+            <ActionTile icon="inventory-2" label="View Products" detail="Your catalogue" tone="amber" onPress={() => navigation.navigate('ProductsServices', {})} />
+          </ActionGrid>
+
+          {/* ---------------- documents */}
+          <PremiumSectionHeader
+            title="My Documents"
+            subtitle="Your important documents in one place"
+            action="View all"
+            onAction={() => navigation.navigate('MemberDocuments')}
+            style={{ marginTop: SPACE.md }}
+          />
+          <PremiumCard padded={false} style={styles.gutter}>
+            {documents.map((d, i) => (
+              <Row key={d.label} onPress={d.go} last={i === documents.length - 1} accessibilityLabel={`${d.label}, ${d.detail}`}>
+                <GradientIconChip icon={d.icon} tone={d.tone} />
+                <View style={styles.rowText}>
+                  <Text style={styles.rowTitle} numberOfLines={1}>{d.label}</Text>
+                  <View style={styles.metaLine}>
+                    {d.verified ? (
+                      <View style={styles.verified}><Icon name="verified" size={11} color={PALETTE.successText} /><Text style={styles.verifiedText}>Verified</Text></View>
+                    ) : null}
+                    <Text style={styles.rowSub} numberOfLines={1}>{d.detail}</Text>
+                  </View>
                 </View>
-                <View style={styles.activePill}>
-                  <Text style={styles.activePillText}>Active</Text>
+                <Icon name="chevron-right" size={22} color={PALETTE.textFaint} />
+              </Row>
+            ))}
+          </PremiumCard>
+
+          {/* ---------------- upcoming events */}
+          <PremiumSectionHeader
+            title="Upcoming Events"
+            subtitle={`Don't miss out on what's next${myEventCount ? ` · ${myEventCount} booked` : ''}`}
+            action="See all"
+            onAction={() => navigation.navigate('MemberEvents')}
+          />
+          <View style={styles.gutter}>
+            {upcoming.length ? upcoming.slice(0, 3).map((e, i) => {
+              const d = e?.startAt ? new Date(e.startAt) : null;
+              const valid = !!d && !Number.isNaN(d.getTime());
+              const registered = e?.myRegistration && e.myRegistration.status !== 'cancelled';
+              const banner = e?.bannerUrl ? resolveMediaUrl(e.bannerUrl) : '';
+              const venue = [e?.venue, e?.district].map((v) => String(v || '').trim()).filter(Boolean).join(', ');
+              return (
+                <FadeInUp key={String(e?.id || i)} delay={i * 70} distance={10}>
+                  <PremiumCard
+                    padded={false}
+                    style={{ marginBottom: SPACE.md }}
+                    onPress={() => navigation.navigate('MemberEventDetail', { id: String(e?.id || '') })}
+                    accessibilityLabel={`${e?.title || 'Untitled event'}${venue ? `, ${venue}` : ''}`}
+                  >
+                    {banner ? (
+                      <View style={styles.poster}>
+                        <Image source={{ uri: banner }} style={styles.posterImg} resizeMode="cover" accessibilityLabel={e?.bannerAlt || ''} />
+                        <LinearGradient colors={['rgba(11,26,69,0)', 'rgba(11,26,69,0.65)']} style={styles.posterShade} />
+                        {e?.category ? <View style={styles.posterCat}><Text style={styles.posterCatText} numberOfLines={1}>{String(e.category).toUpperCase()}</Text></View> : null}
+                      </View>
+                    ) : null}
+                    <View style={styles.eventRow}>
+                      <LinearGradient colors={['#1E3A8A', '#3B82F6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.dateBox}>
+                        <Text style={styles.dateDay} maxFontSizeMultiplier={1.2}>{valid && d ? String(d.getDate()).padStart(2, '0') : '--'}</Text>
+                        <Text style={styles.dateMon} maxFontSizeMultiplier={1.2}>{valid && d ? MONTHS3[d.getMonth()] : 'TBC'}</Text>
+                      </LinearGradient>
+                      <View style={styles.rowText}>
+                        {e?.category && !banner ? <Text style={styles.eventCat} numberOfLines={1}>{e.category}</Text> : null}
+                        <Text style={styles.rowTitle} numberOfLines={2}>{e?.title || 'Untitled event'}</Text>
+                        <View style={styles.metaLine}>
+                          <Icon name="schedule" size={13} color={PALETTE.textMuted} />
+                          <Text style={styles.rowSub} numberOfLines={1}>{e?.startAt ? clockTime(e.startAt) : 'Date to be confirmed'}</Text>
+                        </View>
+                        {venue ? (
+                          <View style={styles.metaLine}>
+                            <Icon name="place" size={13} color={PALETTE.textMuted} />
+                            <Text style={styles.rowSub} numberOfLines={1}>{venue}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      {registered ? (
+                        <View style={styles.regPill}><Icon name="check" size={12} color={PALETTE.successText} /><Text style={styles.regText}>Registered</Text></View>
+                      ) : <Icon name="chevron-right" size={22} color={PALETTE.textFaint} />}
+                    </View>
+                  </PremiumCard>
+                </FadeInUp>
+              );
+            }) : (
+              <PremiumCard>
+                <PremiumEmptyState icon="event" title="Nothing scheduled yet" text="Events open to your membership will appear here." />
+              </PremiumCard>
+            )}
+          </View>
+
+          {/* ---------------- Explore ACTIV (the public website) */}
+          <ExploreActiv navigation={navigation} refreshKey={exploreKey} />
+
+          {/* ---------------- association updates */}
+          <PremiumSectionHeader title="Association Updates" subtitle="Latest news & announcements" action="See all" onAction={() => navigation.navigate('AssociationUpdates')} />
+          <PremiumCard padded={false} style={styles.gutter}>
+            {pinnedFirst.length ? pinnedFirst.slice(0, 3).map((u, i, arr) => {
+              const cat = categoryStyle(u?.category);
+              const banner = u?.bannerUrl ? resolveMediaUrl(u.bannerUrl) : '';
+              return (
+                <Row
+                  key={String(u?.id || i)}
+                  last={i === arr.length - 1}
+                  onPress={() => navigation.navigate('UpdateDetail', { id: String(u?.id || '') })}
+                  accessibilityLabel={u?.title || 'Update'}
+                >
+                  {banner ? <Image source={{ uri: banner }} style={styles.updThumb} /> : (
+                    <GradientIconChip icon={u?.pinned ? 'push-pin' : 'campaign'} tone="amber" />
+                  )}
+                  <View style={styles.rowText}>
+                    <Text style={[styles.updCat, { color: cat.fg }]} numberOfLines={1}>{String(cat.label || '').toUpperCase()}</Text>
+                    <Text style={styles.rowTitle} numberOfLines={2}>{u?.title || 'Update'}</Text>
+                    {u?.summary ? <Text style={styles.rowSub} numberOfLines={2}>{u.summary}</Text> : null}
+                    {u?.publishedAt ? <Text style={styles.updDate}>{shortDate(u.publishedAt)}</Text> : null}
+                  </View>
+                  <Icon name="chevron-right" size={22} color={PALETTE.textFaint} />
+                </Row>
+              );
+            }) : (
+              <PremiumEmptyState icon="campaign" title="No updates yet" text="Notices published for your region appear here first." />
+            )}
+          </PremiumCard>
+
+          {/* ---------------- recent activity */}
+          <PremiumSectionHeader title="Recent Activity" subtitle="Your latest actions" />
+          <PremiumCard padded={false} style={styles.gutter}>
+            {activity.length ? activity.slice(0, 5).map((a, i, arr) => (
+              <View key={String(a?.id || i)} style={[styles.row, i < arr.length - 1 && styles.divider]}>
+                <GradientIconChip icon={activityIcon(a?.type)} tone={activityTone(a?.type)} size={36} />
+                <View style={styles.rowText}>
+                  <Text style={styles.actText} numberOfLines={2}>{a?.description || a?.type || 'Update'}</Text>
+                  <Text style={styles.rowSub}>{ago(a?.at)}</Text>
                 </View>
               </View>
-              <Icon name="emoji-events" size={24} color="#FDE047" />
+            )) : (
+              <PremiumEmptyState icon="history" title="Nothing yet" text="Activity appears here as your account changes." />
+            )}
+          </PremiumCard>
+
+          {/* ---------------- More opportunities await (website closing band) */}
+          <PremiumCard style={[styles.gutter, { marginTop: SPACE.xl }]}>
+            <View style={styles.moreHead}>
+              <GradientIconChip icon="auto-awesome" tone="blue" size={SIZE.touch} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.moreTitle}>More opportunities await</Text>
+                <Text style={styles.rowSub}>Your membership is what opens them.</Text>
+              </View>
             </View>
-            
-            <View style={styles.cardMidSection}>
-              <Text style={styles.memberSinceLabel}>Member since</Text>
-              <Text style={styles.memberSinceDate}>January 15, 2020</Text>
+            <View style={styles.moreBlock}>
+              <Text style={styles.moreLabel}>Your membership plan</Text>
+              <View style={styles.moreRow}>
+                <Text style={styles.moreValue}>{planTitle}</Text>
+                <View style={styles.regPill}><Text style={styles.regText}>{statusLabel}</Text></View>
+              </View>
+              {validUntilLabel || lifetime ? (
+                <>
+                  <Text style={[styles.moreLabel, { marginTop: SPACE.md }]}>Next renewal</Text>
+                  <Text style={styles.moreValue}>{lifetime ? 'No renewal needed' : validUntilLabel}</Text>
+                  {!lifetime && renewal?.canRenew ? (
+                    <GradientButton
+                      label="Renew now"
+                      icon="autorenew"
+                      variant="outline"
+                      onPress={() => navigation.navigate('MembershipPlans', { renew: true })}
+                      style={{ alignSelf: 'flex-start', marginTop: SPACE.sm }}
+                    />
+                  ) : !lifetime && renewal?.opensAt ? (
+                    <Text style={[styles.rowSub, { marginTop: SPACE.xs }]}>Renewal opens on {longDate(renewal.opensAt)}</Text>
+                  ) : null}
+                </>
+              ) : null}
             </View>
+            <GradientButton label="View plan details" iconRight="arrow-forward" onPress={() => navigation.navigate('MembershipPlanDetails')} style={{ marginTop: SPACE.lg }} />
+          </PremiumCard>
 
-            <View style={styles.cardBottomSection}>
-              <Text style={styles.memberIdText}>Member ID: {userData?.membershipId || '—'}</Text>
-            </View>
-          </LinearGradient>
-        </View>
-
-        {/* Official Documents Section */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Official Documents</Text>
-          <Text style={styles.sectionSubtitle}>
-            Access and download essential documents related to your account
-          </Text>
-
-          <TouchableOpacity style={styles.certBtnBlue} onPress={handleDownloadCertificate} activeOpacity={0.8}>
-            <View style={styles.certIconWrap}>
-              <Icon name="verified-user" size={20} color="#1E293B" />
-              <Text style={styles.certBtnTextBlue}>Download Membership Certificate</Text>
-            </View>
-            <Icon name="file-download" size={20} color="#3B82F6" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.certBtnGreen} onPress={handleDownloadTaxExemption} activeOpacity={0.8}>
-            <View style={styles.certIconWrap}>
-              <Icon name="volunteer-activism" size={20} color="#1E293B" />
-              <Text style={styles.certBtnTextGreen}>Download Tax Exemption Certificate</Text>
-            </View>
-            <Icon name="file-download" size={20} color="#16A34A" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Quick Actions Grid */}
-        <View style={styles.gridContainer}>
-          <TouchableOpacity style={styles.gridItem} onPress={() => navigation.navigate('PaidProfile' as any)} activeOpacity={0.8}>
-            <Icon name="person-outline" size={32} color="#2563EB" />
-            <Text style={styles.gridItemText}>Profile</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.gridItem} onPress={() => Alert.alert('Events', 'Upcoming workshops.')} activeOpacity={0.8}>
-            <Icon name="calendar-today" size={28} color="#2563EB" style={{ marginBottom: 4 }} />
-            <Text style={styles.gridItemText}>Events</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.gridItem} onPress={() => Alert.alert('Support', 'Contact ACTIV support.')} activeOpacity={0.8}>
-            <Icon name="headset-mic" size={28} color="#2563EB" style={{ marginBottom: 4 }} />
-            <Text style={styles.gridItemText}>Support</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.gridItem} 
-            onPress={() => navigation.navigate('PaidSettings' as any)} 
-            activeOpacity={0.8}
-          >
-            <Icon name="settings" size={30} color="#2563EB" style={{ marginBottom: 2 }} />
-            <Text style={styles.gridItemText}>Settings</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Extra Features Based on Logic */}
-        {userData?.isBusinessUser && (
-          <View style={styles.businessBannerCard}>
-            <View style={styles.businessCardTextWrap}>
-              <Text style={styles.businessBannerTitle}>Business Dashboard</Text>
-              <Text style={styles.businessBannerSub}>Manage catalog, companies, analytics & sales</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.businessOpenBtn}
-              onPress={() => navigation.navigate('BusinessDashboard')}
-              activeOpacity={0.85}
+          {/* ---------------- platinum invitation (website PlatinumShowcase) */}
+          {!platinum ? (
+            <PressableScale
+              onPress={() => navigation.navigate('PlatinumRequest')}
+              accessibilityRole="button"
+              accessibilityLabel="Platinum Lifetime Membership. Ask the ACTIV office to call you."
+              style={{ marginTop: SPACE.xl }}
+              scaleTo={0.985}
             >
-              <Text style={styles.businessOpenBtnText}>Open</Text>
-              <Icon name="chevron-right" size={16} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <View style={styles.cardSection}>
-          <Text style={styles.cardSectionTitle}>Recent Activity</Text>
-          {recentActivities.map((act, idx) => (
-            <View key={idx} style={[styles.activityItemRow, idx === recentActivities.length - 1 && { borderBottomWidth: 0 }]}>
-              <View style={[styles.activityIconBox, { backgroundColor: act.bg }]}>
-                <Icon name={act.icon} size={18} color={act.color} />
-              </View>
-              <View style={styles.activityTextWrap}>
-                <Text style={styles.activityTitle}>{act.title}</Text>
-                <Text style={styles.activityTime}>{act.time}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-
-      </ScrollView>
-    </View>
+              <GradientPanel colors={GRADIENTS.platinum} padding={SPACE.lg}>
+                <View style={styles.platRow}>
+                  <View style={styles.platIcon}><Icon name="diamond" size={24} color={PALETTE.disabled} /></View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.platTitle}>Platinum Lifetime Membership</Text>
+                    <Text style={styles.platText}>Membership for life. Ask the ACTIV office to call you.</Text>
+                  </View>
+                  <Icon name="chevron-right" size={22} color={PALETTE.disabled} />
+                </View>
+              </GradientPanel>
+            </PressableScale>
+          ) : null}
+        </>
+      )}
+    </PremiumScrollScreen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 90,
-  },
-  topHeader: {
-    backgroundColor: '#352367',
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    paddingBottom: 24,
-  },
-  headerInner: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-  },
-  userInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  avatarWrap: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#F3E8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-    marginRight: 12,
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarInitial: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#7C3AED',
-  },
-  welcomeTextWrap: {
-    flex: 1,
-  },
-  welcomeText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  companyText: {
-    fontSize: 13,
-    color: '#E5E7EB',
-    marginTop: 2,
-  },
-  searchWrap: {
-    backgroundColor: '#EAEBFA',
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    height: 48,
-    justifyContent: 'center',
-  },
-  searchInput: {
-    fontSize: 14,
-    color: '#1F2937',
-  },
-  cardWrapper: {
-    paddingHorizontal: 20,
-    marginTop: 20,
-  },
-  membershipCard: {
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#EC4899',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  cardTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  pillGroup: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  lifetimePill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  lifetimePillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  activePill: {
-    backgroundColor: '#16A34A',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  activePillText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  cardMidSection: {
-    marginTop: 20,
-  },
-  memberSinceLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    opacity: 0.9,
-  },
-  memberSinceDate: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginTop: 4,
-  },
-  cardBottomSection: {
-    marginTop: 12,
-  },
-  memberIdText: {
-    fontSize: 13,
-    color: '#FFFFFF',
-    opacity: 0.9,
-    fontWeight: '500',
-  },
-  sectionContainer: {
-    paddingHorizontal: 20,
-    marginTop: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  sectionSubtitle: {
-    fontSize: 13,
-    color: '#64748B',
-    marginTop: 4,
-    marginBottom: 16,
-    lineHeight: 18,
-  },
-  certBtnBlue: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#D0E5FF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-  },
-  certBtnTextBlue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginLeft: 10,
-  },
-  certBtnGreen: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#CCF0D6',
-    borderRadius: 16,
-    padding: 16,
-  },
-  certBtnTextGreen: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginLeft: 10,
-  },
-  certIconWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginTop: 24,
-  },
-  gridItem: {
-    width: '48%',
-    backgroundColor: '#EEF2FF',
-    borderRadius: 20,
-    paddingVertical: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  gridItemText: {
-    marginTop: 8,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E293B',
-  },
-  businessBannerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
-    marginHorizontal: 20,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  businessCardTextWrap: {
-    flex: 1,
-    marginRight: 10,
-  },
-  businessBannerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#0F172A',
-  },
-  businessBannerSub: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  businessOpenBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#6366F1',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 14,
-    gap: 4,
-  },
-  businessOpenBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  cardSection: {
-    paddingHorizontal: 20,
-    marginTop: 24,
-  },
-  cardSectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 14,
-  },
-  activityItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  activityIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  activityTextWrap: {
-    flex: 1,
-  },
-  activityTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1E293B',
-  },
-  activityTime: {
-    fontSize: 11,
-    color: '#94A3B8',
-    marginTop: 2,
-  },
-  bottomNavContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  navItem: {
-    alignItems: 'center',
-  },
-  navLabel: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: '#9CA3AF',
-    marginTop: 4,
-  },
-  navLabelActive: {
-    color: '#352367',
-    fontWeight: '600',
-  },
+  gutter: { marginHorizontal: SPACE.lg },
+  overlap: { marginTop: -PREMIUM_OVERLAP },
+
+  factGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: SPACE.lg },
+  fact: { width: '50%', paddingRight: SPACE.sm },
+  factWide: { width: '100%', paddingRight: 0 },
+  factLabelRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs },
+  factLabel: { ...TYPE.eyebrow, fontSize: 10, lineHeight: 13, flexShrink: 1 },
+  factValue: { ...TYPE.bodyStrong, marginTop: SPACE.xs, fontVariant: ['tabular-nums'] },
+
+  row: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, paddingHorizontal: SPACE.lg, paddingVertical: SPACE.md, minHeight: SIZE.row + 8 },
+  rowText: { flex: 1, minWidth: 0 },
+  rowTitle: { ...TYPE.subheading },
+  rowSub: { ...TYPE.caption, fontWeight: '400', flexShrink: 1 },
+  divider: { borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: PALETTE.divider },
+  metaLine: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs, marginTop: SPACE.xxs },
+  verified: { flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: PALETTE.successSoft, borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1 },
+  verifiedText: { fontSize: 10.5, fontWeight: '800', color: PALETTE.successText },
+
+  poster: { height: 132, borderTopLeftRadius: 21, borderTopRightRadius: 21, overflow: 'hidden', backgroundColor: PALETTE.field },
+  posterImg: { width: '100%', height: '100%' },
+  posterShade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 60 },
+  posterCat: { position: 'absolute', left: SPACE.md, bottom: SPACE.sm, backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 999, paddingHorizontal: SPACE.sm, paddingVertical: 2, maxWidth: '70%' },
+  posterCatText: { fontSize: 10, lineHeight: 14, fontWeight: '800', color: PALETTE.white, letterSpacing: 0.8 },
+  eventRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, padding: SPACE.md },
+  dateBox: { width: 52, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  dateDay: { fontSize: 20, lineHeight: 24, fontWeight: '800', color: PALETTE.white, fontVariant: ['tabular-nums'] },
+  dateMon: { fontSize: 10, lineHeight: 13, fontWeight: '800', color: 'rgba(255,255,255,0.9)', letterSpacing: 1 },
+  eventCat: { ...TYPE.eyebrow, fontSize: 10, lineHeight: 13, marginBottom: SPACE.xxs },
+  regPill: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: PALETTE.successSoft, borderRadius: 999, paddingHorizontal: SPACE.sm, minHeight: 24 },
+  regText: { fontSize: 11, fontWeight: '800', color: PALETTE.successText },
+
+  updThumb: { width: SIZE.iconChip + 16, height: SIZE.iconChip + 2, borderRadius: RADIUS.sm, backgroundColor: PALETTE.field },
+  updCat: { ...TYPE.eyebrow, fontSize: 10, lineHeight: 13, marginBottom: SPACE.xxs },
+  updDate: { fontSize: 11, lineHeight: 15, color: PALETTE.textFaint, marginTop: SPACE.xs },
+
+  actText: { ...TYPE.bodyStrong, fontWeight: '500' },
+
+  moreHead: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
+  moreTitle: { ...TYPE.heading, fontSize: 17, lineHeight: 23 },
+  moreBlock: { marginTop: SPACE.lg, padding: SPACE.lg, borderRadius: 18, backgroundColor: PALETTE.blueTint, borderWidth: 1, borderColor: PALETTE.primarySoft },
+  moreLabel: { ...TYPE.eyebrow, fontSize: 10, lineHeight: 13 },
+  moreRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.xs },
+  moreValue: { ...TYPE.subheading, flexShrink: 1 },
+
+  platRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
+  platIcon: { width: SIZE.touch, height: SIZE.touch, borderRadius: RADIUS.md, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
+  platTitle: { ...TYPE.subheading, color: PALETTE.white },
+  platText: { ...TYPE.caption, fontWeight: '400', color: 'rgba(255,255,255,0.8)', marginTop: SPACE.xxs },
 });
 
 export default PaidDashboardScreen;
