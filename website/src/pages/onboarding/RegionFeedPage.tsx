@@ -84,20 +84,12 @@ export default function RegionFeedPage({ scope }: { scope: 'region' | 'state' })
             <HeaderSection />
 
             <main className="flex-grow">
-<<<<<<< HEAD
                 <div className={`${SCREEN_CONTAINER} py-6 sm:py-10 md:py-14`}>
-=======
-                <div className={`${SCREEN_CONTAINER} py-10 md:py-14`}>
->>>>>>> 8020f5d (Initial commit for website frontend)
                     <Link
                         to={backTo}
                         className="inline-flex items-center gap-2 text-gray-500 hover:text-brand-700
                                    font-bold text-[1rem] uppercase tracking-[0.1em]
-<<<<<<< HEAD
                                    transition-colors mb-5 sm:mb-8 min-h-[40px]"
-=======
-                                   transition-colors mb-8"
->>>>>>> 8020f5d (Initial commit for website frontend)
                     >
                         <ArrowLeft size={15} /> Back
                     </Link>
@@ -105,11 +97,7 @@ export default function RegionFeedPage({ scope }: { scope: 'region' | 'state' })
                     {data?.title && (
                         <p className={`${MICRO_LABEL} text-gray-400 mb-2`}>{data.title}</p>
                     )}
-<<<<<<< HEAD
                     <h1 className={`${SECTION_HEADING} text-brand-800 mb-5 sm:mb-8 break-words`}>{heading}</h1>
-=======
-                    <h1 className={`${SECTION_HEADING} text-brand-800 mb-8`}>{heading}</h1>
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                     {loading && (
                         <div className="animate-pulse space-y-3">
@@ -134,20 +122,12 @@ export default function RegionFeedPage({ scope }: { scope: 'region' | 'state' })
                             />
 
                             {total > PAGE_SIZE && (
-<<<<<<< HEAD
                                 <div className="mt-6 sm:mt-8 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
-=======
-                                <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     <p className="text-[1.125rem] font-semibold text-gray-500">
                                         Showing <span className="font-extrabold text-brand-800">{from}–{to}</span>
                                         {' '}of <span className="font-extrabold text-brand-800">{total}</span>
                                     </p>
-<<<<<<< HEAD
                                     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-=======
-                                    <div className="flex items-center gap-3">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         {/*
                                           * Disabled at the ends rather than
                                           * hidden: a control that vanishes moves
@@ -159,11 +139,7 @@ export default function RegionFeedPage({ scope }: { scope: 'region' | 'state' })
                                             disabled={offset <= 0}
                                             onClick={() => goTo(Math.max(0, offset - PAGE_SIZE))}
                                             className="inline-flex items-center gap-2 rounded-full border
-<<<<<<< HEAD
                                                        border-brand-200 px-4 sm:px-5 py-2.5 text-[1rem] font-bold
-=======
-                                                       border-brand-200 px-5 py-2.5 text-[1rem] font-bold
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                        uppercase tracking-[0.1em] text-brand-700 transition-colors
                                                        hover:bg-brand-50 disabled:opacity-40
                                                        disabled:cursor-not-allowed disabled:hover:bg-transparent"
@@ -175,11 +151,7 @@ export default function RegionFeedPage({ scope }: { scope: 'region' | 'state' })
                                             disabled={to >= total}
                                             onClick={() => goTo(offset + PAGE_SIZE)}
                                             className="inline-flex items-center gap-2 rounded-full bg-brand-800
-<<<<<<< HEAD
                                                        px-4 sm:px-5 py-2.5 text-[1rem] font-bold uppercase
-=======
-                                                       px-5 py-2.5 text-[1rem] font-bold uppercase
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                        tracking-[0.1em] text-white transition-colors
                                                        hover:bg-brand-700 disabled:opacity-40
                                                        disabled:cursor-not-allowed disabled:hover:bg-brand-800"

@@ -397,21 +397,13 @@ export default function LegalManager() {
                             <div
                                 key={d.slug}
                                 className={
-<<<<<<< HEAD
                                     'flex flex-wrap items-center gap-3 rounded-xl border px-3 sm:px-4 py-3 '
-=======
-                                    'flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 '
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     + (slug === d.slug
                                         ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/25'
                                         : 'border-slate-200 dark:border-[#262626]')
                                 }
                             >
-<<<<<<< HEAD
                                 <div className="min-w-0 flex-1 basis-[12rem]">
-=======
-                                <div className="min-w-0 flex-1">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     <p className="truncate text-[1.25rem] font-bold text-slate-900 dark:text-white">
                                         {d.title || d.slug}
                                     </p>
@@ -425,11 +417,7 @@ export default function LegalManager() {
                                             why their page 404s for everybody else. */}
                                         {d.status === 'draft' && (
                                             <span className="inline-flex items-center gap-1 rounded-full
-<<<<<<< HEAD
                                                              bg-amber-100 px-2 py-0.5 text-[1.0625rem] font-semibold
-=======
-                                                             bg-amber-100 px-2 py-0.5 text-[1rem] font-semibold
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                              text-amber-800 dark:bg-amber-950/50
                                                              dark:text-amber-300">
                                                 <EyeOff className="w-3 h-3" /> Off the site
@@ -486,11 +474,7 @@ export default function LegalManager() {
                                   + 'or on the site, until you do.'
                         }
                         actions={
-<<<<<<< HEAD
                             <div className="flex flex-wrap gap-2">
-=======
-                            <div className="flex gap-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 {!!draft.version && publicUrl && (
                                     <a
                                         href={publicUrl}
@@ -649,11 +633,7 @@ export default function LegalManager() {
                                     <div
                                         key={i}
                                         className="rounded-xl border border-slate-200 dark:border-[#262626]
-<<<<<<< HEAD
                                                    bg-slate-50/60 dark:bg-[#0A0A0A] p-3 sm:p-4"
-=======
-                                                   bg-slate-50/60 dark:bg-[#0A0A0A] p-4"
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     >
                                         <div className="flex items-start justify-between gap-3 mb-3">
                                             {/*
@@ -791,13 +771,8 @@ export default function LegalManager() {
                           position an editor is actually in when they want it.
                           The same button, not a second save path.
                         */}
-<<<<<<< HEAD
                         <div className="mt-6 sm:mt-8 flex flex-wrap items-center gap-3 border-t
                                         border-slate-200 pt-5 sm:pt-6 dark:border-[#1f1f1f]">
-=======
-                        <div className="mt-8 flex flex-wrap items-center gap-3 border-t
-                                        border-slate-200 pt-6 dark:border-[#1f1f1f]">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             <SaveButton loading={saving} />
                             <CmsButton type="button" variant="ghost" onClick={() => setDraft(null)}>
                                 Cancel
@@ -833,11 +808,7 @@ export default function LegalManager() {
                             <div
                                 key={r.version}
                                 className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between
-<<<<<<< HEAD
                                            rounded-xl border border-slate-200 dark:border-[#262626] px-3 sm:px-4 py-3"
-=======
-                                           rounded-xl border border-slate-200 dark:border-[#262626] px-4 py-3"
->>>>>>> 8020f5d (Initial commit for website frontend)
                             >
                                 <div className="min-w-0">
                                     <p className="text-[1.1875rem] font-semibold text-slate-900 dark:text-white">

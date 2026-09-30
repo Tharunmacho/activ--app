@@ -1,9 +1,5 @@
-<<<<<<< HEAD
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, useId } from 'react';
 import { createPortal } from 'react-dom';
-=======
-import { useState, useEffect, useMemo, useRef, useCallback, useId } from 'react';
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { Search, ChevronDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -172,12 +168,9 @@ export function PhoneInput({
     const [highlight, setHighlight] = useState(0);
 
     const rootRef = useRef<HTMLDivElement>(null);
-<<<<<<< HEAD
     /* The panel lives in a portal (see below), so it is not inside `rootRef`. */
     const panelRef = useRef<HTMLDivElement>(null);
     const [panelPos, setPanelPos] = useState<{ top: number; left: number; width: number; up: boolean } | null>(null);
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     const searchRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
     const listId = useId();
@@ -240,16 +233,10 @@ export function PhoneInput({
         if (!open) return undefined;
         const onDocPointerDown = (event: MouseEvent | TouchEvent) => {
             const node = rootRef.current;
-<<<<<<< HEAD
             const target = event.target instanceof Node ? event.target : null;
             if (!target) return;
             if (node?.contains(target) || panelRef.current?.contains(target)) return;
             setOpen(false);
-=======
-            if (node && event.target instanceof Node && !node.contains(event.target)) {
-                setOpen(false);
-            }
->>>>>>> 8020f5d (Initial commit for website frontend)
         };
         document.addEventListener('mousedown', onDocPointerDown);
         document.addEventListener('touchstart', onDocPointerDown);
@@ -269,7 +256,6 @@ export function PhoneInput({
         return () => window.clearTimeout(timer);
     }, [open]);
 
-<<<<<<< HEAD
     /*
      * ============================================================================
      * THE PANEL IS DRAWN IN A PORTAL, positioned under the field
@@ -309,8 +295,6 @@ export function PhoneInput({
         };
     }, [open]);
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     /** Keep the highlighted row in view while the arrows walk the list. */
     useEffect(() => {
         if (!open) return;
@@ -425,7 +409,6 @@ export function PhoneInput({
                 />
             </div>
 
-<<<<<<< HEAD
             {open && panelPos && typeof document !== 'undefined' && createPortal(
                 <div
                     ref={panelRef}
@@ -438,12 +421,6 @@ export function PhoneInput({
                     }}
                     className={cn(
                         'z-[1000] overflow-hidden rounded-md border border-slate-200',
-=======
-            {open && (
-                <div
-                    className={cn(
-                        'absolute left-0 right-0 z-50 mt-1 overflow-hidden rounded-md border border-slate-200',
->>>>>>> 8020f5d (Initial commit for website frontend)
                         'bg-white shadow-lg',
                     )}
                 >
@@ -505,12 +482,8 @@ export function PhoneInput({
                             </div>
                         ))}
                     </div>
-<<<<<<< HEAD
                 </div>,
                 document.body,
-=======
-                </div>
->>>>>>> 8020f5d (Initial commit for website frontend)
             )}
         </div>
     );

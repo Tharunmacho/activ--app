@@ -2,11 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import {
     getContactInfo, updateContactInfo, errorMessage,
-<<<<<<< HEAD
     EMPTY_MEDIA, EMPTY_CONTACT, SOCIAL_PLATFORMS, type ContactInfo, type CmsMedia, type CmsSectionOverride,
-=======
-    EMPTY_MEDIA, type ContactInfo, type CmsMedia, type CmsSectionOverride,
->>>>>>> 8020f5d (Initial commit for website frontend)
 } from '@/services/cmsApi';
 import {
     CmsField,
@@ -25,11 +21,8 @@ import {
 } from './components/CmsUI';
 import { LineList, IconPicker , ExtraFieldsEditor } from './components/CmsEditors';
 import MediaPicker from './components/MediaPicker';
-<<<<<<< HEAD
 import OfficesEditor from './components/OfficesEditor';
 import { SocialButtons, SOCIAL_META, socialHref, withThreads } from '@/components/shared/SocialLinks';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * The contact page.
@@ -97,12 +90,9 @@ export default function ContactManager() {
     const setForm = (patch: Partial<ContactInfo['formCard']>) => set({ formCard: { ...info.formCard, ...patch } });
     const setInfoCard = (patch: Partial<ContactInfo['infoCard']>) => set({ infoCard: { ...info.infoCard, ...patch } });
     const setBanner = (patch: Partial<ContactInfo['banner']>) => set({ banner: { ...info.banner, ...patch } });
-<<<<<<< HEAD
     const setBand = (patch: Partial<ContactInfo['regionsBand']>) => set({
         regionsBand: { ...EMPTY_CONTACT.regionsBand, ...(info.regionsBand || {}), ...patch },
     });
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     const setHeroMedia = (index: number, media: CmsMedia) =>
         set({ heroMedia: info.heroMedia.map((m, i) => (i === index ? media : m)) });
@@ -190,13 +180,8 @@ export default function ContactManager() {
                         ) : (
                             <div className="space-y-4">
                                 {info.heroMedia.map((media, i) => (
-<<<<<<< HEAD
                                     <div key={i} className="border border-slate-200 dark:border-[#2a2a2a] rounded-lg p-3 sm:p-4">
                                         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-=======
-                                    <div key={i} className="border border-slate-200 dark:border-[#2a2a2a] rounded-lg p-4">
-                                        <div className="flex items-center justify-between mb-3">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                             <span className="text-[1.0625rem] font-semibold uppercase tracking-wider text-neutral-400">
                                                 {i === 0 ? 'Large frame' : 'Small frame'}
                                             </span>
@@ -359,7 +344,6 @@ export default function ContactManager() {
                         />
                     </CmsField>
 
-<<<<<<< HEAD
                     <CmsSection title="Headings" hint="The small headings above each detail. Blank leaves a heading out.">
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                             <CmsField label="Address heading">
@@ -382,91 +366,6 @@ export default function ContactManager() {
                         hint="One per state. Visitors switch between them on the Contact page; the head office is shown first. A detail left blank is not shown."
                     >
                         <OfficesEditor offices={info.offices || []} onChange={offices => set({ offices })} />
-=======
-                    <CmsSection title="Details" hint="A detail left blank is not shown on the page at all.">
-                        <div className="space-y-5">
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <CmsField label="Address heading">
-                                <CmsInput
-                                    value={info.infoCard.addressLabel}
-                                    onChange={e => setInfoCard({ addressLabel: e.target.value })}
-                                    placeholder="Head Office Address"
-                                />
-                            </CmsField>
-                            <LineList
-                                label="Address"
-                                hint="One line per row, as it should appear."
-                                value={info.addressLines}
-                                onChange={addressLines => set({ addressLines })}
-                            />
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-3">
-                            <CmsField label="Phone heading">
-                                <CmsInput
-                                    value={info.infoCard.phoneLabel}
-                                    onChange={e => setInfoCard({ phoneLabel: e.target.value })}
-                                    placeholder="Phone Number"
-                                />
-                            </CmsField>
-                            <CmsField label="Primary phone">
-                                <CmsInput
-                                    value={info.phone}
-                                    onChange={e => set({ phone: e.target.value })}
-                                    placeholder="+91 8220012188"
-                                />
-                            </CmsField>
-                            <CmsField label="Alternate phone" hint="Optional.">
-                                <CmsInput
-                                    value={info.alternatePhone}
-                                    onChange={e => set({ alternatePhone: e.target.value })}
-                                />
-                            </CmsField>
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <CmsField label="Email heading">
-                                <CmsInput
-                                    value={info.infoCard.emailLabel}
-                                    onChange={e => setInfoCard({ emailLabel: e.target.value })}
-                                    placeholder="Email Address"
-                                />
-                            </CmsField>
-                            <CmsField label="Email">
-                                <CmsInput
-                                    type="email"
-                                    value={info.email}
-                                    onChange={e => set({ email: e.target.value })}
-                                    placeholder="info@activ.org.in"
-                                />
-                            </CmsField>
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <CmsField label="Hours heading">
-                                <CmsInput
-                                    value={info.infoCard.hoursLabel}
-                                    onChange={e => setInfoCard({ hoursLabel: e.target.value })}
-                                    placeholder="Working Hours"
-                                />
-                            </CmsField>
-                            <LineList
-                                label="Working hours"
-                                value={info.workingHours}
-                                onChange={workingHours => set({ workingHours })}
-                                rows={3}
-                                placeholder={'Mon - Sat : 9.00 AM - 6.00 PM\nSunday : Closed'}
-                            />
-                        </div>
-
-                        <CmsField label="Map embed URL" hint="The src of a Google Maps embed. Blank hides the map.">
-                            <CmsInput
-                                value={info.mapEmbedUrl}
-                                onChange={e => set({ mapEmbedUrl: e.target.value })}
-                            />
-                        </CmsField>
-                        </div>
->>>>>>> 8020f5d (Initial commit for website frontend)
                     </CmsSection>
                 </div>
             </CmsStep>
@@ -524,7 +423,6 @@ export default function ContactManager() {
                 )}
             </CmsStep>
 
-<<<<<<< HEAD
             {/* ============================================== regions band */}
             {/*
               * The six region tiles above the footer, as THIS page draws them.
@@ -577,13 +475,10 @@ export default function ContactManager() {
                 )}
             </CmsStep>
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
             {/* ============================================== socials */}
             <CmsStep
                 sectionKey="contact.social"
                 ownFields={false}
-<<<<<<< HEAD
                 step="Section 6"
                 title="Social media"
                 hint="Your association's own profiles. Each one set here becomes a button in the site footer, on the Contact page and in the phone menu. Blank = no button."
@@ -639,26 +534,6 @@ export default function ContactManager() {
             </CmsStep>
 
             <CmsStep ownFields={false} step="Section 7" title="Your own fields" hint="Extra rows on the page, under the details card.">
-=======
-                step="Section 5"
-                title="Social links"
-                hint="Used elsewhere on the site. The footer's own social buttons are under Header & Footer."
-            >
-                <div className="grid gap-4 sm:grid-cols-2">
-                    {(['facebook', 'instagram', 'linkedin', 'youtube'] as const).map((key) => (
-                        <CmsField key={key} label={key[0].toUpperCase() + key.slice(1)}>
-                            <CmsInput
-                                value={info.social[key]}
-                                onChange={e => set({ social: { ...info.social, [key]: e.target.value } })}
-                                placeholder={`https://${key}.com/…`}
-                            />
-                        </CmsField>
-                    ))}
-                </div>
-            </CmsStep>
-
-            <CmsStep ownFields={false} step="Section 6" title="Your own fields" hint="Extra rows on the page, under the details card.">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 {/* `bare`: the card is already called “Your own fields”. */}
                 <ExtraFieldsEditor
                     bare

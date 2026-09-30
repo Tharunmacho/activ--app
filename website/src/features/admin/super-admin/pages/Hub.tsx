@@ -6,15 +6,9 @@ import {
 import { useNavigate } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
 import { toast } from 'sonner';
-<<<<<<< HEAD
 import { apiFetch, getSuperOverview, getTeamOverview, getStoredRole, approveApplication, rejectApplication, errorMessage } from '@/services/activApi';
 import ApplicantDecisionRow from '@/features/admin/components/ApplicantDecisionRow';
 import { ADMIN_COLUMN, ADMIN_PAGE, AdminStat } from '@/features/admin/components/AdminUI';
-=======
-import { apiFetch, getSuperOverview, approveApplication, rejectApplication, errorMessage } from '@/services/activApi';
-import ApplicantDecisionRow from '@/features/admin/components/ApplicantDecisionRow';
-import { ADMIN_PAGE, AdminStat } from '@/features/admin/components/AdminUI';
->>>>>>> 8020f5d (Initial commit for website frontend)
 import useApplicantDetail from '@/features/admin/components/useApplicantDetail';
 import ProfileViewModal from '@/components/ui/profile-view-modal';
 
@@ -141,13 +135,9 @@ export default function Hub() {
     const { openDetail, target, detailProps } = useApplicantDetail();
 
     useEffect(() => {
-<<<<<<< HEAD
         // The same Hub serves the State and District admins, and the super
         // overview refuses them (403) — so they ask for their own region's.
         (getStoredRole() === 'super_admin' ? getSuperOverview() : getTeamOverview())
-=======
-        getSuperOverview()
->>>>>>> 8020f5d (Initial commit for website frontend)
             .then((data) => {
                 setOverview(data);
                 // An empty object means the request resolved with nothing usable.
@@ -288,27 +278,18 @@ export default function Hub() {
                   * a line of its own above the heading — 40px of bar spent on
                   * one 20px glyph.
                   */}
-<<<<<<< HEAD
                 <header className="bg-white border-b border-slate-200 px-4 sm:px-5 lg:px-8 py-4 sm:py-5">
                   {/* Centred on the cards' column (`ADMIN_COLUMN`) with the
                       page's own padding, so the title lines up with the first
                       card instead of hanging to the left of it. */}
                   <div className={`${ADMIN_COLUMN} flex items-start gap-2 sm:gap-3`}>
                     <button className="lg:hidden shrink-0 -ml-2 -mt-1.5 grid h-10 w-10 place-items-center rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-=======
-                <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-4 flex items-start gap-2 sm:gap-3">
-                    <button className="lg:hidden shrink-0 mt-1 text-slate-500 hover:text-slate-900"
->>>>>>> 8020f5d (Initial commit for website frontend)
                             onClick={() => setSidebarOpen(true)} aria-label="Open menu">
                         <Menu className="w-5 h-5" />
                     </button>
 
                     {level !== 'tiers' && (
-<<<<<<< HEAD
                         <button onClick={back} className="shrink-0 -mt-1.5 grid h-10 w-10 place-items-center rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-50" aria-label="Back">
-=======
-                        <button onClick={back} className="shrink-0 mt-1 text-slate-500 hover:text-slate-900" aria-label="Back">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             <ArrowLeft className="w-5 h-5" />
                         </button>
                     )}
@@ -326,10 +307,7 @@ export default function Hub() {
                                 .filter(Boolean).join(', ')}
                         </p>
                     </div>
-<<<<<<< HEAD
                   </div>
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                 </header>
 
                 <main className={ADMIN_PAGE}>
@@ -348,11 +326,7 @@ export default function Hub() {
                             )}
 
                             {/* Platform totals, from `data.stats`. */}
-<<<<<<< HEAD
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-=======
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 {/*
                                   * `AdminStat`, not a private `stat()`.
                                   *
@@ -414,11 +388,7 @@ export default function Hub() {
                               * The card IS the drill-down, as on mobile — the numbers
                               * and the way in are the same control.
                               */}
-<<<<<<< HEAD
                             <div className="grid gap-3 sm:gap-5 md:grid-cols-3">
-=======
-                            <div className="grid gap-5 md:grid-cols-3">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 {TIERS.map(({ key, title, icon: Icon, accent, head, rule, ring }) => {
                                     const t = tierStats[key] || {};
                                     const figures = [
@@ -443,13 +413,8 @@ export default function Hub() {
                                                 the attention the figures need. */}
                                             <span className={`absolute inset-x-0 top-0 h-1 ${rule}`} />
 
-<<<<<<< HEAD
                                             <div className={`flex items-center gap-3 px-4 pt-4 pb-3 sm:px-5 sm:pt-5 sm:pb-4 ${head}`}>
                                                 <div className={`w-9 h-9 sm:w-11 sm:h-11 shrink-0 rounded-xl flex items-center justify-center ${accent}`}>
-=======
-                                            <div className={`flex items-center gap-3 px-5 pt-5 pb-4 ${head}`}>
-                                                <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${accent}`}>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                     <Icon className="w-5 h-5" />
                                                 </div>
                                                 <p className="font-bold tracking-tight text-slate-900 flex-1">
@@ -463,7 +428,6 @@ export default function Hub() {
                                                                          group-hover:text-slate-600" />
                                             </div>
 
-<<<<<<< HEAD
                                             <div className="grid grid-cols-4 md:grid-cols-2 divide-x md:divide-y divide-slate-100
                                                             border-t border-slate-100">
                                                 {figures.map((f) => (
@@ -472,16 +436,6 @@ export default function Hub() {
                                                             {Number(f.value || 0)}
                                                         </p>
                                                         <p className="text-[0.9375rem] md:text-[1.1875rem] leading-tight font-semibold text-slate-500 mt-1">
-=======
-                                            <div className="grid grid-cols-2 divide-x divide-y divide-slate-100
-                                                            border-t border-slate-100">
-                                                {figures.map((f) => (
-                                                    <div key={f.label} className="px-5 py-4 -mt-px first:mt-0">
-                                                        <p className={`text-[1.75rem] sm:text-[2.125rem] font-semibold tracking-tight tabular-nums ${f.tone}`}>
-                                                            {Number(f.value || 0)}
-                                                        </p>
-                                                        <p className="text-[1.1875rem] font-semibold text-slate-500 mt-1">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                             {f.label}
                                                         </p>
                                                     </div>
@@ -494,7 +448,6 @@ export default function Hub() {
 
                             <button
                                 onClick={() => navigate('/super-admin/admins')}
-<<<<<<< HEAD
                                 className="w-full bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-4 sm:p-6 text-left hover:shadow-md
                                            transition-shadow flex items-center justify-between gap-3"
                             >
@@ -503,27 +456,13 @@ export default function Hub() {
                                         <Users className="w-5 h-5 sm:w-6 sm:h-6" />
                                     </div>
                                     <div className="min-w-0">
-=======
-                                className="w-full bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-6 text-left hover:shadow-md
-                                           transition-shadow flex items-center justify-between"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                                        <Users className="w-6 h-6" />
-                                    </div>
-                                    <div>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         <p className="font-semibold text-slate-900">Staff a region</p>
                                         <p className="text-[1.25rem] text-slate-500">
                                             Adding a block admin is what opens a region for registration.
                                         </p>
                                     </div>
                                 </div>
-<<<<<<< HEAD
                                 <ChevronRight className="w-5 h-5 shrink-0 text-slate-400" />
-=======
-                                <ChevronRight className="w-5 h-5 text-slate-400" />
->>>>>>> 8020f5d (Initial commit for website frontend)
                             </button>
                         </>
                     )}
@@ -557,11 +496,7 @@ export default function Hub() {
                                                        hover:bg-slate-50 text-left"
                                         >
                                             <div className="min-w-0">
-<<<<<<< HEAD
                                                 <p className="font-medium text-slate-900 break-words">{r.name}</p>
-=======
-                                                <p className="font-medium text-slate-900">{r.name}</p>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 <p className="text-[1.1875rem] text-slate-500 mt-0.5">
                                                     {[r.district, r.state].filter(Boolean).join(', ') || '—'}
                                                     {/* An unstaffed region is the one worth chasing:
@@ -593,28 +528,16 @@ export default function Hub() {
                     {/* ----------------------------------------- applications */}
                     {level === 'applications' && (
                         <>
-<<<<<<< HEAD
                             {/* Four pills at `px-4` come to roughly 400px, wider
                                 than a phone. On a phone they share the row evenly
                                 (`flex-1`, tighter padding and type) so all four
                                 stay side by side; from `sm` they size to fit. */}
                             <div className="flex gap-1 sm:gap-2">
-=======
-                            {/* Wraps rather than overflowing: four pills at
-                                `px-4` come to roughly 400px, which is wider than
-                                a phone, and the page has no horizontal scroll —
-                                "rejected" was simply clipped off the edge. */}
-                            <div className="flex flex-wrap gap-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 {STATUSES.map(s => (
                                     <button
                                         key={s}
                                         onClick={() => region && openRegion(region, s)}
-<<<<<<< HEAD
                                         className={`flex-1 sm:flex-none min-w-0 min-h-10 px-1.5 sm:px-4 py-2 rounded-lg text-[1.0625rem] sm:text-[1.25rem] font-medium capitalize truncate transition-colors ${
-=======
-                                        className={`px-4 py-2 rounded-lg text-[1.25rem] font-medium capitalize transition-colors ${
->>>>>>> 8020f5d (Initial commit for website frontend)
                                             status === s
                                                 ? 'bg-blue-600 text-white'
                                                 : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -671,19 +594,11 @@ export default function Hub() {
 }
 
 const Busy = () => (
-<<<<<<< HEAD
     <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] flex items-center justify-center gap-3 py-10 sm:py-16 text-slate-500">
-=======
-    <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] flex items-center justify-center gap-3 py-16 text-slate-500">
->>>>>>> 8020f5d (Initial commit for website frontend)
         <Loader2 className="w-5 h-5 animate-spin" /> Loading…
     </div>
 );
 
 const Empty = ({ text }: { text: string }) => (
-<<<<<<< HEAD
     <p className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] text-center text-slate-500 px-4 py-10 sm:py-16">{text}</p>
-=======
-    <p className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] text-center text-slate-500 py-16">{text}</p>
->>>>>>> 8020f5d (Initial commit for website frontend)
 );

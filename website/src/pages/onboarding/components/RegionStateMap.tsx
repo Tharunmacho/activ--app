@@ -78,7 +78,6 @@ export function RegionStateMap({ regionKey, regionLabel, statePanels }: {
 
     if (!map) return null;
 
-<<<<<<< HEAD
     /*
      * "STATES OF THE NATIONAL" is what this printed on the country's page.
      *
@@ -95,14 +94,11 @@ export function RegionStateMap({ regionKey, regionLabel, statePanels }: {
      */
     const caption = regionKey === 'national' ? 'States of India' : `States of the ${regionLabel}`;
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     const shape = selected ? map.states.find((s) => s.slug === selected) || null : null;
     const council = selected ? byShape.get(selected) || null : null;
 
     return (
         <Reveal as="div" className="min-w-0">
-<<<<<<< HEAD
             <p className="mb-3 break-words text-[1rem] sm:text-[1.25rem] font-bold uppercase tracking-[0.12em] sm:tracking-[0.16em] text-brand-500">
                 {caption}
             </p>
@@ -113,18 +109,6 @@ export function RegionStateMap({ regionKey, regionLabel, statePanels }: {
                     role="img"
                     aria-label={caption}
                     className="mx-auto block h-auto w-full max-h-[20rem] sm:max-h-[26rem]"
-=======
-            <p className="mb-3 text-[1.25rem] font-bold uppercase tracking-[0.16em] text-brand-500">
-                States of the {regionLabel}
-            </p>
-
-            <div className="rounded-[1.25rem] border border-gray-200/70 bg-white/70 p-5">
-                <svg
-                    viewBox={map.viewBox}
-                    role="img"
-                    aria-label={`States of the ${regionLabel}`}
-                    className="mx-auto block h-auto w-full max-h-[26rem]"
->>>>>>> 8020f5d (Initial commit for website frontend)
                 >
                     {map.states.map((row, i) => {
                         const style = STATE_PALETTE[i % STATE_PALETTE.length];
@@ -197,17 +181,10 @@ export function RegionStateMap({ regionKey, regionLabel, statePanels }: {
                     })}
                 </svg>
 
-<<<<<<< HEAD
                 <ul className="mt-4 grid grid-cols-2 gap-x-3 sm:gap-x-4 gap-y-2 text-[0.9375rem] sm:text-[1.0625rem]
                                font-semibold text-gray-600">
                     {map.states.map((row, i) => (
                         <li key={row.slug} className="flex min-w-0 items-center gap-2">
-=======
-                <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-[1.0625rem]
-                               font-semibold text-gray-600">
-                    {map.states.map((row, i) => (
-                        <li key={row.slug} className="flex items-center gap-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             <span className={`h-3 w-3 shrink-0 rounded-full
                                               ${STATE_PALETTE[i % STATE_PALETTE.length].swatch}`} />
                             <span className="truncate" title={row.name}>{row.name}</span>
@@ -231,30 +208,18 @@ export function RegionStateMap({ regionKey, regionLabel, statePanels }: {
                             type="button"
                             onClick={() => setSelected(null)}
                             aria-label="Close"
-<<<<<<< HEAD
                             className="absolute right-1 top-1 sm:right-2 sm:top-2 flex h-10 w-10 sm:h-7 sm:w-7 items-center justify-center
-=======
-                            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center
->>>>>>> 8020f5d (Initial commit for website frontend)
                                        rounded-full text-gray-400 transition-colors
                                        hover:bg-gray-100 hover:text-gray-600"
                         >
                             <X size={14} />
                         </button>
 
-<<<<<<< HEAD
                         <p className="px-8 break-words text-[1rem] sm:text-[1.25rem] font-bold uppercase tracking-[0.16em]
                                       text-brand-500">
                             {regionLabel}
                         </p>
                         <h3 className="mt-1 break-words text-[1.3125rem] sm:text-[1.5625rem] font-black tracking-tight text-brand-900">
-=======
-                        <p className="text-[1.25rem] font-bold uppercase tracking-[0.16em]
-                                      text-brand-500">
-                            {regionLabel}
-                        </p>
-                        <h3 className="mt-1 text-[1.5625rem] font-black tracking-tight text-brand-900">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             {shape.name}
                         </h3>
 
@@ -305,11 +270,7 @@ export function RegionStateMap({ regionKey, regionLabel, statePanels }: {
                                                     </p>
                                                 )}
                                                 {c.email && (
-<<<<<<< HEAD
                                                     <p className="flex min-w-0 items-center justify-center gap-2.5">
-=======
-                                                    <p className="flex items-center justify-center gap-2.5">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                         <Mail size={14} className="shrink-0 text-brand-500" />
                                                         <a
                                                             href={`mailto:${c.email}`}
@@ -326,11 +287,7 @@ export function RegionStateMap({ regionKey, regionLabel, statePanels }: {
                                 {council.slug && (
                                     <Link
                                         to={`/states/${council.slug}`}
-<<<<<<< HEAD
                                         className="mt-4 inline-flex max-w-full min-h-[40px] items-center gap-2 rounded-full
-=======
-                                        className="mt-4 inline-flex items-center gap-2 rounded-full
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                    bg-brand-800 px-4 py-2 text-[1.0625rem] font-bold
                                                    text-white transition-colors hover:bg-brand-700"
                                     >

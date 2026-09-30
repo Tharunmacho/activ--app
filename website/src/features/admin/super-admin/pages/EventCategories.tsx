@@ -17,10 +17,7 @@ import {
     type EventCategoryMode,
 } from '@/services/eventCategoryApi';
 import { errorMessage } from '@/services/api';
-<<<<<<< HEAD
 import { adminBasePath } from '@/features/admin/components/tierConfig';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * Event categories — Medical, Awareness, Export, Coffee Meet.
@@ -275,11 +272,7 @@ export default function SuperAdminEventCategories() {
             render: (row) => {
                 if (editingId === row.id && row.managed) {
                     return (
-<<<<<<< HEAD
                         <div className="flex items-center gap-2 min-w-0">
-=======
-                        <div className="flex items-center gap-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             <input
                                 autoFocus
                                 value={draft}
@@ -288,11 +281,7 @@ export default function SuperAdminEventCategories() {
                                     if (e.key === 'Enter') submitRename(row);
                                     if (e.key === 'Escape') setEditingId('');
                                 }}
-<<<<<<< HEAD
                                 className={`${ADMIN_INPUT} h-10 min-w-0 flex-1 sm:flex-none max-w-xs`}
-=======
-                                className={`${ADMIN_INPUT} h-10 max-w-xs`}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 aria-label={`Rename ${row.label}`}
                             />
                             <AdminIconButton tone="emerald" title="Save" onClick={() => submitRename(row)}>
@@ -478,11 +467,7 @@ export default function SuperAdminEventCategories() {
                         public events page. They are the same rows.
                     </>}
                     onMenu={() => setSidebarOpen(true)}
-<<<<<<< HEAD
                     backTo={`${adminBasePath()}/events`}
-=======
-                    backTo="/super-admin/events"
->>>>>>> 8020f5d (Initial commit for website frontend)
                     actions={
                         <>
                             <button
@@ -507,11 +492,7 @@ export default function SuperAdminEventCategories() {
                 <div className={`flex-1 overflow-y-auto ${ADMIN_PAGE}`}>
 
                     {/* ---------------------------------------------- totals */}
-<<<<<<< HEAD
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-=======
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         <AdminStat
                             icon={<Tags className="w-5 h-5" />}
                             label="Categories"
@@ -545,21 +526,13 @@ export default function SuperAdminEventCategories() {
 
                     {/* ------------------------------------------- messages */}
                     {error && (
-<<<<<<< HEAD
                         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 sm:px-5 py-3 sm:py-4 break-words
-=======
-                        <div className="rounded-xl border border-rose-200 bg-rose-50 px-5 py-4
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         text-[1.25rem] font-semibold text-rose-700">
                             {error}
                         </div>
                     )}
                     {notice && (
-<<<<<<< HEAD
                         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 sm:px-5 py-3 sm:py-4 break-words
-=======
-                        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         text-[1.25rem] font-semibold text-emerald-700">
                             {notice}
                         </div>
@@ -603,11 +576,7 @@ export default function SuperAdminEventCategories() {
                                         <option key={m} value={m}>{MODE_META[m].pick}</option>
                                     ))}
                                 </select>
-<<<<<<< HEAD
                                 <div className="flex gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
-=======
-                                <div className="flex gap-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     <button
                                         type="button"
                                         onClick={submitNew}
@@ -684,11 +653,7 @@ export default function SuperAdminEventCategories() {
                                     type="button"
                                     aria-pressed={active}
                                     onClick={() => setModeFilter(m)}
-<<<<<<< HEAD
                                     className={`inline-flex h-10 sm:h-9 items-center gap-2 rounded-lg border px-3 sm:px-3.5
-=======
-                                    className={`inline-flex h-9 items-center gap-2 rounded-lg border px-3.5
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 text-[1.1875rem] font-bold transition-colors ${active
                                         ? 'border-blue-600 bg-blue-600 text-white'
                                         : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}

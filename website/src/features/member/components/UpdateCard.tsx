@@ -59,42 +59,26 @@ export default function UpdateCard({
 
             <div className="p-4 lg:p-5">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-<<<<<<< HEAD
                     <span className={`text-[1.0625rem] font-bold uppercase tracking-wide px-2 py-0.5
-=======
-                    <span className={`text-[0.8125rem] font-bold uppercase tracking-wide px-2 py-0.5
->>>>>>> 8020f5d (Initial commit for website frontend)
                                       rounded-full ${style.cls}`}>
                         {style.label}
                     </span>
 
                     {update.pinned ? (
-<<<<<<< HEAD
                         <span className="inline-flex items-center gap-1 text-[1.0625rem] font-bold uppercase
-=======
-                        <span className="inline-flex items-center gap-1 text-[0.8125rem] font-bold uppercase
->>>>>>> 8020f5d (Initial commit for website frontend)
                                          tracking-wide text-blue-700">
                             <Pin className="w-3 h-3" /> Pinned
                         </span>
                     ) : null}
 
                     {update.targetLabel ? (
-<<<<<<< HEAD
                         <span className="inline-flex items-center gap-1 text-[1.0625rem] text-slate-500 min-w-0">
-=======
-                        <span className="inline-flex items-center gap-1 text-[0.8125rem] text-slate-500 min-w-0">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             <MapPin className="w-3 h-3 shrink-0" />
                             <span className="truncate">{update.targetLabel}</span>
                         </span>
                     ) : null}
 
-<<<<<<< HEAD
                     <span className="text-[1.0625rem] text-slate-400 ml-auto shrink-0">
-=======
-                    <span className="text-[0.8125rem] text-slate-400 ml-auto shrink-0">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         {formatDate(update.publishedAt)}
                     </span>
                 </div>
@@ -104,11 +88,7 @@ export default function UpdateCard({
                 </h3>
 
                 {update.summary ? (
-<<<<<<< HEAD
                     <p className="text-[1.0625rem] text-slate-600 mt-1.5 leading-relaxed line-clamp-2">
-=======
-                    <p className="text-[1rem] text-slate-600 mt-1.5 leading-relaxed line-clamp-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         {update.summary}
                     </p>
                 ) : null}

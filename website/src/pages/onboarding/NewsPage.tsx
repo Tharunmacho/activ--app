@@ -1,33 +1,18 @@
-<<<<<<< HEAD
 import { BAND_MEASURE } from '@/components/layout/typography';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { HeaderSection } from '../../components/layout/HeaderSection';
 import { FooterSection } from '../../components/layout/FooterSection';
 import { NewsGrid } from './components/NewsGrid';
-<<<<<<< HEAD
-=======
-import { SchemesSection } from './components/SchemesSection';
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
 import { sectionHidden, sectionFields } from '@/components/shared/cmsSections';
 import { Reveal } from '@/components/shared/Reveal';
 import { CmsIcon } from '@/components/shared/CmsIcon';
 import { sizedMediaUrl } from '@/config/api.config';
-<<<<<<< HEAD
 import { AcrossIndia } from '@/components/shared/AcrossIndia';
 import {
     getNews, getNewsSettings,
     type NewsArticle, type NewsSettings,
-=======
-import { CARD_BODY } from '@/components/layout/appTypography';
-import { AcrossIndia } from '@/components/shared/AcrossIndia';
-import {
-    getNews, getSchemes, getNewsSettings,
-    type NewsArticle, type SchemeGroups, type NewsSettings,
->>>>>>> 8020f5d (Initial commit for website frontend)
 } from '@/services/cmsNewsApi';
 
 /**
@@ -35,7 +20,6 @@ import {
  * THE NEWSROOM — `/news`
  * ============================================================================
  *
-<<<<<<< HEAD
  * A band, then the articles. The schemes that used to follow them have their
  * own page at /schemes — a scheme does not age like news, and the question a
  * reader brings to one is "which apply to me", not "what is new".
@@ -43,15 +27,6 @@ import {
  * ------------------------------------------------------------ the filter
  *
  * `?state=` and `?district=` narrow the list, and they live in the
-=======
- * A band, the articles, then the schemes. Three bands, in that order, because
- * that is the order the questions come in: what is happening, then what can I
- * apply to.
- *
- * ------------------------------------------------------------ the filter
- *
- * `?state=` and `?district=` narrow both halves at once, and they live in the
->>>>>>> 8020f5d (Initial commit for website frontend)
  * URL rather than in component state so that a link to a state's news is a
  * link somebody can send. It is the same decision the gallery took, for the
  * same reason, and the two pages behave alike because of it.
@@ -60,19 +35,11 @@ import {
  * `listNews` — and the page does not second-guess it: a reader filtering to
  * Tamil Nadu has not asked to stop hearing about the association as a whole.
  *
-<<<<<<< HEAD
  * ------------------------------------------------------- one load, not two
  *
  * The two calls go together. The band needs the settings and the grid the
  * articles; fetching them in sequence would stack two round trips on a page
  * that is one screen.
-=======
- * ------------------------------------------------------- one load, not three
- *
- * The three calls go together. The band needs the settings, the grid the
- * articles and the schemes band its own list; fetching them in sequence would
- * stack three round trips on a page that is one screen.
->>>>>>> 8020f5d (Initial commit for website frontend)
  */
 export default function NewsPage() {
     const [params, setParams] = useSearchParams();
@@ -81,10 +48,6 @@ export default function NewsPage() {
     const category = params.get('category') || '';
 
     const [articles, setArticles] = useState<NewsArticle[] | null>(null);
-<<<<<<< HEAD
-=======
-    const [schemes, setSchemes] = useState<SchemeGroups | null>(null);
->>>>>>> 8020f5d (Initial commit for website frontend)
     const [settings, setSettings] = useState<NewsSettings | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -94,37 +57,19 @@ export default function NewsPage() {
 
         Promise.all([
             getNews({ state, district, category }),
-<<<<<<< HEAD
             getNewsSettings(),
         ])
             .then(([list, config]) => {
                 if (cancelled) return;
                 setArticles(list);
-=======
-            getSchemes({ state, district }),
-            getNewsSettings(),
-        ])
-            .then(([list, groups, config]) => {
-                if (cancelled) return;
-                setArticles(list);
-                setSchemes(groups);
->>>>>>> 8020f5d (Initial commit for website frontend)
                 setSettings(config);
                 setLoading(false);
             })
             /* A failed newsroom is an empty newsroom, not a white screen. The
-<<<<<<< HEAD
                header and the footer still render. */
             .catch(() => {
                 if (cancelled) return;
                 setArticles([]);
-=======
-               header, the footer and the schemes band still render. */
-            .catch(() => {
-                if (cancelled) return;
-                setArticles([]);
-                setSchemes({ national: [], state: [], district: [] });
->>>>>>> 8020f5d (Initial commit for website frontend)
                 setLoading(false);
             });
 
@@ -152,7 +97,6 @@ export default function NewsPage() {
     };
 
     const where = [district, state].filter(Boolean).join(', ');
-<<<<<<< HEAD
     /* The band is a card on the News settings tab — see `cmsSections`.
        Removing it leaves the articles, which is still a newsroom. The
        ARTICLES are not a card and cannot be removed. */
@@ -160,18 +104,6 @@ export default function NewsPage() {
 
     const hero = showBand ? settings?.heroImage?.url : undefined;
     const bandRows = showBand ? sectionFields(settings?.sections, 'news.header') : [];
-=======
-    /* The two cards on the News settings tab — see `cmsSections`. Removing
-       the band leaves the articles, which is still a newsroom; removing the
-       schemes band takes the three tiers off the page. The ARTICLES are not
-       a card and cannot be removed: a newsroom with no news is not a page. */
-    const showBand = !sectionHidden(settings?.sections, 'news.header');
-    const showSchemes = !sectionHidden(settings?.sections, 'news.schemes');
-
-    const hero = showBand ? settings?.heroImage?.url : undefined;
-    const bandRows = showBand ? sectionFields(settings?.sections, 'news.header') : [];
-    const schemeRows = showSchemes ? sectionFields(settings?.sections, 'news.schemes') : [];
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     return (
         <div className="flex min-h-screen flex-col bg-white font-sans">
@@ -195,11 +127,7 @@ export default function NewsPage() {
                         </>
                     )}
 
-<<<<<<< HEAD
                     <div className="relative z-10 mx-auto w-full max-w-[90rem] px-4 sm:px-6 py-10 sm:py-14 md:py-20
-=======
-                    <div className="relative z-10 mx-auto w-full max-w-[90rem] px-6 py-14 md:py-20
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     lg:px-10">
                         <Reveal>
                             <span className="inline-flex items-center gap-2 rounded-full bg-white/15
@@ -216,11 +144,7 @@ export default function NewsPage() {
                                 </span>
                             </span>
 
-<<<<<<< HEAD
                             <h1 className="mt-4 text-[2rem] sm:text-4xl md:text-5xl font-black
-=======
-                            <h1 className="mt-4 text-3xl sm:text-4xl md:text-5xl font-black
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            leading-[1.06] tracking-tight text-white">
                                 {settings?.heading || 'What is happening at'}
                                 {settings?.headingHighlight && (
@@ -229,25 +153,15 @@ export default function NewsPage() {
                             </h1>
 
                             {settings?.description && (
-<<<<<<< HEAD
                                 <p className={`mt-4 ${BAND_MEASURE} text-[1.0625rem] sm:text-[1.1875rem]
                                               font-semibold leading-relaxed text-white/80
                                               line-clamp-3`}>
-=======
-                                <p className="mt-4 max-w-2xl text-[1.0625rem] sm:text-[1.1875rem]
-                                              font-semibold leading-relaxed text-white/80
-                                              line-clamp-3">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     {settings.description}
                                 </p>
                             )}
 
                             {where && (
-<<<<<<< HEAD
                                 <p className="mt-4 inline-flex max-w-full flex-wrap items-center gap-2 rounded-lg
-=======
-                                <p className="mt-4 inline-flex items-center gap-2 rounded-lg
->>>>>>> 8020f5d (Initial commit for website frontend)
                                               bg-white/15 px-3 py-1.5 text-[1rem] font-bold text-white
                                               ring-1 ring-white/20">
                                     Filtered to {where}
@@ -267,17 +181,10 @@ export default function NewsPage() {
                 )}
 
                 {/* ------------------------------------------- the articles */}
-<<<<<<< HEAD
                 <section className="w-full py-8 sm:py-14 md:py-20">
                     <div className="mx-auto w-full max-w-[90rem] px-4 sm:px-6 lg:px-10">
                         {categories.length > 0 && (
                             <div className="mb-6 sm:mb-8 flex flex-wrap gap-2 sm:gap-2.5">
-=======
-                <section className="w-full py-14 md:py-20">
-                    <div className="mx-auto w-full max-w-[90rem] px-6 lg:px-10">
-                        {categories.length > 0 && (
-                            <div className="mb-8 flex flex-wrap gap-2.5">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 {/* "All" is a chip and not the absence of one: a row
                                     of chips with none lit reads as a filter that has
                                     failed rather than as no filter. */}
@@ -324,7 +231,6 @@ export default function NewsPage() {
                     </div>
                 </section>
 
-<<<<<<< HEAD
                 {/* The editor's own rows on these two cards. */}
                 {bandRows.length > 0 && (
                     <div className="mx-auto w-full max-w-[90rem] px-4 sm:px-6 pb-12 sm:pb-16 lg:px-10
@@ -333,31 +239,6 @@ export default function NewsPage() {
                     </div>
                 )}
 
-=======
-                {/* -------------------------------------------- the schemes */}
-                {showSchemes && !loading && schemes && (
-                    <SchemesSection
-                        groups={schemes}
-                        heading={settings?.schemesHeading}
-                        description={settings?.schemesDescription}
-                    />
-                )}
-
-                {/* The editor's own rows on these two cards. */}
-                {(bandRows.length > 0 || schemeRows.length > 0) && (
-                    <div className="mx-auto w-full max-w-[90rem] px-6 pb-16 lg:px-10">
-                        <CmsExtraFields fields={[...bandRows, ...schemeRows]} />
-                    </div>
-                )}
-
-                {showSchemes && loading && (
-                    <div className="w-full bg-gray-50/70 py-16">
-                        <div className="mx-auto w-full max-w-[90rem] px-6 lg:px-10">
-                            <p className={`text-center ${CARD_BODY} text-gray-400`}>Loading schemes…</p>
-                        </div>
-                    </div>
-                )}
->>>>>>> 8020f5d (Initial commit for website frontend)
             </main>
 
             {/* Above the footer, on every content page — see `AcrossIndia`. */}

@@ -61,15 +61,9 @@ export function SectionCard({
           * gives the card.
           */
         <section className={`flex flex-col bg-white rounded-2xl border border-slate-200 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)] ${className}`}>
-<<<<<<< HEAD
             <header className="flex items-start gap-3 px-4 sm:px-5 lg:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4">
                 {icon ? (
                     <span className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center
-=======
-            <header className="flex items-start gap-3 px-5 lg:px-6 pt-5 pb-4">
-                {icon ? (
-                    <span className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center
->>>>>>> 8020f5d (Initial commit for website frontend)
                                      justify-center shrink-0">
                         {icon}
                     </span>
@@ -85,11 +79,7 @@ export function SectionCard({
                 ) : actionTo ? (
                     <Link
                         to={actionTo}
-<<<<<<< HEAD
                         className="shrink-0 inline-flex items-center gap-0.5 text-[1.0625rem] font-semibold
-=======
-                        className="shrink-0 inline-flex items-center gap-0.5 text-[1rem] font-semibold
->>>>>>> 8020f5d (Initial commit for website frontend)
                                    text-blue-600 hover:text-blue-700 hover:underline"
                     >
                         {actionLabel || 'See all'}
@@ -98,11 +88,7 @@ export function SectionCard({
                 ) : null}
             </header>
 
-<<<<<<< HEAD
             <div className="flex-1 flex flex-col justify-center px-4 sm:px-5 lg:px-6 pb-4 sm:pb-5 lg:pb-6">
-=======
-            <div className="flex-1 flex flex-col justify-center px-5 lg:px-6 pb-5 lg:pb-6">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 {children}
             </div>
         </section>
@@ -131,21 +117,13 @@ export function EmptyState({
     action?: ReactNode;
 }) {
     return (
-<<<<<<< HEAD
         <div className="py-8 sm:py-10 px-4 text-center">
-=======
-        <div className="py-10 px-4 text-center">
->>>>>>> 8020f5d (Initial commit for website frontend)
             <span className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 mx-auto mb-3
                              flex items-center justify-center">
                 {icon || <Inbox className="w-6 h-6" />}
             </span>
             <p className="text-[1.1875rem] font-semibold text-slate-700">{title}</p>
-<<<<<<< HEAD
             <p className="text-[1.0625rem] text-slate-500 mt-1 max-w-sm mx-auto">{detail}</p>
-=======
-            <p className="text-[1rem] text-slate-500 mt-1 max-w-sm mx-auto">{detail}</p>
->>>>>>> 8020f5d (Initial commit for website frontend)
             {action ? <div className="mt-4">{action}</div> : null}
         </div>
     );
@@ -175,11 +153,7 @@ export function PlanLockedCard({
     upgradeTo?: string;
 }) {
     return (
-<<<<<<< HEAD
         <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 sm:p-6">
-=======
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6">
->>>>>>> 8020f5d (Initial commit for website frontend)
             <div className="flex items-start gap-3">
                 <span className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400
                                  flex items-center justify-center shrink-0">
@@ -187,17 +161,10 @@ export function PlanLockedCard({
                 </span>
                 <div className="min-w-0">
                     <h3 className={`${CARD_TITLE} text-slate-800`}>{title}</h3>
-<<<<<<< HEAD
                     <p className="text-[1.0625rem] text-slate-600 mt-1 leading-relaxed">{explanation}</p>
                     <Link
                         to={upgradeTo}
                         className="inline-flex items-center gap-1 mt-3 text-[1.0625rem] font-semibold
-=======
-                    <p className="text-[1rem] text-slate-600 mt-1 leading-relaxed">{explanation}</p>
-                    <Link
-                        to={upgradeTo}
-                        className="inline-flex items-center gap-1 mt-3 text-[1rem] font-semibold
->>>>>>> 8020f5d (Initial commit for website frontend)
                                    text-blue-600 hover:text-blue-700 hover:underline"
                     >
                         Compare memberships <ChevronRight className="w-4 h-4" />
@@ -256,19 +223,11 @@ export function StatTile({
         <>
             <div className="flex items-start gap-2 text-slate-500">
                 {icon ? <span className="w-4 h-4 shrink-0 mt-px">{icon}</span> : null}
-<<<<<<< HEAD
                 <span className="text-[1.0625rem] font-semibold uppercase tracking-wide
                                  leading-snug break-words min-w-0">{label}</span>
             </div>
             <p className={`text-[1.375rem] sm:text-[1.75rem] font-bold mt-1 sm:mt-2 tabular-nums break-words ${TONES[tone]}`}>{value}</p>
             {hint ? <p className="text-[1.0625rem] text-slate-400 mt-0.5 leading-snug break-words">{hint}</p> : null}
-=======
-                <span className="text-[0.8125rem] font-semibold uppercase tracking-wide
-                                 leading-snug break-words min-w-0">{label}</span>
-            </div>
-            <p className={`text-[1.75rem] font-bold mt-2 tabular-nums ${TONES[tone]}`}>{value}</p>
-            {hint ? <p className="text-[0.8125rem] text-slate-400 mt-0.5 leading-snug break-words">{hint}</p> : null}
->>>>>>> 8020f5d (Initial commit for website frontend)
         </>
     );
 
@@ -345,15 +304,9 @@ export function MembershipGate({
     children?: ReactNode;
 }) {
     return (
-<<<<<<< HEAD
         <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-4 sm:p-6 lg:p-8 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
             <div className="flex items-start gap-3 sm:gap-4">
                 <span className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-blue-600 text-white flex items-center
-=======
-        <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-6 lg:p-8 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
-            <div className="flex items-start gap-4">
-                <span className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center
->>>>>>> 8020f5d (Initial commit for website frontend)
                                  justify-center shrink-0 shadow-sm">
                     {icon || <Lock className="w-5 h-5" />}
                 </span>
@@ -363,11 +316,7 @@ export function MembershipGate({
                     <p className="text-[1.1875rem] text-slate-600 mt-2 leading-relaxed max-w-2xl">{detail}</p>
 
                     {cta.detail ? (
-<<<<<<< HEAD
                         <p className="text-[1.0625rem] text-blue-700 font-medium mt-3">{cta.detail}</p>
-=======
-                        <p className="text-[1rem] text-blue-700 font-medium mt-3">{cta.detail}</p>
->>>>>>> 8020f5d (Initial commit for website frontend)
                     ) : null}
 
                     <Link
@@ -379,11 +328,7 @@ export function MembershipGate({
                         {cta.label} <ChevronRight className="w-4 h-4" />
                     </Link>
 
-<<<<<<< HEAD
                     {children ? <div className="mt-4 sm:mt-6">{children}</div> : null}
-=======
-                    {children ? <div className="mt-6">{children}</div> : null}
->>>>>>> 8020f5d (Initial commit for website frontend)
                 </div>
             </div>
         </div>
@@ -421,21 +366,13 @@ export function GateBenefit({
                 <span className="flex items-center gap-2">
                     <span className="text-[1.1875rem] font-bold text-slate-900 leading-tight">{title}</span>
                     {open ? (
-<<<<<<< HEAD
                         <span className="text-[1.0625rem] font-bold uppercase tracking-wide text-emerald-700
-=======
-                        <span className="text-[0.75rem] font-bold uppercase tracking-wide text-emerald-700
->>>>>>> 8020f5d (Initial commit for website frontend)
                                          bg-emerald-100 rounded-full px-1.5 py-0.5 shrink-0">
                             Open now
                         </span>
                     ) : null}
                 </span>
-<<<<<<< HEAD
                 <span className="block text-[1.0625rem] text-slate-500 mt-0.5 leading-snug">{detail}</span>
-=======
-                <span className="block text-[1rem] text-slate-500 mt-0.5 leading-snug">{detail}</span>
->>>>>>> 8020f5d (Initial commit for website frontend)
             </span>
         </li>
     );

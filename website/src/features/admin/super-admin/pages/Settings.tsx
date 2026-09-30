@@ -74,11 +74,7 @@ const Settings = () => {
         } catch (err) {
             console.warn('Logout safely caught:', err);
         }
-<<<<<<< HEAD
         navigate('/admin/login');
-=======
-        navigate('/login');
->>>>>>> 8020f5d (Initial commit for website frontend)
     };
 
     // Fetch real stats from backend
@@ -215,25 +211,16 @@ const Settings = () => {
                     and the centred 90rem column; the back arrow that used to
                     sit here belongs to the header above now. */}
                 <div className={`flex-1 overflow-y-auto ${ADMIN_PAGE}`}>
-<<<<<<< HEAD
                         <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-4 sm:p-6">
                             {/* Header Section */}
                             <div className="mb-6 sm:mb-8">
                                 <div className="flex flex-col md:flex-row items-center md:items-start gap-4 text-center md:text-left">
                                     <Avatar className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 ring-4 ring-blue-100 cursor-pointer hover:ring-6 hover:ring-blue-200 transition-all" onClick={() => setProfileModalOpen(true)}>
-=======
-                        <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-6">
-                            {/* Header Section */}
-                            <div className="mb-8">
-                                <div className="flex flex-col md:flex-row items-center md:items-start gap-4 text-center md:text-left">
-                                    <Avatar className="w-20 h-20 ring-4 ring-blue-100 cursor-pointer hover:ring-6 hover:ring-blue-200 transition-all" onClick={() => setProfileModalOpen(true)}>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         {adminInfo?.avatarUrl && <AvatarImage src={adminInfo.avatarUrl} className="object-cover" />}
                                         <AvatarFallback className="bg-blue-600 text-white font-bold text-[1.75rem]">
                                             {avatarInitials}
                                         </AvatarFallback>
                                     </Avatar>
-<<<<<<< HEAD
                                     <div className="flex-1 min-w-0 w-full">
                                         <h1 className="text-[1.5rem] sm:text-[1.75rem] md:text-[2.125rem] font-bold text-slate-900 break-words">{userName}</h1>
                                         <p className="text-slate-500 text-[1.25rem] md:text-[1.375rem] flex items-center gap-2 justify-center md:justify-start mt-1">
@@ -248,22 +235,6 @@ const Settings = () => {
                                             <div className="flex items-center gap-2 text-slate-500 min-w-0 max-w-full">
                                                 <MapPin className="w-4 h-4 shrink-0" />
                                                 <span className="text-[1.25rem] break-words">{adminLocation}</span>
-=======
-                                    <div className="flex-1">
-                                        <h1 className="text-[1.75rem] md:text-[2.125rem] font-bold text-slate-900">{userName}</h1>
-                                        <p className="text-slate-500 text-[1.25rem] md:text-[1.375rem] flex items-center gap-2 justify-center md:justify-start mt-1">
-                                            <Shield className="w-5 h-5" />
-                                            {roleLabel}
-                                        </p>
-                                        <div className="flex flex-col sm:flex-row items-center gap-3 mt-3">
-                                            <div className="flex items-center gap-2 text-slate-500">
-                                                <Mail className="w-4 h-4" />
-                                                <span className="text-[1.25rem]">{userEmail}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-slate-500">
-                                                <MapPin className="w-4 h-4" />
-                                                <span className="text-[1.25rem]">{adminLocation}</span>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3 mt-4 justify-center md:justify-start">
@@ -283,7 +254,6 @@ const Settings = () => {
                             {/* Statistics Grid */}
                             <div>
                                 <h2 className={`${CARD_TITLE} text-slate-900 mb-4`}>Platform</h2>
-<<<<<<< HEAD
                                 <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 [&>*:first-child]:col-span-2 sm:[&>*:first-child]:col-span-1">
                                     <div className="bg-blue-600 rounded-2xl p-4 sm:p-6 shadow-[0_10px_28px_-6px_rgba(37,99,235,0.55)]">
                                         <div className="flex items-center gap-2 mb-2">
@@ -305,46 +275,16 @@ const Settings = () => {
                                             <p className="text-slate-500 text-[1.0625rem] sm:text-[1.25rem] font-medium leading-tight">Admin accounts</p>
                                         </div>
                                         <p className="text-[2rem] sm:text-[2.5625rem] font-bold tracking-tight tabular-nums text-slate-900">{stats.totalAdmins}</p>
-=======
-                                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                                    <div className="bg-blue-600 rounded-2xl p-6 shadow-[0_10px_28px_-6px_rgba(37,99,235,0.55)]">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Users className="w-5 h-5 text-blue-100" />
-                                            <p className="text-blue-100 text-[1.25rem] font-medium">Total members</p>
-                                        </div>
-                                        <p className="text-[2.5625rem] font-bold tracking-tight tabular-nums text-white">{stats.totalMembers}</p>
-                                    </div>
-                                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Clock className="w-5 h-5 text-amber-500" />
-                                            <p className="text-slate-500 text-[1.25rem] font-medium">Applications</p>
-                                        </div>
-                                        <p className="text-[2.5625rem] font-bold tracking-tight tabular-nums text-slate-900">{stats.totalApplications}</p>
-                                    </div>
-                                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <CheckCircle className="w-5 h-5 text-emerald-500" />
-                                            <p className="text-slate-500 text-[1.25rem] font-medium">Admin accounts</p>
-                                        </div>
-                                        <p className="text-[2.5625rem] font-bold tracking-tight tabular-nums text-slate-900">{stats.totalAdmins}</p>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                     {/* MAIN CONTENT - Light Background */}
-<<<<<<< HEAD
                     <div className="space-y-4 sm:space-y-6">
                             <h2 className={`${CARD_TITLE} text-slate-900`}>Settings &amp; Preferences</h2>
 
                             <div className="grid gap-3 sm:gap-5 md:grid-cols-2">
-=======
-                    <div className="space-y-6">
-                            <h2 className={`${CARD_TITLE} text-slate-900`}>Settings &amp; Preferences</h2>
-
-                            <div className="grid gap-5 md:grid-cols-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 {/* Account Settings Card */}
                                 <Card className="border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] overflow-hidden">
                                     <CardHeader className="border-b border-slate-100 bg-white">

@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 import { useCardTable } from '@/lib/useCardTable';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -26,10 +23,7 @@ import type { EventBooking } from '@/services/eventBookingApi';
 import { errorMessage } from '@/services/api';
 
 import { CARD_TITLE } from '@/components/layout/appTypography';
-<<<<<<< HEAD
 import { adminBasePath } from '@/features/admin/components/tierConfig';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 /**
  * Who is coming to an event, and who has paid.
  *
@@ -123,10 +117,7 @@ function ModeChip({ mode }: { mode: string }) {
 }
 
 export default function SuperAdminBookings() {
-<<<<<<< HEAD
     const cardTableRef2 = useCardTable();
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const navigate = useNavigate();
 
@@ -242,11 +233,7 @@ export default function SuperAdminBookings() {
      */
     useEffect(() => {
         if (!routeEventId && events.length) {
-<<<<<<< HEAD
             navigate(`${adminBasePath()}/bookings/${events[0].id}`, { replace: true });
-=======
-            navigate(`/super-admin/bookings/${events[0].id}`, { replace: true });
->>>>>>> 8020f5d (Initial commit for website frontend)
         }
     }, [events, routeEventId, navigate]);
 
@@ -352,17 +339,10 @@ export default function SuperAdminBookings() {
 
     /* ------------------------------------------------------------ actions */
 
-<<<<<<< HEAD
     const markPaid = async (booking: EventBooking, mode = 'offline') => {
         setActing(booking.bookingRef);
         try {
             const updated = await recordBookingPayment(eventId, booking.bookingRef, mode);
-=======
-    const markPaid = async (booking: EventBooking) => {
-        setActing(booking.bookingRef);
-        try {
-            const updated = await recordBookingPayment(eventId, booking.bookingRef, 'offline');
->>>>>>> 8020f5d (Initial commit for website frontend)
             setOpen(updated);
             load();
             invalidateAttendees();
@@ -373,17 +353,10 @@ export default function SuperAdminBookings() {
         }
     };
 
-<<<<<<< HEAD
     const cancel = async (booking: EventBooking, reason = '') => {
         setActing(booking.bookingRef);
         try {
             await cancelEventBooking(eventId, booking.bookingRef, reason);
-=======
-    const cancel = async (booking: EventBooking) => {
-        setActing(booking.bookingRef);
-        try {
-            await cancelEventBooking(eventId, booking.bookingRef, 'Cancelled by administrator');
->>>>>>> 8020f5d (Initial commit for website frontend)
             setOpen(null);
             load();
             // A cancelled booking frees its seats, so the door list is now one
@@ -407,20 +380,12 @@ export default function SuperAdminBookings() {
                     title="Event Bookings"
                     subtitle="Seats booked through the public Book Now page, and what has been paid"
                     onMenu={() => setSidebarOpen(true)}
-<<<<<<< HEAD
                     backTo={`${adminBasePath()}/bookings`}
-=======
-                    backTo="/super-admin/bookings"
->>>>>>> 8020f5d (Initial commit for website frontend)
                     actions={
                         <>
                             <button
                                 type="button"
-<<<<<<< HEAD
                                 onClick={() => navigate(`${adminBasePath()}/bookings`)}
-=======
-                                onClick={() => navigate('/super-admin/bookings')}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 className={ADMIN_SECONDARY_BTN}
                             >
                                 <ArrowLeft className="w-4 h-4" /> All events
@@ -459,11 +424,7 @@ export default function SuperAdminBookings() {
 
                     {/* ---------------------------------------------- picker */}
                     <div className={`${ADMIN_CARD} p-4 sm:p-5`}>
-<<<<<<< HEAD
                         <label className="block text-[1.0625rem] font-semibold uppercase
-=======
-                        <label className="block text-[1.0625rem] sm:text-[1rem] font-semibold uppercase
->>>>>>> 8020f5d (Initial commit for website frontend)
                                           tracking-wider text-slate-500 mb-2.5">
                             Event
                         </label>
@@ -477,11 +438,7 @@ export default function SuperAdminBookings() {
                              * the URL, the Back button and a reload disagree
                              * with.
                              */
-<<<<<<< HEAD
                             onChange={(e) => navigate(`${adminBasePath()}/bookings/${e.target.value}`)}
-=======
-                            onChange={(e) => navigate(`/super-admin/bookings/${e.target.value}`)}
->>>>>>> 8020f5d (Initial commit for website frontend)
                             disabled={eventsLoading || !events.length}
                             className={ADMIN_INPUT}
                         >
@@ -498,11 +455,7 @@ export default function SuperAdminBookings() {
                     </div>
 
                     {/* ---------------------------------------------- totals */}
-<<<<<<< HEAD
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-=======
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         <AdminStat
                             icon={<Ticket className="w-5 h-5" />}
                             label="Bookings"
@@ -556,14 +509,9 @@ export default function SuperAdminBookings() {
                                 type="button"
                                 onClick={() => setTab(value)}
                                 aria-pressed={tab === value}
-<<<<<<< HEAD
                                 className={`flex-1 sm:flex-none min-w-0 inline-flex items-center justify-center gap-1.5 sm:gap-2
                                             h-12 px-2 sm:px-5 rounded-xl text-[1.125rem] sm:text-[1.25rem] font-semibold whitespace-nowrap
                                             [&>svg]:hidden sm:[&>svg]:block transition-colors
-=======
-                                className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-2
-                                            h-12 px-5 rounded-xl text-[1.25rem] font-semibold transition-colors
->>>>>>> 8020f5d (Initial commit for website frontend)
                                             ${tab === value
                                         ? 'bg-white text-blue-600 shadow-sm'
                                         : 'text-slate-500 hover:text-slate-800'}`}
@@ -601,11 +549,7 @@ export default function SuperAdminBookings() {
                             />
                         </div>
 
-<<<<<<< HEAD
                         <div className="flex gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
-=======
-                        <div className="flex gap-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             {([
                                 ['', 'All'],
                                 ['paid', 'Paid'],
@@ -617,11 +561,7 @@ export default function SuperAdminBookings() {
                                     onClick={() => setPaymentStatus(value)}
                                     aria-pressed={paymentStatus === value}
                                     className={
-<<<<<<< HEAD
                                         'h-12 px-3 sm:px-5 rounded-xl text-[1.25rem] font-semibold transition-colors '
-=======
-                                        'h-12 px-5 rounded-xl text-[1.25rem] font-semibold transition-colors '
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         + (paymentStatus === value
                                             ? 'bg-blue-600 text-white'
                                             : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50')
@@ -634,11 +574,7 @@ export default function SuperAdminBookings() {
                     </div>
 
                     {error && (
-<<<<<<< HEAD
                         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 sm:px-5 py-3 sm:py-4 break-words
-=======
-                        <div className="rounded-xl border border-rose-200 bg-rose-50 px-5 py-4
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         text-[1.25rem] font-semibold text-rose-700">
                             {error}
                         </div>
@@ -646,11 +582,7 @@ export default function SuperAdminBookings() {
 
                     {/* ----------------------------------------------- table */}
                     <div className={`${ADMIN_CARD} overflow-hidden`}>
-<<<<<<< HEAD
                         <div ref={cardTableRef2} className="overflow-x-auto card-table">
-=======
-                        <div className="overflow-x-auto">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             {/*
                               `min-w-[76rem]`, not 60. Nine columns including an
                               email address and a "View Booking Details" button do
@@ -674,11 +606,7 @@ export default function SuperAdminBookings() {
                                                    capitals on a 16px table. This screen and the
                                                    overview above it are one section and must not
                                                    set the same heading two different ways. */
-<<<<<<< HEAD
                                                 className="px-5 py-4 text-[1.0625rem] font-semibold
-=======
-                                                className="px-5 py-4 text-[1.0625rem] sm:text-[1rem] font-semibold
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                            uppercase tracking-wider text-slate-500
                                                            border-b border-slate-200 whitespace-nowrap"
                                             >
@@ -797,26 +725,15 @@ export default function SuperAdminBookings() {
                         {/* -------------------------------------------- pager */}
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3
                                         border-t border-slate-200 px-4 py-3.5">
-<<<<<<< HEAD
                             <p className="text-[1.0625rem] sm:text-[1.25rem] text-slate-500">{showingLine}</p>
 
                             {!!pagination && pagination.pages > 1 && (
                                 <div className="flex flex-wrap items-center gap-1">
-=======
-                            <p className="text-[1.25rem] text-slate-500">{showingLine}</p>
-
-                            {!!pagination && pagination.pages > 1 && (
-                                <div className="flex items-center gap-1">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     <button
                                         type="button"
                                         onClick={() => setPage((p) => Math.max(1, p - 1))}
                                         disabled={pagination.page <= 1}
-<<<<<<< HEAD
                                         className="h-10 w-10 sm:h-11 sm:w-11 inline-flex items-center justify-center rounded-xl
-=======
-                                        className="h-11 w-11 inline-flex items-center justify-center rounded-xl
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                    border border-slate-200 text-slate-600 disabled:opacity-40
                                                    hover:bg-slate-50 transition-colors"
                                         aria-label="Previous page"
@@ -842,11 +759,7 @@ export default function SuperAdminBookings() {
                                                     onClick={() => setPage(n)}
                                                     aria-current={n === pagination.page ? 'page' : undefined}
                                                     className={
-<<<<<<< HEAD
                                                         'h-10 min-w-10 px-2 sm:h-11 sm:min-w-[2.75rem] sm:px-3 rounded-xl text-[1.25rem] font-semibold '
-=======
-                                                        'h-11 min-w-[2.75rem] px-3 rounded-xl text-[1.25rem] font-semibold '
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                         + 'transition-colors '
                                                         + (n === pagination.page
                                                             ? 'bg-blue-600 text-white'
@@ -862,11 +775,7 @@ export default function SuperAdminBookings() {
                                         type="button"
                                         onClick={() => setPage((p) => Math.min(pagination.pages, p + 1))}
                                         disabled={pagination.page >= pagination.pages}
-<<<<<<< HEAD
                                         className="h-10 w-10 sm:h-11 sm:w-11 inline-flex items-center justify-center rounded-xl
-=======
-                                        className="h-11 w-11 inline-flex items-center justify-center rounded-xl
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                    border border-slate-200 text-slate-600 disabled:opacity-40
                                                    hover:bg-slate-50 transition-colors"
                                         aria-label="Next page"
@@ -888,13 +797,8 @@ export default function SuperAdminBookings() {
                     event={selected}
                     acting={acting === open.bookingRef}
                     onClose={() => setOpen(null)}
-<<<<<<< HEAD
                     onMarkPaid={(mode) => markPaid(open, mode)}
                     onCancel={(reason) => cancel(open, reason)}
-=======
-                    onMarkPaid={() => markPaid(open)}
-                    onCancel={() => cancel(open)}
->>>>>>> 8020f5d (Initial commit for website frontend)
                 />
             )}
         </div>
@@ -1018,11 +922,7 @@ function AttendeePanel({ rows, loading, seatsBooked = 0 }: {
                                 : row.paymentStatus === 'failed' ? 'Failed' : 'Unpaid'}
                     </AdminChip>
                     {row.isMemberRate && (
-<<<<<<< HEAD
                         <span className="inline-flex items-center gap-1 text-[1.0625rem] font-semibold text-emerald-600">
-=======
-                        <span className="inline-flex items-center gap-1 text-[0.8125rem] font-semibold text-emerald-600">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             <BadgePercent className="w-3 h-3" /> Member rate
                         </span>
                     )}
@@ -1061,11 +961,7 @@ function AttendeePanel({ rows, loading, seatsBooked = 0 }: {
             minWidth="70rem"
             empty="Nobody has booked a seat on this event yet."
             footer={!loading && rows.length ? (
-<<<<<<< HEAD
                 <div className="px-4 sm:px-5 py-3 sm:py-4 border-t border-slate-100 bg-blue-50/40
-=======
-                <div className="px-5 py-4 border-t border-slate-100 bg-blue-50/40
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 text-[1.25rem] font-semibold text-slate-600 flex flex-wrap gap-x-6 gap-y-1">
                     <span>
                         <ListChecks className="inline w-4 h-4 mr-1 text-blue-600" />
@@ -1112,7 +1008,6 @@ function BookingDetail(props: {
     event: EventOption | null;
     acting: boolean;
     onClose: () => void;
-<<<<<<< HEAD
     onMarkPaid: (mode: string) => void;
     onCancel: (reason: string) => void;
 }) {
@@ -1148,13 +1043,6 @@ function BookingDetail(props: {
         setCancelReason('');
     }, [booking?.bookingRef, booking?.status, payStatus]);
 
-=======
-    onMarkPaid: () => void;
-    onCancel: () => void;
-}) {
-    const { booking, event, acting, onClose, onMarkPaid, onCancel } = props;
-
->>>>>>> 8020f5d (Initial commit for website frontend)
     /* Escape closes it. A panel that can only be dismissed by finding a small
        × is one an admin leaves open and scrolls the page behind. */
     useEffect(() => {
@@ -1185,11 +1073,7 @@ function BookingDetail(props: {
         if (empty) return null;
         return (
             <div className="py-3 border-b border-slate-100 last:border-0">
-<<<<<<< HEAD
                 <dt className="text-[1.0625rem] font-semibold uppercase tracking-wider
-=======
-                <dt className="text-[1.0625rem] sm:text-[1rem] font-semibold uppercase tracking-wider
->>>>>>> 8020f5d (Initial commit for website frontend)
                                text-slate-400 mb-1">
                     {label}
                 </dt>
@@ -1246,13 +1130,8 @@ function BookingDetail(props: {
                            bg-slate-50 shadow-2xl sm:rounded-2xl border border-slate-200
                            flex flex-col overflow-hidden"
             >
-<<<<<<< HEAD
                 <header className="shrink-0 bg-white border-b border-slate-200 px-4 sm:px-6 py-3 sm:py-4
                                    flex items-start justify-between gap-3 sm:gap-4">
-=======
-                <header className="shrink-0 bg-white border-b border-slate-200 px-5 sm:px-6 py-4
-                                   flex items-start justify-between gap-4">
->>>>>>> 8020f5d (Initial commit for website frontend)
                     <div className="min-w-0">
                         {/* The EVENT names the sheet, the reference identifies
                            it. The panel led with the reference alone, which is
@@ -1267,28 +1146,17 @@ function BookingDetail(props: {
                     <button
                         type="button"
                         onClick={onClose}
-<<<<<<< HEAD
                         className="shrink-0 -mr-2 grid h-10 w-10 place-items-center rounded-lg text-slate-400 hover:text-slate-700 transition-colors"
-=======
-                        className="shrink-0 text-slate-400 hover:text-slate-700 transition-colors"
->>>>>>> 8020f5d (Initial commit for website frontend)
                         aria-label="Close"
                     >
                         <X className="w-5 h-5" />
                     </button>
                 </header>
 
-<<<<<<< HEAD
                 <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4 sm:space-y-6">
 
                     {/* ------------------------------------- event details */}
                     <section className={`${ADMIN_CARD} p-4 sm:p-6`}>
-=======
-                <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-5 space-y-6">
-
-                    {/* ------------------------------------- event details */}
-                    <section className={`${ADMIN_CARD} p-5 sm:p-6`}>
->>>>>>> 8020f5d (Initial commit for website frontend)
                         <h3 className={`${CARD_TITLE} text-slate-900 mb-3`}>
                             Event Details
                         </h3>
@@ -1319,11 +1187,7 @@ function BookingDetail(props: {
                     </section>
 
                     {/* ----------------------------------- booking details */}
-<<<<<<< HEAD
                     <section className={`${ADMIN_CARD} p-4 sm:p-6`}>
-=======
-                    <section className={`${ADMIN_CARD} p-5 sm:p-6`}>
->>>>>>> 8020f5d (Initial commit for website frontend)
                         <h3 className={`${CARD_TITLE} text-slate-900 mb-3`}>
                             Booking Details
                         </h3>
@@ -1362,28 +1226,17 @@ function BookingDetail(props: {
 
                     {/* -------------------------------------- participants */}
                     <section className={`${ADMIN_CARD} overflow-hidden`}>
-<<<<<<< HEAD
                         <h3 className={`${CARD_TITLE} text-slate-900 px-4 sm:px-6 pt-4 sm:pt-6 pb-3`}>
                             Participants
                         </h3>
                         <div ref={cardTableRef1} className="overflow-x-auto card-table">
-=======
-                        <h3 className={`${CARD_TITLE} text-slate-900 px-5 sm:px-6 pt-5 sm:pt-6 pb-3`}>
-                            Participants
-                        </h3>
-                        <div className="overflow-x-auto">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             <table className="w-full text-left border-collapse min-w-[34rem]">
                                 <thead>
                                     <tr className="bg-slate-50 border-y border-slate-200">
                                         {['S.No', 'Name', 'Email', 'Mobile'].map((head) => (
                                             <th
                                                 key={head}
-<<<<<<< HEAD
                                                 className="px-5 py-4 text-[1.0625rem] font-semibold
-=======
-                                                className="px-5 py-4 text-[1.0625rem] sm:text-[1rem] font-semibold
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                            uppercase tracking-wider text-slate-500 whitespace-nowrap"
                                             >
                                                 {head}
@@ -1449,7 +1302,6 @@ function BookingDetail(props: {
                   * same reason and is always drawn; the other two appear only
                   * when they apply.
                   */}
-<<<<<<< HEAD
                 <footer className="shrink-0 border-t border-slate-200 bg-white px-4 sm:px-6 py-3 sm:py-4
                                    flex flex-col sm:flex-row gap-3">
                     {confirmOpen ? (
@@ -1544,37 +1396,6 @@ function BookingDetail(props: {
                                 </button>
                             )}
                         </>
-=======
-                <footer className="shrink-0 border-t border-slate-200 bg-white px-5 sm:px-6 py-4
-                                   flex flex-col sm:flex-row gap-3">
-                    {booking.status === 'active'
-                        && booking.payment.status !== 'paid'
-                        && booking.payment.status !== 'not_required' && (
-                        <button
-                            type="button"
-                            onClick={onMarkPaid}
-                            disabled={acting}
-                            className={ADMIN_PRIMARY_BTN}
-                        >
-                            {acting
-                                ? <Loader2 className="w-4 h-4 animate-spin" />
-                                : <CheckCircle2 className="w-4 h-4" />}
-                            {/* Cash at the door. The server stamps who
-                                recorded it, from the token. */}
-                            Record payment received
-                        </button>
-                    )}
-
-                    {booking.status === 'active' && (
-                        <button
-                            type="button"
-                            onClick={onCancel}
-                            disabled={acting}
-                            className={`${ADMIN_SECONDARY_BTN} !text-rose-600 hover:!bg-rose-50`}
-                        >
-                            <Ban className="w-4 h-4" /> Cancel booking
-                        </button>
->>>>>>> 8020f5d (Initial commit for website frontend)
                     )}
 
                     <button

@@ -73,7 +73,6 @@ export default function CertificatePage() {
         );
     }
 
-<<<<<<< HEAD
     /*
      * The chrome has to be as wide as the sheet under it, and the two sheets
      * are not the same width any more: the membership certificate is A4
@@ -105,15 +104,6 @@ export default function CertificatePage() {
                 <button
                     onClick={() => navigate(-1)}
                     className="flex min-h-[2.75rem] items-center gap-2 text-[1.25rem] font-semibold text-gray-500
-=======
-    return (
-        <div className="min-h-screen bg-[#eef1f8] px-4 py-10 print:bg-white print:p-0">
-            {/* Chrome — on screen only. */}
-            <div className="mx-auto mb-6 flex max-w-[210mm] items-center justify-between print:hidden">
-                <button
-                    onClick={() => navigate(-1)}
-                    className="flex items-center gap-2 text-[1.25rem] font-semibold text-gray-500
->>>>>>> 8020f5d (Initial commit for website frontend)
                                transition-colors hover:text-brand-900"
                 >
                     <ArrowLeft className="h-4 w-4" /> Back
@@ -121,11 +111,7 @@ export default function CertificatePage() {
 
                 <button
                     onClick={() => window.print()}
-<<<<<<< HEAD
                     className="flex items-center gap-2 rounded-xl bg-brand-800 px-4 sm:px-5 py-2.5 text-base sm:text-[1.25rem]
-=======
-                    className="flex items-center gap-2 rounded-xl bg-brand-800 px-5 py-2.5 text-[1.25rem]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                font-semibold text-white transition-colors hover:bg-brand-900"
                 >
                     <Printer className="h-4 w-4" />
@@ -133,13 +119,9 @@ export default function CertificatePage() {
                 </button>
             </div>
 
-<<<<<<< HEAD
             <div className={`${fitToScreen} print:[zoom:1]`}>
                 <MemberCertificate cert={cert} />
             </div>
-=======
-            <MemberCertificate cert={cert} />
->>>>>>> 8020f5d (Initial commit for website frontend)
         </div>
     );
 }

@@ -29,8 +29,10 @@ const WHATSAPP_URL = `https://wa.me/${CHAT_NUMBER}?text=${encodeURIComponent('Hi
 const SUPPORT_SPOT_KEY = 'activ-launchers-spot';
 const DONATE_SPOT_KEY = 'activ-donate-spot';
 const HIDDEN_ON = /^\/(cms|super-admin|state-admin|district-admin|block-admin|events-admin|admin|payment|member\/payment|donate\/receipt|donate\/statement)(\/|$)/;
-/** The Donate button is not offered on the donation pages themselves. */
-const DONATE_HIDDEN_ON = /^\/donate(\/|$)/;
+/** Donate is a PUBLIC-site call to action: not on the donation pages themselves,
+    and not over the signed-in member / business work screens, where it covered
+    their own primary buttons. */
+const DONATE_HIDDEN_ON = /^\/(donate|member|business)(\/|$)/;
 
 type Spot = { side: 'left' | 'right'; y: number };
 

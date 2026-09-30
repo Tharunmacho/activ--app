@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 import { EMPTY_MEDIA, type CmsMedia } from '@/services/cmsApi';
-<<<<<<< HEAD
 import { resolveMediaUrl, isResizableUpload } from '@/config/api.config';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * Render CMS media inside a fixed frame, honouring how the editor said it
@@ -74,7 +71,6 @@ const RESIZABLE_HOSTS = ['images.unsplash.com'];
  * only, so what the CMS holds stays exactly what the editor pasted, and an
  * editor who has already sized a URL themselves (`w` is present) is left alone.
  */
-<<<<<<< HEAD
 /*
  * ============================================================================
  * AN UPLOAD IS ON THE API'S ORIGIN, NOT ON THIS ONE
@@ -108,31 +104,14 @@ const sizedSrc = (url: string, width: number): string => {
     } catch {
         // Unparseable: hand back the resolved path rather than the raw one.
         return resolved;
-=======
-const sizedSrc = (url: string, width: number): string => {
-    try {
-        const u = new URL(url, window.location.origin);
-        if (!RESIZABLE_HOSTS.includes(u.hostname)) return url;
-        if (u.searchParams.has('w')) return url;
-        u.searchParams.set('w', String(Math.round(width)));
-        return u.toString();
-    } catch {
-        // A relative path, or something unparseable: leave it exactly as it is.
-        return url;
->>>>>>> 8020f5d (Initial commit for website frontend)
     }
 };
 
 /** Is this a host we can ask for a second density from? */
 const isResizable = (url: string): boolean => {
     try {
-<<<<<<< HEAD
         const u = new URL(resolveMediaUrl(url), window.location.origin);
         return (RESIZABLE_HOSTS.includes(u.hostname) || isResizableUpload(u)) && !u.searchParams.has('w');
-=======
-        const u = new URL(url, window.location.origin);
-        return RESIZABLE_HOSTS.includes(u.hostname) && !u.searchParams.has('w');
->>>>>>> 8020f5d (Initial commit for website frontend)
     } catch {
         return false;
     }
@@ -171,7 +150,6 @@ interface Props {
      * degrades to a transparent one.
      */
     transparent?: boolean;
-<<<<<<< HEAD
     /**
      * Draw an image at its OWN shape instead of filling a fixed box: full width,
      * height from the file, never cropped. For a poster that must be read
@@ -196,13 +174,6 @@ const WIDTH_LADDER = [320, 480, 640, 800, 1024, 1280, 1600, 1920];
 export function CmsMediaFrame({
     media, className = '', fallback = null, priority = false, width = 900,
     transparent = false, natural = false, onNaturalSize, sizes,
-=======
-}
-
-export function CmsMediaFrame({
-    media, className = '', fallback = null, priority = false, width = 900,
-    transparent = false,
->>>>>>> 8020f5d (Initial commit for website frontend)
 }: Props) {
     const m = { ...EMPTY_MEDIA, ...(media || {}) };
 
@@ -211,7 +182,6 @@ export function CmsMediaFrame({
     const plate = transparent ? '' : 'bg-slate-100';
 
     const [failed, setFailed] = useState(false);
-<<<<<<< HEAD
     /*
      * TWO CHANCES BEFORE GIVING UP.
      *
@@ -221,19 +191,13 @@ export function CmsMediaFrame({
      * plate showed a black banner slide over a photograph that existed.
      */
     const [plain, setPlain] = useState(false);
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     /*
      * Reset when the source changes. Without this a frame that has failed once
      * — a carousel slide, say — keeps showing the plate after the editor points
      * it at a working URL, because `failed` is still true from the old src.
      */
-<<<<<<< HEAD
     useEffect(() => { setFailed(false); setPlain(false); }, [m.url]);
-=======
-    useEffect(() => { setFailed(false); }, [m.url]);
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     if (!m.url) return <>{fallback}</>;
 
@@ -245,11 +209,7 @@ export function CmsMediaFrame({
     if (m.type === 'video') {
         return (
             <video
-<<<<<<< HEAD
                 src={resolveMediaUrl(m.url)}
-=======
-                src={m.url}
->>>>>>> 8020f5d (Initial commit for website frontend)
                 className={`w-full h-full ${plate} ${className}`}
                 style={style}
                 autoPlay
@@ -266,7 +226,6 @@ export function CmsMediaFrame({
     // Same box, same classes, no image — so a dead URL cannot change the layout
     // around it.
     if (failed) {
-<<<<<<< HEAD
         // A caller-supplied stand-in beats an empty box (a banner slide).
         if (fallback) return <>{fallback}</>;
         return <div aria-hidden="true" className={`w-full h-full ${plate} ${className}`} />;
@@ -305,19 +264,6 @@ export function CmsMediaFrame({
                     : `${sizedSrc(m.url, width)} 1x, ${sizedSrc(m.url, width * 2)} 2x`)
                 : undefined}
             sizes={isResizable(m.url) && sizes ? sizes : undefined}
-=======
-        return <div aria-hidden="true" className={`w-full h-full ${plate} ${className}`} />;
-    }
-
-    return (
-        <img
-            src={sizedSrc(m.url, width)}
-            // Two densities where the host can serve them, so a retina display
-            // gets a sharp image and everyone else does not pay for one.
-            srcSet={isResizable(m.url)
-                ? `${sizedSrc(m.url, width)} 1x, ${sizedSrc(m.url, width * 2)} 2x`
-                : undefined}
->>>>>>> 8020f5d (Initial commit for website frontend)
             alt={m.alt || ''}
             loading={priority ? 'eager' : 'lazy'}
             /*
@@ -329,7 +275,6 @@ export function CmsMediaFrame({
              */
             {...{ fetchpriority: priority ? 'high' : undefined }}
             decoding="async"
-<<<<<<< HEAD
             onError={() => {
                 // Retry the untouched file only when a resized one was asked for.
                 const sized = sizedSrc(m.url, width) !== resolveMediaUrl(m.url) || isResizable(m.url);
@@ -340,11 +285,6 @@ export function CmsMediaFrame({
                 : undefined}
             className={natural ? `block w-full h-auto ${className}` : `w-full h-full ${plate} ${className}`}
             style={natural ? { objectFit: 'contain', objectPosition: 'center' } : style}
-=======
-            onError={() => setFailed(true)}
-            className={`w-full h-full ${plate} ${className}`}
-            style={style}
->>>>>>> 8020f5d (Initial commit for website frontend)
         />
     );
 }

@@ -15,11 +15,7 @@
  * in the CMS removes it from the site. Copy baked into the markup as a fallback
  * would make deletion appear to do nothing.
  */
-<<<<<<< HEAD
 import api, { unwrap, errorMessage, registerCacheClearer } from './api';
-=======
-import api, { unwrap, errorMessage } from './api';
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { resolveMediaUrl } from '@/config/api.config';
 
 // ============================================================ types
@@ -41,7 +37,6 @@ export interface CmsMedia {
 }
 
 /**
-<<<<<<< HEAD
  * A photograph inside a gallery album.
  *
  * It has a page of its own at `/gallery/:id/photo/:n`, so it carries what a
@@ -71,8 +66,6 @@ export interface GalleryPhotoMedia extends CmsMedia {
 export type GalleryField = CmsExtraField;
 
 /**
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
  * A field the editor named themselves.
  *
  * Every page carries a list of these. The fields a page declares are the ones
@@ -82,7 +75,6 @@ export type GalleryField = CmsExtraField;
 export interface CmsExtraField {
     label: string;
     value: string;
-<<<<<<< HEAD
     /**
      * The mark drawn beside it where the surface draws one.
      *
@@ -106,8 +98,6 @@ export interface CmsExtraField {
      * pages nobody had edited.
      */
     placement?: 'card' | 'content';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 }
 
 /**
@@ -131,7 +121,6 @@ export interface CmsExtraField {
 export interface CmsSectionOverride {
     key: string;
     hidden: boolean;
-<<<<<<< HEAD
     /**
      * The editor's own heading for this card, where they set one.
      *
@@ -140,8 +129,6 @@ export interface CmsSectionOverride {
      * and the public page both fall back to. It never affects `key`.
      */
     title?: string;
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     fields: CmsExtraField[];
 }
 
@@ -212,7 +199,6 @@ export interface SiteSettings {
 
 // ---------------------------------------------------------------- home
 
-<<<<<<< HEAD
 /** Which side of the banner a slide's words sit on. */
 export type BannerAlign = 'left' | 'right';
 
@@ -228,11 +214,6 @@ export interface HeroSlide {
     subheadline: string;
     /** Left or right — moved off whichever side the photograph's subject is on. */
     align: BannerAlign;
-=======
-export interface HeroSlide {
-    media: CmsMedia;
-    caption: string;
->>>>>>> 8020f5d (Initial commit for website frontend)
 }
 
 export interface HomeCarousel {
@@ -450,11 +431,8 @@ export interface GalleryDetailCopy {
 
 export interface GalleryItem {
     _id: string;
-<<<<<<< HEAD
     /** The readable public address (`/gallery/<slug>`); see lib/eventPath. */
     slug?: string;
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     media: CmsMedia;
     title: string;
     caption: string;
@@ -471,22 +449,14 @@ export interface GalleryItem {
     /** Bullet points beside the write-up. */
     highlights?: string[];
     /** Further photographs from the same event, under the poster. */
-<<<<<<< HEAD
     /** The album's photographs, each with its own description. */
     photos?: GalleryPhotoMedia[];
-=======
-    photos?: CmsMedia[];
->>>>>>> 8020f5d (Initial commit for website frontend)
     /**
      * Fields the editor named themselves — chief guest, host chapter, sponsor,
      * anything this schema does not know about. Rendered as a labelled list on
      * the item's own page, in the order they were entered.
      */
-<<<<<<< HEAD
     customFields?: GalleryField[];
-=======
-    customFields?: { label: string; value: string }[];
->>>>>>> 8020f5d (Initial commit for website frontend)
     featured: boolean;
     /**
      * Leads both the banner and the gallery grid.
@@ -497,7 +467,6 @@ export interface GalleryItem {
     pinned?: boolean;
     /** Rides in the landing page banner. Undefined on rows predating the field. */
     showOnHome?: boolean;
-<<<<<<< HEAD
     /**
      * What the home banner says over THIS image, and on which side. Blank
      * falls back to the banner's shared headline.
@@ -506,15 +475,12 @@ export interface GalleryItem {
     bannerHighlight?: string;
     bannerSubheadline?: string;
     bannerAlign?: BannerAlign;
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     sortOrder: number;
     visible: boolean;
 }
 
 // ---------------------------------------------------------------- contact
 
-<<<<<<< HEAD
 /** The association's own profiles. Blank = not shown. The server normalises every one to a URL. */
 export interface SocialLinks {
     facebook: string; instagram: string; x: string; linkedin: string;
@@ -554,8 +520,6 @@ export const EMPTY_OFFICE: ContactOffice = {
     email: '', whatsapp: '', workingHours: [], mapInput: '', order: 0, isActive: true,
 };
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 export interface ContactInfo {
     badgeIcon: string;
     badgeText: string;
@@ -580,7 +544,6 @@ export interface ContactInfo {
     alternatePhone: string;
     email: string;
     workingHours: string[];
-<<<<<<< HEAD
     /** The head office's map, always a frameable Google URL (see ContactOffice). */
     mapEmbedUrl: string;
     mapLink?: string;
@@ -594,11 +557,6 @@ export interface ContactInfo {
      * fall back to the shipped wording in `AcrossIndia`.
      */
     regionsBand: { enabled: boolean; eyebrow: string; heading: string; subtitle: string };
-=======
-    mapEmbedUrl: string;
-    social: { facebook: string; instagram: string; linkedin: string; youtube: string };
-    banner: { enabled: boolean; icon: string; title: string; subtitle: string; ctaLabel: string; ctaHref: string };
->>>>>>> 8020f5d (Initial commit for website frontend)
     /** Fields the editor named themselves — extra rows in the details card. */
     extraFields: CmsExtraField[];
     /** Cards the editor removed, and the rows they added to each. */
@@ -607,11 +565,8 @@ export interface ContactInfo {
 
 export interface CmsEvent {
     id: string;
-<<<<<<< HEAD
     /** The readable public address (`/events/<slug>`); see lib/eventPath. */
     slug?: string;
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     title: string;
     description: string;
     startAt: string | null;
@@ -646,7 +601,6 @@ export interface CmsEvent {
      * somebody turned it off, so a new event needs no second step.
      */
     showOnHome?: boolean;
-<<<<<<< HEAD
     /** The QR card on the event page (components/shared/EventQr). On unless turned off. */
     showQrOnPage?: boolean;
     /** Documents for the event (agenda PDF …), and a YouTube / video link. */
@@ -666,17 +620,6 @@ export interface CmsEvent {
     bannerHighlight?: string;
     bannerSubheadline?: string;
     bannerAlign?: BannerAlign;
-=======
-    /**
-     * Has this event already been copied into the gallery?
-     *
-     * Sent on the ADMIN listing only, so `undefined` means "nobody asked" and
-     * is not the same answer as `false`. The events table reads it to say
-     * which rows have been archived already — without it, "To gallery" is a
-     * button whose effect is invisible from the row that carries it.
-     */
-    inGallery?: boolean;
->>>>>>> 8020f5d (Initial commit for website frontend)
     /**
      * Which site the event was authored for — `public` is the CMS's onboarding
      * programme, `members` the association's own. Optional for the same reason.
@@ -742,11 +685,8 @@ export interface CmsEvent {
     /** `paid` restricts the event to members with an active membership. */
     audience?: 'all' | 'paid';
     agenda?: CmsAgendaItem[];
-<<<<<<< HEAD
     /** The per-day programme — see `CmsEventDay`. Empty for a one-day event. */
     days?: CmsEventDay[];
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     speakers?: CmsSpeaker[];
     /**
      * HOW the event is attended: in a room, or on a link.
@@ -787,7 +727,6 @@ export interface CmsAgendaItem {
     location: string;
 }
 
-<<<<<<< HEAD
 /**
  * ONE DAY OF A MULTI-DAY EVENT — its own hours and its own sessions.
  *
@@ -810,8 +749,6 @@ export interface CmsEventDay {
     agenda: CmsAgendaItem[];
 }
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 export interface CmsSpeaker {
     id?: string;
     name: string;
@@ -829,7 +766,6 @@ export interface ContactMessage {
     subject: string;
     message: string;
     status: 'new' | 'read' | 'archived';
-<<<<<<< HEAD
     /** 'member_dashboard' when a signed-in member sent it from Help & Support. */
     source?: 'website' | 'member_dashboard';
     memberId?: string;
@@ -841,11 +777,6 @@ export interface ContactMessage {
 export const messageSourceLabel = (m: { source?: string }) =>
     m?.source === 'member_dashboard' ? 'Member dashboard' : 'Website contact form';
 
-=======
-    createdAt: string;
-}
-
->>>>>>> 8020f5d (Initial commit for website frontend)
 /**
  * Every icon an editor may pick, grouped so the picker is navigable.
  *
@@ -853,7 +784,6 @@ export const messageSourceLabel = (m: { source?: string }) =>
  * — the server rejects anything else, and the renderer falls back on anything
  * it does not recognise, so a mismatch degrades rather than breaks.
  */
-<<<<<<< HEAD
 /**
  * EVERY MARK THE SITE CAN DRAW, grouped for the picker.
  *
@@ -874,15 +804,6 @@ export const ICON_GROUPS: { label: string; icons: string[] }[] = [
     { label: 'Events & media', icons: ['image', 'images', 'camera', 'monitor-play', 'play', 'tent', 'book-open', 'grid', 'party-popper', 'mic'] },
     { label: 'Notes & labels', icons: ['info', 'tag', 'quote', 'file-text'] },
     { label: 'Contact', icons: ['phone', 'mail', 'message-square', 'send'] },
-=======
-export const ICON_GROUPS: { label: string; icons: string[] }[] = [
-    { label: 'People', icons: ['users', 'user', 'handshake', 'heart-handshake', 'building', 'briefcase'] },
-    { label: 'Growth', icons: ['trending-up', 'award', 'target', 'lightbulb', 'star', 'heart', 'rocket'] },
-    { label: 'Trust', icons: ['shield', 'shield-check', 'scale'] },
-    { label: 'Place & time', icons: ['globe', 'map-pin', 'calendar', 'calendar-days', 'clock'] },
-    { label: 'Events & media', icons: ['image', 'images', 'monitor-play', 'play', 'tent', 'book-open', 'hard-hat', 'grid', 'party-popper', 'mic'] },
-    { label: 'Contact', icons: ['phone', 'mail', 'message-square', 'send', 'file-text'] },
->>>>>>> 8020f5d (Initial commit for website frontend)
     { label: 'Navigation', icons: ['arrow-right', 'external-link', 'home'] },
     { label: 'Social', icons: ['facebook', 'instagram', 'linkedin', 'twitter', 'youtube'] },
 ];
@@ -998,17 +919,11 @@ export const EMPTY_CONTACT: ContactInfo = {
         icon: 'users', title: '', subtitle: '',
         addressLabel: '', phoneLabel: '', emailLabel: '', hoursLabel: '',
     },
-<<<<<<< HEAD
     addressLines: [], phone: '', alternatePhone: '', email: '', workingHours: [], mapEmbedUrl: '', mapLink: '',
     offices: [],
     social: { facebook: '', instagram: '', x: '', linkedin: '', youtube: '', whatsapp: '', telegram: '', threads: '' },
     banner: { enabled: true, icon: 'users', title: '', subtitle: '', ctaLabel: '', ctaHref: '' },
     regionsBand: { enabled: true, eyebrow: '', heading: '', subtitle: '' },
-=======
-    addressLines: [], phone: '', alternatePhone: '', email: '', workingHours: [], mapEmbedUrl: '',
-    social: { facebook: '', instagram: '', linkedin: '', youtube: '' },
-    banner: { enabled: true, icon: 'users', title: '', subtitle: '', ctaLabel: '', ctaHref: '' },
->>>>>>> 8020f5d (Initial commit for website frontend)
     extraFields: [],
     sections: [],
 };
@@ -1054,7 +969,6 @@ const CACHE_TTL_MS = 5_000;
 const cache = new Map<string, { at: number; value: any }>();
 const inFlight = new Map<string, Promise<any>>();
 
-<<<<<<< HEAD
 /*
  * ============================================================================
  * THE LAST COPY, KEPT IN THE BROWSER — FOR THE FIRST FRAME ONLY
@@ -1133,8 +1047,6 @@ const getOrPrefetched = async (path: string, request: () => Promise<{ data: any 
     return request();
 };
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 /** Fetch, store, and clear the in-flight marker whichever way it ends. */
 const refresh = <T>(key: string, load: () => Promise<T>): Promise<T> => {
     const pending = inFlight.get(key);
@@ -1144,10 +1056,7 @@ const refresh = <T>(key: string, load: () => Promise<T>): Promise<T> => {
         try {
             const value = await load();
             cache.set(key, { at: Date.now(), value });
-<<<<<<< HEAD
             persist(key, value);
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
             return value;
         } finally {
             inFlight.delete(key);
@@ -1173,7 +1082,6 @@ const refresh = <T>(key: string, load: () => Promise<T>): Promise<T> => {
  * header's region menu and the page's own document were re-fetched from nothing
  * on each navigation, including a return to a page the reader had just left.
  */
-<<<<<<< HEAD
 /*
  * ONLY THE CHROME IS SERVED STALE.
  *
@@ -1190,24 +1098,16 @@ const refresh = <T>(key: string, load: () => Promise<T>): Promise<T> => {
  */
 const SERVE_STALE = new Set(['site', 'legal:links', 'regions:map', 'schemes:states']);
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 export const cached = async <T>(key: string, load: () => Promise<T>): Promise<T> => {
     const hit = cache.get(key);
 
     if (hit) {
         if (Date.now() - hit.at < CACHE_TTL_MS) return hit.value as T;
-<<<<<<< HEAD
         if (SERVE_STALE.has(key)) {
             // Stale chrome: hand back what we have and bring it up to date behind the render.
             refresh(key, load).catch(() => { /* keep serving the stale copy */ });
             return hit.value as T;
         }
-=======
-        // Stale: hand back what we have and bring it up to date behind the render.
-        refresh(key, load).catch(() => { /* keep serving the stale copy */ });
-        return hit.value as T;
->>>>>>> 8020f5d (Initial commit for website frontend)
     }
 
     return refresh(key, load);
@@ -1225,7 +1125,6 @@ export const cached = async <T>(key: string, load: () => Promise<T>): Promise<T>
 export const invalidateCmsCache = (key?: string) => {
     if (key) cache.delete(key);
     else cache.clear();
-<<<<<<< HEAD
     forget(key);
     // Every other open tab of the site drops its copy too — see below.
     try { cmsChannel?.postMessage({ key: key || '' }); } catch { /* channel closed */ }
@@ -1266,19 +1165,11 @@ registerCacheClearer(() => {
     inFlight.clear();
 });
 
-=======
-};
-
->>>>>>> 8020f5d (Initial commit for website frontend)
 // ============================================================ public reads
 
 const getSiteSettingsUncached = async (): Promise<SiteSettings> => {
     try {
-<<<<<<< HEAD
         const data = unwrap<any>(await getOrPrefetched('/cms/site', () => api.get('/cms/site')), EMPTY_SITE);
-=======
-        const data = unwrap<any>(await api.get('/cms/site'), EMPTY_SITE);
->>>>>>> 8020f5d (Initial commit for website frontend)
         return {
             brand: {
                 ...EMPTY_SITE.brand,
@@ -1305,11 +1196,7 @@ export const getSiteSettings = () => cached('site', getSiteSettingsUncached);
 
 const getHomeUncached = async (): Promise<HomeContent> => {
     try {
-<<<<<<< HEAD
         const data = unwrap<any>(await getOrPrefetched('/cms/home', () => api.get('/cms/home')), EMPTY_HOME);
-=======
-        const data = unwrap<any>(await api.get('/cms/home'), EMPTY_HOME);
->>>>>>> 8020f5d (Initial commit for website frontend)
         const carousel = data.carousel || {};
         const about = data.about || {};
 
@@ -1320,13 +1207,10 @@ const getHomeUncached = async (): Promise<HomeContent> => {
                 slides: (carousel.slides || []).map((slide: any) => ({
                     media: withResolvedUrl(slide.media),
                     caption: slide.caption || '',
-<<<<<<< HEAD
                     headline: slide.headline || '',
                     headlineHighlight: slide.headlineHighlight || '',
                     subheadline: slide.subheadline || '',
                     align: slide.align === 'right' ? 'right' : 'left',
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                 })),
                 galleryPosters: {
                     ...EMPTY_HOME.carousel.galleryPosters,
@@ -1447,7 +1331,6 @@ export const getGallery = (includeHidden = false) =>
 
 const getHomeGalleryUncached = async (): Promise<GalleryItem[]> => {
     try {
-<<<<<<< HEAD
         /*
          * NO `limit`. The switch on the image is the whole control.
          *
@@ -1472,10 +1355,6 @@ const getHomeGalleryUncached = async (): Promise<GalleryItem[]> => {
         const data = unwrap<GalleryItem[]>(
             await getOrPrefetched('/cms/gallery?home=true',
                 () => api.get('/cms/gallery', { params: { home: 'true' } })),
-=======
-        const data = unwrap<GalleryItem[]>(
-            await api.get('/cms/gallery', { params: { home: 'true', limit: 12 } }),
->>>>>>> 8020f5d (Initial commit for website frontend)
             [],
         );
         return (data || []).map(resolveItemMedia);
@@ -1489,17 +1368,10 @@ const getHomeGalleryUncached = async (): Promise<GalleryItem[]> => {
  * first, and nothing else.
  *
  * Its own request rather than a slice of `getGallery()`. The landing page is
-<<<<<<< HEAD
  * the one page on the site whose payload is worth defending, and this answer
  * is the switched-on rows WITHOUT their write-ups or extra photographs — see
  * `listGallery`'s projection, which is what defends the weight now that the
  * count is the editor's to decide.
-=======
- * the one page on the site whose payload is worth defending, and this answer is
- * a dozen rows without the write-ups or the extra photographs. The server caps
- * it at twelve; the section renders as many of those as the CMS limit allows,
- * so changing that number needs no new request.
->>>>>>> 8020f5d (Initial commit for website frontend)
  */
 export const getHomeGallery = () => cached('gallery:home', getHomeGalleryUncached);
 
@@ -1510,7 +1382,6 @@ export const getHomeGallery = () => cached('gallery:home', getHomeGalleryUncache
  * poster has nothing to render, and telling the visitor the link is dead is
  * better than an empty page that looks broken.
  */
-<<<<<<< HEAD
 export const getGalleryItem = (id: string): Promise<GalleryItem> =>
     // Cached like the lists: the album page and each of its photograph pages
     // read the same album, and paging through twenty photographs used to fetch
@@ -1520,13 +1391,6 @@ export const getGalleryItem = (id: string): Promise<GalleryItem> =>
         if (!data || !data._id) throw new Error('Gallery item not found');
         return resolveItemMedia(data);
     });
-=======
-export const getGalleryItem = async (id: string): Promise<GalleryItem> => {
-    const data = unwrap<GalleryItem | null>(await api.get(`/cms/gallery/${id}`), null);
-    if (!data || !data._id) throw new Error('Gallery item not found');
-    return resolveItemMedia(data);
-};
->>>>>>> 8020f5d (Initial commit for website frontend)
 
 const getContactInfoUncached = async (): Promise<ContactInfo> => {
     try {
@@ -1538,13 +1402,9 @@ const getContactInfoUncached = async (): Promise<ContactInfo> => {
             formCard: { ...EMPTY_CONTACT.formCard, ...(data.formCard || {}) },
             infoCard: { ...EMPTY_CONTACT.infoCard, ...(data.infoCard || {}) },
             social: { ...EMPTY_CONTACT.social, ...(data.social || {}) },
-<<<<<<< HEAD
             offices: Array.isArray(data.offices) ? data.offices.map((o: any) => ({ ...EMPTY_OFFICE, ...(o || {}) })) : [],
             banner: { ...EMPTY_CONTACT.banner, ...(data.banner || {}) },
             regionsBand: { ...EMPTY_CONTACT.regionsBand, ...(data.regionsBand || {}) },
-=======
-            banner: { ...EMPTY_CONTACT.banner, ...(data.banner || {}) },
->>>>>>> 8020f5d (Initial commit for website frontend)
         };
     } catch {
         return EMPTY_CONTACT;
@@ -1554,7 +1414,6 @@ const getContactInfoUncached = async (): Promise<ContactInfo> => {
 /** Cached; see `cached()` above. */
 export const getContactInfo = () => cached('contact-info', getContactInfoUncached);
 
-<<<<<<< HEAD
 const resolveEvents = (data: CmsEvent[] | null): CmsEvent[] =>
     (data || []).map((e) => ({
         ...e,
@@ -1575,22 +1434,11 @@ const getCmsEventsUncached = async (): Promise<CmsEvent[]> => {
             await getOrPrefetched('/cms/events?scope=public',
                 () => api.get('/cms/events', { params: { scope: 'public' } })), [],
         ));
-=======
-const getCmsEventsUncached = async (): Promise<CmsEvent[]> => {
-    try {
-        const data = unwrap<CmsEvent[]>(await api.get('/cms/events'), []);
-        return (data || []).map((e) => ({
-            ...e,
-            imageUrl: resolveMediaUrl(e.imageUrl),
-            media: withResolvedUrl(e.media),
-        }));
->>>>>>> 8020f5d (Initial commit for website frontend)
     } catch {
         return [];
     }
 };
 
-<<<<<<< HEAD
 /** The public list. Cached; see `cached()` above. */
 export const getCmsEvents = () => cached('events', getCmsEventsUncached);
 
@@ -1606,12 +1454,6 @@ export const getCmsEventsForEditor = async (): Promise<CmsEvent[]> =>
     resolveEvents(unwrap<CmsEvent[]>(await api.get('/cms/events'), []));
 
 /**
-=======
-/** Cached; see `cached()` above. */
-export const getCmsEvents = () => cached('events', getCmsEventsUncached);
-
-/**
->>>>>>> 8020f5d (Initial commit for website frontend)
  * One event, for its own page.
  *
  * Throws where the list readers swallow: an event page that cannot load its
@@ -1632,11 +1474,8 @@ export const getCmsEvent = async (id: string): Promise<CmsEvent> => {
  */
 export const sendContactMessage = async (payload: {
     name: string; email: string; phone?: string; subject?: string; message: string;
-<<<<<<< HEAD
     /** Sent from Help & Support; the server stamps the source from the token. */
     applicationRef?: string;
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 }): Promise<{ id: string; receivedAt: string }> => {
     const res = await api.post('/cms/contact-messages', payload);
     return unwrap(res, { id: '', receivedAt: '' });
@@ -1693,7 +1532,6 @@ export const updateGallerySettings = async (payload: Partial<GallerySettings>) =
     return saved;
 };
 
-<<<<<<< HEAD
 /** What a pasted map resolves to — the CMS editor's live preview (same rules as the save). */
 export const previewContactMap = async (input: string, address = '') =>
     unwrap<{ embedUrl: string; mapLink: string; directionsUrl: string; query: string }>(
@@ -1701,8 +1539,6 @@ export const previewContactMap = async (input: string, address = '') =>
         { embedUrl: '', mapLink: '', directionsUrl: '', query: '' },
     );
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 export const updateContactInfo = async (payload: Partial<ContactInfo>) => {
     const saved = unwrap<ContactInfo>(await api.put('/cms/contact-info', payload), EMPTY_CONTACT);
     // The editor reloads the public page to check the change; a stale
@@ -1717,7 +1553,6 @@ export const updateContactInfo = async (payload: Partial<ContactInfo>) => {
  * Separate from saving content so the editor can preview the real file before
  * committing — otherwise a wrong image is only discovered once it is live.
  */
-<<<<<<< HEAD
 /** One event document, as stored; the url is site-relative (/uploads/...). */
 export interface EventAttachment {
     name: string;
@@ -1734,8 +1569,6 @@ export const uploadEventAttachment = async (file: File): Promise<EventAttachment
     return { url: data.url || '', name: data.name || file.name, type: data.type || file.type, size: Number(data.size) || file.size };
 };
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 export const uploadMedia = async (file: File): Promise<{ url: string; type: 'image' | 'video' }> => {
     const form = new FormData();
     form.append('file', file);
@@ -1752,11 +1585,8 @@ export const uploadMedia = async (file: File): Promise<{ url: string; type: 'ima
  * edited poster showing its old title on the home page.
  */
 const invalidateGallery = () => {
-<<<<<<< HEAD
     // Every cached album page too — an edit must show on its own page at once.
     [...cache.keys()].filter((k) => k.startsWith('gallery:item:')).forEach((k) => cache.delete(k));
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     invalidateCmsCache('gallery');
     invalidateCmsCache('gallery:all');
     invalidateCmsCache('gallery:home');
@@ -1806,25 +1636,6 @@ export const updateCmsEvent = async (id: string, fields: Record<string, any>, im
     return result;
 };
 
-<<<<<<< HEAD
-=======
-/**
- * Copy a finished event into the gallery.
- *
- * A COPY: the event keeps its page and its URL, and is only switched off the
- * home strip. Pressed twice it updates the item it made the first time rather
- * than adding a second — the server matches on the event's id.
- */
-export const sendEventToGallery = async (id: string) => {
-    const result = unwrap<{ galleryId: string; updated: boolean; title: string }>(
-        await api.post(`/cms/events/${id}/to-gallery`), 
-        { galleryId: '', updated: false, title: '' },
-    );
-    // Both lists now answer differently.
-    invalidateCmsCache();
-    return result;
-};
->>>>>>> 8020f5d (Initial commit for website frontend)
 export const deleteCmsEvent = async (id: string) => {
     const result = unwrap<any>(await api.delete(`/cms/events/${id}`), null);
     // Both gallery scopes, or the events list, now answer differently.
@@ -1915,11 +1726,7 @@ export interface LegalDocument {
      * it, and every reader has to cope with that rather than assume an
      * array is there.
      */
-<<<<<<< HEAD
     extraFields?: CmsExtraField[];
-=======
-    extraFields?: { label: string; value: string }[];
->>>>>>> 8020f5d (Initial commit for website frontend)
     status: 'published' | 'draft';
     order: number;
     /**

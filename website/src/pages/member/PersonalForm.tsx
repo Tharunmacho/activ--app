@@ -29,11 +29,8 @@ interface PersonalFormData {
   district: string;
   block: string;
   city: string;
-<<<<<<< HEAD
   /** Members outside India: where they are, in place of the region. */
   place: string;
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
   socialCategory: string;
   religion: string;
   gender: string;
@@ -49,10 +46,7 @@ const PersonalInformationForm = () => {
     district: "",
     block: "",
     city: "",
-<<<<<<< HEAD
     place: "",
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     socialCategory: "",
     religion: "",
     gender: "",
@@ -60,7 +54,6 @@ const PersonalInformationForm = () => {
 
   const [states, setStates] = useState<string[]>([]);
   const [districts, setDistricts] = useState<string[]>([]);
-<<<<<<< HEAD
   /*
    * A member outside India — decided by the SERVER (`isInternational` on the
    * profile, set from their phone number) and read here only to decide what
@@ -68,8 +61,6 @@ const PersonalInformationForm = () => {
    */
   const [isAbroad, setIsAbroad] = useState(false);
   const [abroadCountry, setAbroadCountry] = useState("");
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
   const [blocks, setBlocks] = useState<string[]>([]);
   /**
    * False when the platform has no staffed region at all. That is a different
@@ -167,10 +158,7 @@ const PersonalInformationForm = () => {
           district: profile.district || "",
           block: profile.block || "",
           city: profile.city || "",
-<<<<<<< HEAD
           place: profile.place || profile.city || "",
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
           socialCategory: profile.socialCategory || "",
           // Old spellings — "Hindu", "hindu", "HINDU" — are mapped onto the
           // list's current wording, so a returning member is not handed a blank
@@ -182,11 +170,8 @@ const PersonalInformationForm = () => {
         });
 
         setIsLocked(profile.isLocked === true);
-<<<<<<< HEAD
         setIsAbroad(profile.isInternational === true);
         setAbroadCountry(profile.country || "");
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
       }
     } catch (error) {
       console.warn("Could not load personal details:", error);
@@ -249,26 +234,16 @@ const PersonalInformationForm = () => {
       return;
     }
 
-<<<<<<< HEAD
     /* The region is asked of members in India only; abroad, the place. */
     const locationMissing = isAbroad
       ? !(formData.place || "").trim()
       : !formData.state || !formData.district || !formData.block || !formData.city;
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     if (
       !formData.fullName ||
       !formData.phoneNumber ||
       !formData.email ||
-<<<<<<< HEAD
       locationMissing ||
-=======
-      !formData.state ||
-      !formData.district ||
-      !formData.block ||
-      !formData.city ||
->>>>>>> 8020f5d (Initial commit for website frontend)
       !formData.socialCategory ||
       !formData.religion ||
       !formData.gender
@@ -282,15 +257,11 @@ const PersonalInformationForm = () => {
       // Sent with the backend's own field names. `updateProfile` routes each
       // group of fields to its own collection and mirrors the personal details
       // onto the member's application, so the admin queues stay in step.
-<<<<<<< HEAD
       /* Abroad, the region is not sent at all — the server drops it anyway —
          and the place doubles as the city the other forms read. */
       await updateProfile(isAbroad
         ? { ...formData, state: undefined, district: undefined, block: undefined, city: formData.place.trim(), place: formData.place.trim() }
         : formData);
-=======
-      await updateProfile(formData);
->>>>>>> 8020f5d (Initial commit for website frontend)
 
       toast.success("Personal information saved");
       window.dispatchEvent(new Event("formSubmitted"));
@@ -319,11 +290,7 @@ const PersonalInformationForm = () => {
       disabled={isLocked}
       onSubmit={handleSubmit}
     >
-<<<<<<< HEAD
       {!isAbroad && !coverageAvailable && (
-=======
-      {!coverageAvailable && (
->>>>>>> 8020f5d (Initial commit for website frontend)
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-[1.1875rem] text-amber-800">
           No region on the platform currently has an active block admin, so there is
           nothing to select yet. An administrator has to open a region before an
@@ -338,7 +305,6 @@ const PersonalInformationForm = () => {
         subtitle="Tell us where your business is located"
       >
         <FormGrid>
-<<<<<<< HEAD
           {isAbroad ? (
             <FormField label="Place" required hint={`You are registered from ${abroadCountry || "outside India"} — no state, district or block is needed. Shown on your certificate and dashboard.`}>
               <Input
@@ -350,8 +316,6 @@ const PersonalInformationForm = () => {
             </FormField>
           ) : (
             <>
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
           <FormField label="State" required>
             <Select value={formData.state} onValueChange={(v) => setField("state", v)}>
               <SelectTrigger className="h-11 border-slate-200 focus:ring-blue-500">
@@ -409,11 +373,8 @@ const PersonalInformationForm = () => {
               className="h-11 border-slate-200 focus-visible:ring-blue-500"
             />
           </FormField>
-<<<<<<< HEAD
             </>
           )}
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
         </FormGrid>
       </FormCard>
 

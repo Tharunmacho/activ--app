@@ -148,11 +148,7 @@ export function LeaderMessageForm({ person, context, onDone }: {
 
     if (sent) {
         return (
-<<<<<<< HEAD
             <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 sm:p-5 text-left">
-=======
-            <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 text-left">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 <p className="flex items-center gap-2 text-[1.1875rem] font-extrabold text-emerald-800">
                     <Check size={18} className="shrink-0" /> Recorded
                 </p>
@@ -183,11 +179,7 @@ export function LeaderMessageForm({ person, context, onDone }: {
         + 'hover:border-brand-300 focus:border-brand-600 focus:ring-2 focus:ring-brand-600/15';
 
     return (
-<<<<<<< HEAD
         <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50/70 p-4 sm:p-5 text-left">
-=======
-        <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50/70 p-5 text-left">
->>>>>>> 8020f5d (Initial commit for website frontend)
             <p className="flex items-center gap-2 text-[1.1875rem] font-extrabold text-brand-900">
                 <MessageSquare size={17} className="shrink-0 text-brand-600" />
                 Ask to be contacted

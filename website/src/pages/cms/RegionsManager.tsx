@@ -24,10 +24,7 @@ import {
     listRegionPagesAdmin, getRegionPageAdmin, getStatePageAdmin,
     type AdminRegionRow, type AdminStateRow,
     saveRegionPage, saveStatePage, listRegionGallery,
-<<<<<<< HEAD
     STATE_LABELS, ZONE_LABELS, NATIONAL_LABELS,
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     type GalleryPhoto,
     type RegionPage, type StatePage, type RegionLeader, type RegionFeedItem, type RegionSlide,
     type RegionContactPerson, type RegionContactGroup,
@@ -113,17 +110,10 @@ export default function RegionsManager() {
 
     const closePage = () => { setParams(new URLSearchParams()); window.scrollTo({ top: 0 }); };
 
-<<<<<<< HEAD
     /* Zone key -> "South Zone", for the state rows' subtitle. */
     const regionLabels = useMemo(
         () => new Map(regions.filter((r) => !r.national)
             .map((r) => [r.key, `${r.label} Zone`])),
-=======
-    /* Region key -> "South Region", for the state rows' subtitle. */
-    const regionLabels = useMemo(
-        () => new Map(regions.filter((r) => !r.national)
-            .map((r) => [r.key, `${r.label} Region`])),
->>>>>>> 8020f5d (Initial commit for website frontend)
         [regions],
     );
 
@@ -139,11 +129,7 @@ export default function RegionsManager() {
             setStates(data.states || []);
             setAllStates(data.allStates || []);
         } catch (err) {
-<<<<<<< HEAD
             setError(errorMessage(err, 'The zone pages could not be loaded'));
-=======
-            setError(errorMessage(err, 'The region pages could not be loaded'));
->>>>>>> 8020f5d (Initial commit for website frontend)
         } finally {
             setLoading(false);
         }
@@ -165,11 +151,7 @@ export default function RegionsManager() {
         regionFilter ? states.filter((row) => row.regionKey === regionFilter) : states
     ), [states, regionFilter]);
 
-<<<<<<< HEAD
     if (loading) return <CmsPage><CmsLoading label="Loading zone pages…" /></CmsPage>;
-=======
-    if (loading) return <CmsPage><CmsLoading label="Loading region pages…" /></CmsPage>;
->>>>>>> 8020f5d (Initial commit for website frontend)
     if (error) return <CmsPage><CmsError message={error} onRetry={load} /></CmsPage>;
 
     /*
@@ -187,13 +169,9 @@ export default function RegionsManager() {
             <CmsPage>
                 <EditorScreen
                     title={statePage.stateName}
-<<<<<<< HEAD
                     subtitle={statePage.regionKey
                         ? `${regionLabels.get(statePage.regionKey) || statePage.regionKey} Zone`
                         : 'State page'}
-=======
-                    subtitle={statePage.regionKey ? `${statePage.regionKey} region` : 'State page'}
->>>>>>> 8020f5d (Initial commit for website frontend)
                     href={`/states/${statePage.slug}`}
                     status={statePage.status}
                     onBack={closePage}
@@ -217,11 +195,7 @@ export default function RegionsManager() {
         return (
             <CmsPage>
                 <EditorScreen
-<<<<<<< HEAD
                     title={`${regionRow.label} Zone`}
-=======
-                    title={`${regionRow.label} Region`}
->>>>>>> 8020f5d (Initial commit for website frontend)
                     subtitle={`${regionRow.stateCount} states`}
                     href={`/regions/${regionRow.key}`}
                     status={regionRow.page?.status}
@@ -234,7 +208,6 @@ export default function RegionsManager() {
                                 label={regionRow.label}
                                 page={full}
                                 onSaved={load}
-<<<<<<< HEAD
                                 /*
                                  * THE ROWS, NOT A RENDERED CARD.
                                  *
@@ -288,49 +261,6 @@ export default function RegionsManager() {
                                             openPage({ state: slug });
                                         }}
                                     />
-=======
-                                below={regionRow.national ? (
-                                    <CmsStep
-                                        step="Section 4"
-                                        title="The five regions"
-                                        hint="The tier under the national page. Each is its own page with its own bench and its own contacts — edited there, listed here, never copied onto this one."
-                                    >
-                                        <TierBelow
-                                            title="Regions of India"
-                                            hint="Drawn as boards under the national leadership, in this order."
-                                            emptyText="No region pages yet."
-                                            rows={regions.filter((r) => !r.national).map((r) => ({
-                                                key: r.key,
-                                                label: `${r.label} Region`,
-                                                subtitle: `${r.stateCount} states`,
-                                                status: r.page?.status,
-                                                href: `/regions/${r.key}`,
-                                                onOpen: () => openPage({ region: r.key }),
-                                            }))}
-                                        />
-                                    </CmsStep>
-                                ) : (
-                                    <CmsStep
-                                        step="Section 4"
-                                        title="State leadership"
-                                        hint="The tier under this region. Each state is its own page with its own bench, its own districts and its own contacts — edited there, listed here, never copied onto this one."
-                                    >
-                                        <TierBelow
-                                            title={`States of the ${regionRow.label}`}
-                                            hint="Drawn as boards under the region’s own leadership. A state with neither a bench nor a contact is not drawn."
-                                            emptyText="No state pages in this region yet."
-                                            rows={states.filter((st) => st.regionKey === regionRow.key)
-                                                .map((st) => ({
-                                                    key: st.slug,
-                                                    label: st.stateName,
-                                                    subtitle: regionLabels.get(st.regionKey) || '',
-                                                    status: st.status,
-                                                    href: `/states/${st.slug}`,
-                                                    onOpen: () => openPage({ state: st.slug }),
-                                                }))}
-                                        />
-                                    </CmsStep>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 )}
                             />
                         )}
@@ -343,28 +273,16 @@ export default function RegionsManager() {
     return (
         <CmsPage>
             <CmsCard
-<<<<<<< HEAD
                 title="Zones & States"
                 description="The zone and state pages on the public site — their leadership, photographs, updates and contact details. Everything here is written by hand; nothing is pulled from the events or member records."
             >
                 <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-[#1f1f1f] mb-6">
                     {([['regions', 'Zones'], ['states', 'States']] as [Tab, string][]).map(([key, label]) => (
-=======
-                title="Regions & States"
-                description="The regional and state pages on the public site — their leadership, photographs, updates and contact details. Everything here is written by hand; nothing is pulled from the events or member records."
-            >
-                <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-[#1f1f1f] mb-6">
-                    {([['regions', 'Regions'], ['states', 'States']] as [Tab, string][]).map(([key, label]) => (
->>>>>>> 8020f5d (Initial commit for website frontend)
                         <button
                             key={key}
                             type="button"
                             onClick={() => { setTab(key); }}
-<<<<<<< HEAD
                             className={`-mb-px px-3 sm:px-5 py-3 text-[1.25rem] font-semibold border-b-2 transition-colors ${
-=======
-                            className={`-mb-px px-5 py-3 text-[1.25rem] font-semibold border-b-2 transition-colors ${
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 tab === key
                                     ? 'border-blue-600 text-blue-700 dark:text-blue-400'
                                     : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-neutral-200'
@@ -384,11 +302,7 @@ export default function RegionsManager() {
                             <PageRow
                                 key={row.key}
                                 /* "India Region" would be wrong twice over. */
-<<<<<<< HEAD
                                 title={row.national ? row.label : `${row.label} Zone`}
-=======
-                                title={row.national ? row.label : `${row.label} Region`}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 subtitle={row.national
                                     ? 'The national page — office-bearers, contacts and the map of India'
                                     : `${row.stateCount} states`}
@@ -406,11 +320,7 @@ export default function RegionsManager() {
                                             setTab('states');
                                            
                                         }}
-<<<<<<< HEAD
                                         className="shrink-0 rounded-full px-3 py-1.5 text-[1.0625rem]
-=======
-                                        className="shrink-0 rounded-full px-3 py-1.5 text-[1rem]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                    font-semibold text-blue-700 dark:text-blue-400
                                                    transition-colors hover:bg-blue-50 dark:hover:bg-blue-950/40"
                                     >
@@ -442,17 +352,10 @@ export default function RegionsManager() {
                               * can only ever empty the list, next to five that
                               * narrow it.
                               */}
-<<<<<<< HEAD
                             {[{ key: '', label: 'All zones', count: states.length }]
                                 .concat(regions.filter((r) => !r.national).map((r) => ({
                                     key: r.key,
                                     label: `${r.label} Zone`,
-=======
-                            {[{ key: '', label: 'All regions', count: states.length }]
-                                .concat(regions.filter((r) => !r.national).map((r) => ({
-                                    key: r.key,
-                                    label: `${r.label} Region`,
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     count: states.filter((st) => st.regionKey === r.key).length,
                                 })))
                                 .map((chip) => (
@@ -461,11 +364,7 @@ export default function RegionsManager() {
                                         type="button"
                                         onClick={() => { setRegionFilter(chip.key); }}
                                         className={`inline-flex items-center gap-2 rounded-full px-4 py-2
-<<<<<<< HEAD
                                                     text-[1.1875rem] font-semibold transition-colors ${
-=======
-                                                    text-[1.125rem] font-semibold transition-colors ${
->>>>>>> 8020f5d (Initial commit for website frontend)
                                             regionFilter === chip.key
                                                 ? 'bg-blue-600 text-white'
                                                 : 'bg-slate-100 dark:bg-[#141414] text-slate-600 '
@@ -583,13 +482,8 @@ function EditorScreen({ title, subtitle, href, status, onBack, children }: {
               * the cards below are padded differently, so it over-reached on the
               * left and lined up with nothing.
               */}
-<<<<<<< HEAD
             <div className="mb-5 sm:mb-7 flex flex-wrap items-center gap-x-3 sm:gap-x-4 gap-y-3 border-b
                             border-slate-200 pb-4 sm:pb-5 dark:border-[#1F1F1F]">
-=======
-            <div className="mb-7 flex flex-wrap items-center gap-x-4 gap-y-3 border-b
-                            border-slate-200 pb-5 dark:border-[#1F1F1F]">
->>>>>>> 8020f5d (Initial commit for website frontend)
                     {/*
                       * THE ARROW ALONE.
                       *
@@ -617,11 +511,7 @@ function EditorScreen({ title, subtitle, href, status, onBack, children }: {
                         <ArrowLeft className="h-[1.125rem] w-[1.125rem]" />
                     </button>
 
-<<<<<<< HEAD
                     <div className="min-w-0 flex-1 basis-[10rem]">
-=======
-                    <div className="min-w-0 flex-1">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         <h2 className={`${CARD_TITLE} truncate leading-tight text-slate-900 dark:text-white`}>
                             {title}
                         </h2>
@@ -634,11 +524,7 @@ function EditorScreen({ title, subtitle, href, status, onBack, children }: {
                     </div>
 
                     <div className="flex shrink-0 items-center gap-2">
-<<<<<<< HEAD
                     <span className={`shrink-0 rounded-full px-3 py-1 text-[1.0625rem] font-semibold ${
-=======
-                    <span className={`shrink-0 rounded-full px-3 py-1 text-[1rem] font-semibold ${
->>>>>>> 8020f5d (Initial commit for website frontend)
                         live
                             ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
                             : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
@@ -676,19 +562,11 @@ function PageRow({ title, subtitle, status, href, onToggle, action }: {
     return (
         <div className="rounded-xl border border-slate-200 transition-colors hover:border-slate-300
                         dark:border-[#2a2a2a] overflow-hidden">
-<<<<<<< HEAD
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 sm:px-4 py-3 sm:py-3.5 bg-slate-50/60 dark:bg-[#111]">
                 <button
                     type="button"
                     onClick={onToggle}
                     className="flex-1 !min-w-[9rem] text-left"
-=======
-            <div className="flex items-center gap-3 px-4 py-3.5 bg-slate-50/60 dark:bg-[#111]">
-                <button
-                    type="button"
-                    onClick={onToggle}
-                    className="flex-1 min-w-0 text-left"
->>>>>>> 8020f5d (Initial commit for website frontend)
                 >
                     <p className="text-[1.25rem] font-bold text-slate-900 dark:text-neutral-100">
                         {title}
@@ -704,13 +582,8 @@ function PageRow({ title, subtitle, status, href, onToggle, action }: {
 
                 <span className={`shrink-0 rounded-full px-2.5 py-1 text-[1.0625rem] font-semibold ${
                     status === 'published'
-<<<<<<< HEAD
                         ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
                         : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
-=======
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : 'bg-amber-50 text-amber-700'
->>>>>>> 8020f5d (Initial commit for website frontend)
                 }`}>
                     {status === 'published' ? 'Published' : status ? 'Draft' : 'Not created'}
                 </span>
@@ -733,11 +606,7 @@ function PageRow({ title, subtitle, status, href, onToggle, action }: {
                     type="button"
                     onClick={onToggle}
                     className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5
-<<<<<<< HEAD
                                text-[1.0625rem] font-semibold text-[#2563EB] transition-colors
-=======
-                               text-[1rem] font-semibold text-[#2563EB] transition-colors
->>>>>>> 8020f5d (Initial commit for website frontend)
                                hover:bg-blue-50 dark:hover:bg-blue-950/30"
                 >
                     <Pencil className="w-3.5 h-3.5" /> Edit
@@ -764,11 +633,7 @@ function AddState({ options, onAdded }: {
 
     return (
         <div className="flex flex-wrap items-end gap-3 pt-2">
-<<<<<<< HEAD
             <div className="min-w-[min(16rem,100%)] flex-1">
-=======
-            <div className="min-w-[16rem] flex-1">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 <CmsField label="Add a state page">
                     <select
                         value={slug}
@@ -850,11 +715,7 @@ function CmsNotDrawn({ where }: { where: string }) {
     return (
         <div className="mt-12 rounded-xl border border-amber-300/70 bg-amber-50 p-4
                         dark:border-amber-500/30 dark:bg-amber-500/10">
-<<<<<<< HEAD
             <p className="text-[1.0625rem] font-bold uppercase tracking-[0.16em] text-amber-700
-=======
-            <p className="text-[0.8125rem] font-bold uppercase tracking-[0.16em] text-amber-700
->>>>>>> 8020f5d (Initial commit for website frontend)
                           dark:text-amber-400">
                 Stored, but not shown on the {where} page
             </p>
@@ -1006,11 +867,7 @@ function BadgeRows({ label, rows, onChange }: {
 
     return (
         <div>
-<<<<<<< HEAD
             <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-=======
-            <div className="flex items-center justify-between gap-3 mb-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 <p className="text-[1.1875rem] font-semibold text-slate-700 dark:text-neutral-200">{label}</p>
                 <AddRowButton
                     label="Add"
@@ -1029,11 +886,7 @@ function BadgeRows({ label, rows, onChange }: {
                             <select
                                 value={row.icon}
                                 onChange={(e) => patch(i, { icon: e.target.value })}
-<<<<<<< HEAD
                                 className="h-11 w-28 sm:w-40 shrink-0 rounded-lg border border-slate-300
-=======
-                                className="h-11 w-40 shrink-0 rounded-lg border border-slate-300
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            dark:border-[#2a2a2a] bg-white dark:bg-[#0b0b0b] px-3
                                            text-[1.1875rem] text-slate-900 dark:text-neutral-100"
                             >
@@ -1051,11 +904,7 @@ function BadgeRows({ label, rows, onChange }: {
                                 type="button"
                                 onClick={() => onChange(rows.filter((_, index) => index !== i))}
                                 aria-label="Remove"
-<<<<<<< HEAD
                                 className="p-2.5 sm:p-1.5 rounded text-red-500 hover:bg-red-500/10 shrink-0"
-=======
-                                className="p-1.5 rounded text-red-500 hover:bg-red-500/10 shrink-0"
->>>>>>> 8020f5d (Initial commit for website frontend)
                             >
                                 <Trash2 className="w-4 h-4" />
                             </button>
@@ -1090,11 +939,7 @@ function FactRows({ rows, onChange }: { rows: Fact[]; onChange: (rows: Fact[]) =
 
     return (
         <div>
-<<<<<<< HEAD
             <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-=======
-            <div className="flex items-center justify-between gap-3 mb-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 <p className="text-[1.1875rem] font-semibold text-slate-700 dark:text-neutral-200">
                     Fact chips
                 </p>
@@ -1115,11 +960,7 @@ function FactRows({ rows, onChange }: { rows: Fact[]; onChange: (rows: Fact[]) =
                             <select
                                 value={row.icon}
                                 onChange={(e) => patch(i, { icon: e.target.value })}
-<<<<<<< HEAD
                                 className="h-11 w-24 sm:w-36 shrink-0 rounded-lg border border-slate-300
-=======
-                                className="h-11 w-36 shrink-0 rounded-lg border border-slate-300
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            dark:border-[#2a2a2a] bg-white dark:bg-[#0b0b0b] px-3
                                            text-[1.1875rem] text-slate-900 dark:text-neutral-100"
                             >
@@ -1142,11 +983,7 @@ function FactRows({ rows, onChange }: { rows: Fact[]; onChange: (rows: Fact[]) =
                                 type="button"
                                 onClick={() => onChange(rows.filter((_, index) => index !== i))}
                                 aria-label="Remove"
-<<<<<<< HEAD
                                 className="p-2.5 sm:p-1.5 rounded text-red-500 hover:bg-red-500/10 shrink-0"
-=======
-                                className="p-1.5 rounded text-red-500 hover:bg-red-500/10 shrink-0"
->>>>>>> 8020f5d (Initial commit for website frontend)
                             >
                                 <Trash2 className="w-4 h-4" />
                             </button>
@@ -1167,11 +1004,7 @@ function GlanceRows({ rows, onChange }: { rows: Glance[]; onChange: (rows: Glanc
 
     return (
         <div>
-<<<<<<< HEAD
             <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-=======
-            <div className="flex items-center justify-between gap-3 mb-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 <p className="text-[1.1875rem] font-semibold text-slate-700 dark:text-neutral-200">
                     State at a Glance
                 </p>
@@ -1188,20 +1021,12 @@ function GlanceRows({ rows, onChange }: { rows: Glance[]; onChange: (rows: Glanc
             ) : (
                 <div className="space-y-2">
                     {rows.map((row, i) => (
-<<<<<<< HEAD
                         /* Phone: icon and delete on one line, the two text boxes full width under them. */
                         <div key={i} className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
                             <select
                                 value={row.icon}
                                 onChange={(e) => patch(i, { icon: e.target.value })}
                                 className="h-11 min-w-0 flex-1 sm:flex-none sm:w-36 shrink-0 rounded-lg border border-slate-300
-=======
-                        <div key={i} className="flex items-center gap-2">
-                            <select
-                                value={row.icon}
-                                onChange={(e) => patch(i, { icon: e.target.value })}
-                                className="h-11 w-36 shrink-0 rounded-lg border border-slate-300
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            dark:border-[#2a2a2a] bg-white dark:bg-[#0b0b0b] px-3
                                            text-[1.1875rem] text-slate-900 dark:text-neutral-100"
                             >
@@ -1214,29 +1039,19 @@ function GlanceRows({ rows, onChange }: { rows: Glance[]; onChange: (rows: Glanc
                                 value={row.title}
                                 placeholder="2nd Largest Economy"
                                 onChange={(e) => patch(i, { title: e.target.value })}
-<<<<<<< HEAD
                                 className="order-3 sm:order-none"
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                             />
                             <CmsInput
                                 value={row.subtitle}
                                 placeholder="in India"
                                 onChange={(e) => patch(i, { subtitle: e.target.value })}
-<<<<<<< HEAD
                                 className="order-3 sm:order-none"
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                             />
                             <button
                                 type="button"
                                 onClick={() => onChange(rows.filter((_, index) => index !== i))}
                                 aria-label="Remove"
-<<<<<<< HEAD
                                 className="order-2 sm:order-none p-2.5 sm:p-1.5 rounded text-red-500 hover:bg-red-500/10 shrink-0"
-=======
-                                className="p-1.5 rounded text-red-500 hover:bg-red-500/10 shrink-0"
->>>>>>> 8020f5d (Initial commit for website frontend)
                             >
                                 <Trash2 className="w-4 h-4" />
                             </button>
@@ -1261,11 +1076,7 @@ function CardRows({ label, rows, onChange }: {
 
     return (
         <div>
-<<<<<<< HEAD
             <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-=======
-            <div className="flex items-center justify-between gap-3 mb-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 <p className="text-[1.1875rem] font-semibold text-slate-700 dark:text-neutral-200">{label}</p>
                 <AddRowButton
                     label="Add"
@@ -1460,7 +1271,6 @@ function PageLoader<T>({ load, children }: {
  * stored: it is the hierarchy, made visible, on the screen where somebody is
  * looking for it.
  */
-<<<<<<< HEAD
 /**
  * One row of the tier below, as the list screen hands it over.
  *
@@ -1531,25 +1341,11 @@ function TierBelow({ title, hint, rows, emptyText, order, onOrder, children }: {
         <CmsSection title={title} hint={hint}>
             {!rows.length ? (
                 <p className="rounded-xl border border-dashed border-slate-300 p-4 sm:p-6 text-center
-=======
-function TierBelow({ title, hint, rows, emptyText }: {
-    title: string;
-    hint: string;
-    rows: { key: string; label: string; subtitle: string; status?: string;
-        onOpen: () => void; href: string }[];
-    emptyText: string;
-}) {
-    return (
-        <CmsSection title={title} hint={hint}>
-            {!rows.length ? (
-                <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center
->>>>>>> 8020f5d (Initial commit for website frontend)
                               text-[1.25rem] text-slate-500 dark:border-[#2a2a2a]">
                     {emptyText}
                 </p>
             ) : (
                 <div className="space-y-3">
-<<<<<<< HEAD
                     {shown.map((row, index) => (
                         <div
                             key={row.key}
@@ -1559,46 +1355,23 @@ function TierBelow({ title, hint, rows, emptyText }: {
                         >
                             <span className="hidden h-10 w-10 shrink-0 items-center justify-center
                                              rounded-lg bg-blue-50 text-[#2563EB] sm:flex
-=======
-                    {rows.map((row) => (
-                        <div
-                            key={row.key}
-                            className="flex items-center gap-3 rounded-xl border border-slate-200
-                                       bg-white p-3.5 transition-colors hover:border-slate-300
-                                       dark:border-[#2a2a2a] dark:bg-[#0f0f0f]"
-                        >
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center
-                                             rounded-lg bg-blue-50 text-[#2563EB]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                              dark:bg-blue-950/40">
                                 <MapPin className="h-4 w-4" />
                             </span>
 
-<<<<<<< HEAD
                             <div className="min-w-0 flex-1 basis-[12rem]">
-=======
-                            <div className="min-w-0 flex-1">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 <p className="truncate text-[1.25rem] font-bold text-slate-900
                                               dark:text-white">
                                     {row.label}
                                 </p>
-<<<<<<< HEAD
                                 <p className="truncate text-[1.0625rem] text-slate-500
-=======
-                                <p className="truncate text-[1rem] text-slate-500
->>>>>>> 8020f5d (Initial commit for website frontend)
                                               dark:text-neutral-400">
                                     {row.subtitle}
                                 </p>
                             </div>
 
                             {row.status && (
-<<<<<<< HEAD
                                 <span className={`shrink-0 rounded-full px-2.5 py-1 text-[1.0625rem]
-=======
-                                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[1rem]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                   font-bold ${row.status === 'published'
                                     ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
                                     : 'bg-slate-100 text-slate-500 dark:bg-[#161616] dark:text-neutral-400'}`}
@@ -1607,7 +1380,6 @@ function TierBelow({ title, hint, rows, emptyText }: {
                                 </span>
                             )}
 
-<<<<<<< HEAD
                             {/*
                               * UP AND DOWN, and disabled at the ends rather
                               * than hidden: a control that disappears on the
@@ -1643,8 +1415,6 @@ function TierBelow({ title, hint, rows, emptyText }: {
                                 </div>
                             )}
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                             <a
                                 href={row.href}
                                 target="_blank"
@@ -1659,11 +1429,7 @@ function TierBelow({ title, hint, rows, emptyText }: {
                                 type="button"
                                 onClick={row.onOpen}
                                 className="inline-flex shrink-0 items-center gap-1.5 rounded-lg
-<<<<<<< HEAD
                                            px-3 py-1.5 text-[1.0625rem] font-semibold text-blue-700
-=======
-                                           px-3 py-1.5 text-[1rem] font-semibold text-blue-700
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            transition-colors hover:bg-blue-50 dark:text-blue-400
                                            dark:hover:bg-blue-950/40"
                             >
@@ -1673,11 +1439,8 @@ function TierBelow({ title, hint, rows, emptyText }: {
                     ))}
                 </div>
             )}
-<<<<<<< HEAD
 
             {children}
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
         </CmsSection>
     );
 }
@@ -1701,7 +1464,6 @@ function TierBelow({ title, hint, rows, emptyText }: {
  *
  * One component, both editors, because it is the same three things on both.
  */
-<<<<<<< HEAD
 /**
  * ==========================================================================
  * THE PAGE'S OWN HEADINGS — the words the page says about itself
@@ -1803,8 +1565,6 @@ function SectionHeadingFields({ draft, set, kind }: {
     );
 }
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 function PageMetaFields({ draft, set, what }: {
     draft: Record<string, unknown>;
     set: (patch: Record<string, unknown>) => void;
@@ -1826,11 +1586,7 @@ function PageMetaFields({ draft, set, what }: {
                 >
                     <CmsInput
                         value={seo.metaTitle || ''}
-<<<<<<< HEAD
                         placeholder={`ACTIV ${what === 'state' ? 'Tamil Nadu' : 'South Zone'}`}
-=======
-                        placeholder={`ACTIV ${what === 'state' ? 'Tamil Nadu' : 'South Region'}`}
->>>>>>> 8020f5d (Initial commit for website frontend)
                         onChange={(e) => setSeo({ metaTitle: e.target.value })}
                     />
                 </CmsField>
@@ -1882,16 +1638,11 @@ function PageMetaFields({ draft, set, what }: {
     );
 }
 
-<<<<<<< HEAD
 function RegionEditor({ slug, label, page, onSaved, tierRows, addTier }: {
-=======
-function RegionEditor({ slug, label, page, onSaved, below }: {
->>>>>>> 8020f5d (Initial commit for website frontend)
     slug: string;
     label: string;
     page: RegionPage | null;
     onSaved: () => Promise<void> | void;
-<<<<<<< HEAD
     /**
      * The tier under this page — the real pages beneath it. Listed, never
      * stored here; see `TierBelow`.
@@ -1913,20 +1664,12 @@ function RegionEditor({ slug, label, page, onSaved, below }: {
            and it is why this line exists rather than being assumed. */
         labels: page?.labels || {},
 
-=======
-    /** The tier under this page. Listed, never stored here — see `TierBelow`. */
-    below: React.ReactNode;
-}) {
-    const [draft, setDraft] = useState<Record<string, unknown>>(() => ({
-        regionName: page?.regionName || label,
->>>>>>> 8020f5d (Initial commit for website frontend)
         hero: page?.hero || {},
         vision: page?.vision || {},
         shortDescription: page?.shortDescription || '',
         fullDescription: page?.fullDescription || '',
         heroCarousel: page?.heroCarousel || [],
         leaders: page?.leaders || [],
-<<<<<<< HEAD
         /*
          * THE BOARDS THIS PAGE OWNS — LOADED, and they were not.
          *
@@ -1946,8 +1689,6 @@ function RegionEditor({ slug, label, page, onSaved, below }: {
         /* Which order the tier below is drawn in — saved with this card,
            like every other field on it. */
         tierOrder: page?.tierOrder || [],
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
         achievements: page?.achievements || [],
         keyAchievements: page?.keyAchievements || [],
         explore: page?.explore || {},
@@ -1992,7 +1733,6 @@ function RegionEditor({ slug, label, page, onSaved, below }: {
      *
      * The same editor writes both, because the national page IS a region page
      * under a reserved key — see `cms.regionMap.js`. All this decides is the
-<<<<<<< HEAD
      * wording: "National leadership" rather than "Zone leadership", and
      * "Zone-wise contacts" rather than "State-wise", because the tier below
      * the country is the ZONES and the tier below a zone is the states.
@@ -2000,11 +1740,6 @@ function RegionEditor({ slug, label, page, onSaved, below }: {
      * "Region" is the word for the tier inside a STATE — a state’s own
      * regions, each covering a handful of its districts — and for nothing
      * else on these screens. The five above the states are ZONES.
-=======
-     * wording: "National leadership" rather than "Region leadership", and
-     * "Region-wise contacts" rather than "State-wise", because the tier below
-     * the country is the regions and the tier below a region is the states.
->>>>>>> 8020f5d (Initial commit for website frontend)
      */
     const national = slug === 'national';
 
@@ -2033,11 +1768,7 @@ function RegionEditor({ slug, label, page, onSaved, below }: {
 
             <CmsStep
                 step="Section 2"
-<<<<<<< HEAD
                 title={national ? "National leadership" : "Zone leadership"}
-=======
-                title={national ? "National leadership" : "Region leadership"}
->>>>>>> 8020f5d (Initial commit for website frontend)
                 hint="The row of portraits under the band, with their photographs and contact details."
             >
                 <LeadersSection draft={draft} set={set} />
@@ -2057,7 +1788,6 @@ function RegionEditor({ slug, label, page, onSaved, below }: {
               *
               * Same order here, at every tier. Nothing else moved.
               */}
-<<<<<<< HEAD
             {/*
               * ==================================================================
               * ONE CARD FOR THE TIER BELOW, NOT TWO
@@ -2099,21 +1829,11 @@ function RegionEditor({ slug, label, page, onSaved, below }: {
                     {addTier}
                 </TierBelow>
 
-=======
-            <CmsStep
-                step="Section 3"
-                title={national ? "Region leadership" : "State leadership"}
-                hint={national
-                    ? "One card per region, drawn as a board under the national bench. These belong to THIS page — editing a region here does not touch that region’s own page, and it is not meant to."
-                    : "One card per state, drawn as a board under this region’s bench. These belong to THIS page — editing a state here does not touch that state’s own page, and it is not meant to."}
-            >
->>>>>>> 8020f5d (Initial commit for website frontend)
                 <TierSection
                     field="stateRegions"
                     draft={draft}
                     set={set}
                     pageName={String(draft.regionName || label)}
-<<<<<<< HEAD
                     title={national ? 'Zones written on this page' : 'States written on this page'}
                     hint={national
                         ? "For a zone that has no page of its own. Drawn after the zone pages above, never instead of them — and a board naming a zone that IS listed above is not drawn at all, because that zone’s own page is the one a reader should meet. A board here belongs to THIS page and never touches that zone’s."
@@ -2124,24 +1844,11 @@ function RegionEditor({ slug, label, page, onSaved, below }: {
                     emptyText={national
                         ? "Nothing written by hand — the zone pages above are what this page draws."
                         : "Nothing written by hand — the state pages above are what this page draws."}
-=======
-                    title={national ? 'Regions' : 'States'}
-                    hint=""
-                    nameLabel={national ? "Region" : "State"}
-                    namePlaceholder={national ? "South Region" : "Tamil Nadu"}
-                    addLabel={national ? "Add region" : "Add state"}
-                    emptyText={national ? "No regions yet." : "No states yet."}
->>>>>>> 8020f5d (Initial commit for website frontend)
                     coversLabel="What it covers"
                     coversPlaceholder={national ? "Eight states and union territories" : "Its districts"}
                 />
             </CmsStep>
 
-<<<<<<< HEAD
-=======
-            {below}
-
->>>>>>> 8020f5d (Initial commit for website frontend)
             {/*
               * ==================================================================
               * THE SAME CONTACTS CARD THE STATE EDITOR HAS, AND LAST
@@ -2162,24 +1869,15 @@ function RegionEditor({ slug, label, page, onSaved, below }: {
               * are Section 3, and neither creates the other.
               */}
             <CmsStep
-<<<<<<< HEAD
                 step="Section 4"
                 title="Contacts"
                 hint={national
                     ? "Everything in Get in Touch on the national page. Nothing on this card is a leader."
                     : "Everything in Get in Touch on this zone page. Nothing on this card is a leader."}
-=======
-                step="Section 5"
-                title="Contacts"
-                hint={national
-                    ? "Everything in Get in Touch on the national page. Nothing on this card is a leader."
-                    : "Everything in Get in Touch on this region page. Nothing on this card is a leader."}
->>>>>>> 8020f5d (Initial commit for website frontend)
             >
                 <PageContacts
                     draft={draft}
                     set={set}
-<<<<<<< HEAD
                     title={national ? "National contacts" : `${label} Zone contacts`}
                     where={national ? "national office" : "zone office"}
                     tier={national ? "ACTIV India" : `${label} Zone`}
@@ -2190,30 +1888,13 @@ function RegionEditor({ slug, label, page, onSaved, below }: {
                     hint={national
                         ? "One group per heading, printed under the national contacts. A group here creates no board and no map marker."
                         : "One group per heading, printed under this zone’s contacts. A group here creates no board and no map marker. A state that publishes its own contact is listed automatically, from its own page."}
-=======
-                    title={national ? "National contacts" : `${label} Region contacts`}
-                    where={national ? "national office" : "regional office"}
-                    tier={national ? "ACTIV India" : `${label} Region`}
-                />
-
-                <CmsSection
-                    title={national ? "Region-wise contacts" : "State-wise contacts"}
-                    hint={national
-                        ? "One group per heading, printed under the national contacts. A group here creates no board and no map marker."
-                        : "One group per heading, printed under this region’s contacts. A group here creates no board and no map marker. A state that publishes its own contact is listed automatically, from its own page."}
->>>>>>> 8020f5d (Initial commit for website frontend)
                 >
                     <ContactGroups
                         field="regionContactGroups"
                         draft={draft}
                         set={set}
-<<<<<<< HEAD
                         label={national ? "zone" : "state"}
                         placeholder={national ? "South Zone" : "Tamil Nadu"}
-=======
-                        label={national ? "region" : "state"}
-                        placeholder={national ? "South Region" : "Tamil Nadu"}
->>>>>>> 8020f5d (Initial commit for website frontend)
                     />
                 </CmsSection>
             </CmsStep>
@@ -2225,7 +1906,6 @@ function RegionEditor({ slug, label, page, onSaved, below }: {
               * wants recorded that the fields above do not cover.
               */}
             <CmsStep
-<<<<<<< HEAD
                 step="Section 5"
                 title="Section headings"
                 hint="What this page calls its own bands. Leave one blank and the page uses the wording in grey."
@@ -2243,13 +1923,6 @@ function RegionEditor({ slug, label, page, onSaved, below }: {
                 hint={`How a link to this ${national ? 'page' : 'zone'} appears in a search result or a chat, and any field you want to add of your own.`}
             >
                 <PageMetaFields draft={draft} set={set} what={national ? 'page' : 'zone'} />
-=======
-                step="Section 6"
-                title="Sharing and extras"
-                hint="How a link to this region appears in a search result or a chat, and any field you want to add of your own."
-            >
-                <PageMetaFields draft={draft} set={set} what="region" />
->>>>>>> 8020f5d (Initial commit for website frontend)
             </CmsStep>
 
             {/*
@@ -2293,15 +1966,12 @@ function StateEditor({ slug, page, onSaved }: {
     onSaved: () => Promise<void> | void;
 }) {
     const [draft, setDraft] = useState<Record<string, unknown>>(() => ({
-<<<<<<< HEAD
         /* THE PAGE'S OWN HEADINGS. Loaded as well as saved — a draft that
            omits a field shows an empty editor for data that is on the record,
            and `EditorShell` sends the draft, so the next save would write the
            blank back over it. That is the `stateRegions` bug noted above,
            and it is why this line exists rather than being assumed. */
         labels: page.labels || {},
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
         hero: page.hero,
         vision: page.vision,
         explore: page.explore,
@@ -2511,7 +2181,6 @@ function StateEditor({ slug, page, onSaved }: {
               */}
             <CmsStep
                 step="Section 6"
-<<<<<<< HEAD
                 title="Section headings"
                 hint="What this page calls its own bands. Leave one blank and the page uses the wording in grey."
             >
@@ -2520,8 +2189,6 @@ function StateEditor({ slug, page, onSaved }: {
 
             <CmsStep
                 step="Section 7"
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                 title="Sharing and extras"
                 hint="How a link to this state appears in a search result or a chat, and any field you want to add of your own."
             >
@@ -2591,26 +2258,15 @@ function EditorShell({ draft, set, save, onSaved, children }: {
           * owns the rhythm. The cards carry no bottom margin at all now, so there
           * is nothing left to disagree with.
           */}
-<<<<<<< HEAD
         <div className="space-y-5 sm:space-y-8">
             {children}
 
             <div className="flex flex-wrap items-center gap-3 pt-5 sm:pt-6 mt-5 sm:mt-6 border-t border-slate-200
-=======
-        <div className="space-y-8">
-            {children}
-
-            <div className="flex flex-wrap items-center gap-3 pt-6 mt-6 border-t border-slate-200
->>>>>>> 8020f5d (Initial commit for website frontend)
                             dark:border-[#1f1f1f]">
                 <select
                     value={String(draft.status || 'draft')}
                     onChange={(e) => set({ status: e.target.value })}
-<<<<<<< HEAD
                     className="h-12 w-full sm:w-auto min-w-0 px-4 rounded-lg border border-slate-300 dark:border-[#2a2a2a]
-=======
-                    className="h-12 px-4 rounded-lg border border-slate-300 dark:border-[#2a2a2a]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                bg-white dark:bg-[#0b0b0b] text-[1.25rem] font-medium
                                text-slate-900 dark:text-neutral-100"
                 >
@@ -2673,29 +2329,17 @@ function RowTools<T>({ rows, index, onChange }: {
         <div className="flex items-center gap-1 shrink-0">
             <button type="button" onClick={() => move(-1)} disabled={index === 0}
                 aria-label="Move up"
-<<<<<<< HEAD
                 className="p-2 sm:p-1.5 rounded text-slate-400 hover:bg-slate-100 disabled:opacity-30">
-=======
-                className="p-1.5 rounded text-slate-400 hover:bg-slate-100 disabled:opacity-30">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 <ChevronUp className="w-4 h-4" />
             </button>
             <button type="button" onClick={() => move(1)} disabled={index === rows.length - 1}
                 aria-label="Move down"
-<<<<<<< HEAD
                 className="p-2 sm:p-1.5 rounded text-slate-400 hover:bg-slate-100 disabled:opacity-30">
-=======
-                className="p-1.5 rounded text-slate-400 hover:bg-slate-100 disabled:opacity-30">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 <ChevronDown className="w-4 h-4" />
             </button>
             <button type="button" onClick={() => onChange(rows.filter((_, i) => i !== index))}
                 aria-label="Remove"
-<<<<<<< HEAD
                 className="p-2 sm:p-1.5 rounded text-red-500 hover:bg-red-500/10">
-=======
-                className="p-1.5 rounded text-red-500 hover:bg-red-500/10">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 <Trash2 className="w-4 h-4" />
             </button>
         </div>
@@ -2715,11 +2359,7 @@ function SlideRows({ rows, onChange }: { rows: RegionSlide[]; onChange: (rows: R
             {rows.map((row, i) => (
                 <div key={i} className="rounded-lg border border-slate-200 dark:border-[#2a2a2a] p-3">
                     <div className="flex items-start gap-3">
-<<<<<<< HEAD
                         <ImageIcon className="hidden sm:block w-4 h-4 text-neutral-400 mt-2.5 shrink-0" />
-=======
-                        <ImageIcon className="w-4 h-4 text-neutral-400 mt-2.5 shrink-0" />
->>>>>>> 8020f5d (Initial commit for website frontend)
                         <div className="flex-1 min-w-0 space-y-3">
                             <MediaPicker
                                 label="Photograph"
@@ -3050,11 +2690,7 @@ function DistrictNameInput({ value, shapes, placeholder, onPick, onType }: {
                                     aria-selected={!!chosen}
                                     onClick={() => { onPick(shape); setOpen(false); }}
                                     className={`flex w-full items-center justify-between gap-3 px-3 py-2
-<<<<<<< HEAD
                                                 text-left text-[1.1875rem] hover:bg-blue-50
-=======
-                                                text-left text-[1.125rem] hover:bg-blue-50
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 dark:hover:bg-blue-950/30 ${chosen
                                         ? 'font-bold text-[#2563EB]'
                                         : 'font-medium text-slate-700 dark:text-neutral-200'}`}
@@ -3063,11 +2699,7 @@ function DistrictNameInput({ value, shapes, placeholder, onPick, onType }: {
                                     {/* The quarter of the state, so an editor can see the
                                         region is about to be set and to what. */}
                                     {shape.zone && (
-<<<<<<< HEAD
                                         <span className="shrink-0 text-[1.0625rem] font-semibold uppercase
-=======
-                                        <span className="shrink-0 text-[1rem] font-semibold uppercase
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                          tracking-wide text-slate-400">
                                             {shape.zone}
                                         </span>
@@ -3204,11 +2836,7 @@ function DistrictRows({ rows, onChange, words, regionOptions, pageName, shapes }
 
     if (!rows.length) {
         return (
-<<<<<<< HEAD
             <div className="rounded-xl border border-dashed border-slate-300 dark:border-[#2a2a2a] p-4 sm:p-6 text-center">
-=======
-            <div className="rounded-xl border border-dashed border-slate-300 dark:border-[#2a2a2a] p-6 text-center">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 <p className="text-[1.25rem] text-slate-500 dark:text-neutral-400">{words.emptyText}</p>
                 <button
                     type="button"
@@ -3237,7 +2865,6 @@ function DistrictRows({ rows, onChange, words, regionOptions, pageName, shapes }
                         }`}
                     >
                         {/* ------------- closed: which region or district this is ------------- */}
-<<<<<<< HEAD
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 p-3 sm:p-3.5">
                             <span className="hidden w-10 h-10 shrink-0 rounded-lg bg-blue-50 dark:bg-blue-950/40
                                              sm:flex items-center justify-center text-[#2563EB]">
@@ -3249,19 +2876,6 @@ function DistrictRows({ rows, onChange, words, regionOptions, pageName, shapes }
                                     {row.name || `Untitled ${words.nameLabel.toLowerCase()}`}
                                 </p>
                                 <p className="text-[1.0625rem] text-slate-500 dark:text-neutral-400 truncate">
-=======
-                        <div className="flex items-center gap-3 p-3.5">
-                            <span className="w-10 h-10 shrink-0 rounded-lg bg-blue-50 dark:bg-blue-950/40
-                                             flex items-center justify-center text-[#2563EB]">
-                                <MapPin className="w-4 h-4" />
-                            </span>
-
-                            <div className="min-w-0 flex-1">
-                                <p className="text-[1.25rem] font-bold text-slate-900 dark:text-white truncate">
-                                    {row.name || `Untitled ${words.nameLabel.toLowerCase()}`}
-                                </p>
-                                <p className="text-[1rem] text-slate-500 dark:text-neutral-400 truncate">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     {bench} office-bearer{bench === 1 ? '' : 's'}
                                     {row.activeMembers ? ` · ${row.activeMembers} members` : ''}
                                     {row.regionName ? ` · ${row.regionName}` : ''}
@@ -3269,21 +2883,13 @@ function DistrictRows({ rows, onChange, words, regionOptions, pageName, shapes }
                                 </p>
                             </div>
 
-<<<<<<< HEAD
                             <div className="ml-auto flex items-center gap-1 shrink-0">
-=======
-                            <div className="flex items-center gap-1 shrink-0">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 {open ? <SaveNow className="mr-1" /> : null}
                                 <button
                                     type="button"
                                     onClick={() => setOpenIndex(open ? null : i)}
                                     className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5
-<<<<<<< HEAD
                                                 text-[1.0625rem] font-semibold transition-colors ${
-=======
-                                                text-[1rem] font-semibold transition-colors ${
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         open
                                             ? 'bg-slate-100 dark:bg-[#1a1a1a] text-slate-700 dark:text-neutral-200'
                                             : 'text-[#2563EB] hover:bg-blue-50 dark:hover:bg-blue-950/30'
@@ -3302,11 +2908,7 @@ function DistrictRows({ rows, onChange, words, regionOptions, pageName, shapes }
                                 type="button"
                                 onClick={() => insertAt(i)}
                                 className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200
-<<<<<<< HEAD
                                            dark:border-[#2a2a2a] px-2.5 py-1 text-[1.0625rem] font-semibold
-=======
-                                           dark:border-[#2a2a2a] px-2.5 py-1 text-[0.9375rem] font-semibold
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            text-slate-600 dark:text-neutral-300 hover:border-[#2563EB]
                                            hover:text-[#2563EB] transition-colors"
                             >
@@ -3316,11 +2918,7 @@ function DistrictRows({ rows, onChange, words, regionOptions, pageName, shapes }
                                 type="button"
                                 onClick={() => insertAt(i + 1)}
                                 className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200
-<<<<<<< HEAD
                                            dark:border-[#2a2a2a] px-2.5 py-1 text-[1.0625rem] font-semibold
-=======
-                                           dark:border-[#2a2a2a] px-2.5 py-1 text-[0.9375rem] font-semibold
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            text-slate-600 dark:text-neutral-300 hover:border-[#2563EB]
                                            hover:text-[#2563EB] transition-colors"
                             >
@@ -3330,11 +2928,7 @@ function DistrictRows({ rows, onChange, words, regionOptions, pageName, shapes }
 
                         {/* ------------- open: the record and its bench ------------- */}
                         {open ? (
-<<<<<<< HEAD
                             <div className="border-t border-slate-100 dark:border-[#1f1f1f] p-3 sm:p-4 space-y-5">
-=======
-                            <div className="border-t border-slate-100 dark:border-[#1f1f1f] p-4 space-y-5">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <CmsField
                                         label={words.nameLabel}
@@ -3421,11 +3015,7 @@ function DistrictRows({ rows, onChange, words, regionOptions, pageName, shapes }
                                                     should not then have to guess the right one. */}
                                                 {nearestShapes(row.name, shapes).length > 0 && (
                                                     <div className="flex flex-wrap items-center gap-2">
-<<<<<<< HEAD
                                                         <span className="text-[1.0625rem] font-medium text-slate-500
-=======
-                                                        <span className="text-[1rem] font-medium text-slate-500
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                                          dark:text-neutral-400">
                                                             Did you mean
                                                         </span>
@@ -3442,11 +3032,7 @@ function DistrictRows({ rows, onChange, words, regionOptions, pageName, shapes }
                                                                         : { name: shape.name });
                                                                 }}
                                                                 className="rounded-lg border border-amber-300 bg-white px-2.5 py-1
-<<<<<<< HEAD
                                                                            text-[1.0625rem] font-semibold text-amber-800
-=======
-                                                                           text-[1rem] font-semibold text-amber-800
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                                            hover:bg-amber-50 dark:border-amber-800
                                                                            dark:bg-transparent dark:text-amber-300"
                                                             >
@@ -3580,11 +3166,7 @@ function DistrictRows({ rows, onChange, words, regionOptions, pageName, shapes }
                                 </div>
 
                                 <div className="border-t border-slate-100 dark:border-[#1f1f1f] pt-4">
-<<<<<<< HEAD
                                     <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-=======
-                                    <div className="flex items-center justify-between gap-3 mb-3">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         <p className="text-[1.1875rem] font-semibold text-slate-600 dark:text-neutral-300">
                                             {row.name
                                                 ? `${row.name} — office bearers`
@@ -3729,11 +3311,7 @@ function ContactGroups({ field, draft, set, label, placeholder }: {
             </AddRow>
 
             {!rows.length ? (
-<<<<<<< HEAD
                 <div className="rounded-xl border border-dashed border-slate-300 p-4 sm:p-6 text-center
-=======
-                <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 dark:border-[#2a2a2a]">
                     <p className="text-[1.25rem] text-slate-500 dark:text-neutral-400">
                         No {label} groups yet.
@@ -3858,20 +3436,12 @@ function ContactRows({ rows, onChange }: {
 
     if (!rows.length) {
         return (
-<<<<<<< HEAD
             <div className="rounded-xl border border-dashed border-slate-300 dark:border-[#2a2a2a] p-4 sm:p-5 text-center">
-=======
-            <div className="rounded-xl border border-dashed border-slate-300 dark:border-[#2a2a2a] p-5 text-center">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 {/* It said "the office above and any office-bearer with their own
                     details are listed already", which described the leadership list to
                     somebody looking at the contacts list. The two are separate and the
                     copy here should not imply one stands in for the other. */}
-<<<<<<< HEAD
                 <p className="text-[1.1875rem] text-slate-500 dark:text-neutral-400">
-=======
-                <p className="text-[1.125rem] text-slate-500 dark:text-neutral-400">
->>>>>>> 8020f5d (Initial commit for website frontend)
                     No contacts yet.
                 </p>
                 <button
@@ -3899,7 +3469,6 @@ function ContactRows({ rows, onChange }: {
                                 : 'border-slate-200 dark:border-[#2a2a2a] hover:border-slate-300'
                         }`}
                     >
-<<<<<<< HEAD
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 p-3">
                             <span className="hidden w-10 h-10 shrink-0 rounded-lg bg-slate-100 dark:bg-[#141414]
                                              sm:flex items-center justify-center text-neutral-400">
@@ -3911,40 +3480,19 @@ function ContactRows({ rows, onChange }: {
                                     {row.name || 'Untitled contact'}
                                 </p>
                                 <p className="text-[1.0625rem] text-slate-500 dark:text-neutral-400 truncate">
-=======
-                        <div className="flex items-center gap-3 p-3">
-                            <span className="w-10 h-10 shrink-0 rounded-lg bg-slate-100 dark:bg-[#141414]
-                                             flex items-center justify-center text-neutral-400">
-                                <Mail className="w-4 h-4" />
-                            </span>
-
-                            <div className="min-w-0 flex-1">
-                                <p className="text-[1.1875rem] font-bold text-slate-900 dark:text-white truncate">
-                                    {row.name || 'Untitled contact'}
-                                </p>
-                                <p className="text-[1rem] text-slate-500 dark:text-neutral-400 truncate">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     {[row.designation, row.organisation, row.email || row.phone]
                                         .filter(Boolean).join(' · ')
                                         || 'Empty — anything you type here will be published'}
                                 </p>
                             </div>
 
-<<<<<<< HEAD
                             <div className="ml-auto flex items-center gap-1 shrink-0">
-=======
-                            <div className="flex items-center gap-1 shrink-0">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 {open ? <SaveNow className="mr-1" /> : null}
                                 <button
                                     type="button"
                                     onClick={() => setOpenIndex(open ? null : i)}
                                     className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5
-<<<<<<< HEAD
                                                 text-[1.0625rem] font-semibold transition-colors ${
-=======
-                                                text-[1rem] font-semibold transition-colors ${
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         open
                                             ? 'bg-slate-100 dark:bg-[#1a1a1a] text-slate-700 dark:text-neutral-200'
                                             : 'text-[#2563EB] hover:bg-blue-50 dark:hover:bg-blue-950/30'
@@ -3962,11 +3510,7 @@ function ContactRows({ rows, onChange }: {
                                 type="button"
                                 onClick={() => insertAt(i)}
                                 className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200
-<<<<<<< HEAD
                                            dark:border-[#2a2a2a] px-2.5 py-1 text-[1.0625rem] font-semibold
-=======
-                                           dark:border-[#2a2a2a] px-2.5 py-1 text-[0.9375rem] font-semibold
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            text-slate-600 dark:text-neutral-300 hover:border-[#2563EB]
                                            hover:text-[#2563EB] transition-colors"
                             >
@@ -3976,11 +3520,7 @@ function ContactRows({ rows, onChange }: {
                                 type="button"
                                 onClick={() => insertAt(i + 1)}
                                 className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200
-<<<<<<< HEAD
                                            dark:border-[#2a2a2a] px-2.5 py-1 text-[1.0625rem] font-semibold
-=======
-                                           dark:border-[#2a2a2a] px-2.5 py-1 text-[0.9375rem] font-semibold
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            text-slate-600 dark:text-neutral-300 hover:border-[#2563EB]
                                            hover:text-[#2563EB] transition-colors"
                             >
@@ -3989,11 +3529,7 @@ function ContactRows({ rows, onChange }: {
                         </div>
 
                         {open ? (
-<<<<<<< HEAD
                             <div className="border-t border-slate-100 dark:border-[#1f1f1f] p-3 sm:p-4">
-=======
-                            <div className="border-t border-slate-100 dark:border-[#1f1f1f] p-4">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 <div className="flex items-start gap-3">
                                 {/*
                                   * NO PHOTOGRAPH ON A CONTACT.
@@ -4164,11 +3700,7 @@ function LeaderRows({ rows, onChange }: { rows: RegionLeader[]; onChange: (rows:
 
     if (!rows.length) {
         return (
-<<<<<<< HEAD
             <div className="rounded-xl border border-dashed border-slate-300 dark:border-[#2a2a2a] p-4 sm:p-6 text-center">
-=======
-            <div className="rounded-xl border border-dashed border-slate-300 dark:border-[#2a2a2a] p-6 text-center">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 <p className="text-[1.25rem] text-slate-500 dark:text-neutral-400">No office-bearers yet.</p>
                 <button
                     type="button"
@@ -4196,11 +3728,7 @@ function LeaderRows({ rows, onChange }: { rows: RegionLeader[]; onChange: (rows:
                         }`}
                     >
                         {/* ---------------- the closed card: who this is ---------------- */}
-<<<<<<< HEAD
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 p-3">
-=======
-                        <div className="flex items-center gap-3 p-3">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             <span className="w-11 h-12 shrink-0 rounded-lg overflow-hidden bg-slate-100
                                              dark:bg-[#141414] flex items-center justify-center text-neutral-400">
                                 {row.photoUrl
@@ -4208,43 +3736,27 @@ function LeaderRows({ rows, onChange }: { rows: RegionLeader[]; onChange: (rows:
                                     : <Users className="w-4 h-4" />}
                             </span>
 
-<<<<<<< HEAD
                             <div className="min-w-0 flex-1 basis-[10rem]">
-=======
-                            <div className="min-w-0 flex-1">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 <p className="text-[1.1875rem] font-bold text-slate-900 dark:text-white truncate">
                                     {row.name || 'Untitled leader'}
                                 </p>
                                 {row.role ? (
                                     <span className="inline-block mt-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40
-<<<<<<< HEAD
                                                      px-2 py-0.5 text-[1.0625rem] font-semibold text-blue-700
-=======
-                                                     px-2 py-0.5 text-[0.9375rem] font-semibold text-blue-700
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                      dark:text-blue-300">
                                         {row.role}
                                     </span>
                                 ) : null}
                             </div>
 
-<<<<<<< HEAD
                             <div className="ml-auto flex items-center gap-1 shrink-0">
-=======
-                            <div className="flex items-center gap-1 shrink-0">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 {open ? <SaveNow className="mr-1" /> : null}
 
                                 <button
                                     type="button"
                                     onClick={() => setOpenIndex(open ? null : i)}
                                     className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5
-<<<<<<< HEAD
                                                 text-[1.0625rem] font-semibold transition-colors ${
-=======
-                                                text-[1rem] font-semibold transition-colors ${
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         open
                                             ? 'bg-slate-100 dark:bg-[#1a1a1a] text-slate-700 dark:text-neutral-200'
                                             : 'text-[#2563EB] hover:bg-blue-50 dark:hover:bg-blue-950/30'
@@ -4264,11 +3776,7 @@ function LeaderRows({ rows, onChange }: { rows: RegionLeader[]; onChange: (rows:
                                 type="button"
                                 onClick={() => insertAt(i)}
                                 className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200
-<<<<<<< HEAD
                                            dark:border-[#2a2a2a] px-2.5 py-1 text-[1.0625rem] font-semibold
-=======
-                                           dark:border-[#2a2a2a] px-2.5 py-1 text-[0.9375rem] font-semibold
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            text-slate-600 dark:text-neutral-300 hover:border-[#2563EB]
                                            hover:text-[#2563EB] transition-colors"
                             >
@@ -4278,11 +3786,7 @@ function LeaderRows({ rows, onChange }: { rows: RegionLeader[]; onChange: (rows:
                                 type="button"
                                 onClick={() => insertAt(i + 1)}
                                 className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200
-<<<<<<< HEAD
                                            dark:border-[#2a2a2a] px-2.5 py-1 text-[1.0625rem] font-semibold
-=======
-                                           dark:border-[#2a2a2a] px-2.5 py-1 text-[0.9375rem] font-semibold
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            text-slate-600 dark:text-neutral-300 hover:border-[#2563EB]
                                            hover:text-[#2563EB] transition-colors"
                             >
@@ -4292,19 +3796,11 @@ function LeaderRows({ rows, onChange }: { rows: RegionLeader[]; onChange: (rows:
 
                         {/* ---------------- the open card: the record ---------------- */}
                         {open ? (
-<<<<<<< HEAD
                             <div className="border-t border-slate-100 dark:border-[#1f1f1f] p-3 sm:p-4">
                                 <div className="flex flex-col items-start gap-3 sm:flex-row">
                                     <LeaderPhoto url={row.photoUrl} onChange={(photoUrl) => patch(i, { photoUrl })} />
 
                                     <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-2 flex-1 min-w-0">
-=======
-                            <div className="border-t border-slate-100 dark:border-[#1f1f1f] p-4">
-                                <div className="flex items-start gap-3">
-                                    <LeaderPhoto url={row.photoUrl} onChange={(photoUrl) => patch(i, { photoUrl })} />
-
-                                    <div className="grid gap-3 sm:grid-cols-2 flex-1 min-w-0">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         <CmsField label="Name">
                                             <CmsInput value={row.name} onChange={(e) => patch(i, { name: e.target.value })} />
                                         </CmsField>
@@ -4318,11 +3814,7 @@ function LeaderRows({ rows, onChange }: { rows: RegionLeader[]; onChange: (rows:
                                         <CmsField label="Designation">
                                             <CmsInput
                                                 value={row.designation}
-<<<<<<< HEAD
                                                 placeholder="Chairman, ACTIV South Zone"
-=======
-                                                placeholder="Chairman, ACTIV Southern Region"
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 onChange={(e) => patch(i, { designation: e.target.value })}
                                             />
                                         </CmsField>
@@ -4421,11 +3913,7 @@ function LeaderPhoto({ url, onChange }: { url: string; onChange: (url: string) =
                     className="hidden"
                     onChange={(e) => { pick(e.target.files && e.target.files[0]); e.target.value = ''; }}
                 />
-<<<<<<< HEAD
                 <span className="mt-1.5 block text-center text-[1.0625rem] font-semibold text-blue-600
-=======
-                <span className="mt-1.5 block text-center text-[1rem] font-semibold text-blue-600
->>>>>>> 8020f5d (Initial commit for website frontend)
                                  dark:text-blue-400">
                     {url ? 'Change' : 'Photo'}
                 </span>
@@ -4436,11 +3924,7 @@ function LeaderPhoto({ url, onChange }: { url: string; onChange: (url: string) =
                 <code
                     title={url}
                     className="mt-1.5 block w-20 truncate rounded bg-slate-100 dark:bg-[#141414] px-1.5
-<<<<<<< HEAD
                                py-1 text-[1.0625rem] font-mono text-slate-500 dark:text-neutral-400
-=======
-                               py-1 text-[0.75rem] font-mono text-slate-500 dark:text-neutral-400
->>>>>>> 8020f5d (Initial commit for website frontend)
                                select-all"
                 >
                     {url}
@@ -4599,11 +4083,7 @@ function FeedRows({ rows, onChange, withDate = false, figures = false }: {
 
                             <div className={full ? 'sm:col-span-2' : 'hidden'}>
                                 <details className="rounded-lg bg-slate-50 dark:bg-[#141414] px-3 py-2">
-<<<<<<< HEAD
                                     <summary className="cursor-pointer text-[1.1875rem] font-semibold
-=======
-                                    <summary className="cursor-pointer text-[1.125rem] font-semibold
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                         text-slate-700 dark:text-neutral-200">
                                         More details — long text, picture, tags
                                     </summary>
@@ -4879,11 +4359,7 @@ function CustomSections({ draft, set, basePath }: {
                     {rows.map((row, i) => (
                         <div
                             key={i}
-<<<<<<< HEAD
                             className="rounded-xl border border-slate-300 dark:border-[#2a2a2a] p-3 sm:p-4"
-=======
-                            className="rounded-xl border border-slate-300 dark:border-[#2a2a2a] p-4"
->>>>>>> 8020f5d (Initial commit for website frontend)
                         >
                             <div className="flex items-start gap-3">
                                 <div className="flex-1 min-w-0 space-y-4">
@@ -4951,11 +4427,7 @@ function CustomSections({ draft, set, basePath }: {
                                     ) : (
                                         <div className="space-y-3">
                                             <div className="flex items-center justify-between gap-3">
-<<<<<<< HEAD
                                                 <p className="text-[1.1875rem] font-semibold text-slate-700
-=======
-                                                <p className="text-[1.125rem] font-semibold text-slate-700
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                               dark:text-neutral-200">
                                                     Items
                                                 </p>
@@ -4976,11 +4448,7 @@ function CustomSections({ draft, set, basePath }: {
                                     )}
 
                                     {keyOf(row) && (
-<<<<<<< HEAD
                                         <p className="text-[1.0625rem] font-semibold text-slate-500
-=======
-                                        <p className="text-[1rem] font-semibold text-slate-500
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                       dark:text-neutral-400">
                                             Its own screen:{' '}
                                             <code className="rounded bg-slate-100 dark:bg-[#141414] px-1.5 py-0.5">
@@ -5131,11 +4599,7 @@ function PagePhotos({ state, region, label }: {
                     No photographs yet. The Photo Gallery card is left off the page until there is one.
                 </p>
             ) : (
-<<<<<<< HEAD
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-=======
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
->>>>>>> 8020f5d (Initial commit for website frontend)
                     {rows.map((photo) => (
                         <div
                             key={photo.id}
@@ -5148,11 +4612,7 @@ function PagePhotos({ state, region, label }: {
                                     className="h-full w-full object-cover"
                                 />
                             </div>
-<<<<<<< HEAD
                             <div className="p-2 sm:p-3 space-y-2">
-=======
-                            <div className="p-3 space-y-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 <CmsInput
                                     defaultValue={photo.title}
                                     onBlur={(e) => rename(photo, e.target.value)}

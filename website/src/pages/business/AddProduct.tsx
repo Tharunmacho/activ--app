@@ -130,18 +130,11 @@ const AddProduct = () => {
                 <>
                     <Button
                         variant="outline"
-<<<<<<< HEAD
                         className="border-slate-200 text-slate-700 hover:bg-slate-50 px-3 sm:px-4"
                         onClick={() => navigate("/business/products")}
                         aria-label="Cancel"
                     >
                         <ArrowLeft className="h-4 w-4 sm:mr-2" />
-=======
-                        className="border-slate-200 text-slate-700 hover:bg-slate-50"
-                        onClick={() => navigate("/business/products")}
-                    >
-                        <ArrowLeft className="h-4 w-4 mr-2" />
->>>>>>> 8020f5d (Initial commit for website frontend)
                         <span className="hidden sm:inline">Cancel</span>
                     </Button>
                     <Button
@@ -149,11 +142,7 @@ const AddProduct = () => {
                         onClick={handleSave}
                         disabled={loading}
                     >
-<<<<<<< HEAD
                         {loading ? 'Publishing…' : <>Publish<span className="hidden sm:inline">&nbsp;Product</span></>}
-=======
-                        {loading ? 'Publishing…' : 'Publish Product'}
->>>>>>> 8020f5d (Initial commit for website frontend)
                     </Button>
                 </>
             }
@@ -178,11 +167,7 @@ const AddProduct = () => {
                 <Card>
                     <SectionHeading title="Product" icon={Package} />
 
-<<<<<<< HEAD
                     <div className="grid gap-4 sm:gap-6 md:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] items-start">
-=======
-                    <div className="grid gap-6 md:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] items-start">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         <div>
                             <label
                                 htmlFor="product-image"
@@ -192,15 +177,9 @@ const AddProduct = () => {
                             >
                                 {imagePreview ? (
                                     <img src={imagePreview} alt="Product preview"
-<<<<<<< HEAD
                                         className="w-full h-44 sm:h-52 object-cover" />
                                 ) : (
                                     <div className="flex flex-col items-center justify-center h-44 sm:h-52 px-4 text-center">
-=======
-                                        className="w-full h-52 object-cover" />
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center h-52 px-4 text-center">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         <ImagePlus className="h-9 w-9 text-slate-400 mb-2.5" />
                                         <p className="text-[1.25rem] font-semibold text-slate-700">Add a picture</p>
                                         <p className="text-[1.1875rem] text-slate-500 mt-1">JPG or PNG, max 5MB</p>
@@ -221,11 +200,7 @@ const AddProduct = () => {
                             ) : null}
                         </div>
 
-<<<<<<< HEAD
                         <div className="space-y-4 sm:space-y-5 min-w-0">
-=======
-                        <div className="space-y-5">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             <Field label="Product Name" required full>
                                 <Input
                                     placeholder="Enter product / service name"
@@ -268,11 +243,7 @@ const AddProduct = () => {
                     </div>
                 </Card>
 
-<<<<<<< HEAD
                 <div className="mt-4 sm:mt-6">
-=======
-                <div className="mt-6">
->>>>>>> 8020f5d (Initial commit for website frontend)
                     {!activeCompany && (
                         <Card className="border-amber-200 bg-amber-50">
                             <div className="flex items-start gap-3">

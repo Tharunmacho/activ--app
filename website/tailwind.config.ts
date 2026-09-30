@@ -92,7 +92,6 @@ export default {
          * old face when the display font changed. Use `font-display`.
          */
         serif: ['Poppins', 'Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
-<<<<<<< HEAD
         /*
          * NO MONOSPACE EITHER — `font-mono` is Poppins, for the same reason
          * `serif` is. It was left at Tailwind's default, so booking refs,
@@ -116,8 +115,6 @@ export default {
          * to the product's own face rather than to a system serif.
          */
         certificate: ['Playfair Display', 'Poppins', 'Georgia', 'serif'],
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
       },
       colors: {
         /**

@@ -85,10 +85,6 @@ export function AboutBlock({
     const showImage = !sectionHidden(sections, 'about.image');
     const showStats = !sectionHidden(sections, 'about.statsBar');
     const hasMedia = showImage && !!media?.url;
-<<<<<<< HEAD
-=======
-    const hasCopy = !!((showBadge && badgeText) || (showHeading && (heading || headingHighlight || body)));
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     const hasQuote = showQuote && !!(quote && String(quote.text || '').trim());
 
@@ -99,7 +95,6 @@ export function AboutBlock({
     const badgeFields = showBadge ? sectionFields(sections, 'about.badge') : [];
     const quoteFields = hasQuote ? sectionFields(sections, 'about.quote') : [];
 
-<<<<<<< HEAD
     /*
      * A CARD WITH NOTHING BUT THE EDITOR'S OWN ROWS IS STILL A CARD.
      *
@@ -115,8 +110,6 @@ export function AboutBlock({
         || (showHeading && (heading || headingHighlight || body))
         || badgeFields.length || headingFields.length);
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     const showBullets = showPoints && bullets.length > 0;
     const showStatsBar = showStats && statsBar.length > 0;
 
@@ -126,11 +119,7 @@ export function AboutBlock({
         && !quoteFields.length) return null;
 
     return (
-<<<<<<< HEAD
         <section className="w-full py-12 sm:py-20 dot-band flex flex-col items-center relative overflow-hidden font-sans">
-=======
-        <section className="w-full py-20 dot-band flex flex-col items-center relative overflow-hidden font-sans">
->>>>>>> 8020f5d (Initial commit for website frontend)
             {/* Decorative only — no content, so it is not authored.
                 `z-0`, not `-z-10`: a negative index puts this behind the
                 section's own background colour, which is opaque, so the pattern
@@ -142,11 +131,7 @@ export function AboutBlock({
 
             <div className={`${SCREEN_CONTAINER} relative z-10`}>
 
-<<<<<<< HEAD
                 <div className="flex flex-col lg:flex-row gap-8 sm:gap-12 lg:gap-16 items-center">
-=======
-                <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 items-center">
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                     {/* Copy — takes the full width when there is no media beside it. */}
                     {hasCopy && (
@@ -154,22 +139,14 @@ export function AboutBlock({
 
                             {showBadge && badgeText && (
                                 <div className="inline-flex items-center space-x-2 bg-brand-50 text-brand-600 px-4 py-1.5
-<<<<<<< HEAD
                                                 rounded-full mb-4 sm:mb-6 border border-brand-100 shadow-sm">
-=======
-                                                rounded-full mb-6 border border-brand-100 shadow-sm">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     <CmsIcon name={badgeIcon} size={14} className="stroke-[3]" fallback="users" />
                                     <span className={EYEBROW}>{badgeText}</span>
                                 </div>
                             )}
 
                             {showHeading && (heading || headingHighlight) && (
-<<<<<<< HEAD
                                 <h2 className={`${SECTION_HEADING} text-[#111827] mb-4 sm:mb-6 break-words`}>
-=======
-                                <h2 className={`${SECTION_HEADING} text-[#111827] mb-6`}>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     {heading}
                                     {heading && headingHighlight && <br />}
                                     {headingHighlight && <span className="text-brand-600">{headingHighlight}</span>}
@@ -187,7 +164,6 @@ export function AboutBlock({
                                 />
                             )}
 
-<<<<<<< HEAD
                             {/*
                               * The editor's own rows on the badge and heading
                               * cards, IN THIS COLUMN'S TYPE.
@@ -205,13 +181,6 @@ export function AboutBlock({
                                     className="mt-10"
                                 />
                             </div>
-=======
-                            {/* The editor's own rows on the badge and heading cards. */}
-                            <CmsExtraFields
-                                fields={[...badgeFields, ...headingFields]}
-                                className="mt-10"
-                            />
->>>>>>> 8020f5d (Initial commit for website frontend)
                         </Reveal>
                     )}
 
@@ -252,7 +221,6 @@ export function AboutBlock({
                                 className="relative z-10"
                                 intensity={7} lift={1.02} glare={false} perspective={1100}
                             >
-<<<<<<< HEAD
                                 <div className="relative w-full rounded-3xl sm:rounded-[2.5rem] overflow-hidden
                                                 shadow-[0_30px_70px_-20px_rgb(28_46_104/0.45)] bg-white p-1.5 sm:p-2">
                                     {/* A phone gets a 4:3 frame and the WHOLE photograph,
@@ -280,17 +248,6 @@ export function AboutBlock({
                                                 className="absolute top-3 right-3 sm:top-6 sm:right-6 bg-white/95 backdrop-blur-md
                                                            px-3 py-2 sm:px-6 sm:py-4 rounded-xl
                                                            shadow-[0_10px_30px_rgb(0,0,0,0.15)] max-w-[7.5rem] sm:max-w-[12.5rem]"
-=======
-                                <div className="relative w-full rounded-[2.5rem] overflow-hidden
-                                                shadow-[0_30px_70px_-20px_rgb(28_46_104/0.45)] bg-white p-2">
-                                    <div className="rounded-[2rem] overflow-hidden relative h-[31.25rem] w-full">
-                                        <CmsMediaFrame media={media} priority width={640} />
-
-                                        {logoOverlay?.url && (
-                                            <div
-                                                className="absolute top-6 right-6 bg-white/95 backdrop-blur-md px-6 py-4
-                                                           rounded-xl shadow-[0_10px_30px_rgb(0,0,0,0.15)] max-w-[12.5rem]"
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 // Lifted off the card face so it parallaxes
                                                 // against the photograph as the frame tilts.
                                                 style={{ transform: 'translateZ(60px)' }}
@@ -298,11 +255,7 @@ export function AboutBlock({
                                                 <CmsMediaFrame
                                                     media={logoOverlay}
                                                     width={220}
-<<<<<<< HEAD
                                                     className="w-full h-auto max-h-10 sm:max-h-16 object-contain"
-=======
-                                                    className="w-full h-auto max-h-16 object-contain"
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 />
                                             </div>
                                         )}
@@ -310,13 +263,9 @@ export function AboutBlock({
                                 </div>
                             </Tilt3D>
 
-<<<<<<< HEAD
                             <div className={`${SECTION_LEDE} text-gray-600`}>
                                 <CmsExtraFields fields={imageFields} className="mt-8" />
                             </div>
-=======
-                            <CmsExtraFields fields={imageFields} className="mt-8" />
->>>>>>> 8020f5d (Initial commit for website frontend)
                         </Reveal>
                     )}
                 </div>
@@ -347,15 +296,9 @@ export function AboutBlock({
                   * page that looks broken.
                   */}
                 {hasQuote && (
-<<<<<<< HEAD
                     <Reveal className="mt-12 sm:mt-20">
                         <figure className="relative mx-auto max-w-4xl rounded-[1.75rem] border
                                            border-brand-100 bg-white/80 px-5 py-7 text-center
-=======
-                    <Reveal className="mt-16 sm:mt-20">
-                        <figure className="relative mx-auto max-w-4xl rounded-[1.75rem] border
-                                           border-brand-100 bg-white/80 px-7 py-9 text-center
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            shadow-[0_18px_50px_-30px_rgba(28,46,104,0.45)]
                                            sm:px-12 sm:py-12">
                             {/* The mark, behind the words rather than in the flow:
@@ -371,11 +314,7 @@ export function AboutBlock({
                             </span>
 
                             <blockquote
-<<<<<<< HEAD
                                 className="relative text-[1.1875rem] font-semibold leading-[1.6] break-words
-=======
-                                className="relative text-[1.375rem] font-semibold leading-[1.6]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            text-brand-900 sm:text-[1.75rem] sm:leading-[1.55]
                                            [&_strong]:text-brand-600"
                                 dangerouslySetInnerHTML={{ __html: quote!.text || '' }}
@@ -384,13 +323,8 @@ export function AboutBlock({
                             {/* A bigger portrait needs more room above it and beside
                                 it, or the name sits hard against its edge. */}
                             {(quote!.author || quote!.role || quote!.photo?.url) && (
-<<<<<<< HEAD
                                 <figcaption className="relative mt-7 sm:mt-9 flex items-center justify-center
                                                        gap-4 sm:gap-5">
-=======
-                                <figcaption className="relative mt-9 flex items-center justify-center
-                                                       gap-5">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     {/*
                                       A PORTRAIT, not a favicon.
 
@@ -407,19 +341,11 @@ export function AboutBlock({
                                             src={sizedMediaUrl(quote!.photo!.url, 240)}
                                             alt={quote!.author || ''}
                                             loading="lazy"
-<<<<<<< HEAD
                                             className="h-16 w-16 shrink-0 rounded-full object-cover
                                                        ring-4 ring-brand-100 sm:h-24 sm:w-24"
                                         />
                                     )}
                                     <span className="min-w-0 text-left">
-=======
-                                            className="h-20 w-20 shrink-0 rounded-full object-cover
-                                                       ring-4 ring-brand-100 sm:h-24 sm:w-24"
-                                        />
-                                    )}
-                                    <span className="text-left">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         {quote!.author && (
                                             <span className="block text-[1.1875rem] font-extrabold
                                                              text-brand-900">
@@ -437,16 +363,11 @@ export function AboutBlock({
                             )}
                         </figure>
 
-<<<<<<< HEAD
                         {/* The editor's own rows on the quote card, in this
                             column's type — see the note on the heading card. */}
                         <div className={`${SECTION_LEDE} text-gray-600`}>
                             <CmsExtraFields fields={quoteFields} className="mt-8" />
                         </div>
-=======
-                        {/* The editor's own rows on the quote card. */}
-                        <CmsExtraFields fields={quoteFields} className="mt-8" />
->>>>>>> 8020f5d (Initial commit for website frontend)
                     </Reveal>
                 )}
             </div>
@@ -456,13 +377,9 @@ export function AboutBlock({
                 <div className="w-full">
                     <MissionCarousel bullets={bullets} />
                     <div className={`${SCREEN_CONTAINER} relative z-10`}>
-<<<<<<< HEAD
                         <div className={`${SECTION_LEDE} text-gray-600`}>
                             <CmsExtraFields fields={pointsFields} className="mt-8" />
                         </div>
-=======
-                        <CmsExtraFields fields={pointsFields} className="mt-8" />
->>>>>>> 8020f5d (Initial commit for website frontend)
                     </div>
                 </div>
             )}
@@ -474,23 +391,15 @@ export function AboutBlock({
                     <Reveal
                         variant="scale"
                         className="bg-white rounded-3xl shadow-[0_20px_50px_rgb(0,0,0,0.06)] border border-gray-50
-<<<<<<< HEAD
                                    py-6 px-4 sm:py-8 sm:px-6 md:px-12 w-full"
                     >
                         <div
                             className={`grid ${statsBar.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-x-4 gap-y-6 sm:gap-8
-=======
-                                   py-8 px-6 md:px-12 w-full"
-                    >
-                        <div
-                            className={`grid grid-cols-1 sm:grid-cols-2 gap-8 divide-y sm:divide-y-0
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         sm:divide-x divide-gray-100 ${LG_COLUMNS[Math.min(statsBar.length, 6)]}`}
                         >
                             {statsBar.map((stat, i) => (
                                 <div
                                     key={i}
-<<<<<<< HEAD
                                     className="min-w-0 flex flex-col sm:flex-row items-center gap-2 sm:gap-0 sm:space-x-5 justify-center text-center sm:text-left"
                                 >
                                     <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-brand-50 flex items-center justify-center shrink-0">
@@ -501,18 +410,6 @@ export function AboutBlock({
                                             <CountUp value={stat.value} />
                                         </p>
                                         <p className={`${STAT_LABEL} text-gray-500 mt-1 break-words`}>{stat.label}</p>
-=======
-                                    className="flex items-center space-x-5 justify-center pt-4 sm:pt-0"
-                                >
-                                    <div className="w-14 h-14 rounded-full bg-brand-50 flex items-center justify-center shrink-0">
-                                        <CmsIcon name={stat.icon} size={24} className="text-brand-600" fallback="users" />
-                                    </div>
-                                    <div>
-                                        <p className={`${STAT_FIGURE} text-brand-800`}>
-                                            <CountUp value={stat.value} />
-                                        </p>
-                                        <p className={`${STAT_LABEL} text-gray-500 mt-1`}>{stat.label}</p>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     </div>
                                 </div>
                             ))}
@@ -524,18 +421,12 @@ export function AboutBlock({
             {/* Whatever the editor added that this block does not know about.
                 Renders nothing at all when the list is empty. */}
             <div className={`${SCREEN_CONTAINER} relative z-10`}>
-<<<<<<< HEAD
                 {/* The figures bar's own rows, then the page's — both in the
                     block's type, as every other row on it now is. */}
                 <div className={`${SECTION_LEDE} text-gray-600`}>
                     <CmsExtraFields fields={statsFields} className="mt-12" />
                     <CmsExtraFields fields={extraFields} className="mt-12" />
                 </div>
-=======
-                {/* The figures bar's own rows, then the page's. */}
-                <CmsExtraFields fields={statsFields} className="mt-12" />
-                <CmsExtraFields fields={extraFields} className="mt-12" />
->>>>>>> 8020f5d (Initial commit for website frontend)
             </div>
         </section>
     );

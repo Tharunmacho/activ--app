@@ -1,5 +1,4 @@
 import { toast } from 'sonner';
-<<<<<<< HEAD
 import { Children, createContext, isValidElement, useContext, useEffect, useRef, useState, type ReactNode, type ReactElement } from 'react';
 import {
     Loader2, AlertCircle, Save, X, Check, Pencil,
@@ -9,15 +8,6 @@ import {
 import type { CmsExtraField, CmsSectionOverride } from '@/services/cmsApi';
 import { ICON_GROUPS } from '@/services/cmsApi';
 import { CmsIcon, hasIcon } from '@/components/shared/CmsIcon';
-=======
-import { Children, createContext, isValidElement, useContext, useState, type ReactNode, type ReactElement } from 'react';
-import {
-    Loader2, AlertCircle, Save, X, Check,
-    Trash2, Undo2, Plus, ArrowUp, ArrowDown, EyeOff,
-} from 'lucide-react';
-
-import type { CmsExtraField, CmsSectionOverride } from '@/services/cmsApi';
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { CARD_TITLE } from '@/components/layout/appTypography';
 /**
  * Shared pieces for the CMS screens.
@@ -49,11 +39,7 @@ export function CmsCard({ title, description, children, actions }: {
                     {/* 24px black: the card title is the top of the page's
                         hierarchy and has to win against the section headings
                         under it, which are themselves extrabold. */}
-<<<<<<< HEAD
                     <h2 className={`font-display ${CARD_TITLE} break-words text-slate-900 dark:text-white`}>
-=======
-                    <h2 className={`font-display ${CARD_TITLE} text-slate-900 dark:text-white`}>
->>>>>>> 8020f5d (Initial commit for website frontend)
                         {title}
                     </h2>
                     {description && (
@@ -187,7 +173,6 @@ export function CmsPage({ children }: { children: ReactNode }) {
  * without a provider, so adding it to `CmsSection` cannot put a dead button
  * on the managers that have not adopted this yet.
  */
-<<<<<<< HEAD
 type SaveNowValue = {
     save: () => Promise<void> | void;
     saving: boolean;
@@ -207,9 +192,6 @@ type SaveNowValue = {
      */
     label?: string;
 };
-=======
-type SaveNowValue = { save: () => Promise<void> | void; saving: boolean; dirty: boolean };
->>>>>>> 8020f5d (Initial commit for website frontend)
 
 const SaveNowContext = createContext<SaveNowValue | null>(null);
 
@@ -252,11 +234,7 @@ export function SaveNow({ className = '', always = false, block = false }: {
             disabled={ctx.saving}
             className={`inline-flex items-center justify-center gap-2 rounded-lg font-semibold
                         transition-colors disabled:opacity-60
-<<<<<<< HEAD
                         ${block ? 'w-full px-4 py-3 text-[1.1875rem]' : 'shrink-0 px-3 py-1.5 text-[1.0625rem]'}
-=======
-                        ${block ? 'w-full px-4 py-3 text-[1.1875rem]' : 'shrink-0 px-3 py-1.5 text-[1rem]'}
->>>>>>> 8020f5d (Initial commit for website frontend)
                         ${idle
                             /*
                              * IDLE IS BLUE TOO, just quieter.
@@ -278,16 +256,11 @@ export function SaveNow({ className = '', always = false, block = false }: {
                         ${className}`}
         >
             {ctx.saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-<<<<<<< HEAD
             {ctx.saving ? 'Saving…' : idle ? 'Saved' : (ctx.label || 'Save page')}
-=======
-            {ctx.saving ? 'Saving…' : idle ? 'Saved' : 'Save page'}
->>>>>>> 8020f5d (Initial commit for website frontend)
         </button>
     );
 }
 
-<<<<<<< HEAD
 /*
  * ============================================================================
  * `RepeatableList` LIVES HERE NOW, and is re-exported from `CmsEditors`.
@@ -642,8 +615,6 @@ export function RepeatableList<T>({
     );
 }
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 /**
  * ==========================================================================
  * A NUMBERED STEP — the card every CMS screen is built out of
@@ -673,12 +644,8 @@ export function RepeatableList<T>({
  * grey stripe at the bottom of it.
  */
 export function CmsStep({
-<<<<<<< HEAD
     step, title, hint, actions, sectionKey, fixed,
     ownFields = true, fieldMode = 'both', fieldNoun = 'detail', children,
-=======
-    step, title, hint, actions, sectionKey, fixed, ownFields = true, children,
->>>>>>> 8020f5d (Initial commit for website frontend)
 }: {
     step?: string;
     title?: string;
@@ -721,7 +688,6 @@ export function CmsStep({
      * a card whose public counterpart was checked and renders nothing.
      */
     ownFields?: boolean;
-<<<<<<< HEAD
     /**
      * WHICH SHAPES OF FIELD THIS CARD'S SURFACE CAN ACTUALLY DRAW.
      *
@@ -756,8 +722,6 @@ export function CmsStep({
      * Singular. The list adds the "s".
      */
     fieldNoun?: string;
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     children: ReactNode;
 }) {
     const save = useContext(SaveNowContext);
@@ -786,7 +750,6 @@ export function CmsStep({
                         <div className="min-w-0">
                             <p className="truncate text-[1.1875rem] font-bold text-slate-600
                                           dark:text-neutral-300">
-<<<<<<< HEAD
                                 {/* The editor's name, if they gave the card
                                     one — a collapsed card that reverts to the
                                     shipped heading is a card they cannot find
@@ -794,11 +757,6 @@ export function CmsStep({
                                 {tools.title || title || step || 'Section'}
                             </p>
                             <p className="text-[1.0625rem] text-slate-500 dark:text-neutral-400">
-=======
-                                {title || step || 'Section'}
-                            </p>
-                            <p className="text-[1rem] text-slate-500 dark:text-neutral-400">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 Removed — this section is not shown on the public page.
                                 {tools.fields.length > 0 && ' Your fields in it are kept.'}
                             </p>
@@ -809,11 +767,7 @@ export function CmsStep({
                         type="button"
                         onClick={() => tools.setHidden(false)}
                         className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border
-<<<<<<< HEAD
                                    border-slate-300 bg-white px-3 py-1.5 text-[1.0625rem] font-semibold
-=======
-                                   border-slate-300 bg-white px-3 py-1.5 text-[1rem] font-semibold
->>>>>>> 8020f5d (Initial commit for website frontend)
                                    text-slate-700 transition-colors hover:bg-slate-100
                                    dark:border-[#2a2a2a] dark:bg-[#111] dark:text-neutral-200
                                    dark:hover:bg-[#1a1a1a]"
@@ -833,7 +787,6 @@ export function CmsStep({
     }
 
     return (
-<<<<<<< HEAD
         /*
          * ======================================================================
          * NO `overflow-hidden` HERE, AND THAT IS THE ICON BUG.
@@ -852,33 +805,20 @@ export function CmsStep({
          * card is the normal case in a form, not the exception.
          */
         <section className="rounded-2xl border border-slate-200 bg-white
-=======
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white
->>>>>>> 8020f5d (Initial commit for website frontend)
                             shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_32px_-24px_rgba(15,23,42,0.35)]
                             dark:border-[#1F1F1F] dark:bg-[#0A0A0A] dark:shadow-none">
 
             {title ? (
-<<<<<<< HEAD
                 <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 rounded-t-2xl border-b
                                    border-slate-100 bg-slate-50/70 px-4 pt-5 pb-5 sm:px-6 sm:pt-6 sm:pb-6
                                    dark:border-[#1a1a1a] dark:bg-[#0F0F0F]">
                     <div className="min-w-0">
                         {step ? (
                             <p className="text-[1.0625rem] font-bold uppercase tracking-[0.16em]
-=======
-                <header className="flex items-start justify-between gap-4 border-b border-slate-100
-                                   bg-slate-50/70 px-4 pt-5 pb-5 sm:px-6 sm:pt-6 sm:pb-6
-                                   dark:border-[#1a1a1a] dark:bg-[#0F0F0F]">
-                    <div className="min-w-0">
-                        {step ? (
-                            <p className="text-[0.8125rem] font-bold uppercase tracking-[0.16em]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                           text-blue-600 dark:text-blue-400">
                                 {step}
                             </p>
                         ) : null}
-<<<<<<< HEAD
                         {/*
                           * THE CARD'S OWN HEADING, RENAMEABLE IN PLACE.
                           *
@@ -908,11 +848,6 @@ export function CmsStep({
                                 {title}
                             </h3>
                         )}
-=======
-                        <h3 className={`${CARD_TITLE} mt-1 text-slate-900 dark:text-neutral-100`}>
-                            {title}
-                        </h3>
->>>>>>> 8020f5d (Initial commit for website frontend)
                         {hint && (
                             <p className="mt-1.5 text-[1.1875rem] leading-snug text-slate-500
                                           dark:text-neutral-400">
@@ -922,11 +857,7 @@ export function CmsStep({
                     </div>
 
                     {(actions || removable) ? (
-<<<<<<< HEAD
                         <div className="flex flex-wrap shrink-0 items-center gap-2">
-=======
-                        <div className="flex shrink-0 items-center gap-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             {actions}
                             {removable && <RemoveSection onRemove={() => tools.setHidden(true)} />}
                         </div>
@@ -937,27 +868,18 @@ export function CmsStep({
             <div className="px-4 pt-5 pb-5 sm:px-6 sm:pt-6 sm:pb-6">
                 {children}
                 {tools && ownFields ? (
-<<<<<<< HEAD
                     <SectionFields
                         fields={tools.fields}
                         onChange={tools.setFields}
                         mode={fieldMode}
                         noun={fieldNoun}
                     />
-=======
-                    <SectionFields fields={tools.fields} onChange={tools.setFields} />
->>>>>>> 8020f5d (Initial commit for website frontend)
                 ) : null}
             </div>
 
             {save ? (
-<<<<<<< HEAD
                 <footer className="rounded-b-2xl border-t border-slate-100 bg-slate-50/70 px-4 py-4
                                    sm:px-6 sm:py-5 dark:border-[#1a1a1a] dark:bg-[#0F0F0F]">
-=======
-                <footer className="border-t border-slate-100 bg-slate-50/70 px-4 py-4 sm:px-6 sm:py-5
-                                   dark:border-[#1a1a1a] dark:bg-[#0F0F0F]">
->>>>>>> 8020f5d (Initial commit for website frontend)
                     <SaveNow always block />
                 </footer>
             ) : null}
@@ -966,7 +888,6 @@ export function CmsStep({
 }
 
 /**
-<<<<<<< HEAD
  * ==========================================================================
  * A CARD'S HEADING, WHICH THE EDITOR CAN RENAME
  * ==========================================================================
@@ -1078,8 +999,6 @@ function StepTitle({ shipped, value, onChange }: {
 }
 
 /**
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
  * Remove a section, with the click it deserves.
  *
  * Two clicks, not a browser `confirm()`: this is reversible — the card
@@ -1103,11 +1022,7 @@ function RemoveSection({ onRemove }: { onRemove: () => void }) {
                     setTimeout(() => setArmed(false), 4000);
                 }}
                 title="Remove this section from the page"
-<<<<<<< HEAD
                 className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[1.0625rem]
-=======
-                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[1rem]
->>>>>>> 8020f5d (Initial commit for website frontend)
                            font-semibold text-slate-500 transition-colors hover:bg-red-50
                            hover:text-red-600 dark:text-neutral-400 dark:hover:bg-red-950/40
                            dark:hover:text-red-400"
@@ -1124,11 +1039,7 @@ function RemoveSection({ onRemove }: { onRemove: () => void }) {
                 type="button"
                 onClick={() => { setArmed(false); onRemove(); }}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-2.5 py-1.5
-<<<<<<< HEAD
                            text-[1.0625rem] font-semibold text-white transition-colors hover:bg-red-700"
-=======
-                           text-[1rem] font-semibold text-white transition-colors hover:bg-red-700"
->>>>>>> 8020f5d (Initial commit for website frontend)
             >
                 <Trash2 className="h-4 w-4" /> Remove it
             </button>
@@ -1160,11 +1071,7 @@ export function CmsSteps({ children }: { children: ReactNode }) {
      * and the following card's heading read as one continuous column and
      * the cards stopped looking like cards.
      */
-<<<<<<< HEAD
     return <div className="space-y-5 sm:space-y-8">{children}</div>;
-=======
-    return <div className="space-y-8">{children}</div>;
->>>>>>> 8020f5d (Initial commit for website frontend)
 }
 
 /**
@@ -1189,11 +1096,7 @@ export function CmsSteps({ children }: { children: ReactNode }) {
 export function CmsBlock({ title, hint }: { title: string; hint?: string }) {
     return (
         <header className="mb-4 mt-2 border-l-4 border-[#2563EB] pl-4">
-<<<<<<< HEAD
             <h2 className={`font-display ${CARD_TITLE} break-words text-slate-900 dark:text-white`}>
-=======
-            <h2 className={`font-display ${CARD_TITLE} text-slate-900 dark:text-white`}>
->>>>>>> 8020f5d (Initial commit for website frontend)
                 {title}
             </h2>
             {hint && (
@@ -1249,11 +1152,7 @@ export function SectionToolsProvider({ value, children }: {
     return <SectionToolsContext.Provider value={value}>{children}</SectionToolsContext.Provider>;
 }
 
-<<<<<<< HEAD
 const EMPTY_OVERRIDE: CmsSectionOverride = { key: '', hidden: false, title: '', fields: [] };
-=======
-const EMPTY_OVERRIDE: CmsSectionOverride = { key: '', hidden: false, fields: [] };
->>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * Read and write one card's row.
@@ -1280,23 +1179,17 @@ const useSectionTools = (sectionKey?: string) => {
 
     return {
         hidden: row?.hidden === true,
-<<<<<<< HEAD
         /* Blank means "the heading this code ships" — see `title` on the
            section-override schema. Never falls back to the key. */
         title: (row?.title || '').trim(),
         fields: row?.fields || [],
         setHidden: (hidden: boolean) => write({ hidden }),
         setTitle: (title: string) => write({ title }),
-=======
-        fields: row?.fields || [],
-        setHidden: (hidden: boolean) => write({ hidden }),
->>>>>>> 8020f5d (Initial commit for website frontend)
         setFields: (fields: CmsExtraField[]) => write({ fields }),
     };
 };
 
 /**
-<<<<<<< HEAD
  * ==========================================================================
  * THE EDITOR'S OWN ROWS INSIDE ONE CARD — the same list as every other list
  * ==========================================================================
@@ -1452,127 +1345,6 @@ function SectionFields({ fields, onChange, mode = 'both', noun = 'detail' }: {
                     </div>
                 )}
             />
-=======
- * The editor's own rows inside ONE card.
- *
- * Deliberately not `RepeatableList`: that component is the card treatment for
- * a list that IS the section — slides, columns, office-bearers — and using it
- * here would put a card inside a card and read as a second section. These
- * rows are an addition to the section around them and are drawn as one.
- *
- * Add, rename, retype, reorder and delete, all inline. The order is the order
- * they render in on the public page, which is why the arrows are here: "third
- * line down" is the only positioning this feature offers.
- */
-function SectionFields({ fields, onChange }: {
-    fields: CmsExtraField[];
-    onChange: (next: CmsExtraField[]) => void;
-}) {
-    const rows = fields || [];
-
-    const move = (i: number, by: number) => {
-        const j = i + by;
-        if (j < 0 || j >= rows.length) return;
-        const next = [...rows];
-        [next[i], next[j]] = [next[j], next[i]];
-        onChange(next);
-    };
-
-    return (
-        <div className="mt-6 border-t border-dashed border-slate-200 pt-5 dark:border-[#232323]">
-            <div className="mb-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                    <p className="text-[1.125rem] font-bold text-slate-700 dark:text-neutral-200">
-                        Your own fields in this section
-                    </p>
-                    <p className="text-[1rem] text-slate-500 dark:text-neutral-400">
-                        Each row shows as a labelled line inside this section on the public page.
-                    </p>
-                </div>
-
-                <button
-                    type="button"
-                    onClick={() => onChange([...rows, { label: '', value: '' }])}
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-blue-200
-                               bg-blue-50 px-3 py-1.5 text-[1rem] font-semibold text-blue-700
-                               transition-colors hover:bg-blue-100
-                               dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300"
-                >
-                    <Plus className="h-4 w-4" /> Add field
-                </button>
-            </div>
-
-            {rows.length === 0 ? null : (
-                <div className="space-y-2.5">
-                    {rows.map((field, i) => (
-                        <div
-                            key={i}
-                            className="rounded-xl border border-slate-200 bg-slate-50/60 p-3
-                                       dark:border-[#232323] dark:bg-[#0d0d0d]"
-                        >
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)_auto]">
-                                <CmsInput
-                                    value={field.label}
-                                    onChange={e => onChange(rows.map((r, k) =>
-                                        (k === i ? { ...r, label: e.target.value } : r)))}
-                                    placeholder="Field name"
-                                />
-                                <CmsTextarea
-                                    rows={2}
-                                    value={field.value}
-                                    onChange={e => onChange(rows.map((r, k) =>
-                                        (k === i ? { ...r, value: e.target.value } : r)))}
-                                    placeholder="What it says"
-                                />
-
-                                <div className="flex items-start gap-1">
-                                    <button
-                                        type="button"
-                                        onClick={() => move(i, -1)}
-                                        disabled={i === 0}
-                                        title="Move up"
-                                        className="rounded-lg p-2 text-slate-500 transition-colors
-                                                   hover:bg-slate-200 disabled:opacity-30
-                                                   dark:text-neutral-400 dark:hover:bg-[#1c1c1c]"
-                                    >
-                                        <ArrowUp className="h-4 w-4" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => move(i, 1)}
-                                        disabled={i === rows.length - 1}
-                                        title="Move down"
-                                        className="rounded-lg p-2 text-slate-500 transition-colors
-                                                   hover:bg-slate-200 disabled:opacity-30
-                                                   dark:text-neutral-400 dark:hover:bg-[#1c1c1c]"
-                                    >
-                                        <ArrowDown className="h-4 w-4" />
-                                    </button>
-                                    {/*
-                                      LABELLED, like every other delete in the
-                                      panel. A bare bin between two arrows is a
-                                      control an editor has to hover to identify,
-                                      and this is the one that throws work away.
-                                    */}
-                                    <button
-                                        type="button"
-                                        onClick={() => onChange(rows.filter((_, k) => k !== i))}
-                                        title="Delete this field"
-                                        className="inline-flex items-center gap-1.5 rounded-lg border
-                                                   border-red-200 px-2.5 py-1.5 text-[1rem] font-semibold
-                                                   text-red-600 transition-colors hover:bg-red-50
-                                                   dark:border-red-500/30 dark:text-red-400
-                                                   dark:hover:bg-red-950/40"
-                                    >
-                                        <Trash2 className="h-3.5 w-3.5" /> Delete
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
->>>>>>> 8020f5d (Initial commit for website frontend)
         </div>
     );
 }
@@ -1586,11 +1358,7 @@ export function CmsSection({ title, hint, actions, children }: {
 }) {
     return (
         <section className="pt-7 first:pt-0 border-t first:border-t-0 border-slate-200 dark:border-[#1F1F1F]">
-<<<<<<< HEAD
             <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4 mb-4">
-=======
-            <div className="flex items-start justify-between gap-4 mb-4">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 <div className="min-w-0">
                     {/* 19px and extrabold: a section heading has to win against
                         the bold field labels under it, or the form reads as one
@@ -1599,11 +1367,7 @@ export function CmsSection({ title, hint, actions, children }: {
                         {title}
                     </h3>
                     {hint && (
-<<<<<<< HEAD
                         <p className="text-[1.1875rem] font-medium text-slate-600 dark:text-[#A1A1AA]
-=======
-                        <p className="text-[1.125rem] font-medium text-slate-600 dark:text-[#A1A1AA]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                       mt-1.5 leading-snug max-w-3xl">
                             {hint}
                         </p>
@@ -1715,11 +1479,7 @@ export function CmsField({ label, hint, children, onClear, canClear = true }: {
         <label className="block">
             {(label || showClear) ? (
                 <span className="flex items-center justify-between gap-2 mb-2">
-<<<<<<< HEAD
                     <span className="min-w-0 text-[1.25rem] font-semibold text-slate-800 dark:text-neutral-100">{label}</span>
-=======
-                    <span className="text-[1.25rem] font-semibold text-slate-800 dark:text-neutral-100">{label}</span>
->>>>>>> 8020f5d (Initial commit for website frontend)
                     {showClear && (
                         <button
                             type="button"
@@ -1883,11 +1643,7 @@ export function CmsError({ message, onRetry }: { message: string; onRetry?: () =
 
 export function CmsEmpty({ title, hint }: { title: string; hint?: string }) {
     return (
-<<<<<<< HEAD
         <div className="text-center py-8 sm:py-12">
-=======
-        <div className="text-center py-12">
->>>>>>> 8020f5d (Initial commit for website frontend)
             <p className="text-slate-700 dark:text-[#D4D4D8] font-medium">{title}</p>
             {hint && <p className="text-[1.25rem] text-slate-500 dark:text-[#A1A1AA] mt-1">{hint}</p>}
         </div>
@@ -2195,7 +1951,6 @@ export function CmsModeCard({
         </div>
     );
 }
-<<<<<<< HEAD
 
 /**
  * Where a section's own field goes — exactly one of two, so a radio group.
@@ -2403,5 +2158,3 @@ export function IconPicker({ value, onChange, label = 'Icon' }: {
     );
 }
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)

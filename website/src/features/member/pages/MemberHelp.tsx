@@ -1,14 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-<<<<<<< HEAD
 import { toast } from 'sonner';
 import {
     LifeBuoy, Mail, Phone, Clock, MapPin, Send, ChevronDown,
-=======
-import { Link } from 'react-router-dom';
-import { toast } from 'sonner';
-import {
-    LifeBuoy, Mail, Phone, Clock, MapPin, Send, ChevronRight, ChevronDown,
->>>>>>> 8020f5d (Initial commit for website frontend)
     ClipboardList, CreditCard, CalendarDays, UserCog,
 } from 'lucide-react';
 import MemberPageShell from '@/pages/member/MemberPageShell';
@@ -16,12 +9,9 @@ import { SectionCard } from '@/features/member/components/MemberUI';
 import { getContactInfo, sendContactMessage } from '@/services/cmsApi';
 import { getMyProfile, getMyApplication, errorMessage } from '@/services/activApi';
 import { formatApplicationRef } from '@/features/member/memberAccess';
-<<<<<<< HEAD
 import {
     ACTION_TEXT, CARD_BODY, ITEM_TITLE, ITEM_BODY, EYEBROW,
 } from '@/components/layout/appTypography';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * Help & Support, inside the member area.
@@ -48,16 +38,9 @@ const FAQ = [
         icon: ClipboardList,
         question: 'How long does the review take?',
         answer:
-<<<<<<< HEAD
             'Your Block, District and State Admins — the admins for your own region — review your '
             + 'application at the same time, and the State Admin gives the final decision. The '
             + 'Application Status screen shows each of their answers as it is recorded.',
-=======
-            'Your application passes through three reviews — Block, then District, then State. '
-            + 'Each one is carried out by the admin for your own region, and the Application '
-            + 'Status screen shows exactly which stage your file is at and when each approval '
-            + 'was recorded.',
->>>>>>> 8020f5d (Initial commit for website frontend)
     },
     {
         icon: CreditCard,
@@ -79,15 +62,9 @@ const FAQ = [
         icon: UserCog,
         question: 'Can I still change my details?',
         answer:
-<<<<<<< HEAD
             'Your details are edited in My Profile. Once your application is submitted its forms '
             + 'lock, so a correction then needs the office team — send the change below and it '
             + 'reaches them with your application reference.',
-=======
-            'Your contact details can be updated at any time from Settings. The four application '
-            + 'forms lock when you submit them, so a correction to those needs the review team — '
-            + 'send the change below with your application reference and they will action it.',
->>>>>>> 8020f5d (Initial commit for website frontend)
     },
 ];
 
@@ -137,10 +114,7 @@ export default function MemberHelp() {
     const address = (contact?.addressLines || []).filter(Boolean) as string[];
     const email = contact?.email || '';
     const phone = contact?.phone || '';
-<<<<<<< HEAD
     const hasDetails = hours.length > 0 || !!email || !!phone || address.length > 0;
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     const set = (key: keyof typeof form) => (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -169,16 +143,10 @@ export default function MemberHelp() {
                 subject: [(form.subject || '').trim() || 'Member support request',
                     appRef.full ? `(Application ${appRef.full})` : ''].filter(Boolean).join(' '),
                 message,
-<<<<<<< HEAD
                 applicationRef: appRef.full || '',
             });
 
             toast.success('Your message has reached the ACTIV office. The team will reply to your email.');
-=======
-            });
-
-            toast.success('Your message has been sent. The team will be in touch.');
->>>>>>> 8020f5d (Initial commit for website frontend)
             setForm((current) => ({ ...current, subject: '', message: '' }));
         } catch (err) {
             toast.error(errorMessage(err, 'Your message could not be sent'));
@@ -189,22 +157,14 @@ export default function MemberHelp() {
 
     return (
         <MemberPageShell title="Help & Support" subtitle="Questions about your membership" width="standard">
-<<<<<<< HEAD
             <div className="grid gap-4 sm:gap-5 lg:grid-cols-12 items-start">
-=======
-            <div className="grid gap-5 lg:grid-cols-12 items-start">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 {/* ---------------------------------------------- ask ---------- */}
                 <div className="lg:col-span-7 space-y-5">
                     <SectionCard
                         title="Send us a message"
                         subtitle={appRef.full
                             ? `Sent with your application reference ${appRef.full}`
-<<<<<<< HEAD
                             : 'It goes straight to the ACTIV office team'}
-=======
-                            : 'The support team reads every message'}
->>>>>>> 8020f5d (Initial commit for website frontend)
                         icon={<Send className="w-5 h-5" />}
                     >
                         <form onSubmit={submit} className="space-y-4">
@@ -257,15 +217,9 @@ export default function MemberHelp() {
                             <button
                                 type="submit"
                                 disabled={sending}
-<<<<<<< HEAD
                                 className={`inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700
                                            disabled:opacity-60 text-white px-5 py-2.5
                                            rounded-xl shadow-sm transition-colors ${ACTION_TEXT}`}
-=======
-                                className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700
-                                           disabled:opacity-60 text-white text-[1.1875rem] font-bold px-5 py-2.5
-                                           rounded-xl shadow-sm transition-colors"
->>>>>>> 8020f5d (Initial commit for website frontend)
                             >
                                 {sending ? 'Sending…' : 'Send message'}
                                 <Send className="w-4 h-4" />
@@ -295,12 +249,7 @@ export default function MemberHelp() {
                                                              flex items-center justify-center shrink-0">
                                                 <Icon className="w-4 h-4" />
                                             </span>
-<<<<<<< HEAD
                                             <span className={`min-w-0 flex-1 text-slate-900 pt-1.5 ${ITEM_TITLE}`}>
-=======
-                                            <span className="min-w-0 flex-1 text-[1.1875rem] font-semibold
-                                                             text-slate-900 pt-1.5">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 {question}
                                             </span>
                                             <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 mt-2
@@ -310,12 +259,7 @@ export default function MemberHelp() {
                                         </button>
 
                                         {expanded ? (
-<<<<<<< HEAD
                                             <p className={`text-slate-600 pl-3 sm:pl-12 pr-2 pb-4 ${CARD_BODY}`}>
-=======
-                                            <p className="text-[1rem] text-slate-600 leading-relaxed
-                                                          pl-12 pr-2 pb-4">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 {answer}
                                             </p>
                                         ) : null}
@@ -328,10 +272,7 @@ export default function MemberHelp() {
 
                 {/* ---------------------------------------------- reach --------- */}
                 <div className="lg:col-span-5 space-y-5">
-<<<<<<< HEAD
                     {hasDetails ? (
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                     <SectionCard
                         title="Contact the association"
                         subtitle="The same details as the public office"
@@ -371,43 +312,10 @@ export default function MemberHelp() {
                                 </Detail>
                             ) : null}
 
-<<<<<<< HEAD
                         </ul>
                     </SectionCard>
                     ) : null}
 
-=======
-                            {hours.length === 0 && !email && !phone && address.length === 0 ? (
-                                <li className="text-[1rem] text-slate-500">
-                                    Send a message using the form and the team will get back to you.
-                                </li>
-                            ) : null}
-                        </ul>
-                    </SectionCard>
-
-                    <SectionCard title="Where to look first" icon={<ClipboardList className="w-5 h-5" />}>
-                        <ul className="space-y-2">
-                            {[
-                                { label: 'Application status and timeline', to: '/member/application-status' },
-                                { label: 'Your documents and certificates', to: '/member/documents' },
-                                { label: 'Events programme', to: '/member/events' },
-                                { label: 'Account settings', to: '/member/settings' },
-                            ].map(({ label, to }) => (
-                                <li key={to}>
-                                    <Link
-                                        to={to}
-                                        className="flex items-center justify-between gap-3 p-3 rounded-xl
-                                                   border border-slate-200 hover:border-blue-400 hover:bg-blue-50
-                                                   transition-colors text-[1rem] font-semibold text-slate-800"
-                                    >
-                                        {label}
-                                        <ChevronRight className="w-4 h-4 text-blue-500 shrink-0" />
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
-                    </SectionCard>
->>>>>>> 8020f5d (Initial commit for website frontend)
                 </div>
             </div>
         </MemberPageShell>
@@ -415,11 +323,7 @@ export default function MemberHelp() {
 }
 
 const INPUT =
-<<<<<<< HEAD
     `w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-slate-900 ${CARD_BODY} `
-=======
-    'w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-[1.1875rem] text-slate-900 '
->>>>>>> 8020f5d (Initial commit for website frontend)
     + 'placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
 
 function Field({
@@ -433,11 +337,7 @@ function Field({
 }) {
     return (
         <label className="block">
-<<<<<<< HEAD
             <span className={`block text-slate-500 mb-1.5 ${EYEBROW}`}>
-=======
-            <span className="block text-[0.8125rem] font-bold uppercase tracking-wide text-slate-500 mb-1.5">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 {label}{required ? <span className="text-red-500"> *</span> : null}
             </span>
             {children}
@@ -461,17 +361,10 @@ function Detail({
                 {icon}
             </span>
             <span className="min-w-0">
-<<<<<<< HEAD
                 <span className={`block text-slate-500 ${EYEBROW}`}>
                     {label}
                 </span>
                 <span className={`block text-slate-700 mt-0.5 ${ITEM_BODY}`}>{children}</span>
-=======
-                <span className="block text-[0.8125rem] font-bold uppercase tracking-wide text-slate-500">
-                    {label}
-                </span>
-                <span className="block text-[1rem] text-slate-700 mt-0.5 leading-snug">{children}</span>
->>>>>>> 8020f5d (Initial commit for website frontend)
             </span>
         </li>
     );

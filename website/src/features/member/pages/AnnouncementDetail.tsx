@@ -58,11 +58,7 @@ export default function AnnouncementDetail() {
                 <button
                     type="button"
                     onClick={() => navigate('/member/updates')}
-<<<<<<< HEAD
                     className="text-[1.0625rem] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
-=======
-                    className="text-[1rem] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
->>>>>>> 8020f5d (Initial commit for website frontend)
                 >
                     All updates
                 </button>
@@ -94,28 +90,17 @@ export default function AnnouncementDetail() {
                         </div>
                     ) : null}
 
-<<<<<<< HEAD
                     <div className="p-4 sm:p-5 lg:p-7">
                         <div className="flex flex-wrap items-center gap-2 mb-3">
                             {style ? (
                                 <span className={`text-[1.0625rem] font-bold uppercase tracking-wide px-2 py-0.5
-=======
-                    <div className="p-5 lg:p-7">
-                        <div className="flex flex-wrap items-center gap-2 mb-3">
-                            {style ? (
-                                <span className={`text-[0.8125rem] font-bold uppercase tracking-wide px-2 py-0.5
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                   rounded-full ${style.cls}`}>
                                     {style.label}
                                 </span>
                             ) : null}
 
                             {update.pinned ? (
-<<<<<<< HEAD
                                 <span className="inline-flex items-center gap-1 text-[1.0625rem] font-bold
-=======
-                                <span className="inline-flex items-center gap-1 text-[0.8125rem] font-bold
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                  uppercase tracking-wide text-blue-700">
                                     <Pin className="w-3 h-3" /> Pinned
                                 </span>
@@ -131,39 +116,23 @@ export default function AnnouncementDetail() {
                         </h1>
 
                         {update.targetLabel ? (
-<<<<<<< HEAD
                             <p className="mt-2 inline-flex items-center gap-1.5 text-[1.0625rem] text-slate-500">
-=======
-                            <p className="mt-2 inline-flex items-center gap-1.5 text-[1rem] text-slate-500">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 <MapPin className="w-3.5 h-3.5" />
                                 For {update.targetLabel}
                             </p>
                         ) : (
-<<<<<<< HEAD
                             <p className="mt-2 text-[1.0625rem] text-slate-500">For all members</p>
                         )}
 
                         {update.summary ? (
                             <p className="mt-4 text-[1.1875rem] text-slate-700 leading-relaxed font-medium">
-=======
-                            <p className="mt-2 text-[1rem] text-slate-500">For all members</p>
-                        )}
-
-                        {update.summary ? (
-                            <p className="mt-4 text-[1.125rem] text-slate-700 leading-relaxed font-medium">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 {update.summary}
                             </p>
                         ) : null}
 
                         {update.body ? (
                             <div
-<<<<<<< HEAD
                                 className="mt-4 text-[1.1875rem] text-slate-700 leading-relaxed
-=======
-                                className="mt-4 text-[1.125rem] text-slate-700 leading-relaxed
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3
                                            [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-3
                                            [&_h2]:text-[1.375rem] [&_h2]:font-bold [&_h2]:text-slate-900 [&_h2]:mt-5 [&_h2]:mb-2

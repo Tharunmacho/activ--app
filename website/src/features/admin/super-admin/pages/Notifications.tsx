@@ -40,7 +40,6 @@ const CHANNEL_META: Record<string, { label: string; icon: typeof Mail; tone: str
 
 /** The events a filter can name, in the order they happen to a member. */
 const EVENTS = [
-<<<<<<< HEAD
     'ACCOUNT_REGISTERED', 'APPLICATION_SUBMITTED', 'ADMIN_NEW_APPLICATION', 'APPLICATION_ENDORSED',
     'CORRECTION_REQUESTED', 'APPLICATION_APPROVED', 'PAYMENT_REQUIRED', 'MEMBERSHIP_ACTIVATED',
     'MEMBERSHIP_RENEWAL_DUE',
@@ -50,11 +49,6 @@ const EVENTS = [
     // Retired events, still on older log rows.
     'STAGE_CHANGED', 'PAYMENT_SUCCESS',
     'BOT_REPLY', 'CUSTOM',
-=======
-    'ACCOUNT_REGISTERED', 'APPLICATION_SUBMITTED', 'STAGE_CHANGED', 'CORRECTION_REQUESTED',
-    'APPLICATION_APPROVED', 'PAYMENT_REQUIRED', 'PAYMENT_SUCCESS', 'MEMBERSHIP_ACTIVATED',
-    'EVENT_REGISTERED', 'EVENT_REMINDER', 'BOT_REPLY', 'CUSTOM',
->>>>>>> 8020f5d (Initial commit for website frontend)
 ];
 
 const humanEvent = (value: string) =>
@@ -166,13 +160,8 @@ export default function Notifications() {
         }
     };
 
-<<<<<<< HEAD
     const emailOff = !!status && !status?.email?.configured;
     const waOff = !!status && !status?.whatsapp?.configured;
-=======
-    const emailOff = status && !status.email.configured;
-    const waOff = status && !status.whatsapp.configured;
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     return (
         <div className={`min-h-screen flex ${ADMIN_BG}`}>
@@ -219,11 +208,7 @@ export default function Notifications() {
                     {(emailOff || waOff) && (
                         <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
                             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-<<<<<<< HEAD
                             <div className="min-w-0 text-[1.25rem] text-amber-900 [overflow-wrap:anywhere]">
-=======
-                            <div className="min-w-0 text-[1.25rem] text-amber-900">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 <p className="font-semibold">
                                     {emailOff && waOff
                                         ? 'Neither email nor WhatsApp is configured.'
@@ -232,17 +217,10 @@ export default function Notifications() {
                                 <p className="mt-1">
                                     Messages on {emailOff && waOff ? 'those channels' : 'that channel'} are recorded
                                     below as <strong>not sent</strong> and nothing leaves the server. Add the
-<<<<<<< HEAD
                                     credentials to <code className="font-mono text-[1.1875rem]">backend/.env</code> and
                                     restart — {emailOff ? <><code className="font-mono text-[1.1875rem]">EMAIL_USER</code> and <code className="font-mono text-[1.1875rem]">EMAIL_PASS</code></> : null}
                                     {emailOff && waOff ? ', ' : null}
                                     {waOff ? <><code className="font-mono text-[1.1875rem]">BOTBEE_API_TOKEN</code> and <code className="font-mono text-[1.1875rem]">BOTBEE_PHONE_NUMBER_ID</code></> : null}.
-=======
-                                    credentials to <code className="font-mono text-[1.125rem]">backend/.env</code> and
-                                    restart — {emailOff ? <><code className="font-mono text-[1.125rem]">EMAIL_USER</code> and <code className="font-mono text-[1.125rem]">EMAIL_PASS</code></> : null}
-                                    {emailOff && waOff ? ', ' : null}
-                                    {waOff ? <><code className="font-mono text-[1.125rem]">BOTBEE_API_TOKEN</code> and <code className="font-mono text-[1.125rem]">BOTBEE_PHONE_NUMBER_ID</code></> : null}.
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 </p>
                             </div>
                         </div>
@@ -257,11 +235,7 @@ export default function Notifications() {
                       * Bookings and Categories show one click away. Two stat
                       * rows for one idea is the drift `AdminUI` exists to stop.
                       */}
-<<<<<<< HEAD
                     <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
-=======
-                    <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         <AdminStat
                             icon={<CheckCircle2 className="w-5 h-5" />}
                             label="Delivered"
@@ -294,7 +268,6 @@ export default function Notifications() {
                     </div>
 
                     {/* ========================================= channel cards */}
-<<<<<<< HEAD
                     <div className="grid gap-3 sm:gap-5 lg:grid-cols-2">
                         <ChannelCard
                             icon={<Mail className="w-5 h-5" />}
@@ -306,19 +279,6 @@ export default function Notifications() {
                                 ['From address', status?.email?.from || '—'],
                                 ['Regional From', status?.email?.regionalFrom ? 'On' : 'Off — region is in the display name'],
                                 ['Fallback Reply-To', status?.email?.supportAddress || '—'],
-=======
-                    <div className="grid gap-5 lg:grid-cols-2">
-                        <ChannelCard
-                            icon={<Mail className="w-5 h-5" />}
-                            title="Email"
-                            configured={!!status?.email.configured}
-                            rows={[
-                                ['Host', status?.email.host || '—'],
-                                ['Account', status?.email.user || '—'],
-                                ['From address', status?.email.from || '—'],
-                                ['Regional From', status?.email.regionalFrom ? 'On' : 'Off — region is in the display name'],
-                                ['Fallback Reply-To', status?.email.supportAddress || '—'],
->>>>>>> 8020f5d (Initial commit for website frontend)
                             ]}
                             note="Application emails are sent from the verified address with the applicant's
                                   region in the display name, and Reply-To set to their own Block, District or
@@ -327,7 +287,6 @@ export default function Notifications() {
                         <ChannelCard
                             icon={<MessageSquare className="w-5 h-5" />}
                             title="WhatsApp (BotBee)"
-<<<<<<< HEAD
                             configured={!!status?.whatsapp?.configured}
                             rows={[
                                 ['Base URL', status?.whatsapp?.baseUrl || '—'],
@@ -337,28 +296,13 @@ export default function Notifications() {
                             ]}
                             note={status?.whatsapp?.webhookUrl
                                 ? `Register this webhook URL on BotBee: ${status?.whatsapp?.webhookUrl}`
-=======
-                            configured={!!status?.whatsapp.configured}
-                            rows={[
-                                ['Base URL', status?.whatsapp.baseUrl || '—'],
-                                ['Template endpoint', status?.whatsapp.templateEndpoint || '—'],
-                                ['Auth style', status?.whatsapp.authStyle || '—'],
-                                ['Webhook secret', status?.whatsapp.webhookConfigured ? 'Set' : 'Not set — inbound bot disabled'],
-                            ]}
-                            note={status?.whatsapp.webhookUrl
-                                ? `Register this webhook URL on BotBee: ${status.whatsapp.webhookUrl}`
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 : undefined}
                             noteIcon={<Webhook className="w-3.5 h-3.5" />}
                         />
                     </div>
 
                     {/* ============================================= test send */}
-<<<<<<< HEAD
                     <section className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6
-=======
-                    <section className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                         <h2 className={`${CARD_TITLE} text-slate-900`}>Send a test message</h2>
                         <p className="text-[1.25rem] text-slate-500 mt-1">
@@ -398,13 +342,8 @@ export default function Notifications() {
                     </section>
 
                     {/* ================================================ filters */}
-<<<<<<< HEAD
                     <div className="grid grid-cols-2 gap-2.5 sm:flex sm:flex-row sm:flex-wrap [&>select:last-child]:col-span-2">
                         <div className="relative col-span-2 flex-1 min-w-0 sm:min-w-[14rem]">
-=======
-                    <div className="flex flex-col sm:flex-row flex-wrap gap-2.5">
-                        <div className="relative flex-1 min-w-0 sm:min-w-[14rem]">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input
                                 value={search}
@@ -443,15 +382,9 @@ export default function Notifications() {
                                 const state = row.mock ? 'mock' : row.status;
 
                                 return (
-<<<<<<< HEAD
                                     <div key={row._id} className="px-4 sm:px-5 py-3.5 sm:py-4 flex flex-wrap sm:flex-nowrap
                                                                   items-start sm:items-center gap-x-3 gap-y-2">
                                         <span className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center
-=======
-                                    <div key={row._id} className="px-4 sm:px-5 py-4 flex flex-col sm:flex-row
-                                                                  sm:items-center gap-3">
-                                        <span className={`w-10 h-10 rounded-xl flex items-center justify-center
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                           shrink-0 ${meta.tone}`}>
                                             <Icon className="w-5 h-5" />
                                         </span>
@@ -472,11 +405,7 @@ export default function Notifications() {
                                             ) : null}
                                         </div>
 
-<<<<<<< HEAD
                                         <div className="w-full sm:w-auto pl-12 sm:pl-0 flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
-=======
-                                        <div className="flex items-center gap-3 shrink-0">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                             <span className="text-[1.1875rem] text-slate-400 tabular-nums whitespace-nowrap">
                                                 {when(row.createdAt)}
                                             </span>
@@ -488,11 +417,7 @@ export default function Notifications() {
                                                     disabled={retrying === row._id}
                                                     title="Send again"
                                                     aria-label="Send again"
-<<<<<<< HEAD
                                                     className="w-10 h-10 sm:w-9 sm:h-9 rounded-lg border border-slate-200 flex items-center
-=======
-                                                    className="w-9 h-9 rounded-lg border border-slate-200 flex items-center
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                                justify-center text-slate-600 hover:bg-slate-50
                                                                transition-colors disabled:opacity-60"
                                                 >
@@ -520,17 +445,10 @@ function ChannelCard({ icon, title, configured, rows, note, noteIcon }: {
     rows: [string, string][]; note?: string; noteIcon?: React.ReactNode;
 }) {
     return (
-<<<<<<< HEAD
         <section className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6
                             shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
             <div className="flex items-center gap-3">
                 <span className="w-10 h-10 shrink-0 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-=======
-        <section className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6
-                            shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
-            <div className="flex items-center gap-3">
-                <span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
->>>>>>> 8020f5d (Initial commit for website frontend)
                     {icon}
                 </span>
                 <h2 className={`${CARD_TITLE} text-slate-900 flex-1 min-w-0`}>{title}</h2>
@@ -597,11 +515,7 @@ function Select({ value, onChange, label, options }: {
             value={value}
             onChange={(e) => onChange(e.target.value)}
             aria-label={label}
-<<<<<<< HEAD
             className="h-11 w-full sm:w-auto min-w-0 px-3 rounded-xl border border-slate-200 text-[1.25rem] bg-white text-slate-700
-=======
-            className="h-11 px-3 rounded-xl border border-slate-200 text-[1.25rem] bg-white text-slate-700
->>>>>>> 8020f5d (Initial commit for website frontend)
                        outline-none transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
         >
             <option value="">{label}</option>
@@ -611,22 +525,14 @@ function Select({ value, onChange, label, options }: {
 }
 
 const Busy = () => (
-<<<<<<< HEAD
     <div className="bg-white border border-slate-200 rounded-2xl flex items-center justify-center gap-3 py-10 sm:py-16
-=======
-    <div className="bg-white border border-slate-200 rounded-2xl flex items-center justify-center gap-3 py-16
->>>>>>> 8020f5d (Initial commit for website frontend)
                     text-slate-500 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
         <Loader2 className="w-5 h-5 animate-spin" /> Loading…
     </div>
 );
 
 const Empty = ({ text }: { text: string }) => (
-<<<<<<< HEAD
     <p className="bg-white border border-slate-200 rounded-2xl text-center text-slate-500 px-4 py-10 sm:py-16
-=======
-    <p className="bg-white border border-slate-200 rounded-2xl text-center text-slate-500 py-16
->>>>>>> 8020f5d (Initial commit for website frontend)
                   shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
         {text}
     </p>

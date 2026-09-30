@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 import { useCardTable } from '@/lib/useCardTable';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { useCallback, useEffect, useState } from 'react';
 import { Menu, Plus, Pencil, Trash2, X, Pin, Globe, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import AdminSidebar from './AdminSidebar';
@@ -83,10 +80,7 @@ const toDateInput = (value?: string | null): string => {
 };
 
 export default function SuperAdminUpdates() {
-<<<<<<< HEAD
     const cardTableRef = useCardTable();
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const [rows, setRows] = useState<Announcement[]>([]);
@@ -291,11 +285,7 @@ export default function SuperAdminUpdates() {
                     {showForm ? (
                         <form
                             onSubmit={submit}
-<<<<<<< HEAD
                             className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-4 sm:p-5 lg:p-6 space-y-5 sm:space-y-6"
-=======
-                            className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-5 lg:p-6 space-y-6"
->>>>>>> 8020f5d (Initial commit for website frontend)
                         >
                             <div className="flex items-start justify-between gap-3">
                                 <h2 className={`${CARD_TITLE} text-slate-900`}>
@@ -305,21 +295,13 @@ export default function SuperAdminUpdates() {
                                     type="button"
                                     onClick={() => setShowForm(false)}
                                     aria-label="Close"
-<<<<<<< HEAD
                                     className="shrink-0 -mr-2 -mt-1.5 grid h-10 w-10 place-items-center rounded-lg text-slate-400 hover:text-slate-700"
-=======
-                                    className="text-slate-400 hover:text-slate-700"
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 >
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
 
-<<<<<<< HEAD
                             <div className="grid gap-4 sm:gap-5 sm:grid-cols-2">
-=======
-                            <div className="grid gap-5 sm:grid-cols-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 <div className="sm:col-span-2">
                                     <Field label="Headline">
                                         <input
@@ -409,11 +391,7 @@ export default function SuperAdminUpdates() {
                             {/* ---- who it reaches ---- */}
                             <div className="border-t border-slate-100 pt-5">
                                 <h3 className={`${CARD_TITLE} text-slate-900`}>Who it reaches</h3>
-<<<<<<< HEAD
                                 <p className="text-[1.0625rem] text-slate-500 mt-0.5 mb-4">
-=======
-                                <p className="text-[0.9375rem] text-slate-500 mt-0.5 mb-4">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     Leave a region blank to reach everyone below that level. A block-level
                                     update goes only to that block.
                                 </p>
@@ -524,11 +502,7 @@ export default function SuperAdminUpdates() {
                                     <span className="text-[1.25rem] text-slate-700">Pin to the top of every feed</span>
                                 </label>
 
-<<<<<<< HEAD
                                 <div className="w-full sm:w-auto sm:ml-auto flex gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
-=======
-                                <div className="ml-auto flex gap-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     <button
                                         type="button"
                                         onClick={() => setShowForm(false)}
@@ -542,11 +516,7 @@ export default function SuperAdminUpdates() {
                                         disabled={saving}
                                         className="px-5 h-11 rounded-xl bg-blue-600 text-white text-[1.25rem] font-bold
                                                    hover:bg-blue-700 disabled:opacity-60 inline-flex
-<<<<<<< HEAD
                                                    items-center justify-center gap-2"
-=======
-                                                   items-center gap-2"
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     >
                                         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                                         {editing ? 'Save update' : 'Create update'}
@@ -557,11 +527,7 @@ export default function SuperAdminUpdates() {
                     ) : null}
 
                     {/* ---------------------------------------------- listing */}
-<<<<<<< HEAD
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-4 sm:p-5">
-=======
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] p-5">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         <h2 className={`${CARD_TITLE} text-slate-900 mb-4`}>
                             Updates ({rows.length})
                         </h2>
@@ -574,7 +540,6 @@ export default function SuperAdminUpdates() {
                                 member's dashboard.
                             </p>
                         ) : (
-<<<<<<< HEAD
                             <div ref={cardTableRef} className="overflow-x-auto card-table">
                                 <table className="w-full text-[1.25rem]">
                                     <thead>
@@ -583,33 +548,16 @@ export default function SuperAdminUpdates() {
                                             <th className="pb-3 pr-4 text-[1.0625rem] font-semibold uppercase tracking-wider">Reaches</th>
                                             <th className="pb-3 pr-4 text-[1.0625rem] font-semibold uppercase tracking-wider">Published</th>
                                             <th className="pb-3 text-[1.0625rem] font-semibold uppercase tracking-wider text-right">Actions</th>
-=======
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-[1.25rem]">
-                                    <thead>
-                                        <tr className="text-left text-slate-500 border-b border-slate-200">
-                                            <th className="pb-3 pr-4 text-[1.0625rem] sm:text-[1rem] font-semibold uppercase tracking-wider">Headline</th>
-                                            <th className="pb-3 pr-4 text-[1.0625rem] sm:text-[1rem] font-semibold uppercase tracking-wider">Reaches</th>
-                                            <th className="pb-3 pr-4 text-[1.0625rem] sm:text-[1rem] font-semibold uppercase tracking-wider">Published</th>
-                                            <th className="pb-3 text-[1.0625rem] sm:text-[1rem] font-semibold uppercase tracking-wider text-right">Actions</th>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {rows.map((row) => (
                                             <tr key={row.id} className="border-b border-slate-100">
                                                 <td className="py-3 pr-4">
-<<<<<<< HEAD
                                                     <span className="font-medium text-slate-800 break-words">{row.title}</span>
                                                     {row.pinned ? (
                                                         <span className="ml-2 inline-flex items-center gap-1
                                                                          text-[1.0625rem] font-bold uppercase
-=======
-                                                    <span className="font-medium text-slate-800">{row.title}</span>
-                                                    {row.pinned ? (
-                                                        <span className="ml-2 inline-flex items-center gap-1
-                                                                         text-[0.75rem] font-bold uppercase
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                                          text-blue-700 align-middle">
                                                             <Pin className="w-3 h-3" /> Pinned
                                                         </span>
@@ -646,11 +594,7 @@ export default function SuperAdminUpdates() {
                                                         onClick={() => togglePublished(row)}
                                                         aria-label={row.status === 'published' ? 'Withdraw' : 'Publish'}
                                                         title={row.status === 'published' ? 'Withdraw' : 'Publish'}
-<<<<<<< HEAD
                                                         className="p-2.5 sm:p-1.5 rounded text-slate-500 hover:bg-slate-100"
-=======
-                                                        className="p-1.5 rounded text-slate-500 hover:bg-slate-100"
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                     >
                                                         {row.status === 'published'
                                                             ? <EyeOff className="w-4 h-4" />
@@ -660,11 +604,7 @@ export default function SuperAdminUpdates() {
                                                     <button
                                                         onClick={() => openEdit(row)}
                                                         aria-label="Edit"
-<<<<<<< HEAD
                                                         className="p-2.5 sm:p-1.5 rounded text-slate-500 hover:bg-slate-100"
-=======
-                                                        className="p-1.5 rounded text-slate-500 hover:bg-slate-100"
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                     >
                                                         <Pencil className="w-4 h-4" />
                                                     </button>
@@ -703,15 +643,9 @@ function Field({
 }: { label: string; hint?: string; children: React.ReactNode }) {
     return (
         <label className="block min-w-0">
-<<<<<<< HEAD
             <span className="block text-[1.0625rem] font-semibold text-slate-700 mb-1">{label}</span>
             {children}
             {hint ? <span className="block text-[1.0625rem] text-slate-400 mt-1">{hint}</span> : null}
-=======
-            <span className="block text-[0.9375rem] font-semibold text-slate-700 mb-1">{label}</span>
-            {children}
-            {hint ? <span className="block text-[0.875rem] text-slate-400 mt-1">{hint}</span> : null}
->>>>>>> 8020f5d (Initial commit for website frontend)
         </label>
     );
 }

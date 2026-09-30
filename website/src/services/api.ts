@@ -102,7 +102,6 @@ export const syncLegacyTokenKeys = (): void => {
     }
 };
 
-<<<<<<< HEAD
 /**
  * WHERE A SIGNED-OUT PERSON IS SENT: admins to `/admin/login`, members to
  * `/login`. The two sign-in screens are separate — see `EnhancedLoginPage`'s
@@ -119,8 +118,6 @@ export const loginPathFor = (role?: string | null): string => {
     return value && value !== 'member' ? '/admin/login' : '/login';
 };
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 export const clearSession = (): void => {
     try {
         Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
@@ -304,7 +301,6 @@ api.interceptors.response.use(
             url.includes('/auth/login') ||
             url.includes('/auth/register') ||
             url.includes('/auth/forgot-password') ||
-<<<<<<< HEAD
             url.includes('/auth/reset-password') ||
             url.includes('/auth/oauth/');
 
@@ -318,14 +314,6 @@ api.interceptors.response.use(
             clearSession();
             if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
                 window.location.assign(signIn);
-=======
-            url.includes('/auth/reset-password');
-
-        if (status === 401 && !isAuthAttempt) {
-            clearSession();
-            if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-                window.location.assign('/login');
->>>>>>> 8020f5d (Initial commit for website frontend)
             }
         }
 

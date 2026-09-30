@@ -1,8 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-<<<<<<< HEAD
 import ApplicantAvatar from '@/components/shared/ApplicantAvatar';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -124,16 +121,6 @@ const TAB_ACTIVE: Record<BucketKey, string> = {
     all: 'bg-blue-600 text-white shadow-sm',
 };
 
-<<<<<<< HEAD
-=======
-const getInitials = (fullName?: string | null): string => {
-    const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0) return '?';
-    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-};
-
->>>>>>> 8020f5d (Initial commit for website frontend)
 export default function ApprovalQueue({
     buckets,
     level,
@@ -214,7 +201,6 @@ export default function ApprovalQueue({
         const endorsement = String((applicant as any)?.endorsementLine || '');
         const grantsMembership = (applicant as any)?.decidesOutcome !== false;
 
-<<<<<<< HEAD
         /* Outside India there is no block or district — say so, with the place. */
         const abroad = (applicant as any)?.isInternational === true;
         const location = abroad
@@ -227,24 +213,15 @@ export default function ApprovalQueue({
         const isStudent = declaredKind.includes('student');
         const isAspirant =
             isStudent ||
-=======
-        const location = [applicant?.block, applicant?.district].filter(Boolean).join(', ');
-
-        const isAspirant =
->>>>>>> 8020f5d (Initial commit for website frontend)
             applicant?.doingBusiness === false ||
             (applicant as any)?.businessInfo?.doingBusiness === false ||
             String((applicant as any)?.registrationType || (applicant as any)?.memberType || applicant?.role || '')
                 .toLowerCase()
                 .includes('aspirant');
 
-<<<<<<< HEAD
         const displayRole = isStudent
             ? 'Student'
             : isAspirant
-=======
-        const displayRole = isAspirant
->>>>>>> 8020f5d (Initial commit for website frontend)
             ? 'Aspirant'
             : applicant?.doingBusiness === true || (applicant as any)?.businessInfo?.organizationName
               ? 'Business Member'
@@ -257,11 +234,7 @@ export default function ApprovalQueue({
                 key={applicant?.id || applicant?.applicationId}
                 /* The admin area's card, so an applicant row sits at the same
                    elevation as every other panel around it. */
-<<<<<<< HEAD
                 className={`mb-3 sm:mb-4 border border-slate-200 rounded-2xl
-=======
-                className={`mb-4 border border-slate-200 rounded-2xl
->>>>>>> 8020f5d (Initial commit for website frontend)
                             shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] ${
                     onPressApplicant
                         ? 'cursor-pointer transition-all duration-200 hover:-translate-y-0.5 '
@@ -271,17 +244,9 @@ export default function ApprovalQueue({
                 }`}
                 onClick={() => onPressApplicant?.(applicant)}
             >
-<<<<<<< HEAD
                 <CardContent className="p-3.5 sm:p-4">
                     <div className="flex items-start gap-3">
                         <ApplicantAvatar name={applicant?.fullName} photo={applicant?.profilePhoto} className="w-10 h-10" />
-=======
-                <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold shrink-0">
-                            {getInitials(applicant?.fullName)}
-                        </div>
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                         <div className="flex-1 min-w-0">
                             {/* Never a placeholder name: an admin deciding on a
@@ -334,11 +299,7 @@ export default function ApprovalQueue({
                     </div>
 
                     <div className="mt-3 space-y-1 text-[1.25rem]">
-<<<<<<< HEAD
                         <div className="flex flex-wrap items-center gap-x-1">
-=======
-                        <div className="flex items-center gap-1">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             <span className="text-slate-500">Role:</span>
                             <span className={isAspirant ? 'text-emerald-600 font-semibold' : 'text-blue-600 font-semibold'}>
                                 {displayRole}
@@ -346,23 +307,14 @@ export default function ApprovalQueue({
                         </div>
                         {!!location && (
                             <div className="flex items-center gap-1 text-slate-500">
-<<<<<<< HEAD
                                 <MapPin className="w-3.5 h-3.5 shrink-0" />
-=======
-                                <MapPin className="w-3.5 h-3.5" />
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 <span className="truncate">{location}</span>
                             </div>
                         )}
                         {!!applicant?.phone && (
                             <div className="flex items-center gap-1 text-slate-500">
-<<<<<<< HEAD
                                 <Phone className="w-3.5 h-3.5 shrink-0" />
                                 <span className="break-all">{applicant.phone}</span>
-=======
-                                <Phone className="w-3.5 h-3.5" />
-                                <span>{applicant.phone}</span>
->>>>>>> 8020f5d (Initial commit for website frontend)
                             </div>
                         )}
                     </div>
@@ -393,11 +345,7 @@ export default function ApprovalQueue({
                             <p className="text-[1.0625rem] uppercase tracking-wider text-slate-400 font-semibold">
                                 Membership Type
                             </p>
-<<<<<<< HEAD
                             <p className="text-[1.25rem] text-slate-800 font-medium capitalize break-words">
-=======
-                            <p className="text-[1.25rem] text-slate-800 font-medium capitalize">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 {applicant?.memberType || applicant?.role || 'Member'}
                             </p>
                         </div>
@@ -564,11 +512,7 @@ export default function ApprovalQueue({
                                 <Button
                                     size="sm"
                                     variant="outline"
-<<<<<<< HEAD
                                     className="flex-1 h-10"
-=======
-                                    className="flex-1"
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     disabled={isBusy}
                                     onClick={() => {
                                         setRejectingId(null);
@@ -580,11 +524,7 @@ export default function ApprovalQueue({
                                 <Button
                                     size="sm"
                                     variant="destructive"
-<<<<<<< HEAD
                                     className="flex-1 h-10"
-=======
-                                    className="flex-1"
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     disabled={isBusy}
                                     onClick={() => submit(applicant, 'reject', (rejectReason || '').trim())}
                                 >
@@ -639,11 +579,7 @@ export default function ApprovalQueue({
                             key={tab.key}
                             type="button"
                             onClick={() => setActiveFilter(tab.key)}
-<<<<<<< HEAD
                             className={`sm:flex-1 min-h-10 px-2 py-2 rounded-lg text-[1.1875rem] font-semibold truncate
-=======
-                            className={`sm:flex-1 px-2 py-2 rounded-lg text-[1.1875rem] font-semibold truncate
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         transition-colors ${
                                 isActive
                                     ? TAB_ACTIVE[tab.key]
@@ -668,19 +604,11 @@ export default function ApprovalQueue({
                   card an applicant row would have appeared in, which is exactly
                   the point: the panel is there, it is simply empty.
                 */
-<<<<<<< HEAD
                 <div className="flex flex-col items-center justify-center py-10 sm:py-16 px-4 sm:px-6 text-center
                                 bg-white border border-slate-200 rounded-2xl
                                 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
                     <span className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-slate-50 flex items-center justify-center mb-3 sm:mb-4">
                         <Inbox className="w-6 h-6 sm:w-7 sm:h-7 text-slate-400" />
-=======
-                <div className="flex flex-col items-center justify-center py-16 px-6 text-center
-                                bg-white border border-slate-200 rounded-2xl
-                                shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)]">
-                    <span className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center mb-4">
-                        <Inbox className="w-7 h-7 text-slate-400" />
->>>>>>> 8020f5d (Initial commit for website frontend)
                     </span>
                     <p className="text-[1.25rem] font-bold tracking-tight text-slate-900">
                         {/* `No all applications` is not a sentence. The `all`

@@ -6,11 +6,7 @@ import { CmsIcon } from '@/components/shared/CmsIcon';
 import { CountUp } from '@/components/shared/CountUp';
 import { Reveal } from '@/components/shared/Reveal';
 import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
-<<<<<<< HEAD
 import { HERO_HEADING, HERO_LEDE, EYEBROW, BAND_MEASURE } from '@/components/layout/typography';
-=======
-import { HERO_HEADING, HERO_LEDE, EYEBROW } from '@/components/layout/typography';
->>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * The Events page's opening band.
@@ -78,11 +74,7 @@ export function EventsHero({ settings }: Props) {
             </div>
 
             <div className={`${SCREEN_CONTAINER} relative z-10 pt-16 pb-20 md:pt-20 md:pb-24`}>
-<<<<<<< HEAD
                 <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-14">
-=======
-                <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                     {/* ------------------------------------------------ copy */}
                     <Reveal variant="left" className="min-w-0">
@@ -102,7 +94,6 @@ export function EventsHero({ settings }: Props) {
                         )}
 
                         {lede && (
-<<<<<<< HEAD
                             <p className={`${HERO_LEDE} mt-6 ${BAND_MEASURE} text-white/70`}>{lede}</p>
                         )}
 
@@ -126,27 +117,12 @@ export function EventsHero({ settings }: Props) {
                                         className="min-w-0 flex items-center gap-2.5 sm:block
                                                    rounded-xl sm:rounded-2xl bg-white/[0.07] px-3 py-2.5 sm:px-4 sm:py-4
                                                    ring-1 ring-white/15
-=======
-                            <p className={`${HERO_LEDE} mt-6 max-w-xl text-white/70`}>{lede}</p>
-                        )}
-
-                        {/* The editor's own rows on these two cards. */}
-                        <CmsExtraFields fields={ownRows} tone="dark" className="mt-8" />
-
-                        {stats.length > 0 && (
-                            <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-                                {stats.map((stat, i) => (
-                                    <div
-                                        key={i}
-                                        className="rounded-2xl bg-white/[0.07] px-4 py-4 ring-1 ring-white/15
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                    transition-colors duration-300
                                                    hover:bg-white/[0.12]"
                                     >
                                         <CmsIcon
                                             name={stat.icon}
                                             size={20}
-<<<<<<< HEAD
                                             className="shrink-0 text-brand-300 sm:mb-2.5"
                                             fallback="calendar-days"
                                         />
@@ -159,18 +135,6 @@ export function EventsHero({ settings }: Props) {
                                             {stat.label}
                                         </p>
                                         </div>
-=======
-                                            className="text-brand-300 mb-2.5"
-                                            fallback="calendar-days"
-                                        />
-                                        <p className="text-2xl font-black tracking-tight tabular-nums">
-                                            <CountUp value={stat.value} />
-                                        </p>
-                                        <p className="mt-0.5 text-[1.0625rem] sm:text-[0.8125rem] font-bold uppercase
-                                                      tracking-[0.08em] text-white/55">
-                                            {stat.label}
-                                        </p>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     </div>
                                 ))}
                             </div>

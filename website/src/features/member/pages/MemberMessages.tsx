@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-<<<<<<< HEAD
 import { useRenewal } from '@/features/member/useRenewal';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 import {
     MessageSquare, Users, CalendarDays, Megaphone, FileBadge, Handshake,
 } from 'lucide-react';
@@ -57,12 +54,8 @@ export default function MemberMessages() {
         [profileCompletion, application, isPaid],
     );
 
-<<<<<<< HEAD
     const renewal = useRenewal();
     const cta = useMemo(() => membershipCta(access, renewal), [access, renewal]);
-=======
-    const cta = useMemo(() => membershipCta(access), [access]);
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     /**
      * Nothing until the answer is in.
@@ -96,11 +89,7 @@ export default function MemberMessages() {
                 cta={cta}
             >
                 <div>
-<<<<<<< HEAD
                     <p className="text-[1.0625rem] font-bold uppercase tracking-wide text-slate-500 mb-3">
-=======
-                    <p className="text-[0.8125rem] font-bold uppercase tracking-wide text-slate-500 mb-3">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         What your membership covers
                     </p>
                     <ul className="grid gap-4 sm:grid-cols-2">

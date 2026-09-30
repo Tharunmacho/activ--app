@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-<<<<<<< HEAD
 import { useRenewal } from '@/features/member/useRenewal';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { Link } from 'react-router-dom';
 import { BadgeCheck, CheckCircle2, ChevronRight, Clock, Download, FileBadge, FileText, Lock, ReceiptText, ShieldCheck } from 'lucide-react';
 import MemberPageShell from '@/pages/member/MemberPageShell';
@@ -111,12 +108,8 @@ export default function MemberDocuments() {
         [profileCompletion, application, isPaid],
     );
 
-<<<<<<< HEAD
     const renewal = useRenewal();
     const cta = useMemo(() => membershipCta(access, renewal), [access, renewal]);
-=======
-    const cta = useMemo(() => membershipCta(access), [access]);
->>>>>>> 8020f5d (Initial commit for website frontend)
     const appRef = useMemo(() => formatApplicationRef(application), [application]);
 
     const submittedAt = formatDate(application?.createdAt || application?.submittedAt);
@@ -163,11 +156,7 @@ export default function MemberDocuments() {
                                                 {detail}
                                             </span>
                                             <span className="mt-2 inline-flex items-center gap-1.5 rounded-full
-<<<<<<< HEAD
                                                              bg-emerald-50 px-2.5 py-1 text-[1.0625rem]
-=======
-                                                             bg-emerald-50 px-2.5 py-1 text-[0.8125rem]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                              font-bold text-emerald-700">
                                                 <BadgeCheck className="h-4 w-4" /> Issued
                                             </span>
@@ -251,11 +240,7 @@ export default function MemberDocuments() {
                                     {done ? (
                                         <Link
                                             to="/member/profile-view"
-<<<<<<< HEAD
                                             className="shrink-0 text-[1.0625rem] font-semibold text-blue-600
-=======
-                                            className="shrink-0 text-[1rem] font-semibold text-blue-600
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                        hover:underline"
                                         >
                                             View
@@ -263,11 +248,7 @@ export default function MemberDocuments() {
                                     ) : (
                                         <Link
                                             to={to}
-<<<<<<< HEAD
                                             className="shrink-0 inline-flex items-center gap-0.5 text-[1.0625rem]
-=======
-                                            className="shrink-0 inline-flex items-center gap-0.5 text-[1rem]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                        font-semibold text-blue-600 hover:underline"
                                         >
                                             Complete <ChevronRight className="w-3.5 h-3.5" />

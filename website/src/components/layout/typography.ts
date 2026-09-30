@@ -50,7 +50,6 @@
  * headings: at 60px a geometric face needs noticeably more negative tracking
  * than it does at 24px, and a single global value cannot be right at both ends.
  */
-<<<<<<< HEAD
 /*
  * FLUID, for the reason `HERO_HEADING` is — see the note there.
  *
@@ -64,10 +63,6 @@
  */
 export const SECTION_HEADING =
     'text-[clamp(2.1875rem,1.35rem+3.7vw,3.75rem)] font-black leading-[1.08] md:leading-[1.05] tracking-tight';
-=======
-export const SECTION_HEADING =
-    'text-[2.1875rem] sm:text-4xl md:text-5xl lg:text-6xl font-black leading-[1.08] md:leading-[1.05] tracking-tight';
->>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * The hero `<h1>`. One step above a section heading, and the only 7xl on the site.
@@ -77,7 +72,6 @@ export const SECTION_HEADING =
  * below the hero's own bottom edge and straight under the statistics card —
  * the primary call to action on the site was covered up on every phone.
  */
-<<<<<<< HEAD
 /*
  * FLUID, not four fixed steps.
  *
@@ -95,16 +89,11 @@ export const SECTION_HEADING =
  */
 export const HERO_HEADING =
     'text-[clamp(2.125rem,1.1rem+4.6vw,4.5rem)] font-black leading-[1.06] md:leading-[1.02] tracking-tight';
-=======
-export const HERO_HEADING =
-    'text-[2.125rem] sm:text-5xl md:text-6xl lg:text-7xl font-black leading-[1.06] md:leading-[1.02] tracking-tight';
->>>>>>> 8020f5d (Initial commit for website frontend)
 
 /** The paragraph directly under a heading. */
 export const SECTION_LEDE =
     'text-[1.3125rem] md:text-[1.75rem] leading-relaxed font-semibold';
 
-<<<<<<< HEAD
 /**
  * ============================================================================
  * A BAND'S MEASURE OPENS WITH THE DISPLAY
@@ -127,8 +116,6 @@ export const SECTION_LEDE =
  */
 export const BAND_MEASURE = 'max-w-2xl lg:max-w-3xl xl:max-w-4xl';
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 /** The hero's lede, one step larger because it sits on a photograph. */
 export const HERO_LEDE =
     'text-[1.3125rem] sm:text-[1.375rem] md:text-[2.0625rem] leading-relaxed font-semibold';

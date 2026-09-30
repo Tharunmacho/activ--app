@@ -392,19 +392,11 @@ export function StateDistrictMap({
           * heading opposite.
           */
         <Reveal as="div" className="min-w-0">
-<<<<<<< HEAD
             <p className="mb-3 break-words text-[1rem] sm:text-[1.25rem] font-bold uppercase tracking-[0.12em] sm:tracking-[0.16em] text-brand-500">
                 Chapters across {stateName}
             </p>
 
             <div className="rounded-[1.25rem] border border-gray-200/70 bg-white/70 p-3 sm:p-5">
-=======
-            <p className="mb-3 text-[1.25rem] font-bold uppercase tracking-[0.16em] text-brand-500">
-                Chapters across {stateName}
-            </p>
-
-            <div className="rounded-[1.25rem] border border-gray-200/70 bg-white/70 p-5">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 {/*
                   * One place decides a shape's colour, and the order is the whole
                   * rule: the region an editor assigned, then the zone the build
@@ -415,11 +407,7 @@ export function StateDistrictMap({
                     viewBox={map.viewBox}
                     role="img"
                     aria-label={`Districts of ${stateName}`}
-<<<<<<< HEAD
                     className="mx-auto block h-auto w-full max-h-[22rem] sm:max-h-[26rem]"
-=======
-                    className="mx-auto block h-auto w-full max-h-[26rem]"
->>>>>>> 8020f5d (Initial commit for website frontend)
                 >
                     {map.districts.map((row) => {
                         const style = styleFor(row);
@@ -557,21 +545,12 @@ export function StateDistrictMap({
                   * With nothing assigned it is the four zones, exactly as before.
                   */}
                 {legend.length > 0 && (
-<<<<<<< HEAD
                     <ul className="mt-4 grid grid-cols-2 gap-x-3 sm:gap-x-4 gap-y-2 text-[0.9375rem] sm:text-[1.0625rem]
                                    font-semibold text-gray-600">
                         {legend.map((row) => (
                             <li key={row.key} className="flex min-w-0 items-center gap-2">
                                 <span className={`h-3 w-3 shrink-0 rounded-full ${row.swatch}`} />
                                 <span className="min-w-0 break-words">{row.label}</span>
-=======
-                    <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-[1.0625rem]
-                                   font-semibold text-gray-600">
-                        {legend.map((row) => (
-                            <li key={row.key} className="flex items-center gap-2">
-                                <span className={`h-3 w-3 shrink-0 rounded-full ${row.swatch}`} />
-                                {row.label}
->>>>>>> 8020f5d (Initial commit for website frontend)
                             </li>
                         ))}
                     </ul>
@@ -581,11 +560,7 @@ export function StateDistrictMap({
                     so it follows whether a key was drawn — not whether the
                     state happens to be zoned, which stopped being the same
                     question once regions could colour the map too. */}
-<<<<<<< HEAD
                 <p className={`flex items-center gap-2 text-[0.9375rem] sm:text-[1.0625rem] font-semibold text-gray-500
-=======
-                <p className={`flex items-center gap-2 text-[1.0625rem] font-semibold text-gray-500
->>>>>>> 8020f5d (Initial commit for website frontend)
                                ${legend.length > 0
                         ? 'mt-3 border-t border-gray-200/80 pt-3'
                         : 'mt-4'}`}
@@ -608,30 +583,18 @@ export function StateDistrictMap({
                             type="button"
                             onClick={() => setSelected(null)}
                             aria-label="Close"
-<<<<<<< HEAD
                             className="absolute right-1 top-1 sm:right-2 sm:top-2 flex h-10 w-10 sm:h-7 sm:w-7 items-center justify-center
-=======
-                            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center
->>>>>>> 8020f5d (Initial commit for website frontend)
                                        rounded-full text-gray-400 transition-colors
                                        hover:bg-gray-100 hover:text-gray-600"
                         >
                             <X size={14} />
                         </button>
 
-<<<<<<< HEAD
                         <p className="px-8 break-words text-[1rem] sm:text-[1.25rem] font-bold uppercase tracking-[0.16em]
                                       text-brand-500">
                             {zone ? `${zone.label} · ${stateName}` : stateName}
                         </p>
                         <h3 className="mt-1 break-words text-[1.3125rem] sm:text-[1.5625rem] font-black tracking-tight text-brand-900">
-=======
-                        <p className="text-[1.25rem] font-bold uppercase tracking-[0.16em]
-                                      text-brand-500">
-                            {zone ? `${zone.label} · ${stateName}` : stateName}
-                        </p>
-                        <h3 className="mt-1 text-[1.5625rem] font-black tracking-tight text-brand-900">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             {chapter ? chapter.name : shape.name}
                         </h3>
 
@@ -711,11 +674,7 @@ export function StateDistrictMap({
                                             </p>
                                         )}
                                         {c.email && (
-<<<<<<< HEAD
                                             <p className="flex min-w-0 items-center justify-center gap-2.5">
-=======
-                                            <p className="flex items-center justify-center gap-2.5">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 <Mail size={14} className="shrink-0 text-brand-500" />
                                                 <a
                                                     href={`mailto:${c.email}`}
@@ -728,11 +687,7 @@ export function StateDistrictMap({
                                         {c.address && (
                                             <p className="flex items-start justify-center gap-2.5">
                                                 <MapPin size={14} className="mt-[3px] shrink-0 text-brand-500" />
-<<<<<<< HEAD
                                                 <span className="min-w-0 break-words">{c.address}</span>
-=======
-                                                <span>{c.address}</span>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                             </p>
                                         )}
                                     </li>

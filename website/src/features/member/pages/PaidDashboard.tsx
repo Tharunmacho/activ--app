@@ -1,15 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-<<<<<<< HEAD
 import { RefreshCw } from 'lucide-react';
 import RenewalBanner from '@/features/member/components/RenewalBanner';
 import { RENEW_PATH, readRenewal, renewalDate } from '@/features/member/useRenewal';
 import {
     ArrowRight, BadgeCheck, Briefcase, CalendarDays, CalendarPlus, ChevronRight, Clock, CreditCard, Crown, FileText, FolderOpen, History, MapPin, Megaphone, Package, ReceiptText, ShieldCheck, Sparkles, Sun, User, UserCircle, UserCog, Users, Zap,
-=======
-import {
-    ArrowRight, BadgeCheck, Briefcase, CalendarDays, CalendarPlus, ChevronRight, Clock, CreditCard, FileText, FolderOpen, History, MapPin, Megaphone, Package, ReceiptText, ShieldCheck, Sparkles, Sun, User, UserCircle, UserCog, Users, Zap,
->>>>>>> 8020f5d (Initial commit for website frontend)
 } from 'lucide-react';
 import MemberPageShell from '@/pages/member/MemberPageShell';
 import {
@@ -26,11 +21,8 @@ import { resolveMediaUrl } from '@/config/api.config';
 import { formatApplicationRef } from '@/lib/applicationRef';
 import { BIZ_DETAIL_LABEL } from '@/components/layout/surface';
 import cardBackdrop from '@/assets/membership-card-bg.svg';
-<<<<<<< HEAD
 import { PlatinumBadge, isPlatinumProfile } from '@/components/shared/Platinum';
 import { MemberAvatar } from '@/features/member/memberPhoto';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 import greetingBubbles from '@/assets/greeting-bubbles.svg';
 
 import { CARD_TITLE, PAGE_TITLE } from '@/components/layout/appTypography';
@@ -94,11 +86,7 @@ import {
  * these every week.
  */
 const QUICK_ACTIONS = [
-<<<<<<< HEAD
     { label: 'Register for Event', detail: 'Book your seat', icon: CalendarPlus, to: '/member/events', tint: 'bg-rose-50/70', ink: 'text-rose-600' },
-=======
-    { label: 'Register for Event', icon: CalendarPlus, to: '/member/events', tint: 'bg-rose-50/70', ink: 'text-rose-600' },
->>>>>>> 8020f5d (Initial commit for website frontend)
     /*
      * `/member/profile-view`, NOT `/member/profile`.
      *
@@ -109,24 +97,15 @@ const QUICK_ACTIONS = [
      * has not finished applying, and the profile view links into it per
      * section for exactly that.
      */
-<<<<<<< HEAD
     { label: 'Update Profile', detail: 'Keep details current', icon: UserCog, to: '/member/profile-view', tint: 'bg-emerald-50/70', ink: 'text-emerald-600' },
     { label: 'Explore Directory', detail: 'Find fellow members', icon: Users, to: '/member/directory', tint: 'bg-violet-50/70', ink: 'text-violet-600' },
-=======
-    { label: 'Update Profile', icon: UserCog, to: '/member/profile-view', tint: 'bg-emerald-50/70', ink: 'text-emerald-600' },
-    { label: 'Explore Directory', icon: Users, to: '/member/directory', tint: 'bg-violet-50/70', ink: 'text-violet-600' },
->>>>>>> 8020f5d (Initial commit for website frontend)
     /*
      * `/business/products` — the member's OWN catalogue, which is what a tile
      * called View Products means. It pointed at `/business/discover`, the
      * network-wide search, so pressing "View Products" opened somebody
      * else's. Discover has its own place in the business rail.
      */
-<<<<<<< HEAD
     { label: 'View Products', detail: 'Your catalogue', icon: Package, to: '/business/products', tint: 'bg-amber-50/70', ink: 'text-amber-600' },
-=======
-    { label: 'View Products', icon: Package, to: '/business/products', tint: 'bg-amber-50/70', ink: 'text-amber-600' },
->>>>>>> 8020f5d (Initial commit for website frontend)
 ] as const;
 
 /*
@@ -156,14 +135,10 @@ const eventDay = (iso: string | null) => {
     return {
         day: d.toLocaleDateString('en-GB', { day: '2-digit' }),
         month: d.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase(),
-<<<<<<< HEAD
         /* 12-hour, like every other time on the site — see `formatTime` on
            the event detail page for why a 24-hour clock read as wrong. */
         time: d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true })
             .toUpperCase(),
-=======
-        time: d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
->>>>>>> 8020f5d (Initial commit for website frontend)
     };
 };
 
@@ -226,11 +201,8 @@ export default function PaidDashboard() {
 
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState<any>(null);
-<<<<<<< HEAD
     // From the profile this screen already loads — the server's renewal answer.
     const renewal = useMemo(() => readRenewal(profile), [profile]);
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     const [application, setApplication] = useState<any>(null);
     const [hasBusinessRecord, setHasBusinessRecord] = useState(false);
     /* Printed on the membership card. The dashboard already fetches this
@@ -386,13 +358,10 @@ export default function PaidDashboard() {
     const block = String(profile?.block || '').trim();
     const district = String(profile?.district || '').trim();
     const state = String(profile?.state || '').trim();
-<<<<<<< HEAD
     /* A member outside India has no region — their place and country instead. */
     const abroad = profile?.isInternational === true;
     const place = String(profile?.place || profile?.city || '').trim();
     const country = String(profile?.country || '').trim();
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     /**
      * When the membership lapses.
@@ -406,14 +375,10 @@ export default function PaidDashboard() {
      * A LIFETIME membership has no expiry and must not be given an invented
      * one; `lifetime` below makes the card print the word instead.
      */
-<<<<<<< HEAD
     /* Platinum is the lifetime tier the Super Admin grants — always lifetime. */
     const platinum = isPlatinumProfile(profile);
     const lifetime = platinum || membershipType.toLowerCase() === 'lifetime';
     const planTitle = platinum ? 'Platinum Lifetime Membership' : (planLabel(plan) || 'Member');
-=======
-    const lifetime = membershipType.toLowerCase() === 'lifetime';
->>>>>>> 8020f5d (Initial commit for website frontend)
     const expiresAt = useMemo(() => {
         if (lifetime) return '';
         if (profile?.membershipExpiresAt) return profile.membershipExpiresAt;
@@ -433,20 +398,6 @@ export default function PaidDashboard() {
         })
         : '';
 
-<<<<<<< HEAD
-=======
-    /**
-     * `profilePhoto` is what this backend returns; `profileImage` is a name no
-     * endpoint has ever sent, and reading it is what left every avatar blank on
-     * the profile screen. Both are accepted, and the URL is re-anchored to the
-     * API origin — a stored `/uploads/...` path resolves against this site,
-     * which serves no uploads.
-     */
-    const photoUrl = useMemo(
-        () => resolveMediaUrl(profile?.profilePhoto || profile?.profileImage) || '',
-        [profile],
-    );
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     // ---------------------------------------------------------------- derived
 
@@ -494,56 +445,12 @@ export default function PaidDashboard() {
             tint: 'bg-violet-50 text-violet-600', issued: true,
         },
         {
-<<<<<<< HEAD
             label: 'Membership Plan', detail: platinum ? 'Platinum Lifetime' : (planLabel(plan) || 'Your plan'),
-=======
-            label: 'Membership Plan', detail: planLabel(plan) || 'Your plan',
->>>>>>> 8020f5d (Initial commit for website frontend)
             to: '/member/plan', icon: BadgeCheck,
             tint: 'bg-amber-50 text-amber-600', issued: false,
         },
     ];
 
-<<<<<<< HEAD
-=======
-    /*
-     * THE PHOTO IS READ, NEVER WRITTEN, ON THIS SCREEN.
-     *
-     * It is changed on the profile screen, which posts it and then fires
-     * `profilePhotoUpdated` — the same event the sidebar listens for. This
-     * picks it up too, so a member who changes their photo two screens away
-     * comes back to the dashboard and finds it already there, without a
-     * reload and without a second upload control to maintain.
-     */
-    const [livePhoto, setLivePhoto] = useState('');
-
-    useEffect(() => {
-        const read = () => {
-            try { setLivePhoto(localStorage.getItem('userProfilePhoto') || ''); } catch { /* unavailable */ }
-        };
-        read();
-        window.addEventListener('profilePhotoUpdated', read);
-        return () => window.removeEventListener('profilePhotoUpdated', read);
-    }, []);
-
-    /** The record's photo, unless a newer one was just saved on the profile. */
-    const candidate = livePhoto || photoUrl;
-
-    /*
-     * A PHOTO THAT DOES NOT LOAD IS NOT A PHOTO.
-     *
-     * `userProfilePhoto` in localStorage outlives the file it points at: the
-     * upload is replaced, the member signs in on another device, the path
-     * changes — and the avatar then rendered the browser's broken-image
-     * glyph, which is what was reported. `onError` drops the src and the
-     * initials take over, which is what the card shows for a member who has
-     * no photo at all. Reset on change, or a good URL after a bad one would
-     * stay hidden.
-     */
-    const [photoBroken, setPhotoBroken] = useState(false);
-    useEffect(() => { setPhotoBroken(false); }, [candidate]);
-    const avatarSrc = photoBroken ? '' : candidate;
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     const greeting = greetingFor(new Date().getHours());
     const today = todayParts();
@@ -564,14 +471,10 @@ export default function PaidDashboard() {
 
     return (
         <MemberPageShell title="Dashboard" subtitle="Your membership at a glance" width="wide">
-<<<<<<< HEAD
             <div className="space-y-4 sm:space-y-6">
 
                 {/* The last 30 days of the year: renewal is open, and said first. */}
                 <RenewalBanner renewal={renewal} />
-=======
-            <div className="space-y-6">
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                 {/* ============================= greeting · membership card
                     TWO CARDS, NOT ONE BAND.
@@ -698,26 +601,17 @@ export default function PaidDashboard() {
                       them. The padding insets the right column and leaves the
                       decoration visible behind it.
                     */}
-<<<<<<< HEAD
                     <div className="relative grid items-center justify-between gap-5 sm:gap-6 p-4 sm:p-8
-=======
-                    <div className="relative grid items-center justify-between gap-6 p-6 sm:p-8
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     lg:grid-cols-[minmax(0,auto)_minmax(0,26rem)] lg:pr-24">
 
                         {/* ------------------------------------ the greeting */}
                         <div>
-<<<<<<< HEAD
                             <div className="mb-4 sm:mb-6 inline-flex max-w-full flex-wrap items-center gap-x-2.5 gap-y-1 rounded-full bg-white/15 px-4 py-2 sm:py-2.5
-=======
-                            <div className="mb-6 inline-flex items-center gap-2.5 rounded-full bg-white/15 px-4 py-2.5
->>>>>>> 8020f5d (Initial commit for website frontend)
                                             ring-1 ring-white/25 backdrop-blur-sm">
                                 <Sun className="h-5 w-5 text-amber-300" />
                                 {/* Up a step throughout this block: it was all set
                                     smaller than the white card beside it, on a band
                                     four times its height. */}
-<<<<<<< HEAD
                                 <span className="whitespace-nowrap text-[1.2rem] sm:text-[1.5625rem] font-extrabold text-white">{today.date}</span>
                                 <span className="whitespace-nowrap text-[1.05rem] sm:text-[1.25rem] font-semibold text-white/70">· {today.day}</span>
                             </div>
@@ -742,41 +636,6 @@ export default function PaidDashboard() {
                                         Your journey with ACTIV is making a difference.
                                     </p>
                                     <p className="text-[1.15rem] sm:text-[1.5625rem] font-semibold leading-relaxed text-white/85">
-=======
-                                <span className="text-[1.5rem] font-extrabold text-white">{today.date}</span>
-                                <span className="text-[1.3125rem] font-semibold text-white/70">· {today.day}</span>
-                            </div>
-
-                            <div className="flex items-start gap-5">
-                                {/* STATIC. The photo is changed on the profile
-                                    screen and arrives here through the record.
-                                    `onError` drops to the initials: a stored
-                                    path outlives the file it points at. */}
-                                <span className="flex h-[5.5rem] w-[5.5rem] shrink-0 items-center justify-center
-                                                 overflow-hidden rounded-full bg-white/15 text-[2.125rem]
-                                                 font-extrabold text-white shadow-lg ring-4 ring-white/30">
-                                    {avatarSrc
-                                        ? (
-                                            <img
-                                                src={avatarSrc}
-                                                alt=""
-                                                className="h-full w-full object-cover"
-                                                onError={() => setPhotoBroken(true)}
-                                            />
-                                        )
-                                        : initials}
-                                </span>
-
-                                <div className="min-w-0">
-                                    <p className="text-[1.5625rem] font-bold text-white/70">{greeting},</p>
-                                    <h2 className={`${PAGE_TITLE} mt-1 text-white`}>
-                                        {name} <span aria-hidden="true">👋</span>
-                                    </h2>
-                                    <p className="mt-3 text-[1.5rem] font-semibold leading-relaxed text-white/85">
-                                        Your journey with ACTIV is making a difference.
-                                    </p>
-                                    <p className="text-[1.5rem] font-semibold leading-relaxed text-white/85">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         Together we build a stronger community.
                                     </p>
                                 </div>
@@ -792,48 +651,30 @@ export default function PaidDashboard() {
                               deliberately, and these pills are what the eye takes
                               in without stopping.
                             */}
-<<<<<<< HEAD
                             <div className="mt-4 sm:mt-6 flex flex-wrap items-center gap-2 sm:gap-2.5">
                                 {platinum ? (
                                     <PlatinumBadge size="lg" label="Platinum Lifetime Member" />
                                 ) : plan && (
                                     <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 sm:px-4 py-2 sm:py-2.5
                                                      text-base sm:text-[1.375rem] font-bold text-white ring-1 ring-white/25
-=======
-                            <div className="mt-6 flex flex-wrap items-center gap-2.5">
-                                {plan && (
-                                    <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2.5
-                                                     text-[1.375rem] font-bold text-white ring-1 ring-white/25
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                      backdrop-blur-sm">
                                         <BadgeCheck className="h-4 w-4" /> {planLabel(plan) || 'Member'}
                                     </span>
                                 )}
                                 {applicationRef && (
-<<<<<<< HEAD
                                     <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 sm:px-4 py-2 sm:py-2.5
                                                      text-base sm:text-[1.375rem] font-bold text-white ring-1 ring-white/25
-=======
-                                    <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2.5
-                                                     text-[1.375rem] font-bold text-white ring-1 ring-white/25
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                      backdrop-blur-sm">
                                         <FileText className="h-4 w-4" /> {applicationRef}
                                     </span>
                                 )}
                                 {memberSinceLabel && (
-<<<<<<< HEAD
                                     <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 sm:px-4 py-2 sm:py-2.5
                                                      text-base sm:text-[1.375rem] font-bold text-white ring-1 ring-white/25
-=======
-                                    <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2.5
-                                                     text-[1.375rem] font-bold text-white ring-1 ring-white/25
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                      backdrop-blur-sm">
                                         <CalendarDays className="h-4 w-4" /> Member since {memberSinceLabel}
                                     </span>
                                 )}
-<<<<<<< HEAD
                                 {(abroad ? (place || country) : (district || state)) && (
                                     <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 sm:px-4 py-2 sm:py-2.5
                                                      text-base sm:text-[1.375rem] font-bold text-white ring-1 ring-white/25
@@ -841,13 +682,6 @@ export default function PaidDashboard() {
                                         <MapPin className="h-4 w-4" />
                                         {(abroad ? [place, country] : [district, state])
                                             .filter((v, i, all) => !!v && all.indexOf(v) === i).join(', ')}
-=======
-                                {(district || state) && (
-                                    <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2.5
-                                                     text-[1.375rem] font-bold text-white ring-1 ring-white/25
-                                                     backdrop-blur-sm">
-                                        <MapPin className="h-4 w-4" /> {[district, state].filter(Boolean).join(', ')}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     </span>
                                 )}
                             </div>
@@ -861,11 +695,7 @@ export default function PaidDashboard() {
                         {/* 26rem and 20px of padding, down from 30rem and 24.
                             Eight facts and a button in a half-metre-wide card
                             read as a page of its own beside the greeting. */}
-<<<<<<< HEAD
                         <div className="relative overflow-hidden rounded-[1.25rem] bg-white p-4 sm:p-5
-=======
-                        <div className="relative overflow-hidden rounded-[1.25rem] bg-white p-5
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         shadow-[0_18px_40px_-18px_rgba(0,0,0,0.45)]">
                             <img
                                 src={cardBackdrop}
@@ -874,7 +704,6 @@ export default function PaidDashboard() {
                                 className="pointer-events-none absolute inset-0 h-full w-full object-cover"
                             />
 
-<<<<<<< HEAD
                             <div className="relative flex flex-wrap items-start justify-between gap-3">
                                 <div className="flex !min-w-[12rem] flex-1 items-center gap-3 sm:gap-4">
                                     <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white shadow-md ${platinum
@@ -888,20 +717,6 @@ export default function PaidDashboard() {
                                         </p>
                                         <p className="text-[1.25rem] font-semibold text-blue-600">
                                             {platinum ? 'Lifetime · never renews' : membershipType ? `${membershipType} membership` : 'Membership'}
-=======
-                            <div className="relative flex items-start justify-between gap-3">
-                                <div className="flex items-center gap-4">
-                                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl
-                                                     bg-gradient-to-br from-blue-600 to-sky-400 text-white shadow-md">
-                                        <User className="h-6 w-6" strokeWidth={2.4} />
-                                    </span>
-                                    <div className="min-w-0">
-                                        <p className="text-[1.4375rem] font-extrabold tracking-tight text-slate-900">
-                                            {planLabel(plan) || 'Member'}
-                                        </p>
-                                        <p className="text-[1.25rem] font-semibold text-blue-600">
-                                            {membershipType ? `${membershipType} membership` : 'Membership'}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         </p>
                                     </div>
                                 </div>
@@ -914,7 +729,6 @@ export default function PaidDashboard() {
                                 </span>
                             </div>
 
-<<<<<<< HEAD
                             <div className="relative mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-0 sm:divide-x divide-slate-200 border-t
                                             border-slate-200 pt-4">
                                 <CardFact label="Member ID" value={memberId} />
@@ -941,25 +755,6 @@ export default function PaidDashboard() {
                                     <CardFact icon={MapPin} label="Block" value={block} className="sm:pl-3" />
                                 </div>
                             )}
-=======
-                            <div className="relative mt-3 grid grid-cols-3 divide-x divide-slate-200 border-t
-                                            border-slate-200 pt-4">
-                                <CardFact label="Member ID" value={memberId} />
-                                <CardFact label="Member since" value={cardDate(memberSince)} className="px-3" />
-                                <CardFact
-                                    label={lifetime ? 'Validity' : 'Valid until'}
-                                    value={lifetime ? 'Lifetime' : cardDate(expiresAt)}
-                                    className="pl-3"
-                                />
-                            </div>
-
-                            <div className="relative mt-3 grid grid-cols-3 divide-x divide-slate-200 border-t
-                                            border-slate-200 pt-4">
-                                <CardFact icon={MapPin} label="State" value={state} />
-                                <CardFact icon={MapPin} label="District" value={district} className="px-3" />
-                                <CardFact icon={MapPin} label="Block" value={block} className="pl-3" />
-                            </div>
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                             {/*
                               THE TWO FACTS A MEMBER IS ASKED TO QUOTE.
@@ -977,11 +772,7 @@ export default function PaidDashboard() {
                                 <div className="relative mt-4 grid grid-cols-2 divide-x divide-slate-200
                                                 border-t border-slate-200 pt-4">
                                     <CardFact icon={Briefcase} label="Business type" value={businessType} />
-<<<<<<< HEAD
                                     <CardFact label="Application ID" value={applicationRef} className="sm:pl-3" />
-=======
-                                    <CardFact label="Application ID" value={applicationRef} className="pl-3" />
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 </div>
                             )}
 
@@ -1002,11 +793,7 @@ export default function PaidDashboard() {
                 {/* 1.6 / 1, not 1.05 / 1. Five tiles in half a 1280px
                     content column are 100px each, which wraps "Register for
                     Event" onto three lines and clips the third. */}
-<<<<<<< HEAD
                 <div className="grid items-stretch gap-4 sm:gap-6 2xl:grid-cols-2">
-=======
-                <div className="grid items-stretch gap-6 xl:grid-cols-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                     <SectionCard
                         title="Quick Actions"
@@ -1031,22 +818,16 @@ export default function PaidDashboard() {
                           filled theirs, which is exactly the misalignment that
                           was reported. The count is the number of actions.
                         */}
-<<<<<<< HEAD
                         {/* 2 × 2, FILLING THE CARD — the same grid as My Documents
                             beside it. Four abreast left a short row floating in
                             the middle of a tall card (the body centres its
                             content), so the two cards never lined up. */}
                         <div className="grid flex-1 auto-rows-fr grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-2">
                             {QUICK_ACTIONS.map(({ label, detail, icon: Icon, to, tint, ink }) => (
-=======
-                        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                            {QUICK_ACTIONS.map(({ label, icon: Icon, to, tint, ink }) => (
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 <button
                                     key={label}
                                     type="button"
                                     onClick={() => navigate(to)}
-<<<<<<< HEAD
                                     className={`group flex h-full min-w-0 flex-col gap-3 rounded-2xl border
                                                 border-slate-200 p-3.5 sm:p-4 text-left transition-all
                                                 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md ${tint}`}
@@ -1054,15 +835,6 @@ export default function PaidDashboard() {
                                     <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl
                                                       bg-white ${ink} shadow-sm`}>
                                         <Icon className="h-5 w-5" />
-=======
-                                    className={`group flex h-full flex-col justify-between gap-6 rounded-2xl border
-                                                border-slate-200 p-5 text-left transition-all
-                                                hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md ${tint}`}
-                                >
-                                    <span className={`flex h-12 w-12 items-center justify-center rounded-xl
-                                                      bg-white ${ink} shadow-sm`}>
-                                        <Icon className="h-6 w-6" />
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     </span>
                                     {/* Label left, the arrow in its own circle
                                         bottom-right — the design's tile. Inline
@@ -1079,7 +851,6 @@ export default function PaidDashboard() {
                                       four tiles that had slipped. `em`, so it
                                       follows the type size.
                                     */}
-<<<<<<< HEAD
                                     <span className="block text-[1.125rem] sm:text-[1.25rem] font-bold leading-snug text-slate-900
                                                      break-normal [overflow-wrap:normal] [hyphens:manual]">
                                         {label}
@@ -1088,13 +859,6 @@ export default function PaidDashboard() {
                                         {detail}
                                     </span>
                                     <span className="mt-auto block">
-=======
-                                    <span className="block">
-                                        <span className="block min-h-[2.8em] text-[1.25rem] font-bold
-                                                         leading-snug text-slate-900">
-                                            {label}
-                                        </span>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         <span className="mt-3 flex justify-end">
                                             <span className={`flex h-8 w-8 items-center justify-center rounded-full
                                                               bg-white ${ink} shadow-sm transition-transform
@@ -1119,33 +883,23 @@ export default function PaidDashboard() {
                             above the name, the badge under it and the arrow
                             in the corner, as the design draws them. Two
                             abreast until there is room for four. */}
-<<<<<<< HEAD
                         {/* Always two abreast: this card is HALF the page wide, and four
                             tiles in it split "Membership" into "Membershi / p". */}
                         <div className="grid flex-1 auto-rows-fr grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-2">
-=======
-                        <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             {DOCUMENTS.map((doc) => (
                                 <button
                                     key={doc.to}
                                     type="button"
                                     onClick={() => navigate(doc.to)}
                                     className="group flex h-full flex-col gap-3 rounded-2xl border border-slate-200
-<<<<<<< HEAD
                                                bg-white p-3.5 sm:p-4 text-left transition-all hover:-translate-y-0.5
                                                hover:border-blue-300 hover:shadow-md min-w-0"
-=======
-                                               bg-white p-4 text-left transition-all hover:-translate-y-0.5
-                                               hover:border-blue-300 hover:shadow-md"
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 >
                                     <span className={`flex h-11 w-11 shrink-0 items-center justify-center
                                                       rounded-xl ${doc.tint}`}>
                                         <doc.icon className="h-5 w-5" />
                                     </span>
 
-<<<<<<< HEAD
                                     <span className="block text-[1.125rem] sm:text-[1.25rem] font-bold leading-snug text-slate-900
                                                      break-normal [overflow-wrap:normal] [hyphens:manual]">
                                         {doc.label}
@@ -1155,16 +909,6 @@ export default function PaidDashboard() {
                                         {doc.issued ? (
                                             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50
                                                              px-2.5 py-1 text-[1.0625rem] font-bold text-emerald-700">
-=======
-                                    <span className="block text-[1.25rem] font-bold leading-snug text-slate-900">
-                                        {doc.label}
-                                    </span>
-
-                                    <span className="mt-auto block">
-                                        {doc.issued ? (
-                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50
-                                                             px-2.5 py-1 text-[1rem] font-bold text-emerald-700">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 <BadgeCheck className="h-4 w-4" /> Verified
                                             </span>
                                         ) : (
@@ -1186,10 +930,7 @@ export default function PaidDashboard() {
                     </SectionCard>
                 </div>
 
-<<<<<<< HEAD
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                 {/* ================= events · updates · activity */}
                 {/*
                   EVENTS GETS A ROW OF ITS OWN.
@@ -1202,11 +943,7 @@ export default function PaidDashboard() {
                   that ARE happy in a narrow column — a list of notices and a
                   list of timestamps — share the row beneath it.
                 */}
-<<<<<<< HEAD
                 <div className="grid items-stretch gap-4 sm:gap-6">
-=======
-                <div className="grid items-stretch gap-6">
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                     {/* ---------------------------------------- events ---- */}
                     <SectionCard
@@ -1234,24 +971,14 @@ export default function PaidDashboard() {
                                     return (
                                         <div
                                             key={event.id}
-<<<<<<< HEAD
                                             className="flex flex-wrap sm:flex-nowrap items-stretch gap-3 sm:gap-4 rounded-2xl border border-slate-200
-=======
-                                            className="flex items-stretch gap-4 rounded-2xl border border-slate-200
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                        bg-white p-3 transition-all hover:border-blue-300
                                                        hover:shadow-md"
                                         >
                                             {/* the date block */}
-<<<<<<< HEAD
                                             <span className="flex w-14 sm:w-16 shrink-0 flex-col items-center justify-center
                                                              rounded-xl bg-blue-50 px-2 py-2.5 sm:py-3 text-center">
                                                 <span className="text-[1.5rem] sm:text-[1.75rem] font-extrabold leading-none text-blue-700">
-=======
-                                            <span className="flex w-16 shrink-0 flex-col items-center justify-center
-                                                             rounded-xl bg-blue-50 px-2 py-3 text-center">
-                                                <span className="text-[1.75rem] font-extrabold leading-none text-blue-700">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                     {when.day}
                                                 </span>
                                                 <span className="mt-1 text-[1.0625rem] font-extrabold uppercase
@@ -1279,11 +1006,7 @@ export default function PaidDashboard() {
                                                     />
                                                     {event.category && (
                                                         <span className="absolute left-1.5 top-1.5 rounded-md
-<<<<<<< HEAD
                                                                          bg-slate-900/80 px-2 py-0.5 text-[1.0625rem]
-=======
-                                                                         bg-slate-900/80 px-2 py-0.5 text-[0.9375rem]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                                          font-bold text-white">
                                                             {event.category}
                                                         </span>
@@ -1294,11 +1017,7 @@ export default function PaidDashboard() {
                                             <span className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 py-1">
                                                 {!banner && event.category && (
                                                     <span className="w-fit rounded-md bg-slate-100 px-2 py-0.5
-<<<<<<< HEAD
                                                                      text-[1.0625rem] font-bold text-slate-600">
-=======
-                                                                     text-[1rem] font-bold text-slate-600">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                         {event.category}
                                                     </span>
                                                 )}
@@ -1307,11 +1026,7 @@ export default function PaidDashboard() {
                                                     their time and venue rows a line
                                                     apart, and three rows down the
                                                     card nothing lines up. */}
-<<<<<<< HEAD
                                                 <span className="line-clamp-2 break-words text-[1.25rem] sm:text-[1.5625rem]
-=======
-                                                <span className="line-clamp-2 text-[1.5rem]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                                  font-extrabold leading-snug tracking-tight
                                                                  text-slate-900">
                                                     {event.title || 'Untitled event'}
@@ -1333,19 +1048,11 @@ export default function PaidDashboard() {
                                                 )}
                                             </span>
 
-<<<<<<< HEAD
                                             <span className="flex w-full sm:w-auto shrink-0 items-center self-center">
                                                 <button
                                                     type="button"
                                                     onClick={() => navigate(`/member/events/${event.id}`)}
                                                     className={`inline-flex w-full sm:w-auto justify-center items-center gap-1.5 rounded-xl px-4 py-2.5
-=======
-                                            <span className="flex shrink-0 items-center self-center">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => navigate(`/member/events/${event.id}`)}
-                                                    className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                                 text-[1.25rem] font-bold transition-colors ${registered
                                                             ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                                                             : 'bg-blue-600 text-white hover:bg-blue-700'}`}
@@ -1364,11 +1071,7 @@ export default function PaidDashboard() {
                 </div>
 
                 {/* ------------------------- updates · activity, side by side */}
-<<<<<<< HEAD
                 <div className="grid items-stretch gap-4 sm:gap-6 lg:grid-cols-2">
-=======
-                <div className="grid items-stretch gap-6 lg:grid-cols-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                     {/* --------------------------------------- updates ---- */}
                     <SectionCard
@@ -1419,22 +1122,14 @@ export default function PaidDashboard() {
                                                 <span className="flex flex-wrap items-center gap-2">
                                                     {update.category && (
                                                         <span className="rounded-md bg-blue-50 px-2 py-0.5
-<<<<<<< HEAD
                                                                          text-[1.0625rem] font-bold capitalize
-=======
-                                                                         text-[1rem] font-bold capitalize
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                                          text-blue-700">
                                                             {update.category}
                                                         </span>
                                                     )}
                                                     {update.pinned && (
                                                         <span className="rounded-md bg-amber-50 px-2 py-0.5
-<<<<<<< HEAD
                                                                          text-[1.0625rem] font-bold text-amber-700">
-=======
-                                                                         text-[1rem] font-bold text-amber-700">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                             Pinned
                                                         </span>
                                                     )}
@@ -1451,11 +1146,7 @@ export default function PaidDashboard() {
                                                     </span>
                                                 )}
                                                 {update.publishedAt && (
-<<<<<<< HEAD
                                                     <span className="mt-1.5 flex items-center gap-1.5 text-[1.1875rem]
-=======
-                                                    <span className="mt-1.5 flex items-center gap-1.5 text-[1.125rem]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                                      font-semibold text-slate-400">
                                                         <CalendarDays className="h-4 w-4" />
                                                         {shortDate(update.publishedAt)}
@@ -1522,23 +1213,14 @@ export default function PaidDashboard() {
                 <section className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white
                                     shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
                     <div className="flex flex-col gap-5 bg-gradient-to-r from-blue-50 via-white to-blue-50
-<<<<<<< HEAD
                                     p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:p-7">
-=======
-                                    p-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:p-7">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         <div className="flex items-center gap-4">
                             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl
                                              bg-blue-600 text-white">
                                 <Sparkles className="h-6 w-6" />
                             </span>
-<<<<<<< HEAD
                             <div className="min-w-0">
                                 <p className="text-[1.25rem] sm:text-[1.5625rem] font-extrabold tracking-tight text-slate-900">
-=======
-                            <div>
-                                <p className="text-[1.5rem] font-extrabold tracking-tight text-slate-900">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     More opportunities await
                                 </p>
                                 <p className="text-[1.25rem] font-semibold text-slate-500">
@@ -1547,20 +1229,12 @@ export default function PaidDashboard() {
                             </div>
                         </div>
 
-<<<<<<< HEAD
                         <div className="flex flex-wrap items-center gap-x-6 sm:gap-x-10 gap-y-4">
                             <div>
                                 <p className={BIZ_DETAIL_LABEL}>Your membership plan</p>
                                 <p className="mt-1 flex flex-wrap items-center gap-2 text-[1.25rem] font-bold text-slate-900">
                                     {planTitle}
                                     {platinum ? <PlatinumBadge size="sm" /> : null}
-=======
-                        <div className="flex flex-wrap items-center gap-x-10 gap-y-4">
-                            <div>
-                                <p className={BIZ_DETAIL_LABEL}>Your membership plan</p>
-                                <p className="mt-1 flex items-center gap-2 text-[1.25rem] font-bold text-slate-900">
-                                    {planLabel(plan) || 'Member'}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50
                                                      px-2.5 py-0.5 text-[1.0625rem] font-bold text-emerald-700">
                                         <BadgeCheck className="h-4 w-4" /> {statusLabel}
@@ -1574,7 +1248,6 @@ export default function PaidDashboard() {
                                     <p className="mt-1 text-[1.25rem] font-bold text-slate-900">
                                         {lifetime ? 'No renewal needed' : validUntilLabel}
                                     </p>
-<<<<<<< HEAD
                                     {!lifetime && renewal?.canRenew ? (
                                         <button
                                             type="button"
@@ -1589,19 +1262,13 @@ export default function PaidDashboard() {
                                             Renewal opens on {renewalDate(renewal.opensAt)}
                                         </p>
                                     ) : null}
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 </div>
                             )}
 
                             <button
                                 type="button"
                                 onClick={() => navigate('/member/plan')}
-<<<<<<< HEAD
                                 className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5
-=======
-                                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            text-[1.25rem] font-bold text-white transition-colors
                                            hover:bg-blue-700"
                             >
@@ -1635,17 +1302,10 @@ function CardFact({ icon: Icon, label, value, className = '' }: {
                 frame the panel lost 24px, and "MEMBER SINCE" was wrapping to
                 two lines in its column while its neighbours stayed on one —
                 which pushed that one value down a line. */}
-<<<<<<< HEAD
             <p className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-[1rem] font-extrabold
                           uppercase tracking-[0.06em] text-slate-400">
                 {Icon ? <Icon className="h-3.5 w-3.5 shrink-0" /> : null}
                 <span className="truncate" title={label}>{label}</span>
-=======
-            <p className="flex items-center gap-1.5 whitespace-nowrap text-[0.9375rem] font-extrabold
-                          uppercase tracking-[0.1em] text-slate-400">
-                {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
-                {label}
->>>>>>> 8020f5d (Initial commit for website frontend)
             </p>
             <p className="mt-1 truncate text-[1.25rem] font-bold text-slate-900" title={value || '—'}>
                 {value || '—'}

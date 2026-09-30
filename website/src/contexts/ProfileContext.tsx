@@ -12,12 +12,8 @@ import { SESSION_EVENT } from "@/services/api";
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 /** The roles that have an admin dashboard instead of a member profile. */
-<<<<<<< HEAD
 // One list, shared with RoleGate and every member-session check — see lib/session.
 import { ADMIN_ROLES } from '@/lib/session';
-=======
-const ADMIN_ROLES = ['block_admin', 'district_admin', 'state_admin', 'super_admin', 'cms_admin', 'admin'];
->>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * Whether the signed-in user is a member with a profile to load.

@@ -257,11 +257,7 @@ export function LeaderCard({ person, onOpen, context }: {
                   * cards read as five portraits with captions.
                   */}
                 <span
-<<<<<<< HEAD
                     className="flex flex-1 flex-col items-center px-0.5 sm:px-1 pt-3 sm:pt-5 pb-1 sm:pb-2"
-=======
-                    className="flex flex-1 flex-col items-center px-1 pt-5 pb-2"
->>>>>>> 8020f5d (Initial commit for website frontend)
                     style={{ transform: 'translateZ(34px)' }}
                 >
                     {/*
@@ -280,11 +276,7 @@ export function LeaderCard({ person, onOpen, context }: {
                       * 1920). `line-clamp` on the name and the firm caps the
                       * worst case; the DESIGNATION is never clamped — see below.
                       */}
-<<<<<<< HEAD
                     <span className="text-balance text-[1.125rem] sm:text-[1.1875rem] font-extrabold break-words
-=======
-                    <span className="text-balance text-[1.3125rem] sm:text-[1.1875rem] font-extrabold
->>>>>>> 8020f5d (Initial commit for website frontend)
                                      leading-snug text-brand-900 line-clamp-2 min-h-[1.4em]
                                      transition-colors group-hover:text-brand-700">
                         {person.name || 'Name to be confirmed'}
@@ -300,34 +292,20 @@ export function LeaderCard({ person, onOpen, context }: {
                       * three-line designation costs the row three lines once.
                       */}
                     {person.role && (
-<<<<<<< HEAD
                         <span className="mt-1 sm:mt-1.5 min-h-[2.6em] text-balance text-[1rem] sm:text-[1.1875rem] font-semibold
                                          leading-snug text-brand-600 break-words">
-=======
-                        <span className="mt-1.5 min-h-[2.6em] text-balance text-[1.1875rem] font-semibold
-                                         leading-snug text-brand-600">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             {person.designation || person.role}
                         </span>
                     )}
                     {!person.role && person.designation && (
-<<<<<<< HEAD
                         <span className="mt-1 sm:mt-1.5 min-h-[2.6em] text-balance text-[1rem] sm:text-[1.1875rem] font-semibold
                                          leading-snug text-brand-600 break-words">
-=======
-                        <span className="mt-1.5 min-h-[2.6em] text-balance text-[1.1875rem] font-semibold
-                                         leading-snug text-brand-600">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             {person.designation}
                         </span>
                     )}
 
                     {person.organisation && (
-<<<<<<< HEAD
                         <span className="mt-1.5 sm:mt-2 min-h-[2.8em] text-balance text-[0.9375rem] sm:text-[1.0625rem] font-medium
-=======
-                        <span className="mt-2 min-h-[2.8em] text-balance text-[1.0625rem] font-medium
->>>>>>> 8020f5d (Initial commit for website frontend)
                                          leading-snug text-gray-500 line-clamp-2">
                             {person.organisation}
                         </span>
@@ -338,13 +316,8 @@ export function LeaderCard({ person, onOpen, context }: {
                         rule above it: with the box gone there is nothing for a
                         divider to divide, and a hairline across open background
                         is a line drawn for its own sake. */}
-<<<<<<< HEAD
                     <span className="mt-auto pt-3 sm:pt-4 inline-flex min-h-10 items-center justify-center gap-1.5
                                      text-[1rem] sm:text-[1.0625rem] font-bold text-brand-600
-=======
-                    <span className="mt-auto pt-4 inline-flex items-center justify-center gap-1.5
-                                     text-[1.0625rem] font-bold text-brand-600
->>>>>>> 8020f5d (Initial commit for website frontend)
                                      transition-colors group-hover:text-brand-800">
                         Read More
                         <ArrowRight
@@ -438,7 +411,6 @@ const tracksFor = (count: number, max = 5) => {
     return (fits > 2 && count % fits === 1) ? fits - 1 : fits;
 };
 
-<<<<<<< HEAD
 /*
  * ON A PHONE every bench of two or more is two columns, so an odd bench left
  * its last portrait alone against a blank column. It is centred instead, at
@@ -452,11 +424,6 @@ const PHONE_ORPHAN =
 const rowClass = (count: number, max = 5) => {
     const tracks = tracksFor(count, max);
     return `${GRID[tracks] || GRID[5]} ${ROW_WIDTH[tracks] || ''} ${tracks >= 2 ? PHONE_ORPHAN : ''}`;
-=======
-const rowClass = (count: number, max = 5) => {
-    const tracks = tracksFor(count, max);
-    return `${GRID[tracks] || GRID[5]} ${ROW_WIDTH[tracks] || ''}`;
->>>>>>> 8020f5d (Initial commit for website frontend)
 };
 
 /**
@@ -495,11 +462,7 @@ const OFFICE_WIDTH: Record<number, string> = {
 
 export function officeGridClass(count: number) {
     const tracks = tracksFor(count, 4);
-<<<<<<< HEAD
     return `grid gap-3 sm:gap-5 items-stretch ${OFFICE_GRID[tracks] || OFFICE_GRID[3]} `
-=======
-    return `grid gap-5 items-stretch ${OFFICE_GRID[tracks] || OFFICE_GRID[3]} `
->>>>>>> 8020f5d (Initial commit for website frontend)
         + `${OFFICE_WIDTH[tracks] || ''}`;
 }
 
@@ -525,11 +488,7 @@ export function LeaderGrid({ leaders, onOpen, max = 5, context }: {
     if (!people.length) return null;
 
     return (
-<<<<<<< HEAD
         <ul className={`grid gap-x-3 gap-y-5 sm:gap-6 items-stretch ${rowClass(people.length, max)}`}>
-=======
-        <ul className={`grid gap-5 sm:gap-6 items-stretch ${rowClass(people.length, max)}`}>
->>>>>>> 8020f5d (Initial commit for website frontend)
             {people.map((person, i) => (
                 /*
                  * `Math.min(i, 4) * 80` — the stagger the events grid uses.
@@ -631,7 +590,6 @@ export function TierPanel({
                 the sequence reads the same at every level of the page: the
                 heading, then the faces under it. */}
             {showName && (
-<<<<<<< HEAD
             <Reveal as="header" className="mb-4 sm:mb-6 text-center">
                 {/* WIDER THAN THE ROW. With one leader the row is one portrait wide,
                     and "TIRUVANNAMALAI" was cut mid-word to fit it. The heading may
@@ -640,12 +598,6 @@ export function TierPanel({
                 <h3 className={`relative left-1/2 w-[min(92vw,56rem)] -translate-x-1/2 text-balance break-normal [overflow-wrap:normal] ${variant === 'bar'
                     ? 'text-[clamp(1.25rem,4.5vw,2.0625rem)] font-extrabold uppercase tracking-[0.04em] sm:tracking-[0.08em] text-brand-900'
                     : 'text-[clamp(1.125rem,4vw,1.75rem)] font-extrabold uppercase tracking-[0.05em] sm:tracking-[0.08em] text-brand-800'}`}
-=======
-            <Reveal as="header" className="mb-6 text-center">
-                <h3 className={variant === 'bar'
-                    ? 'text-[1.75rem] sm:text-[2.0625rem] font-extrabold uppercase tracking-[0.08em] text-brand-900'
-                    : 'text-[1.25rem] sm:text-[1.75rem] font-extrabold uppercase tracking-[0.08em] text-brand-800'}
->>>>>>> 8020f5d (Initial commit for website frontend)
                 >
                     {name}
                 </h3>
@@ -669,11 +621,7 @@ export function TierPanel({
  */
 function Line({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
     return (
-<<<<<<< HEAD
         <li className="flex items-start justify-center gap-2 sm:gap-2.5 text-[1.0625rem] sm:text-[1.1875rem] font-medium
-=======
-        <li className="flex items-start justify-center gap-2.5 text-[1.1875rem] font-medium
->>>>>>> 8020f5d (Initial commit for website frontend)
                        leading-relaxed text-gray-600">
             <span className="mt-[3px] shrink-0 text-brand-500">{icon}</span>
             <span className="min-w-0 text-center">{children}</span>
@@ -731,11 +679,7 @@ export function ContactPerson({ entry, delay = 0 }: { entry: ContactEntry; delay
         <Reveal
             as="li"
             delay={delay}
-<<<<<<< HEAD
             className="h-full rounded-[1.25rem] border border-gray-200/70 bg-white/70 p-4 sm:p-5
-=======
-            className="h-full rounded-[1.25rem] border border-gray-200/70 bg-white/70 p-5
->>>>>>> 8020f5d (Initial commit for website frontend)
                        text-center transition-shadow duration-300
                        hover:shadow-[0_2px_6px_rgba(16,24,40,0.05),0_18px_40px_-28px_rgba(28,46,104,0.5)]"
         >
@@ -754,11 +698,7 @@ export function ContactPerson({ entry, delay = 0 }: { entry: ContactEntry; delay
               * still visible one level in.
               */}
             {entry.role && (
-<<<<<<< HEAD
                 <p className="mt-1 min-h-[2.6em] text-balance text-[1.0625rem] sm:text-[1.1875rem] font-semibold leading-snug text-brand-600">
-=======
-                <p className="mt-1 min-h-[2.6em] text-balance text-[1.1875rem] font-semibold leading-snug text-brand-600">
->>>>>>> 8020f5d (Initial commit for website frontend)
                     {entry.role}
                 </p>
             )}
@@ -788,11 +728,7 @@ export function ContactPerson({ entry, delay = 0 }: { entry: ContactEntry; delay
 
             {(entry.organisation || entry.address) && (
                 <p className="mt-3 border-t border-gray-100 pt-3 text-[1.0625rem] font-medium
-<<<<<<< HEAD
                               leading-relaxed text-gray-500 whitespace-pre-line break-words">
-=======
-                              leading-relaxed text-gray-500 whitespace-pre-line">
->>>>>>> 8020f5d (Initial commit for website frontend)
                     {[entry.organisation, entry.address].filter(Boolean).join('\n')}
                 </p>
             )}
@@ -848,11 +784,7 @@ export function ContactGroup({ label, entries }: { label: string; entries: Conta
             {/* `items-stretch` is what lets `h-full` on the card mean
                 anything — without it each card is only as tall as its own
                 text and the boxes in a row end at different points. */}
-<<<<<<< HEAD
             <ul className={`grid gap-3 sm:gap-5 items-stretch ${CONTACT_GRID}`}>
-=======
-            <ul className={`grid gap-5 items-stretch ${CONTACT_GRID}`}>
->>>>>>> 8020f5d (Initial commit for website frontend)
                 {rows.map((entry, i) => (
                     <ContactPerson
                         key={entry.id || `${entry.name}-${i}`}
@@ -959,11 +891,7 @@ export function ContactLabel({ children }: { children: React.ReactNode }) {
     return (
         <Reveal
             as="p"
-<<<<<<< HEAD
             className="mb-3 text-[1.0625rem] sm:text-[1.25rem] font-bold uppercase tracking-[0.12em] sm:tracking-[0.16em] text-brand-500"
-=======
-            className="mb-3 text-[1.25rem] font-bold uppercase tracking-[0.16em] text-brand-500"
->>>>>>> 8020f5d (Initial commit for website frontend)
         >
             {children}
         </Reveal>
@@ -1011,11 +939,7 @@ export function OfficeCard({ title, office, wide = false, delay = 0 }: {
              * begins. It is lighter than it was: a hairline and a tint, no drop
              * shadow, so it sits behind the text rather than in front of it.
              */
-<<<<<<< HEAD
             className="h-full rounded-[1.25rem] border border-gray-200/70 bg-white/70 p-4 sm:p-5
-=======
-            className="h-full rounded-[1.25rem] border border-gray-200/70 bg-white/70 p-5
->>>>>>> 8020f5d (Initial commit for website frontend)
                        text-center"
         >
             <h3 className="text-[1.1875rem] font-extrabold text-brand-900">{title}</h3>

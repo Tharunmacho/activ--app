@@ -53,12 +53,8 @@ export default function SuperAdminEvents() {
                     title="Events"
                     subtitle={<>
                         Aim an event at a state, district or block and every member there sees it —
-<<<<<<< HEAD
                         paid or unpaid. Every event also goes on the onboarding site and into the CMS,
                         unless you untick that on the form.
-=======
-                        paid or unpaid. Choose whether it also appears on the onboarding site.
->>>>>>> 8020f5d (Initial commit for website frontend)
                     </>}
                     onMenu={() => setSidebarOpen(true)}
                 />

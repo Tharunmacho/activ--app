@@ -2,19 +2,12 @@ import {
     Users, User, Handshake, HeartHandshake, Building2, Briefcase,
     TrendingUp, Award, Target, Lightbulb, Star, Heart, Rocket,
     Factory, Leaf, GraduationCap, Ship,
-<<<<<<< HEAD
     Shield, ShieldCheck, Scale, Landmark,
-=======
-    Shield, ShieldCheck, Scale,
->>>>>>> 8020f5d (Initial commit for website frontend)
     Globe, MapPin, Calendar, CalendarDays, Clock,
     Image as ImageIcon, Images, MonitorPlay, Play, Tent, BookOpen, HardHat,
     Grid3x3, PartyPopper, Mic,
     Phone, Mail, MessageSquare, Send, FileText,
-<<<<<<< HEAD
     Info, Camera, Tag, Users2, Quote,
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     ArrowRight, ExternalLink, Home,
     Facebook, Instagram, Linkedin, Twitter, Youtube,
     type LucideIcon,
@@ -42,11 +35,7 @@ const ICONS: Record<string, LucideIcon> = {
     // industry and environment
     factory: Factory, leaf: Leaf, 'graduation-cap': GraduationCap, ship: Ship,
     // trust
-<<<<<<< HEAD
     shield: Shield, 'shield-check': ShieldCheck, scale: Scale, landmark: Landmark,
-=======
-    shield: Shield, 'shield-check': ShieldCheck, scale: Scale,
->>>>>>> 8020f5d (Initial commit for website frontend)
     // place and time
     globe: Globe, 'map-pin': MapPin, calendar: Calendar,
     'calendar-days': CalendarDays, clock: Clock,
@@ -56,14 +45,11 @@ const ICONS: Record<string, LucideIcon> = {
     'party-popper': PartyPopper, mic: Mic,
     // contact
     phone: Phone, mail: Mail, 'message-square': MessageSquare, send: Send, 'file-text': FileText,
-<<<<<<< HEAD
     /* A photograph's own fields pick from this list too, and these are the
        ones those labels actually want — "Photographer", "Chief Guest",
        "Category". `info` is their default: a real mark rather than the empty
        circle a missing icon used to leave. */
     info: Info, camera: Camera, tag: Tag, 'users-2': Users2, quote: Quote,
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     // navigation
     'arrow-right': ArrowRight, 'external-link': ExternalLink, home: Home,
     // social

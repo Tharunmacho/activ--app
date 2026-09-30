@@ -2,18 +2,11 @@ import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
-<<<<<<< HEAD
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { login, errorMessage, getPaymentStatus, getSocialProviders, socialStartUrl, type SocialProvider } from "@/services/activApi";
 import { clearSession } from "@/services/api";
 import { Mail, Lock, ShieldCheck } from "lucide-react";
-=======
-import { useNavigate, Link } from "react-router-dom";
-import { toast } from "sonner";
-import { login, getMyApplication, errorMessage, getPaymentStatus } from "@/services/activApi";
-import { Mail, Lock } from "lucide-react";
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { FaGoogle, FaLinkedinIn, FaFacebookF } from "react-icons/fa";
 import AuthSplitLayout from "./AuthSplitLayout";
 
@@ -71,7 +64,6 @@ const FIELD_LABEL = 'mb-3 block text-[1.25rem] font-semibold text-slate-800';
 const FIELD_ICON =
   'pointer-events-none absolute left-0 top-1/2 z-10 -translate-y-1/2 text-blue-600';
 
-<<<<<<< HEAD
 /**
  * ============================================================================
  * TWO SIGN-IN SCREENS, ONE COMPONENT
@@ -90,16 +82,12 @@ const FIELD_ICON =
  */
 export default function EnhancedLoginPage({ audience = 'member' }: { audience?: 'member' | 'admin' } = {}) {
   const forAdmins = audience === 'admin';
-=======
-export default function EnhancedLoginPage() {
->>>>>>> 8020f5d (Initial commit for website frontend)
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
 
-<<<<<<< HEAD
   const location = useLocation();
 
   /*
@@ -125,16 +113,6 @@ export default function EnhancedLoginPage() {
       return;
     }
     window.location.assign(socialStartUrl(key));
-=======
-  /*
-   * Kept, and kept in the flow rather than tucked away: the association uses
-   * these three to sign in. Each still reports that the provider is not wired
-   * up yet — which is the honest answer until the OAuth apps exist — rather
-   * than failing silently on a click.
-   */
-  const handleSocialLogin = (provider: string) => {
-    toast.info(`${provider} sign-in is being set up — use your email for now.`);
->>>>>>> 8020f5d (Initial commit for website frontend)
   };
 
 
@@ -183,7 +161,6 @@ export default function EnhancedLoginPage() {
     setIsLoading(true);
 
     try {
-<<<<<<< HEAD
       /* The server refuses the wrong screen outright — see `assertPortal`. */
       const result = await login(id, password, audience);
 
@@ -220,12 +197,6 @@ export default function EnhancedLoginPage() {
         return;
       }
 
-=======
-      const result = await login(id, password);
-
-      toast.success(`Welcome ${result.user?.fullName || 'back'}!`);
-
->>>>>>> 8020f5d (Initial commit for website frontend)
       // Members who have already paid land on the paid dashboard. A failure to
       // read the application must not block the sign-in that already succeeded.
       if (result.role === 'member') {
@@ -259,7 +230,6 @@ export default function EnhancedLoginPage() {
 
   return (
     <AuthSplitLayout
-<<<<<<< HEAD
       eyebrow={forAdmins ? "ACTIV admin portal" : "ACTIV member portal"}
       /* The association's own welcome, as this screen has always carried it —
          the reference's "Hello, welcome back!" was a stand-in for it. */
@@ -271,17 +241,6 @@ export default function EnhancedLoginPage() {
       formEyebrow={forAdmins ? "Admin sign in" : "Sign in"}
       title={forAdmins ? "Sign in to the admin panel" : "Log in to your account"}
       subtitle={forAdmins ? "For ACTIV administrators only." : "Members sign in here."}
-=======
-      eyebrow="ACTIV member portal"
-      /* The association's own welcome, as this screen has always carried it —
-         the reference's "Hello, welcome back!" was a stand-in for it. */
-      headline={<>Welcome to<br />ACTIVian Platform! 👋</>}
-      quote={'"Empowering Communities, Simplifying Lives"'}
-      lede="Our digital platform connects communities with essential services and resources. Whether you are managing applications, accessing member benefits or exploring business opportunities, we are here to make your journey seamless and transparent."
-      formEyebrow="Sign in"
-      title="Log in to your account"
-      subtitle="Members and admins sign in here."
->>>>>>> 8020f5d (Initial commit for website frontend)
       assurance=""
     >
       <form onSubmit={handleUnifiedSubmit} className="space-y-6">
@@ -304,15 +263,11 @@ export default function EnhancedLoginPage() {
               id="login-email"
               name="email"
               type="email"
-<<<<<<< HEAD
               inputMode="email"
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
               placeholder={forAdmins ? "admin@activ.org.in" : "you@example.com"}
-=======
-              placeholder="you@example.com"
->>>>>>> 8020f5d (Initial commit for website frontend)
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               className={FIELD}
@@ -329,11 +284,7 @@ export default function EnhancedLoginPage() {
               Password
             </label>
             <Link
-<<<<<<< HEAD
               to={forAdmins ? "/admin/forgot-password" : "/forgot-password"}
-=======
-              to="/forgot-password"
->>>>>>> 8020f5d (Initial commit for website frontend)
               className="text-[1.125rem] font-semibold text-blue-600 transition-colors hover:text-blue-800"
             >
               Forgot password?
@@ -378,11 +329,8 @@ export default function EnhancedLoginPage() {
 
       </form>
 
-<<<<<<< HEAD
       {!forAdmins && (
       <>
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
       {/* ------------------------------------------- the other ways in
         GOOGLE, LINKEDIN AND FACEBOOK — the three the association uses.
         LinkedIn replaces Apple: this is a chamber of commerce, and the
@@ -401,7 +349,6 @@ export default function EnhancedLoginPage() {
 
       <div className="flex justify-center gap-3">
         {([
-<<<<<<< HEAD
           ['google', 'Google', <FaGoogle key="g" className="h-[1.375rem] w-[1.375rem] text-[#ea4335]" />],
           ['linkedin', 'LinkedIn', <FaLinkedinIn key="l" className="h-[1.375rem] w-[1.375rem] text-[#0a66c2]" />],
           ['facebook', 'Facebook', <FaFacebookF key="f" className="h-[1.375rem] w-[1.375rem] text-[#1877f2]" />],
@@ -410,16 +357,6 @@ export default function EnhancedLoginPage() {
             key={key}
             type="button"
             onClick={() => handleSocialLogin(key, name)}
-=======
-          ['Google', <FaGoogle key="g" className="h-[1.375rem] w-[1.375rem] text-[#ea4335]" />],
-          ['LinkedIn', <FaLinkedinIn key="l" className="h-[1.375rem] w-[1.375rem] text-[#0a66c2]" />],
-          ['Facebook', <FaFacebookF key="f" className="h-[1.375rem] w-[1.375rem] text-[#1877f2]" />],
-        ] as const).map(([name, icon]) => (
-          <button
-            key={name}
-            type="button"
-            onClick={() => handleSocialLogin(name)}
->>>>>>> 8020f5d (Initial commit for website frontend)
             aria-label={`Sign in with ${name}`}
             className="flex h-14 w-14 items-center justify-center rounded-xl border border-slate-200
                        bg-white transition-colors hover:border-slate-300 hover:bg-slate-50"
@@ -429,12 +366,9 @@ export default function EnhancedLoginPage() {
         ))}
       </div>
 
-<<<<<<< HEAD
       </>
       )}
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
       {/*
         WHAT WAS REMOVED, AND WHY — the social row is not part of it.
 
@@ -454,7 +388,6 @@ export default function EnhancedLoginPage() {
         needs: another way to sign in, and the fact that they may not have an
         account yet.
       */}
-<<<<<<< HEAD
       {forAdmins ? (
         <p className="mt-7 text-center text-[1.25rem] font-normal text-slate-500">
           Not an administrator?{' '}
@@ -485,14 +418,6 @@ export default function EnhancedLoginPage() {
           </Link>
         </div>
       )}
-=======
-      <p className="mt-7 text-center text-[1.25rem] font-normal text-slate-500">
-        New to ACTIV?{' '}
-        <Link to="/register" className="font-semibold text-blue-700 transition-colors hover:text-blue-900">
-          Create an account
-        </Link>
-      </p>
->>>>>>> 8020f5d (Initial commit for website frontend)
     </AuthSplitLayout>
   );
 }

@@ -171,11 +171,7 @@ export default function LeaderMessagesInbox() {
     if (loading) return <CmsLoading label="Loading leader enquiries…" />;
 
     const chip = (active: boolean) =>
-<<<<<<< HEAD
         `rounded-full px-3.5 sm:px-4 py-2 sm:py-1.5 text-[1.0625rem] font-semibold transition-colors ${active
-=======
-        `rounded-full px-4 py-1.5 text-[1.0625rem] font-semibold transition-colors ${active
->>>>>>> 8020f5d (Initial commit for website frontend)
             ? 'bg-[#2563EB] text-white'
             : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-[#1a1a1a] dark:text-neutral-300'}`;
 
@@ -229,11 +225,7 @@ export default function LeaderMessagesInbox() {
                             value={place}
                             onChange={(e) => setPlace(e.target.value)}
                             placeholder="Filter by place or leader…"
-<<<<<<< HEAD
                             className="w-full sm:ml-auto sm:max-w-xs rounded-lg border border-slate-300 bg-white
-=======
-                            className="ml-auto w-full max-w-xs rounded-lg border border-slate-300 bg-white
->>>>>>> 8020f5d (Initial commit for website frontend)
                                        px-3 py-2 text-[1.0625rem] text-slate-900 outline-none
                                        dark:border-[#2a2a2a] dark:bg-black dark:text-neutral-100"
                         />
@@ -254,21 +246,13 @@ export default function LeaderMessagesInbox() {
                         {shown.map((m) => (
                             <article
                                 key={m._id}
-<<<<<<< HEAD
                                 className="rounded-2xl border border-slate-200 bg-white p-3.5 sm:p-5
-=======
-                                className="rounded-2xl border border-slate-200 bg-white p-5
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            dark:border-[#1f1f1f] dark:bg-[#0A0A0A]"
                             >
                                 {/* ---- who wrote, and to whom ---- */}
                                 <div className="flex flex-wrap items-start justify-between gap-3">
                                     <div className="min-w-0">
-<<<<<<< HEAD
                                         <p className="text-[1.25rem] sm:text-[1.375rem] font-extrabold break-words text-slate-900 dark:text-white">
-=======
-                                        <p className="text-[1.375rem] font-extrabold text-slate-900 dark:text-white">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                             {m.sender.name || 'Someone'}
                                             <span className="mx-2 font-medium text-slate-400">wrote to</span>
                                             {m.leader.name || 'an office-bearer'}
@@ -286,32 +270,19 @@ export default function LeaderMessagesInbox() {
                                         </p>
                                     </div>
 
-<<<<<<< HEAD
                                     <div className="flex shrink-0 flex-wrap items-center gap-2">
                                         <span className={`rounded-full px-3 py-1 text-[1.0625rem] font-bold
                                                           ${STATUS_STYLE[m.status]}`}>
                                             {m.status}
                                         </span>
                                         <span className="text-[1.0625rem] font-medium text-slate-400">
-=======
-                                    <div className="flex shrink-0 items-center gap-2">
-                                        <span className={`rounded-full px-3 py-1 text-[1rem] font-bold
-                                                          ${STATUS_STYLE[m.status]}`}>
-                                            {m.status}
-                                        </span>
-                                        <span className="text-[1rem] font-medium text-slate-400">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                             {whenOf(m.createdAt)}
                                         </span>
                                     </div>
                                 </div>
 
                                 {/* ---- what they want ---- */}
-<<<<<<< HEAD
                                 <p className="mt-3 inline-flex max-w-full items-center gap-2 rounded-lg bg-slate-100
-=======
-                                <p className="mt-3 inline-flex items-center gap-2 rounded-lg bg-slate-100
->>>>>>> 8020f5d (Initial commit for website frontend)
                                               px-3 py-1.5 text-[1.0625rem] font-bold text-slate-700
                                               dark:bg-[#141414] dark:text-neutral-200">
                                     <MessageSquare size={14} className="shrink-0" />
@@ -383,20 +354,12 @@ export default function LeaderMessagesInbox() {
                                     {m.sender.email && (
                                         <a
                                             href={`mailto:${m.sender.email}`}
-<<<<<<< HEAD
                                             className="inline-flex max-w-full items-center gap-1.5 rounded-lg bg-slate-100
-=======
-                                            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                        px-3 py-1.5 text-[1.0625rem] font-bold text-slate-700
                                                        transition-colors hover:bg-slate-200
                                                        dark:bg-[#1a1a1a] dark:text-neutral-300"
                                         >
-<<<<<<< HEAD
                                             <Mail size={14} className="shrink-0" /> <span className="min-w-0 break-all">{m.sender.email}</span>
-=======
-                                            <Mail size={14} /> {m.sender.email}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         </a>
                                     )}
 
@@ -419,11 +382,7 @@ export default function LeaderMessagesInbox() {
                                   */}
                                 <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100
                                                 pt-3 dark:border-[#1a1a1a]">
-<<<<<<< HEAD
                                     <span className="text-[1.0625rem] font-semibold text-slate-400">
-=======
-                                    <span className="text-[1rem] font-semibold text-slate-400">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         Take them something:
                                     </span>
                                     <a
@@ -461,11 +420,7 @@ export default function LeaderMessagesInbox() {
                                             type="button"
                                             disabled={busy === m._id || m.status === next}
                                             onClick={() => patch(m, { status: next })}
-<<<<<<< HEAD
                                             className="rounded-lg border border-slate-300 px-3 py-2 sm:py-1.5
-=======
-                                            className="rounded-lg border border-slate-300 px-3 py-1.5
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                        text-[1.0625rem] font-semibold text-slate-700
                                                        transition-colors hover:bg-slate-100 disabled:opacity-40
                                                        dark:border-[#2a2a2a] dark:text-neutral-300
@@ -482,11 +437,7 @@ export default function LeaderMessagesInbox() {
                                         type="button"
                                         onClick={() => remove(m)}
                                         disabled={busy === m._id}
-<<<<<<< HEAD
                                         className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-3 py-2 sm:py-1.5
-=======
-                                        className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                    text-[1.0625rem] font-semibold text-red-600 transition-colors
                                                    hover:bg-red-50 disabled:opacity-40 dark:hover:bg-red-950/40"
                                     >
@@ -497,11 +448,7 @@ export default function LeaderMessagesInbox() {
                                 {/* ---- the admin's own note ---- */}
                                 <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
                                     <label className="min-w-0 flex-1">
-<<<<<<< HEAD
                                         <span className="mb-1 block text-[1.0625rem] font-semibold text-slate-500">
-=======
-                                        <span className="mb-1 block text-[1rem] font-semibold text-slate-500">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                             Your note — what was said, what was promised
                                         </span>
                                         <textarea
@@ -523,11 +470,7 @@ export default function LeaderMessagesInbox() {
                                 </div>
 
                                 {m.handledBy?.email && (
-<<<<<<< HEAD
                                     <p className="mt-2 text-[1.0625rem] font-medium text-slate-400">
-=======
-                                    <p className="mt-2 text-[1rem] font-medium text-slate-400">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         Last touched by {m.handledBy.email}
                                     </p>
                                 )}

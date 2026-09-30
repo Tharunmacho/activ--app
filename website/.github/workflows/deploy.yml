@@ -21,3 +21,4 @@ jobs:
             npm install
             npm run build
             cp -r dist/* ../public_html/
+            node deploy/merge-htaccess.mjs ../public_html/.htaccess

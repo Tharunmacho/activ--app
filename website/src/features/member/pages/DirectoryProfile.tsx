@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-<<<<<<< HEAD
 import { useRenewal } from '@/features/member/useRenewal';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, Building2, Package, Users, CalendarDays, MessageSquare, Lock, Loader2 } from 'lucide-react';
 import MemberPageShell from '@/pages/member/MemberPageShell';
@@ -140,19 +137,14 @@ export default function DirectoryProfile() {
         [profileCompletion, application, isPaid],
     );
 
-<<<<<<< HEAD
     const renewal = useRenewal();
     const cta = useMemo(() => membershipCta(access, renewal), [access, renewal]);
-=======
-    const cta = useMemo(() => membershipCta(access), [access]);
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     useEffect(() => {
         let cancelled = false;
         setLoading(true);
 
         getDirectoryEntry(id)
-<<<<<<< HEAD
             .then((row) => {
                 if (cancelled) return;
                 // Arrays normalised once, so a sparse profile renders instead of throwing.
@@ -163,9 +155,6 @@ export default function DirectoryProfile() {
                     products: Array.isArray(row.products) ? row.products : [],
                 } : row);
             })
-=======
-            .then((row) => { if (!cancelled) setEntry(row); })
->>>>>>> 8020f5d (Initial commit for website frontend)
             .catch((err) => {
                 if (!cancelled) setError(errorMessage(err, 'Could not open this member'));
             })
@@ -193,11 +182,7 @@ export default function DirectoryProfile() {
                         <button
                             type="button"
                             onClick={() => navigate('/member/directory')}
-<<<<<<< HEAD
                             className="text-[1.0625rem] font-semibold text-blue-600 hover:underline"
-=======
-                            className="text-[1rem] font-semibold text-blue-600 hover:underline"
->>>>>>> 8020f5d (Initial commit for website frontend)
                         >
                             Back to the directory
                         </button>
@@ -227,11 +212,7 @@ export default function DirectoryProfile() {
                 <button
                     type="button"
                     onClick={() => navigate('/member/directory')}
-<<<<<<< HEAD
                     className="text-[1.0625rem] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
-=======
-                    className="text-[1rem] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
->>>>>>> 8020f5d (Initial commit for website frontend)
                 >
                     All members
                 </button>
@@ -244,26 +225,15 @@ export default function DirectoryProfile() {
                     pair this carried made it the odd one out. */}
                 <div className="bg-white rounded-2xl border border-slate-200
                                 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]
-<<<<<<< HEAD
                                 p-4 sm:p-5 lg:p-6 flex flex-wrap items-start gap-4 sm:gap-5">
-=======
-                                p-5 lg:p-6 flex flex-wrap items-start gap-5">
->>>>>>> 8020f5d (Initial commit for website frontend)
                     {photo ? (
                         <img
                             src={photo}
                             alt=""
-<<<<<<< HEAD
                             className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover shrink-0 ring-2 ring-blue-50"
                         />
                     ) : (
                         <span className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-blue-600 text-white shrink-0
-=======
-                            className="w-20 h-20 rounded-2xl object-cover shrink-0 ring-2 ring-blue-50"
-                        />
-                    ) : (
-                        <span className="w-20 h-20 rounded-2xl bg-blue-600 text-white shrink-0
->>>>>>> 8020f5d (Initial commit for website frontend)
                                          flex items-center justify-center text-[1.5625rem] font-bold">
                             {(entry.fullName || '?').split(' ').filter(Boolean).slice(0, 2)
                                 .map((part) => part[0]).join('').toUpperCase()}
@@ -271,11 +241,7 @@ export default function DirectoryProfile() {
                     )}
 
                     <div className="min-w-0 flex-1">
-<<<<<<< HEAD
                         <h2 className={`${CARD_TITLE} text-slate-900 break-words`}>{entry.fullName}</h2>
-=======
-                        <h2 className={`${CARD_TITLE} text-slate-900`}>{entry.fullName}</h2>
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                         {/*
                           * REGION AND MEMBER-SINCE AS LABELLED FIELDS.
@@ -287,11 +253,7 @@ export default function DirectoryProfile() {
                           * `BIZ_DETAIL_VALUE` in `components/layout/surface.ts`),
                           * and that is what these are.
                           */}
-<<<<<<< HEAD
                         <div className="mt-4 grid gap-x-6 sm:gap-x-8 gap-y-3 sm:gap-y-4 grid-cols-1 sm:grid-cols-2">
-=======
-                        <div className="mt-4 grid gap-x-8 gap-y-4 grid-cols-1 sm:grid-cols-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             {where ? (
                                 <div className="min-w-0">
                                     <p className="flex items-center gap-1.5 text-[1.0625rem] font-extrabold
@@ -354,11 +316,7 @@ export default function DirectoryProfile() {
                           */}
                         <div className="mt-5">
                             {isSelf ? (
-<<<<<<< HEAD
                                 <p className="text-[1.0625rem] font-semibold text-slate-500">
-=======
-                                <p className="text-[1rem] font-semibold text-slate-500">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     This is how other members see your profile.
                                 </p>
                             ) : (
@@ -368,11 +326,7 @@ export default function DirectoryProfile() {
                                 onClick={() => (access.membershipActive
                                     ? startConversation()
                                     : setAskedToConnect(true))}
-<<<<<<< HEAD
                                 className="inline-flex w-full sm:w-auto items-center justify-center gap-2 h-11 px-5 rounded-xl
-=======
-                                className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            bg-blue-600 text-[1.1875rem] font-bold text-white shadow-sm
                                            transition-colors hover:bg-blue-700 disabled:opacity-60"
                             >
@@ -386,36 +340,21 @@ export default function DirectoryProfile() {
                             )}
 
                             {openError ? (
-<<<<<<< HEAD
                                 <p className="mt-2 text-[1.0625rem] font-medium text-amber-700">{openError}</p>
-=======
-                                <p className="mt-2 text-[1rem] font-medium text-amber-700">{openError}</p>
->>>>>>> 8020f5d (Initial commit for website frontend)
                             ) : null}
 
                             {askedToConnect && !access.membershipActive ? (
                                 <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-4">
-<<<<<<< HEAD
                                     <p className="text-[1.0625rem] font-bold text-slate-900">
                                         {MEMBERS_ONLY_COPY.title}
                                     </p>
                                     <p className="text-[1.0625rem] text-slate-600 mt-1 leading-relaxed">
-=======
-                                    <p className="text-[1rem] font-bold text-slate-900">
-                                        {MEMBERS_ONLY_COPY.title}
-                                    </p>
-                                    <p className="text-[1rem] text-slate-600 mt-1 leading-relaxed">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         {MEMBERS_ONLY_COPY.short} {cta.detail}
                                     </p>
                                     <button
                                         type="button"
                                         onClick={() => navigate(cta.to)}
-<<<<<<< HEAD
                                         className="inline-flex items-center gap-1 mt-3 text-[1.0625rem]
-=======
-                                        className="inline-flex items-center gap-1 mt-3 text-[1rem]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                    font-bold text-blue-700 hover:underline"
                                     >
                                         {cta.label} →
@@ -490,11 +429,7 @@ export default function DirectoryProfile() {
                             detail="This member has not published any products or services."
                         />
                     ) : (
-<<<<<<< HEAD
                         <div className="grid gap-3 sm:gap-5 grid-cols-2 lg:grid-cols-3">
-=======
-                        <div className="grid gap-5 grid-cols-2 lg:grid-cols-3">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             {entry.products.map((product) => {
                                 const image = resolveMediaUrl(product.imageUrl);
 
@@ -524,7 +459,6 @@ export default function DirectoryProfile() {
                                         </div>
 
                                         <div className="p-2.5">
-<<<<<<< HEAD
                                             <p className="text-[1.0625rem] font-semibold text-slate-900 truncate">
                                                 {product.name}
                                             </p>
@@ -533,16 +467,6 @@ export default function DirectoryProfile() {
                                             </p>
                                             {product.price > 0 ? (
                                                 <p className="text-[1.0625rem] font-bold text-blue-700 mt-0.5 tabular-nums">
-=======
-                                            <p className="text-[1rem] font-semibold text-slate-900 truncate">
-                                                {product.name}
-                                            </p>
-                                            <p className="text-[0.8125rem] text-slate-500 truncate">
-                                                {product.category}
-                                            </p>
-                                            {product.price > 0 ? (
-                                                <p className="text-[1rem] font-bold text-blue-700 mt-0.5 tabular-nums">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                     ₹{product.price.toLocaleString('en-IN')}
                                                 </p>
                                             ) : null}

@@ -33,22 +33,14 @@ export const PALETTE = {
  * the fidelity CSS gives for free.
  */
 export const SuccessMark = ({ tone = PALETTE.success }: { tone?: string }) => (
-<<<<<<< HEAD
     <div className="relative h-28 sm:h-[9.375rem] flex items-center justify-center mb-4 sm:mb-6">
         <span
             aria-hidden
             className="absolute w-20 h-20 sm:w-24 sm:h-24 rounded-full opacity-20 animate-ping"
-=======
-    <div className="relative h-[9.375rem] flex items-center justify-center mb-6">
-        <span
-            aria-hidden
-            className="absolute w-24 h-24 rounded-full opacity-20 animate-ping"
->>>>>>> 8020f5d (Initial commit for website frontend)
             style={{ backgroundColor: tone, animationDuration: '2.4s' }}
         />
         <span
             aria-hidden
-<<<<<<< HEAD
             className="absolute w-24 h-24 sm:w-28 sm:h-28 rounded-full opacity-10"
             style={{ backgroundColor: tone }}
         />
@@ -57,16 +49,6 @@ export const SuccessMark = ({ tone = PALETTE.success }: { tone?: string }) => (
             style={{ backgroundColor: tone, boxShadow: `0 10px 28px -6px ${tone}66` }}
         >
             <Check className="w-9 h-9 sm:w-11 sm:h-11 text-white" strokeWidth={3} />
-=======
-            className="absolute w-28 h-28 rounded-full opacity-10"
-            style={{ backgroundColor: tone }}
-        />
-        <span
-            className="relative w-[5.75rem] h-[5.75rem] rounded-full flex items-center justify-center shadow-xl"
-            style={{ backgroundColor: tone, boxShadow: `0 10px 28px -6px ${tone}66` }}
-        >
-            <Check className="w-11 h-11 text-white" strokeWidth={3} />
->>>>>>> 8020f5d (Initial commit for website frontend)
         </span>
     </div>
 );
@@ -79,11 +61,7 @@ export const ScreenTitle = ({ children }: { children: ReactNode }) => (
 );
 
 export const ScreenSubtitle = ({ children }: { children: ReactNode }) => (
-<<<<<<< HEAD
     <p className="text-[1.1875rem] text-center mt-2 mb-5 sm:mb-7 leading-relaxed max-w-md mx-auto"
-=======
-    <p className="text-[1.1875rem] text-center mt-2 mb-7 leading-relaxed max-w-md mx-auto"
->>>>>>> 8020f5d (Initial commit for website frontend)
        style={{ color: PALETTE.muted }}>
         {children}
     </p>
@@ -91,11 +69,7 @@ export const ScreenSubtitle = ({ children }: { children: ReactNode }) => (
 
 /** The white card every section on these screens sits in. */
 export const KitCard = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
-<<<<<<< HEAD
     <div className={`rounded-2xl bg-white border p-4 sm:p-5 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] ${className}`}
-=======
-    <div className={`rounded-2xl bg-white border p-5 shadow-[0_1px_3px_rgba(16,24,40,0.10),0_6px_16px_-6px_rgba(16,24,40,0.12)] ${className}`}
->>>>>>> 8020f5d (Initial commit for website frontend)
          style={{ borderColor: PALETTE.border }}>
         {children}
     </div>
@@ -103,15 +77,9 @@ export const KitCard = ({ children, className = '' }: { children: ReactNode; cla
 
 export const KitCardHeader = ({ title, pill }: { title: string; pill?: string }) => (
     <div className="flex items-center justify-between gap-3 mb-4">
-<<<<<<< HEAD
         <p className="font-display text-[1.1875rem] font-bold" style={{ color: PALETTE.ink }}>{title}</p>
         {pill ? (
             <span className="shrink-0 rounded-lg px-2.5 py-1 text-[1.0625rem] font-extrabold"
-=======
-        <p className="font-display text-[1.125rem] font-bold" style={{ color: PALETTE.ink }}>{title}</p>
-        {pill ? (
-            <span className="shrink-0 rounded-lg px-2.5 py-1 text-[0.8125rem] font-extrabold"
->>>>>>> 8020f5d (Initial commit for website frontend)
                   style={{ backgroundColor: '#E0E7FF', color: PALETTE.primary }}>
                 {pill}
             </span>
@@ -147,11 +115,7 @@ export const StageRail = ({ stages }: { stages: KitStage[] }) => (
                     <div className="w-[1.625rem] shrink-0 flex flex-col items-center">
                         <span
                             className="w-[1.625rem] h-[1.625rem] rounded-full flex items-center justify-center
-<<<<<<< HEAD
                                        text-[1.0625rem] font-extrabold text-white shrink-0"
-=======
-                                       text-[0.8125rem] font-extrabold text-white shrink-0"
->>>>>>> 8020f5d (Initial commit for website frontend)
                             style={{ backgroundColor: tone }}
                         >
                             {stage.done ? <Check className="w-3.5 h-3.5" strokeWidth={3} />
@@ -195,11 +159,7 @@ export const PrimaryAction = ({ onClick, children, tone = PALETTE.primary, disab
         type="button"
         onClick={onClick}
         disabled={disabled}
-<<<<<<< HEAD
         className="w-full h-12 rounded-xl text-white font-bold text-[1.1875rem] flex items-center
-=======
-        className="w-full h-12 rounded-xl text-white font-bold text-[1.125rem] flex items-center
->>>>>>> 8020f5d (Initial commit for website frontend)
                    justify-center gap-2 transition-opacity hover:opacity-90
                    disabled:opacity-60 disabled:cursor-not-allowed"
         style={{ backgroundColor: tone }}
@@ -213,11 +173,7 @@ export const GhostAction = ({ onClick, children }: { onClick: () => void; childr
     <button
         type="button"
         onClick={onClick}
-<<<<<<< HEAD
         className="w-full h-12 rounded-xl font-semibold text-[1.1875rem] bg-white border
-=======
-        className="w-full h-12 rounded-xl font-semibold text-[1.125rem] bg-white border
->>>>>>> 8020f5d (Initial commit for website frontend)
                    transition-colors hover:bg-slate-50 mt-3"
         style={{ borderColor: PALETTE.border, color: PALETTE.ink }}
     >

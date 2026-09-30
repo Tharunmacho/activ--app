@@ -1,9 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-<<<<<<< HEAD
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-=======
-import { Link, useNavigate } from 'react-router-dom';
->>>>>>> 8020f5d (Initial commit for website frontend)
 import {
     ArrowRight, BadgeCheck, CalendarDays, CreditCard, FileText, IndianRupee,
     MapPin, ReceiptText, RefreshCw, ShieldCheck, Sparkles, UserCircle,
@@ -12,10 +8,7 @@ import MemberPageShell from '@/pages/member/MemberPageShell';
 import { SectionCard, RowsSkeleton } from '@/features/member/components/MemberUI';
 import { BIZ_DETAIL_LABEL } from '@/components/layout/surface';
 import { getMyProfile, getMyApplication } from '@/services/activApi';
-<<<<<<< HEAD
 import { RENEW_PATH, readRenewal, renewalDate, renewalMessage } from '@/features/member/useRenewal';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { resolvePlanEligibility, type MembershipPlan } from '@/features/member/membershipPlans';
 import { resolveApplicantKind, resolvePlan, planLabel } from '@/features/member/memberAccess';
 
@@ -82,11 +75,7 @@ function Fact({ icon: Icon, label, value }: {
             </span>
             <span className="min-w-0">
                 <span className={`${BIZ_DETAIL_LABEL} block`}>{label}</span>
-<<<<<<< HEAD
                 <span className="mt-1 block text-[1.1875rem] font-bold text-slate-900">{value}</span>
-=======
-                <span className="mt-1 block text-[1.125rem] font-bold text-slate-900">{value}</span>
->>>>>>> 8020f5d (Initial commit for website frontend)
             </span>
         </div>
     );
@@ -94,16 +83,11 @@ function Fact({ icon: Icon, label, value }: {
 
 export default function MembershipPlanDetails() {
     const navigate = useNavigate();
-<<<<<<< HEAD
     const [searchParams] = useSearchParams();
     const standalone = searchParams.get('view') === 'standalone';
 
     const [profile, setProfile] = useState<any>(null);
     const renewal = useMemo(() => readRenewal(profile), [profile]);
-=======
-
-    const [profile, setProfile] = useState<any>(null);
->>>>>>> 8020f5d (Initial commit for website frontend)
     const [application, setApplication] = useState<any>(null);
     const [plan, setPlan] = useState<MembershipPlan | null>(null);
     const [priceFailed, setPriceFailed] = useState(false);
@@ -168,7 +152,6 @@ export default function MembershipPlanDetails() {
     const region = [profile?.block, profile?.district, profile?.state]
         .map((part: any) => String(part || '').trim()).filter(Boolean).join(' · ');
 
-<<<<<<< HEAD
     /*
      * Opened from OUTSIDE the dashboard (the payment-success receipt), the plan is
      * its own screen: no member rail, a back arrow to where the reader came from.
@@ -181,11 +164,6 @@ export default function MembershipPlanDetails() {
     if (loading) {
         return (
             <MemberPageShell title="Membership Plan" subtitle="Your plan, in full" width="standard" {...shellMode}>
-=======
-    if (loading) {
-        return (
-            <MemberPageShell title="Membership Plan" subtitle="Your plan, in full" width="standard">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 <RowsSkeleton rows={4} />
             </MemberPageShell>
         );
@@ -196,29 +174,17 @@ export default function MembershipPlanDetails() {
             title="Membership Plan"
             subtitle="What your membership is, what it cost and when it renews"
             width="standard"
-<<<<<<< HEAD
             {...shellMode}
         >
             <div className="space-y-4 sm:space-y-6">
-=======
-        >
-            <div className="space-y-6">
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                 {/* ================================================ the plan */}
                 <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white
                                     shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
-<<<<<<< HEAD
                     <div className="flex flex-col gap-5 bg-gradient-to-r from-blue-600 to-blue-700 p-4 sm:p-6 text-white
                                     sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-4">
                             <span className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl
-=======
-                    <div className="flex flex-col gap-5 bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white
-                                    sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex items-center gap-4">
-                            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl
->>>>>>> 8020f5d (Initial commit for website frontend)
                                              bg-white/15 ring-1 ring-white/25">
                                 <UserCircle className="h-7 w-7" />
                             </span>
@@ -230,11 +196,7 @@ export default function MembershipPlanDetails() {
                                     {plan?.name || planLabel(kind) || 'Membership'}
                                 </h2>
                                 {membershipType && (
-<<<<<<< HEAD
                                     <p className="mt-0.5 text-[1.1875rem] font-semibold text-white/80">
-=======
-                                    <p className="mt-0.5 text-[1.125rem] font-semibold text-white/80">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         {membershipType} term
                                     </p>
                                 )}
@@ -242,11 +204,7 @@ export default function MembershipPlanDetails() {
                         </div>
 
                         <span className={`inline-flex w-fit items-center gap-2 rounded-full px-4 py-2
-<<<<<<< HEAD
                                           text-[1.0625rem] font-extrabold uppercase tracking-[0.08em]
-=======
-                                          text-[1rem] font-extrabold uppercase tracking-[0.08em]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                           ${activeNow
                                 ? 'bg-emerald-400/20 text-emerald-50 ring-1 ring-emerald-200/40'
                                 : 'bg-amber-400/20 text-amber-50 ring-1 ring-amber-200/40'}`}>
@@ -254,11 +212,7 @@ export default function MembershipPlanDetails() {
                         </span>
                     </div>
 
-<<<<<<< HEAD
                     <div className="grid gap-3 sm:gap-4 p-4 sm:p-6 sm:grid-cols-2 xl:grid-cols-4">
-=======
-                    <div className="grid gap-4 p-6 sm:grid-cols-2 xl:grid-cols-4">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         {profile?.membershipNumber && (
                             <Fact icon={ShieldCheck} label="Member ID" value={profile.membershipNumber} />
                         )}
@@ -275,11 +229,7 @@ export default function MembershipPlanDetails() {
                 </section>
 
                 {/* ====================================== price · what you paid */}
-<<<<<<< HEAD
                 <div className="grid items-stretch gap-4 sm:gap-6 lg:grid-cols-2">
-=======
-                <div className="grid items-stretch gap-6 lg:grid-cols-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                     <SectionCard
                         title="What this plan costs"
@@ -295,11 +245,7 @@ export default function MembershipPlanDetails() {
                         */}
                         {priceFailed || !plan ? (
                             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
-<<<<<<< HEAD
                                 <p className="text-[1.1875rem] font-bold text-amber-900">
-=======
-                                <p className="text-[1.125rem] font-bold text-amber-900">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     The current rate could not be loaded
                                 </p>
                                 <p className="mt-1 text-[1.1875rem] font-semibold text-amber-800">
@@ -309,11 +255,7 @@ export default function MembershipPlanDetails() {
                                     type="button"
                                     onClick={() => { setLoading(true); setAttempt((n) => n + 1); }}
                                     className="mt-4 inline-flex items-center gap-2 rounded-xl bg-amber-600 px-5 py-3
-<<<<<<< HEAD
                                                text-[1.1875rem] font-bold text-white transition-colors
-=======
-                                               text-[1.125rem] font-bold text-white transition-colors
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                hover:bg-amber-700"
                                 >
                                     <RefreshCw className="h-5 w-5" /> Try again
@@ -321,26 +263,15 @@ export default function MembershipPlanDetails() {
                             </div>
                         ) : (
                             <>
-<<<<<<< HEAD
                                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
                                     <p className={BIZ_DETAIL_LABEL}>Current rate</p>
                                     <p className="mt-1 flex flex-wrap items-baseline gap-x-2">
                                         <span className="text-[1.875rem] sm:text-[2.25rem] font-extrabold tracking-tight text-slate-900
-=======
-                                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                                    <p className={BIZ_DETAIL_LABEL}>Current rate</p>
-                                    <p className="mt-1 flex items-baseline gap-2">
-                                        <span className="text-[2.25rem] font-extrabold tracking-tight text-slate-900
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                          tabular-nums">
                                             {rupees(plan.price)}
                                         </span>
                                         {membershipType && (
-<<<<<<< HEAD
                                             <span className="text-[1.1875rem] font-bold text-slate-500">
-=======
-                                            <span className="text-[1.125rem] font-bold text-slate-500">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 per {membershipType.toLowerCase() === 'annual' ? 'year' : 'term'}
                                             </span>
                                         )}
@@ -375,15 +306,9 @@ export default function MembershipPlanDetails() {
                         className="h-full"
                     >
                         <div className="space-y-4">
-<<<<<<< HEAD
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
                                 <p className={BIZ_DETAIL_LABEL}>Amount paid</p>
                                 <p className="mt-1 text-[1.875rem] sm:text-[2.25rem] font-extrabold tracking-tight text-slate-900
-=======
-                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                                <p className={BIZ_DETAIL_LABEL}>Amount paid</p>
-                                <p className="mt-1 text-[2.25rem] font-extrabold tracking-tight text-slate-900
->>>>>>> 8020f5d (Initial commit for website frontend)
                                               tabular-nums">
                                     {rupees(paidAmount)}
                                 </p>
@@ -397,11 +322,7 @@ export default function MembershipPlanDetails() {
                             {txnRef && (
                                 <div className="rounded-2xl border border-slate-200 bg-white p-4">
                                     <p className={BIZ_DETAIL_LABEL}>Transaction reference</p>
-<<<<<<< HEAD
                                     <p className="mt-1 break-all text-[1.1875rem] font-bold tracking-wide tabular-nums text-slate-900">
-=======
-                                    <p className="mt-1 break-all text-[1.125rem] font-bold tracking-wide tabular-nums text-slate-900">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         {txnRef}
                                     </p>
                                 </div>
@@ -411,11 +332,7 @@ export default function MembershipPlanDetails() {
                                 type="button"
                                 onClick={() => navigate('/member/payment-success?view=receipt')}
                                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl
-<<<<<<< HEAD
                                            bg-blue-600 px-5 py-3.5 text-[1.1875rem] font-bold text-white
-=======
-                                           bg-blue-600 px-5 py-3.5 text-[1.125rem] font-bold text-white
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            transition-colors hover:bg-blue-700"
                             >
                                 <ReceiptText className="h-5 w-5" /> View payment receipt
@@ -431,11 +348,7 @@ export default function MembershipPlanDetails() {
                     icon={<FileText className="w-5 h-5" />}
                     actionTo="/member/documents"
                 >
-<<<<<<< HEAD
                     <div className="grid gap-3 sm:gap-4 sm:grid-cols-3">
-=======
-                    <div className="grid gap-4 sm:grid-cols-3">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         {[
                             { label: 'Membership Certificate', to: '/member/certificate/membership', icon: FileText },
                             { label: 'Tax Exemption Certificate', to: '/member/certificate/tax-exemption', icon: ShieldCheck },
@@ -453,11 +366,7 @@ export default function MembershipPlanDetails() {
                                     <Icon className="h-5 w-5" />
                                 </span>
                                 <span className="min-w-0">
-<<<<<<< HEAD
                                     <span className="block text-[1.1875rem] font-bold text-slate-900">{label}</span>
-=======
-                                    <span className="block text-[1.125rem] font-bold text-slate-900">{label}</span>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     <span className="block text-[1.1875rem] font-semibold text-slate-500">
                                         View / download
                                     </span>
@@ -470,45 +379,29 @@ export default function MembershipPlanDetails() {
                 {/* ================================================ renewal */}
                 <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white
                                     shadow-[0_1px_2px_rgba(16,24,40,0.04),0_10px_30px_-12px_rgba(16,24,40,0.28)]">
-<<<<<<< HEAD
                     <div className="flex flex-col gap-5 bg-gradient-to-r from-blue-50 via-white to-blue-50 p-4 sm:p-6
-=======
-                    <div className="flex flex-col gap-5 bg-gradient-to-r from-blue-50 via-white to-blue-50 p-6
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-4">
                             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl
                                              bg-blue-600 text-white">
                                 <Sparkles className="h-6 w-6" />
                             </span>
-<<<<<<< HEAD
                             <div className="min-w-0">
                                 <p className="text-[1.25rem] sm:text-[1.5625rem] font-extrabold tracking-tight text-slate-900">
-=======
-                            <div>
-                                <p className="text-[1.5rem] font-extrabold tracking-tight text-slate-900">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     {lifetime ? 'This membership does not expire' : 'Keep your membership active'}
                                 </p>
                                 <p className="text-[1.1875rem] font-semibold text-slate-500">
                                     {lifetime
                                         ? 'Nothing to renew — your benefits continue for life.'
-<<<<<<< HEAD
                                         : renewal?.canRenew
                                             ? renewalMessage(renewal)
                                             : expiresAt
                                                 ? `Your plan runs to ${formatDate(expiresAt)}.${renewal?.opensAt ? ` Renewal opens on ${renewalDate(renewal.opensAt)}.` : ''}`
                                                 : 'Your renewal date is not recorded yet.'}
-=======
-                                        : expiresAt
-                                            ? `Your plan runs to ${formatDate(expiresAt)}.`
-                                            : 'Your renewal date is not recorded yet.'}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 </p>
                             </div>
                         </div>
 
-<<<<<<< HEAD
                         {/*
                           RENEW, when the server says renewal is open (expired, or
                           the last 30 days). Before that the office is the right
@@ -533,16 +426,6 @@ export default function MembershipPlanDetails() {
                                 Ask about renewal <ArrowRight className="h-5 w-5" />
                             </Link>
                         )}
-=======
-                        <Link
-                            to="/member/help"
-                            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white
-                                       px-6 py-3.5 text-[1.125rem] font-bold text-slate-700 transition-colors
-                                       hover:border-blue-300 hover:text-blue-700"
-                        >
-                            Ask about renewal <ArrowRight className="h-5 w-5" />
-                        </Link>
->>>>>>> 8020f5d (Initial commit for website frontend)
                     </div>
                 </section>
             </div>

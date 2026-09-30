@@ -117,7 +117,6 @@ export const completeMembershipPayment = async (input: {
     );
 
 /**
-<<<<<<< HEAD
  * ==========================================================================
  * WHICH CHECKOUT IS LIVE — the server's answer, not this file's guess
  * ==========================================================================
@@ -205,12 +204,6 @@ export const startHostedBookingPayment = async (bookingRef: string) =>
  * Order, authorise, complete. This is the MOCK path — it is only reached when
  * the server reports `mode: 'mock'`; with a gateway connected the caller uses
  * `startHostedMembershipPayment` and leaves the site.
-=======
- * The whole purchase, for a caller that just wants it done.
- *
- * Order, authorise, complete. When a real gateway is connected the middle step
- * becomes its checkout and this helper is where that swap lands.
->>>>>>> 8020f5d (Initial commit for website frontend)
  */
 export const payForMembership = async (
     planId: string,
@@ -232,7 +225,6 @@ export const payForMembership = async (
     return order;
 };
 
-<<<<<<< HEAD
 /** What the return page learns about an order — public, works for a guest. */
 export interface PaymentReturnResult {
     orderId: string;
@@ -267,8 +259,6 @@ export const resolvePaymentReturn = async (
         {} as PaymentReturnResult,
     );
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 /** Poll a payment request created through the Instamojo path. */
 export const checkPaymentRequestStatus = async (paymentRequestId: string) =>
     unwrap<any>(await api.get(ENDPOINTS.PAYMENT.STATUS(paymentRequestId)), {});

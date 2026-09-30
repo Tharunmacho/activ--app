@@ -1,12 +1,9 @@
-<<<<<<< HEAD
 import { PosterFrame } from '@/components/shared/PosterFrame';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
     ArrowLeft, ArrowRight, Calendar, Clock, MapPin, Phone, Mail, User, Users, ExternalLink,
-    Timer, Lock, Video,
+    Timer, Lock, Video, Tag, Languages,
 } from 'lucide-react';
 import {
     getCmsEvent, getCmsEvents, getEventsSettings,
@@ -26,13 +23,10 @@ import {
     BIZ_DETAIL_LABEL, BIZ_DETAIL_VALUE,
 } from '@/components/layout/surface';
 import { Reveal } from '@/components/shared/Reveal';
-<<<<<<< HEAD
 import { eventPath } from '@/lib/eventPath';
 import { setShareMeta } from '@/lib/shareMeta';
 import { EventQrFeature } from '@/components/shared/EventQr';
 import { resolveMediaUrl } from '@/config/api.config';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * One event, in full.
@@ -82,7 +76,6 @@ const formatDay = (iso?: string | null): string => {
 };
 
 /** "10:30" — empty when the event carries no time of day. */
-<<<<<<< HEAD
 /**
  * A time a reader can act on — "09:00 AM", not "09:00".
  *
@@ -94,13 +87,10 @@ const formatDay = (iso?: string | null): string => {
  * `hour12: true` rather than switching locale, so the date formatting either
  * side of it is untouched.
  */
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 const formatTime = (iso?: string | null): string => {
     if (!iso) return '';
     const date = new Date(iso);
     if (Number.isNaN(date.getTime())) return '';
-<<<<<<< HEAD
     return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true })
         .toUpperCase();
 };
@@ -135,9 +125,6 @@ const formatPhone = (value?: string | null): string => {
      */
     if (national.length !== 10 || !/^[6-9]/.test(national)) return raw;
     return `+91 ${national.slice(0, 5)} ${national.slice(5)}`;
-=======
-    return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
->>>>>>> 8020f5d (Initial commit for website frontend)
 };
 
 /** The facts list joins multi-line values with this. */
@@ -161,7 +148,6 @@ export default function EventDetailPage() {
     const [availability, setAvailability] = useState<BookableEvent | null>(null);
     const [loading, setLoading] = useState(true);
     const [missing, setMissing] = useState(false);
-<<<<<<< HEAD
     // Portrait poster? Decided from the loaded image; see the banner below.
     const [bannerTall, setBannerTall] = useState(false);
 
@@ -188,16 +174,23 @@ export default function EventDetailPage() {
     // The share tags for this event; see lib/shareMeta and server.mjs.
     useEffect(() => {
         if (!event) return undefined;
+        // "<name> on <date> at <venue>" — the same card the crawlers get from
+        // the API's share page (backend modules/share).
+        const start = event.startAt ? new Date(event.startAt) : null;
+        const date = start && !Number.isNaN(start.getTime())
+            ? start.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'long', year: 'numeric' })
+            : '';
+        const venue = event.mode === 'online'
+            ? `Online${event.onlinePlatform ? ` (${event.onlinePlatform})` : ''}`
+            : (event.venue || event.location || '');
         return setShareMeta({
-            title: event.title || 'ACTIV event',
-            description: event.description || '',
-            image: event.imageUrl || '',
+            title: [event.title || 'ACTIV event', date && `on ${date}`, venue && `at ${venue}`].filter(Boolean).join(' '),
+            description: [event.venueAddress, event.description].filter(Boolean).join(' — '),
+            image: resolveMediaUrl(event.imageUrl || ''),
             url: `${window.location.origin}${eventPath(event)}`,
             type: 'article',
         });
     }, [event]);
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     useEffect(() => {
         let cancelled = false;
@@ -205,10 +198,7 @@ export default function EventDetailPage() {
         setLoading(true);
         setMissing(false);
         setEvent(null);
-<<<<<<< HEAD
         setBannerTall(false);
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
         // Arriving from a card lower down the previous page would otherwise open
         // this one already scrolled past its own banner.
         window.scrollTo({ top: 0, behavior: 'auto' });
@@ -274,11 +264,7 @@ export default function EventDetailPage() {
                     <Link
                         to="/events"
                         className="inline-flex items-center gap-2 bg-brand-800 hover:bg-brand-700 text-white
-<<<<<<< HEAD
                                    px-6 sm:px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase tracking-[0.1em]
-=======
-                                   px-8 py-3.5 rounded-full font-bold text-[1rem] uppercase tracking-[0.1em]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                    transition-colors"
                     >
                         <ArrowLeft size={15} /> Back to Events
@@ -297,7 +283,6 @@ export default function EventDetailPage() {
      */
     const isOnline = event.mode === 'online';
 
-<<<<<<< HEAD
     const flatAgenda = (event.agenda || []).filter(row => row && (row.title || row.startTime));
 
     /*
@@ -374,11 +359,6 @@ export default function EventDetailPage() {
      */
     const lastDay = formatDay(event.endAt);
     const runsOverDays = !!lastDay && lastDay !== day;
-=======
-    const agenda = (event.agenda || []).filter(row => row && (row.title || row.startTime));
-    const speakers = (event.speakers || []).filter(person => person && person.name);
-    const day = formatDay(event.startAt);
->>>>>>> 8020f5d (Initial commit for website frontend)
     const startTime = formatTime(event.startAt);
     const endTime = formatTime(event.endAt);
 
@@ -409,7 +389,6 @@ export default function EventDetailPage() {
     const facts = [
         day ? {
             icon: <Calendar size={16} />,
-<<<<<<< HEAD
             label: runsOverDays ? 'Dates' : 'Date',
             /* A three-day conclave says so here. Printing only the first day
                tells somebody booking travel they need one night. */
@@ -441,12 +420,6 @@ export default function EventDetailPage() {
                 .filter(Boolean)
                 .join(NEWLINE),
         } : startTime ? {
-=======
-            label: 'Date',
-            value: day,
-        } : null,
-        startTime ? {
->>>>>>> 8020f5d (Initial commit for website frontend)
             icon: <Clock size={16} />,
             label: 'Time',
             // An end time is optional — many events are announced without one.
@@ -474,7 +447,6 @@ export default function EventDetailPage() {
                 ? `${event.venue || event.location}\n${event.venueAddress}`
                 : (event.venue || event.location),
         } : null,
-<<<<<<< HEAD
         /*
          * ======================================================================
          * THREE ROWS, NOT ONE BLOCK — a number needs to say it is a number
@@ -492,6 +464,19 @@ export default function EventDetailPage() {
          * them. They are also `href`ed now: a number on a phone is something to
          * tap, and printing it as dead text makes the reader copy it by hand.
          */
+        /* Topic and language: set on the event form (CMS -> Events) and, until
+           these rows, printed only in the booking messages — a visitor deciding
+           whether to book never saw either. */
+        (event.topic || '').trim() ? {
+            icon: <Tag size={16} />,
+            label: 'Topic',
+            value: (event.topic || '').trim(),
+        } : null,
+        (event.language || '').trim() ? {
+            icon: <Languages size={16} />,
+            label: 'Language',
+            value: (event.language || '').trim(),
+        } : null,
         event.contactName ? {
             icon: <User size={16} />,
             label: 'Contact',
@@ -508,12 +493,6 @@ export default function EventDetailPage() {
             label: 'Email',
             value: event.contactEmail,
             href: `mailto:${event.contactEmail}`,
-=======
-        event.contactName || event.contactPhone || event.contactEmail ? {
-            icon: <User size={16} />,
-            label: 'Contact',
-            value: [event.contactName, event.contactPhone, event.contactEmail].filter(Boolean).join('\n'),
->>>>>>> 8020f5d (Initial commit for website frontend)
         } : null,
         /*
          * The static capacity, ONLY until the live meter arrives.
@@ -536,7 +515,6 @@ export default function EventDetailPage() {
          * drawn once it has passed: the button says so by then, and a date that
          * has gone reads as an invitation.
          */
-<<<<<<< HEAD
         /*
          * "REGISTRATION CLOSES", not "Book by".
          *
@@ -562,14 +540,6 @@ export default function EventDetailPage() {
         /** Set where the value is something to tap — a number, an address. */
         href?: string;
     }[];
-=======
-        (deadline && !bookingClosed) ? {
-            icon: <Clock size={16} />,
-            label: 'Book by',
-            value: deadline,
-        } : null,
-    ].filter(Boolean) as { icon: React.ReactNode; label: string; value: string }[];
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     const countdown = countdownLabel(event.startAt);
     /*
@@ -590,11 +560,7 @@ export default function EventDetailPage() {
             <HeaderSection />
 
             <main className="flex-grow">
-<<<<<<< HEAD
                 <section className="w-full pt-6 pb-12 sm:pt-10 sm:pb-16 md:pt-14 md:pb-24 relative overflow-hidden">
-=======
-                <section className="w-full pt-10 pb-16 md:pt-14 md:pb-24 relative overflow-hidden">
->>>>>>> 8020f5d (Initial commit for website frontend)
                     <div className="absolute top-0 right-0 w-96 h-96 bg-brand-50/60 rounded-full blur-3xl transform-gpu
                                     -z-10 translate-x-1/3 -translate-y-1/3 transform-gpu pointer-events-none" />
 
@@ -629,7 +595,6 @@ export default function EventDetailPage() {
                                       * every width and matches the card the
                                       * visitor clicked to get here.
                                       */}
-<<<<<<< HEAD
                                     {/*
                                       * TALLER, and the whole poster is visible.
                                       *
@@ -700,11 +665,6 @@ export default function EventDetailPage() {
                                             />
                                         </div>
                                     )}
-=======
-                                    <div className="w-full aspect-[16/9] max-h-[30rem]">
-                                        <CmsMediaFrame media={event.media} priority width={1100} />
-                                    </div>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 </div>
                             </Reveal>
                         )}
@@ -718,29 +678,18 @@ export default function EventDetailPage() {
                           * a layer. One tinted sheet, and the cards on it have an
                           * edge without any of them being outlined more heavily.
                           */}
-<<<<<<< HEAD
                         <div className={`${SHEET} mt-6 sm:mt-10`}>
                         <div className="grid gap-4 sm:gap-5 lg:gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] items-start">
 
                             <div className="min-w-0 space-y-4 sm:space-y-5 lg:space-y-6">
                             <div className={`${BIZ_CARD} p-4 sm:p-8 min-w-0`}>
-=======
-                        <div className={`${SHEET} mt-10`}>
-                        <div className="grid gap-4 sm:gap-5 lg:gap-6 lg:grid-cols-[1.6fr_1fr] items-start">
-
-                            <div className={`${BIZ_CARD} p-6 sm:p-8`}>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 {event.category && (
                                     <span className={`${BIZ_BADGE} bg-brand-50 text-brand-700 border border-brand-100 mb-5`}>
                                         {event.category}
                                     </span>
                                 )}
 
-<<<<<<< HEAD
                                 <h1 className={`${SECTION_HEADING} text-brand-800 mb-5 break-words [overflow-wrap:anywhere] hyphens-auto`}>
-=======
-                                <h1 className={`${SECTION_HEADING} text-brand-800 mb-5`}>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     {/* Never an empty heading - the same fallback
                                         the cards use, because nothing on the
                                         event form is required. */}
@@ -814,7 +763,6 @@ export default function EventDetailPage() {
                                   */}
                                 <EventActions event={event} className="mb-8" />
 
-<<<<<<< HEAD
                                 {/* ---- programme ----
 
                                     DAY BY DAY when the event runs over more than
@@ -891,31 +839,17 @@ export default function EventDetailPage() {
                                     </div>
                                 ) : agenda.length > 0 && (
                                     <div className="mt-6 pt-6 sm:mt-8 sm:pt-8 border-t border-slate-100">
-=======
-                                {/* ---- agenda ---- */}
-                                {agenda.length > 0 && (
-                                    <div className="mt-8 pt-8 border-t border-slate-100">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         <h2 className={`${BIZ_CARD_TITLE} mb-5`}>Programme</h2>
                                         <ol className="border-l-2 border-slate-200 pl-5 space-y-6">
                                             {agenda.map((row, i) => (
                                                 <li key={row.id || i} className="relative">
-<<<<<<< HEAD
                                                     {/* The dot sits on the rule, so the times read as a
                                                         timeline rather than as a table with a stray border. */}
-=======
-                                                    {/* The dot sits on the rule, so the times read as a timeline
-                                                        rather than as a table with a stray border. */}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                     <span className="absolute -left-[1.6875rem] top-1.5 w-3 h-3 rounded-full
                                                                      bg-brand-600 ring-4 ring-white" />
                                                     {(row.startTime || row.endTime) && (
                                                         <p className={`${BIZ_DETAIL_LABEL} mb-1`}>
-<<<<<<< HEAD
                                                             {span(row.startTime, row.endTime)}
-=======
-                                                            {row.startTime}{row.endTime ? ` – ${row.endTime}` : ''}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                         </p>
                                                     )}
                                                     <p className="text-[1.25rem] font-bold text-slate-900">{row.title}</p>
@@ -937,11 +871,7 @@ export default function EventDetailPage() {
 
                                 {/* ---- speakers ---- */}
                                 {speakers.length > 0 && (
-<<<<<<< HEAD
                                     <div className="mt-6 pt-6 sm:mt-8 sm:pt-8 border-t border-slate-100">
-=======
-                                    <div className="mt-8 pt-8 border-t border-slate-100">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         <h2 className={`${BIZ_CARD_TITLE} mb-5`}>Speakers</h2>
                                         {/*
                                           * `auto-fit` rather than a fixed two
@@ -955,23 +885,18 @@ export default function EventDetailPage() {
                                           * content when there is one, and still
                                           * gives two or three a row.
                                           */}
-<<<<<<< HEAD
                                         {/* 18rem, not 15rem: the portrait grew to 5.5rem and
                                             a designation runs to three lines beside it, so the
                                             old track squeezed "Minister for Social Justice
                                             Department, Government of Tamilnadu" into a column
                                             of single words. */}
                                         <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:[grid-template-columns:repeat(auto-fit,minmax(18rem,max-content))]">
-=======
-                                        <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(15rem,max-content))]">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                             {speakers.map((person, i) => (
                                                 <div
                                                     key={person.id || i}
                                                     /* A tinted well inside the card, not a second
                                                        card: `slate-50` on white is the same step
                                                        down the sheet is from the page. */
-<<<<<<< HEAD
                                                     className="flex items-start gap-3 sm:gap-4 rounded-xl border border-slate-200
                                                                bg-slate-50 p-3.5 sm:p-4"
                                                 >
@@ -1012,16 +937,6 @@ export default function EventDetailPage() {
                                                                 />
                                                             )
                                                             : <User size={30} className="text-slate-400" />}
-=======
-                                                    className="flex items-start gap-4 rounded-xl border border-slate-200
-                                                               bg-slate-50 p-4"
-                                                >
-                                                    <div className="w-14 h-14 rounded-full overflow-hidden bg-white border
-                                                                    border-slate-200 shrink-0 flex items-center justify-center">
-                                                        {person.photoUrl
-                                                            ? <CmsMediaFrame media={{ url: person.photoUrl }} width={80} />
-                                                            : <User size={20} className="text-slate-400" />}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                     </div>
                                                     <div className="min-w-0">
                                                         <p className="text-[1.25rem] font-bold text-slate-900">{person.name}</p>
@@ -1041,7 +956,6 @@ export default function EventDetailPage() {
                                 )}
                             </div>
 
-<<<<<<< HEAD
                                 {/*
                                   * THE EVENT'S QR — a feature card of its own in
                                   * the wide column, under the programme and the
@@ -1060,10 +974,6 @@ export default function EventDetailPage() {
 
                             {/* ---- the side card ---- */}
                             <aside className={`${BIZ_CARD} p-4 sm:p-7 lg:sticky lg:top-28 min-w-0`}>
-=======
-                            {/* ---- the side card ---- */}
-                            <aside className={`${BIZ_CARD} p-6 sm:p-7 lg:sticky lg:top-28`}>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 {/*
                                   * ONE ROW SHAPE, REPEATED.
                                   *
@@ -1102,7 +1012,6 @@ export default function EventDetailPage() {
                                               * other fact prints as before.
                                               */}
                                             <p className={`${BIZ_DETAIL_VALUE} mt-1 break-words whitespace-pre-line`}>
-<<<<<<< HEAD
                                                 {/*
                                                   * THE ROW SAYS WHETHER IT IS A LINK.
                                                   *
@@ -1125,25 +1034,6 @@ export default function EventDetailPage() {
                                                             {fact.value}
                                                         </a>
                                                     )
-=======
-                                                {fact.label === 'Contact'
-                                                    ? fact.value.split(NEWLINE).map((line, n) => {
-                                                        const isPhone = /^[+\d][\d\s()-]{6,}$/.test(line.trim());
-                                                        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(line.trim());
-                                                        return (
-                                                            <span key={n} className="block">
-                                                                {isPhone || isEmail ? (
-                                                                    <a
-                                                                        href={`${isPhone ? 'tel:' : 'mailto:'}${line.trim()}`}
-                                                                        className="hover:text-brand-700 transition-colors"
-                                                                    >
-                                                                        {line}
-                                                                    </a>
-                                                                ) : line}
-                                                            </span>
-                                                        );
-                                                    })
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                     : fact.value}
                                             </p>
                                         </div>
@@ -1166,7 +1056,6 @@ export default function EventDetailPage() {
                                   */}
                                 {capped && (
                                     <div className={`${BIZ_WELL} mt-5`}>
-<<<<<<< HEAD
                                         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                                             <p className={BIZ_DETAIL_LABEL}>Availability</p>
                                             <p className={`text-[1.1875rem] font-bold whitespace-nowrap ${
@@ -1174,15 +1063,6 @@ export default function EventDetailPage() {
                                                     : fillingFast ? 'text-amber-700' : 'text-slate-900'
                                             }`}>
                                                 {soldOut ? 'Fully booked' : `${Number(seatsLeft || 0).toLocaleString('en-IN')} of ${Number(capacity || 0).toLocaleString('en-IN')} left`}
-=======
-                                        <div className="flex items-baseline justify-between gap-3">
-                                            <p className={BIZ_DETAIL_LABEL}>Availability</p>
-                                            <p className={`text-[1.1875rem] font-bold ${
-                                                soldOut ? 'text-rose-600'
-                                                    : fillingFast ? 'text-amber-700' : 'text-slate-900'
-                                            }`}>
-                                                {soldOut ? 'Fully booked' : `${seatsLeft} of ${capacity} left`}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                             </p>
                                         </div>
                                         <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-slate-200">
@@ -1195,11 +1075,7 @@ export default function EventDetailPage() {
                                             />
                                         </div>
                                         <p className="mt-2 text-[1.1875rem] font-semibold text-slate-500">
-<<<<<<< HEAD
                                             {Math.max(0, Number(capacity || 0) - Number(seatsLeft || 0)).toLocaleString('en-IN')} booked so far
-=======
-                                            {capacity - Number(seatsLeft)} booked so far
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         </p>
                                     </div>
                                 )}
@@ -1354,7 +1230,6 @@ export default function EventDetailPage() {
                                   * links now, and the reader is not asked to
                                   * work out why the page is telling them twice.
                                   */}
-<<<<<<< HEAD
 
                             </aside>
 
@@ -1362,9 +1237,6 @@ export default function EventDetailPage() {
                             {event.showQrOnPage !== false && (
                                 <div className="lg:hidden min-w-0"><EventQrFeature event={event} /></div>
                             )}
-=======
-                            </aside>
->>>>>>> 8020f5d (Initial commit for website frontend)
                         </div>
                         </div>
 
@@ -1381,19 +1253,11 @@ export default function EventDetailPage() {
                                 <h2 className={`${BIZ_CARD_TITLE} mb-5`}>
                                     {settings?.viewAllLabel ? 'More events' : 'More events'}
                                 </h2>
-<<<<<<< HEAD
                                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
                                     {moreEvents.map(other => (
                                         <Link
                                             key={other.id}
                                             to={eventPath(other)}
-=======
-                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                                    {moreEvents.map(other => (
-                                        <Link
-                                            key={other.id}
-                                            to={`/events/${other.id}`}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                             className={`${BIZ_CARD} group block overflow-hidden
                                                         transition-all duration-300 hover:-translate-y-0.5
                                                         hover:border-slate-300
@@ -1409,7 +1273,6 @@ export default function EventDetailPage() {
                                               * on a row of four photographs reads
                                               * as an image that failed to load.
                                               */}
-<<<<<<< HEAD
                                             {other.media?.url ? (
                                                 <PosterFrame
                                                     media={other.media}
@@ -1423,31 +1286,12 @@ export default function EventDetailPage() {
                                                 </div>
                                             )}
                                             <div className="p-3 sm:p-4">
-=======
-                                            <div className="w-full h-40 overflow-hidden bg-slate-50
-                                                            flex items-center justify-center">
-                                                {other.media?.url ? (
-                                                    <CmsMediaFrame
-                                                        media={other.media}
-                                                        width={340}
-                                                        className="group-hover:scale-105 transition-transform duration-700 transform-gpu"
-                                                    />
-                                                ) : (
-                                                    <Calendar size={28} className="text-slate-300" />
-                                                )}
-                                            </div>
-                                            <div className="p-4">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 {/* A FIXED TWO-LINE BOX, so the dates line up
                                                     across the row. `line-clamp-2` caps a long
                                                     title but does nothing for a short one, so a
                                                     one-line title pulled its date 24px up and the
                                                     four tiles read as four different cards. */}
-<<<<<<< HEAD
                                                 <p className="min-h-[3rem] text-[1.125rem] sm:text-[1.25rem] font-bold text-slate-900 line-clamp-2
-=======
-                                                <p className="min-h-[3rem] text-[1.25rem] font-bold text-slate-900 line-clamp-2
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                               group-hover:text-brand-700 transition-colors">
                                                     {/* Never an empty line — the same
                                                         fallback every other card uses. */}

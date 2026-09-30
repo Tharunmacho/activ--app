@@ -127,11 +127,7 @@ export function BackArrow({
             onClick={goBack}
             title={label}
             aria-label={label}
-<<<<<<< HEAD
             className={`absolute top-5 z-30 flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-full
-=======
-            className={`absolute top-5 z-30 flex h-10 w-10 items-center justify-center rounded-full
->>>>>>> 8020f5d (Initial commit for website frontend)
                         transition-colors
                         ${placement === 'right' ? 'right-5' : 'left-5'}
                         ${tone === 'onLight'

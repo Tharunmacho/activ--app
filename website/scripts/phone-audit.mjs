@@ -144,9 +144,12 @@ for (const p of ROUTES) {
       if (!r.width || !r.height) continue;
       if (r.right > vw + 1 || r.left < -1) {
         let clipped = false;
-        for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+        // Wholly off the LEFT edge (a closed slide-out drawer) cannot make the
+        // page scroll sideways, and nothing inside a FIXED layer can either.
+        if (r.right <= 0) clipped = true;
+        for (let a = el.parentElement; !clipped && a && a !== document.body; a = a.parentElement) {
           const s = getComputedStyle(a);
-          if (/(hidden|clip|auto|scroll)/.test(s.overflowX)) { clipped = true; break; }
+          if (/(hidden|clip|auto|scroll)/.test(s.overflowX) || s.position === 'fixed') { clipped = true; break; }
         }
         const st = getComputedStyle(el);
         if (!clipped && st.position !== 'fixed' && st.visibility !== 'hidden') {

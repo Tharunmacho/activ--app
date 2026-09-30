@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-<<<<<<< HEAD
 import { FaHome, FaCheckCircle, FaUsers, FaCog, FaSignOutAlt, FaTimes, FaUserShield, FaCalendarAlt, FaBullhorn, FaBell, FaTicketAlt, FaTags, FaListUl, FaChevronDown, FaImages, FaNewspaper, FaLandmark, FaHandHoldingHeart } from 'react-icons/fa';
-=======
-import { FaHome, FaCheckCircle, FaUsers, FaCog, FaSignOutAlt, FaTimes, FaUserShield, FaCalendarAlt, FaBullhorn, FaBell, FaTicketAlt, FaTags, FaListUl, FaChevronDown } from 'react-icons/fa';
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { apiFetch, logout } from '@/services/activApi';
@@ -100,13 +96,10 @@ export default function AdminSidebar({
         tags: <FaTags />,
         list: <FaListUl />,
         cog: <FaCog />,
-<<<<<<< HEAD
         image: <FaImages />,
         newspaper: <FaNewspaper />,
         landmark: <FaLandmark />,
         heart: <FaHandHoldingHeart />,
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     } as const;
 
     const nav = config.nav;
@@ -192,11 +185,7 @@ export default function AdminSidebar({
         } catch (err) {
             console.warn('Logout safely caught:', err);
         }
-<<<<<<< HEAD
         navigate('/admin/login');
-=======
-        navigate('/login');
->>>>>>> 8020f5d (Initial commit for website frontend)
         onClose?.();
     };
 
@@ -298,11 +287,7 @@ export default function AdminSidebar({
                                                 ? 'bg-white/25 text-white backdrop-blur-sm'
                                                 : 'text-white hover:bg-white/20 backdrop-blur-sm'}`}
                                     >
-<<<<<<< HEAD
                                         <span className="w-[1.375rem] h-[1.375rem] text-[1.25rem] text-white
-=======
-                                        <span className="w-[1.375rem] h-[1.375rem] text-[1.3125rem] text-white
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                          flex items-center justify-center">
                                             {ICONS[item.icon]}
                                         </span>
@@ -342,11 +327,7 @@ export default function AdminSidebar({
                                                         </span>
                                                         {/* One step under its parent, not two. A child at
                                                             13px beside a 16px parent read as a footnote. */}
-<<<<<<< HEAD
                                                         <span className="text-[1.1875rem]">{child.label}</span>
-=======
-                                                        <span className="text-[1.125rem]">{child.label}</span>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                     </Link>
                                                 );
                                             })}
@@ -369,11 +350,7 @@ export default function AdminSidebar({
                                     : 'text-white hover:bg-white/20 backdrop-blur-sm'
                                     }`}
                             >
-<<<<<<< HEAD
                                 <span className={`w-[1.375rem] h-[1.375rem] text-[1.25rem] flex items-center
-=======
-                                <span className={`w-[1.375rem] h-[1.375rem] text-[1.3125rem] flex items-center
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                   justify-center ${active ? 'text-blue-600' : 'text-white'}`}>
                                     {ICONS[item.icon]}
                                 </span>
@@ -420,11 +397,7 @@ export default function AdminSidebar({
      * inside need, so nothing lost the context `relative` was there to provide.
      */
     const shell =
-<<<<<<< HEAD
         'bg-gradient-to-b from-[#172554] via-[#1e3a8a] to-[#2563eb] shadow-lg overflow-hidden';
-=======
-        'bg-gradient-to-b from-blue-600 via-purple-600 to-indigo-700 shadow-lg overflow-hidden';
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     return (
         <>
@@ -443,14 +416,10 @@ export default function AdminSidebar({
               * This is the one rail every tier renders - block, district, state
               * and super all re-export this file - so the four move together.
               */}
-<<<<<<< HEAD
             {/* `shrink-0`: the shell is `overflow-hidden`, which makes a flex
                 item's automatic minimum width zero, so a wide page could
                 squeeze the rail down to a sliver of gradient at the edge. */}
             <div className={`hidden lg:flex lg:flex-col shrink-0 lg:w-[17.5rem] xl:w-[20.5rem] 2xl:w-[22rem] h-screen sticky top-0 min-h-0 ${shell}`}>
-=======
-            <div className={`hidden lg:flex lg:flex-col lg:w-[17.5rem] xl:w-[20.5rem] 2xl:w-[22rem] h-screen sticky top-0 min-h-0 ${shell}`}>
->>>>>>> 8020f5d (Initial commit for website frontend)
                 <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full filter blur-3xl pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full filter blur-3xl pointer-events-none" />
                 {content}

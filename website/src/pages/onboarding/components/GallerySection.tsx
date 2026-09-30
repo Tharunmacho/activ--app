@@ -1,13 +1,7 @@
-<<<<<<< HEAD
 import { galleryPath } from '@/lib/eventPath';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Images, Calendar, MapPin, Grid3x3, ArrowRight } from 'lucide-react';
-=======
-import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Calendar, MapPin, Grid3x3, ArrowRight } from 'lucide-react';
->>>>>>> 8020f5d (Initial commit for website frontend)
 import {
     getGallery, getGallerySettings,
     type GalleryItem, type GallerySettings,
@@ -15,7 +9,6 @@ import {
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
 import { CmsIcon } from '@/components/shared/CmsIcon';
 import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
-<<<<<<< HEAD
 import { SECTION_HEADING, SECTION_LEDE, EYEBROW, BAND_MEASURE } from '@/components/layout/typography';
 import { Reveal } from '@/components/shared/Reveal';
 import { sectionHidden, sectionFields } from '@/components/shared/cmsSections';
@@ -24,12 +17,6 @@ import { SectionFields } from '@/components/shared/SectionFields';
 
 /** The gallery band's own type, for the rows added to its cards. */
 const GRID_PROSE = 'text-[1.125rem] font-medium leading-relaxed text-gray-500';
-=======
-import { SECTION_HEADING, SECTION_LEDE, EYEBROW } from '@/components/layout/typography';
-import { Reveal } from '@/components/shared/Reveal';
-import { sectionHidden, sectionFields } from '@/components/shared/cmsSections';
-import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { Tilt3D } from '@/components/shared/Tilt3D';
 
 /**
@@ -47,7 +34,6 @@ import { Tilt3D } from '@/components/shared/Tilt3D';
 export function GallerySection() {
     const [images, setImages] = useState<GalleryItem[] | null>(null);
     const [settings, setSettings] = useState<GallerySettings | null>(null);
-<<<<<<< HEAD
     /*
      * THE CHOSEN CATEGORY LIVES IN THE ADDRESS (`/gallery?category=Conferences`),
      * so a filtered gallery can be shared, bookmarked and reloaded. `replace`,
@@ -60,9 +46,6 @@ export function GallerySection() {
         if (!value || value === 'All') next.delete('category'); else next.set('category', value);
         setParams(next, { replace: true });
     };
-=======
-    const [activeFilter, setActiveFilter] = useState('All');
->>>>>>> 8020f5d (Initial commit for website frontend)
     const [expanded, setExpanded] = useState(false);
 
     useEffect(() => {
@@ -118,27 +101,12 @@ export function GallerySection() {
         ? []
         : (settings?.categories || []);
 
-<<<<<<< HEAD
-=======
-    /*
-     * THE BAND SAYING WHAT THIS PAGE IS.
-     *
-     * `/events` is upcoming events only, and it points here for the rest.
-     * A visitor who follows that link arrives at a grid of photographs with
-     * nothing confirming they are in the right place — so the page says so,
-     * in the editor's words, and the card can be removed like any other.
-     */
-    const past = settings?.pastEvents;
-    const showPast = !sectionHidden(settings?.sections, 'gallery.pastEvents')
-        && !!(past?.enabled && (past.title || past.subtitle));
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     /* A card's rows go with the card: removing it takes them off the page
        too, which is what the collapsed strip in the CMS says it will do. */
     const rowsOf = (key: string) =>
         (sectionHidden(settings?.sections, key) ? [] : sectionFields(settings?.sections, key));
 
-<<<<<<< HEAD
     /*
      * Each card's rows are drawn WITH that card now — see `SectionFields`.
      * They were pooled here and printed once under the grid, so a field added
@@ -170,20 +138,6 @@ export function GallerySection() {
 
     return (
         <section className="w-full py-10 sm:py-16 md:py-24 dot-band relative overflow-hidden font-sans">
-=======
-    const ownRows = [
-        ...rowsOf('gallery.categories'),
-        ...rowsOf('gallery.paging'),
-        ...rowsOf('gallery.detail'),
-        ...rowsOf('gallery.pastEvents'),
-        ...(settings?.extraFields || []),
-    ];
-    const noteLines = settings?.noteLines || [];
-    const hasIntro = !!(settings?.badgeText || settings?.heading || settings?.description);
-
-    return (
-        <section className="w-full py-16 md:py-24 dot-band relative overflow-hidden font-sans">
->>>>>>> 8020f5d (Initial commit for website frontend)
 
             {/* Decorative only — not authored. */}
             <div className="absolute top-0 right-0 w-1/3 h-full -z-10 opacity-30 pointer-events-none">
@@ -203,11 +157,7 @@ export function GallerySection() {
 
                 {/* ---- intro and collage ---- */}
                 {(hasIntro || collage.length > 0) && (
-<<<<<<< HEAD
                     <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 items-center mb-12 sm:mb-24">
-=======
-                    <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 items-center mb-24">
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                         {hasIntro && (
                             <div className={`w-full ${collage.length ? 'lg:w-5/12' : ''} relative`}>
@@ -220,11 +170,7 @@ export function GallerySection() {
                                 )}
 
                                 {(settings?.heading || settings?.headingHighlight) && (
-<<<<<<< HEAD
                                     <h2 className={`${SECTION_HEADING} text-[#111827] mb-4 sm:mb-6 break-words`}>
-=======
-                                    <h2 className={`${SECTION_HEADING} text-[#111827] mb-6`}>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         {settings.heading}
                                         {settings.headingHighlight && (
                                             <> <span className="text-brand-600">{settings.headingHighlight}</span></>
@@ -233,16 +179,11 @@ export function GallerySection() {
                                 )}
 
                                 {settings?.description && (
-<<<<<<< HEAD
                                     <p className={`${SECTION_LEDE} text-gray-500 ${BAND_MEASURE}`}>
-=======
-                                    <p className={`${SECTION_LEDE} text-gray-500 max-w-xl`}>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         {settings.description}
                                     </p>
                                 )}
 
-<<<<<<< HEAD
                                 {/* Each card's rows, with that card — the badge's
                                     under the badge, the heading's under the lede.
                                     `proseClass` because the type on this column
@@ -258,8 +199,6 @@ export function GallerySection() {
                                     />
                                 ))}
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 {noteLines.length > 0 && (
                                     /*
                                       Anchored to `left-full` — the outside edge of
@@ -278,7 +217,6 @@ export function GallerySection() {
                                     <div className="hidden xl:block absolute left-full ml-2 top-[13.5rem]
                                                     w-56 h-56 z-20 text-brand-600 pointer-events-none">
                                         <div className="relative w-full h-full">
-<<<<<<< HEAD
                                             {/*
                                               * No `fontFamily`. It named Caveat, which this
                                               * site never loads — `index.html` requests Poppins
@@ -289,12 +227,6 @@ export function GallerySection() {
                                               * the handwritten feel instead.
                                               */}
                                             <p className="absolute top-0 left-0 text-[1.5625rem] rotate-[-10deg] font-bold text-brand-600">
-=======
-                                            <p
-                                                className="absolute top-0 left-0 text-2xl rotate-[-10deg] font-bold text-brand-600"
-                                                style={{ fontFamily: "'Caveat', cursive, serif" }}
-                                            >
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 {noteLines.map((line, i) => (
                                                     <span key={i} className="block">{line}</span>
                                                 ))}
@@ -314,17 +246,11 @@ export function GallerySection() {
                         )}
 
                         {collage.length > 0 && (
-<<<<<<< HEAD
                             <div className={`w-full ${hasIntro ? 'lg:w-7/12' : ''} mt-8 sm:mt-12 lg:mt-0 relative`}>
                                 {/* Added isolate to prevent z-index issues with sticky header during scroll */}
                                 {/* Phones: a plain grid — the big photograph whole, the other two
                                     as square thumbnails — instead of the overlapping collage. */}
                                 <div className="relative grid grid-cols-2 gap-3 sm:block sm:h-[28.125rem] md:h-[31.25rem] w-full max-w-3xl mx-auto isolate">
-=======
-                            <div className={`w-full ${hasIntro ? 'lg:w-7/12' : ''} mt-12 lg:mt-0 relative`}>
-                                {/* Added isolate to prevent z-index issues with sticky header during scroll */}
-                                <div className="relative h-[28.125rem] md:h-[31.25rem] w-full max-w-3xl mx-auto isolate">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     {/* Fixed positions rather than a loop: the three frames
                                         are deliberately different sizes and angles. */}
                                     {/* Each frame links to its own item, like every other
@@ -332,48 +258,28 @@ export function GallerySection() {
                                         the biggest photograph on the page expects it to
                                         do what the small ones below it do. */}
                                     {collage[0] && (
-<<<<<<< HEAD
                                         <div className="relative col-span-2 aspect-[4/3] sm:aspect-auto sm:absolute sm:top-4 sm:left-0 w-full sm:w-3/5 sm:h-4/5 z-10 sm:-rotate-2 group transform-gpu">
                                             <Link
                                                 to={galleryPath(collage[0])}
                                                 aria-label={collage[0].title ? `View details of ${collage[0].title}` : 'View gallery item'}
                                                 className="block w-full h-full rounded-3xl overflow-hidden border-4 sm:border-[6px]
-=======
-                                        <div className="absolute top-4 left-0 w-3/5 h-4/5 z-10 -rotate-2 group transform-gpu">
-                                            <Link
-                                                to={`/gallery/${collage[0]._id}`}
-                                                aria-label={collage[0].title ? `View details of ${collage[0].title}` : 'View gallery item'}
-                                                className="block w-full h-full rounded-3xl overflow-hidden border-[6px]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                            border-white shadow-xl bg-gray-100 transform-gpu"
                                             >
                                                 <CmsMediaFrame
                                                     media={collage[0].media}
                                                     priority
                                                     width={520}
-<<<<<<< HEAD
                                                     className="max-sm:!object-contain group-hover:scale-105 transition-transform duration-700 transform-gpu"
-=======
-                                                    className="group-hover:scale-105 transition-transform duration-700 transform-gpu"
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 />
                                             </Link>
                                         </div>
                                     )}
                                     {collage[1] && (
-<<<<<<< HEAD
                                         <div className="relative aspect-square sm:aspect-auto sm:absolute sm:-top-4 sm:right-4 w-full sm:w-[42%] sm:h-[45%] z-20 sm:rotate-2 group transform-gpu">
                                             <Link
                                                 to={galleryPath(collage[1])}
                                                 aria-label={collage[1].title ? `View details of ${collage[1].title}` : 'View gallery item'}
                                                 className="block w-full h-full rounded-3xl overflow-hidden border-4 sm:border-[6px]
-=======
-                                        <div className="absolute -top-4 right-4 w-[42%] h-[45%] z-20 rotate-2 group transform-gpu">
-                                            <Link
-                                                to={`/gallery/${collage[1]._id}`}
-                                                aria-label={collage[1].title ? `View details of ${collage[1].title}` : 'View gallery item'}
-                                                className="block w-full h-full rounded-3xl overflow-hidden border-[6px]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                            border-white shadow-xl bg-gray-100 transform-gpu"
                                             >
                                                 <CmsMediaFrame
@@ -385,19 +291,11 @@ export function GallerySection() {
                                         </div>
                                     )}
                                     {collage[2] && (
-<<<<<<< HEAD
                                         <div className="relative aspect-square sm:aspect-auto sm:absolute sm:bottom-4 sm:right-0 w-full sm:w-[45%] sm:h-[45%] z-30 sm:-rotate-1 group transform-gpu">
                                             <Link
                                                 to={galleryPath(collage[2])}
                                                 aria-label={collage[2].title ? `View details of ${collage[2].title}` : 'View gallery item'}
                                                 className="block w-full h-full rounded-3xl overflow-hidden border-4 sm:border-[6px]
-=======
-                                        <div className="absolute bottom-4 right-0 w-[45%] h-[45%] z-30 -rotate-1 group transform-gpu">
-                                            <Link
-                                                to={`/gallery/${collage[2]._id}`}
-                                                aria-label={collage[2].title ? `View details of ${collage[2].title}` : 'View gallery item'}
-                                                className="block w-full h-full rounded-3xl overflow-hidden border-[6px]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                            border-white shadow-xl bg-gray-100 transform-gpu"
                                             >
                                                 <CmsMediaFrame
@@ -414,7 +312,6 @@ export function GallerySection() {
                     </div>
                 )}
 
-<<<<<<< HEAD
                 {/* ---- filter chips ---- */}
                 {categories.length > 0 && (
                     /* One swipeable row on a phone (the chips stacked one per line
@@ -422,50 +319,13 @@ export function GallerySection() {
                     <div className="-mx-5 mb-7 flex snap-x items-center gap-2.5 overflow-x-auto px-5 pb-1
                                     [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
                                     sm:mx-0 sm:mb-12 sm:flex-wrap sm:justify-center sm:gap-3 sm:overflow-visible sm:px-0">
-=======
-                {/* ---- the past-events band ---- */}
-                {showPast && (
-                    <Reveal>
-                        <div className="mb-10 flex flex-col gap-4 rounded-2xl border border-brand-100
-                                        bg-white/80 px-6 py-5 shadow-[0_18px_46px_-30px_rgb(28_46_104/0.45)]
-                                        sm:flex-row sm:items-center sm:gap-5">
-                            <span className="flex h-12 w-12 shrink-0 items-center justify-center
-                                             rounded-full bg-brand-50 text-brand-600">
-                                <CmsIcon name={past?.icon} size={22} fallback="calendar-days" />
-                            </span>
-
-                            <div className="min-w-0">
-                                {past?.title && (
-                                    <p className="text-[1.375rem] font-extrabold text-brand-800">
-                                        {past.title}
-                                    </p>
-                                )}
-                                {past?.subtitle && (
-                                    <p className="mt-1 text-[1.125rem] font-medium leading-relaxed text-gray-600">
-                                        {past.subtitle}
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-                    </Reveal>
-                )}
-
-                {/* ---- filter chips ---- */}
-                {categories.length > 0 && (
-                    <div className="flex flex-wrap items-center justify-center gap-3 mb-12">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         {[{ label: 'All', icon: '' }, ...categories].map((filter, index) => (
                             <button
                                 key={index}
                                 onClick={() => { setActiveFilter(filter.label); setExpanded(false); }}
-<<<<<<< HEAD
                                 className={`flex shrink-0 snap-start items-center space-x-2 sm:space-x-2.5 px-4 sm:px-7 py-2.5 sm:py-3
                                             rounded-full text-[1.05rem] sm:text-[1.25rem] font-semibold whitespace-nowrap
                                             transition-all duration-200 border active:scale-95 ${
-=======
-                                className={`flex items-center space-x-2.5 px-7 py-3 rounded-full text-[1.25rem] font-semibold
-                                            transition-all duration-200 border ${
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     activeFilter === filter.label
                                         ? 'bg-brand-800 border-brand-800 text-white shadow-md'
                                         : 'bg-white border-gray-200 text-brand-800 hover:border-brand-800 hover:bg-brand-50'
@@ -485,7 +345,6 @@ export function GallerySection() {
                     </div>
                 )}
 
-<<<<<<< HEAD
                 {/* The chips' own rows, with the chips — see `SectionFields`.
 
                     `align="center"` because the rail above them is centred, and
@@ -506,13 +365,6 @@ export function GallerySection() {
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8 sm:mb-12">
                         {Array.from({ length: 8 }).map((_, i) => (
                             <div key={i} className="rounded-2xl h-56 sm:h-72 bg-gray-100 animate-pulse border border-gray-200" />
-=======
-                {/* ---- grid ---- */}
-                {loading ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-                        {Array.from({ length: 8 }).map((_, i) => (
-                            <div key={i} className="rounded-2xl h-72 bg-gray-100 animate-pulse border border-gray-200" />
->>>>>>> 8020f5d (Initial commit for website frontend)
                         ))}
                     </div>
                 ) : visible.length === 0 ? (
@@ -523,11 +375,7 @@ export function GallerySection() {
                                 .replace('{category}', activeFilter))}
                     </p>
                 ) : (
-<<<<<<< HEAD
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8 sm:mb-12">
-=======
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         {visible.map((card, i) => (
                             /* Staggered across the row, capped so the last tile of a
                                long gallery never looks like it failed to load. */
@@ -540,11 +388,7 @@ export function GallerySection() {
                                       whose picture is what everyone taps.
                                     */}
                                     <Link
-<<<<<<< HEAD
                                         to={galleryPath(card)}
-=======
-                                        to={`/gallery/${card._id}`}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         aria-label={card.title ? `View details of ${card.title}` : 'View gallery item'}
                                         className="bg-white rounded-[1.25rem] overflow-hidden h-full
                                                    border border-brand-100/70
@@ -555,7 +399,6 @@ export function GallerySection() {
                                                    focus-visible:ring-offset-2
                                                    flex flex-col group"
                                     >
-<<<<<<< HEAD
                                 {/*
                                   * ONE SHAPE FOR EVERY COVER.
                                   *
@@ -569,9 +412,6 @@ export function GallerySection() {
                                   * as four unrelated crops.
                                   */}
                                 <div className="w-full aspect-[4/3] relative overflow-hidden bg-gray-50 p-1">
-=======
-                                <div className="w-full h-48 relative overflow-hidden bg-gray-50 p-1">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     <div className="w-full h-full rounded-t-2xl overflow-hidden relative">
                                         <CmsMediaFrame
                                             media={card.media}
@@ -579,7 +419,6 @@ export function GallerySection() {
                                             className="group-hover:scale-105 transition-transform duration-500 transform-gpu"
                                         />
 
-<<<<<<< HEAD
                                         {/* How many photographs are inside the album —
                                             the cover plus its photos. Only when there
                                             is more than the cover to open. */}
@@ -606,8 +445,6 @@ export function GallerySection() {
                                             </span>
                                         )}
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         {/* NO CATEGORY CHIP.
 
                                             It printed a word over the middle of
@@ -618,7 +455,6 @@ export function GallerySection() {
                                     </div>
                                 </div>
 
-<<<<<<< HEAD
                                 <div className="p-3 sm:p-5 flex flex-col flex-grow">
                                     {/*
                                       * A HEADING ON EVERY CARD, even an untitled one.
@@ -686,45 +522,6 @@ export function GallerySection() {
                                             View <ArrowRight size={15} />
                                         </span>
                                     </div>
-=======
-                                <div className="p-5 flex flex-col flex-grow">
-                                    {card.title && (
-                                        <h3 className="text-[1.3125rem] font-extrabold text-[#111827] mb-4 leading-snug
-                                                       line-clamp-2 group-hover:text-brand-600 transition-colors">
-                                            {card.title}
-                                        </h3>
-                                    )}
-
-                                    {(card.eventDate || card.location) && (
-                                        <div className="mt-auto flex items-center justify-between text-gray-500 text-[1.0625rem]
-                                                        font-medium border-t border-gray-50 pt-4">
-                                            {card.eventDate && (
-                                                <div className="flex items-center space-x-1.5">
-                                                    <Calendar size={16} className="text-gray-400" />
-                                                    <span>{card.eventDate}</span>
-                                                </div>
-                                            )}
-                                            {card.location && (
-                                                <div className="flex items-center space-x-1.5">
-                                                    <MapPin size={16} className="text-gray-400" />
-                                                    <span className="truncate max-w-[5.625rem]">{card.location}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* `mt-auto` on this rather than on the row above
-                                        when there are no details, so a card with
-                                        neither date nor location still puts the cue
-                                        at its foot and the grid stays even. */}
-                                    <span className={`${!card.eventDate && !card.location ? 'mt-auto pt-4' : 'mt-3'}
-                                                     inline-flex items-center gap-1.5 text-brand-600
-                                                     text-[1rem] font-extrabold uppercase tracking-widest
-                                                     opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100
-                                                     transition-opacity duration-300`}>
-                                        View details <ArrowRight size={15} />
-                                    </span>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         </div>
                                     </Link>
                                 </Tilt3D>
@@ -735,19 +532,11 @@ export function GallerySection() {
 
                 {/* Expands in place rather than navigating: there is no second page. */}
                 {hasMore && !expanded && settings?.viewMoreLabel && (
-<<<<<<< HEAD
                     <div className="flex justify-center mt-8 sm:mt-12">
                         <button
                             onClick={() => setExpanded(true)}
                             className="flex items-center space-x-2 bg-white border-2 border-brand-100 hover:border-brand-200
                                        text-brand-700 hover:bg-brand-50 px-6 sm:px-8 py-3 rounded-full font-bold transition-all shadow-sm"
-=======
-                    <div className="flex justify-center mt-12">
-                        <button
-                            onClick={() => setExpanded(true)}
-                            className="flex items-center space-x-2 bg-white border-2 border-brand-100 hover:border-brand-200
-                                       text-brand-700 hover:bg-brand-50 px-8 py-3 rounded-full font-bold transition-all shadow-sm"
->>>>>>> 8020f5d (Initial commit for website frontend)
                         >
                             <Grid3x3 size={16} />
                             <span>{settings.viewMoreLabel}</span>
@@ -755,7 +544,6 @@ export function GallerySection() {
                     </div>
                 )}
 
-<<<<<<< HEAD
                 {/* The paging card's own rows, then the PAGE's. Each card's
                     rows used to be pooled into one list printed here, so a field
                     added to the categories landed under the grid.
@@ -781,12 +569,6 @@ export function GallerySection() {
                 <div className={GRID_PROSE}>
                     <CmsExtraFields fields={ownRows} className="mt-16" />
                 </div>
-=======
-                {/* Fields the editor added to this page. Nothing is drawn
-                    when the list is empty. */}
-                {/* The editor's own rows, per card, then the page's own list. */}
-                <CmsExtraFields fields={ownRows} className="mt-16" />
->>>>>>> 8020f5d (Initial commit for website frontend)
             </div>
         </section>
     );

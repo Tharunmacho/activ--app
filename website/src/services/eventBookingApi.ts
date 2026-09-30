@@ -1,11 +1,8 @@
 import api, { unwrap } from './api';
 import { ENDPOINTS } from '@/config/api.config';
-<<<<<<< HEAD
 /* Which checkout is live, and how to start a hosted one — one implementation,
    shared with the membership flow so the two cannot disagree. */
 import { getPaymentConfig, startHostedBookingPayment } from './paymentApi';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * "Book Now" — seats at an event, bought by a guest or by a signed-in member.
@@ -270,23 +267,14 @@ export const payEventBooking = async (input: {
     );
 
 /**
-<<<<<<< HEAD
  * ==========================================================================
  * BOOK, THEN PAY — through the gateway, or through the stand-in
  * ==========================================================================
-=======
- * Book and pay, for a caller that just wants it done.
- *
- * Take the booking, authorise it, settle it. When a real gateway is connected
- * the middle step becomes its checkout and this helper is where that swap lands
- * — exactly as `payForMembership` is for memberships.
->>>>>>> 8020f5d (Initial commit for website frontend)
  *
  * A FREE EVENT NEVER REACHES THE GATEWAY. `payment.status` comes back
  * `not_required` and the booking is already confirmed; running it through the
  * payment steps would ask the server to verify a signature over a zero-rupee
  * order that was never created.
-<<<<<<< HEAD
  *
  * WHICH CHECKOUT IS THE SERVER'S ANSWER, not this file's. This used to call
  * `authorizeEventBooking` unconditionally — the mock stand-in — so the moment
@@ -304,16 +292,11 @@ export const bookAndPay = async (
     eventId: string,
     input: BookingRequest,
 ): Promise<EventBooking | null> => {
-=======
- */
-export const bookAndPay = async (eventId: string, input: BookingRequest) => {
->>>>>>> 8020f5d (Initial commit for website frontend)
     const booking = await createEventBooking(eventId, input);
     if (!booking?.bookingRef) throw new Error('The booking could not be started');
 
     if (booking.payment.status !== 'pending') return booking;
 
-<<<<<<< HEAD
     const config = await getPaymentConfig();
 
     if (config.mode === 'gateway') {
@@ -324,8 +307,6 @@ export const bookAndPay = async (eventId: string, input: BookingRequest) => {
         return null;
     }
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     const authorized = await authorizeEventBooking(booking.bookingRef);
     if (!authorized?.signature) throw new Error('The payment was not authorised');
 

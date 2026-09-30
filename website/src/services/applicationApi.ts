@@ -279,11 +279,7 @@ export const checkProfileCompletion = async (): Promise<{
   isComplete: boolean;
   completedForms: string[];
   totalFormsRequired: number;
-<<<<<<< HEAD
   memberType: 'business' | 'aspirant' | 'student';
-=======
-  memberType: 'business' | 'aspirant';
->>>>>>> 8020f5d (Initial commit for website frontend)
 }> => {
   const token = localStorage.getItem('token');
   
@@ -299,10 +295,7 @@ export const checkProfileCompletion = async (): Promise<{
   try {
     const completed: string[] = [];
     let isDoingBusiness = true;
-<<<<<<< HEAD
     let isStudent = false;
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     // Check Personal Form
     const personalRes = await apiFetch(`${API_BASE_URL}/members/my-profile`, {
@@ -325,10 +318,7 @@ export const checkProfileCompletion = async (): Promise<{
         if (data.data.doingBusiness === 'no' || data.data.doingBusiness === false) {
           isDoingBusiness = false;
         }
-<<<<<<< HEAD
         if (String(data.data.registrationType || '').toLowerCase() === 'student') isStudent = true;
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
         if (data.data.doingBusiness) {
           completed.push('Business Information');
         }
@@ -350,11 +340,7 @@ export const checkProfileCompletion = async (): Promise<{
       isComplete: completed.length === TOTAL_FORMS,
       completedForms: completed,
       totalFormsRequired: TOTAL_FORMS,
-<<<<<<< HEAD
       memberType: isDoingBusiness ? 'business' : isStudent ? 'student' : 'aspirant'
-=======
-      memberType: isDoingBusiness ? 'business' : 'aspirant'
->>>>>>> 8020f5d (Initial commit for website frontend)
     };
   } catch (error) {
     console.error('Error checking profile completion:', error);

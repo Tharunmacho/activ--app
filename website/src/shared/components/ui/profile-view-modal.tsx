@@ -369,12 +369,8 @@ const ProfileViewModal = ({ open, onClose, profile, loading }: ProfileViewModalP
                       Declaration
                     </h3>
                     <div className="grid grid-cols-1 gap-4">
-<<<<<<< HEAD
                       {profile?.sisterConcerns && !(String(profile?.doingBusiness) === 'false' || String(profile?.doingBusiness) === 'no'
                         || ['aspirant', 'student'].includes(String((profile as any)?.registrationType || (profile as any)?.memberType || '').toLowerCase())) && (
-=======
-                      {profile?.sisterConcerns && (
->>>>>>> 8020f5d (Initial commit for website frontend)
                         <div className="flex items-start gap-2">
                           <Building className="w-4 h-4 text-muted-foreground mt-1" />
                           <div>

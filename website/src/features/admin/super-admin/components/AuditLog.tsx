@@ -106,11 +106,7 @@ export default function AuditLog() {
 
     return (
         <div className="bg-white rounded-xl border">
-<<<<<<< HEAD
             <header className="px-4 sm:px-6 py-4 sm:py-5 border-b">
-=======
-            <header className="px-6 py-5 border-b">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 <h2 className={`${CARD_TITLE} text-slate-900`}>Audit log</h2>
                 <p className="text-[1.25rem] text-slate-500 mt-0.5">
                     {counts.all !== undefined
@@ -119,13 +115,8 @@ export default function AuditLog() {
                 </p>
             </header>
 
-<<<<<<< HEAD
             <div className="px-4 sm:px-6 py-4 border-b flex flex-wrap items-center gap-3">
                 <div className="relative flex-1 basis-full sm:basis-auto min-w-0 sm:min-w-[12.5rem]">
-=======
-            <div className="px-6 py-4 border-b flex flex-wrap items-center gap-3">
-                <div className="relative flex-1 min-w-[12.5rem]">
->>>>>>> 8020f5d (Initial commit for website frontend)
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                         value={query}
@@ -136,20 +127,12 @@ export default function AuditLog() {
                     />
                 </div>
 
-<<<<<<< HEAD
                 <div className="flex flex-wrap gap-2">
-=======
-                <div className="flex gap-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                     {categories.map(c => (
                         <button
                             key={c.key}
                             onClick={() => setCategory(c.key)}
-<<<<<<< HEAD
                             className={`min-h-10 px-3 py-2 rounded-lg text-[1.25rem] font-medium transition-colors ${
-=======
-                            className={`px-3 py-2 rounded-lg text-[1.25rem] font-medium transition-colors ${
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 category === c.key
                                     ? 'bg-blue-600 text-white'
                                     : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -171,17 +154,10 @@ export default function AuditLog() {
                     </p>
                 ) : (
                     entries.map(e => (
-<<<<<<< HEAD
                         <div key={e.id} className="px-4 sm:px-6 py-3.5 sm:py-4">
                             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-4">
                                 <div className="min-w-0">
                                     <p className="text-[1.25rem] text-slate-900 break-words">{e.summary || e.action}</p>
-=======
-                        <div key={e.id} className="px-6 py-4">
-                            <div className="flex items-start justify-between gap-4">
-                                <div className="min-w-0">
-                                    <p className="text-[1.25rem] text-slate-900">{e.summary || e.action}</p>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     <p className="text-[1.1875rem] text-slate-500 mt-1">
                                         {e.actorName || e.actorEmail}
                                         {e.actorRoleLabel && ` · ${e.actorRoleLabel}`}
@@ -189,20 +165,12 @@ export default function AuditLog() {
                                     </p>
                                 </div>
 
-<<<<<<< HEAD
                                 <div className="sm:text-right shrink-0 flex sm:block items-center gap-2">
-=======
-                                <div className="text-right shrink-0">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     <p className="text-[1.1875rem] text-slate-400 whitespace-nowrap">{when(e.createdAt)}</p>
                                     {/* A super admin acting on a tier's behalf is worth
                                         marking: the decision was not the region's own. */}
                                     {e.proxy && (
-<<<<<<< HEAD
                                         <span className="inline-flex items-center gap-1 mt-1 text-[1.0625rem]
-=======
-                                        <span className="inline-flex items-center gap-1 mt-1 text-[0.75rem]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                          bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">
                                             <ShieldAlert className="w-3 h-3" /> proxy
                                         </span>
@@ -215,11 +183,7 @@ export default function AuditLog() {
             </div>
 
             {(more || loading) && (
-<<<<<<< HEAD
                 <div className="px-4 sm:px-6 py-4 border-t">
-=======
-                <div className="px-6 py-4 border-t">
->>>>>>> 8020f5d (Initial commit for website frontend)
                     <button
                         onClick={() => load(page + 1, false)}
                         disabled={loading}

@@ -163,11 +163,7 @@ export default function ApplicantRegionFilter({
                         aria-label={LABELS[group.level]}
                         value={selection[group.level]}
                         onChange={(e) => pick(group.level, e.target.value)}
-<<<<<<< HEAD
                         className="h-10 sm:h-9 min-w-0 max-w-full flex-1 basis-[10rem] sm:flex-none sm:basis-auto rounded-lg border border-slate-200 bg-white px-2.5 text-[1.25rem]
-=======
-                        className="h-9 min-w-0 rounded-lg border border-slate-200 bg-white px-2.5 text-[1.25rem]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                    font-medium text-slate-700 outline-none transition-colors
                                    hover:border-slate-300 focus:border-blue-600 focus:ring-2
                                    focus:ring-blue-600/15"
@@ -187,11 +183,7 @@ export default function ApplicantRegionFilter({
                 <button
                     type="button"
                     onClick={() => onChange({ ...EMPTY_SELECTION })}
-<<<<<<< HEAD
                     className="inline-flex h-10 sm:h-9 items-center gap-1.5 rounded-lg border border-slate-200
-=======
-                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200
->>>>>>> 8020f5d (Initial commit for website frontend)
                                px-3 text-[1.25rem] font-semibold text-slate-500 transition-colors
                                hover:border-blue-600 hover:text-blue-600"
                 >

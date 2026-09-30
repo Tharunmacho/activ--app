@@ -93,11 +93,7 @@ export function MissionCarousel({
     if (!items.length) return null;
 
     return (
-<<<<<<< HEAD
         <section className="w-full py-12 sm:py-20 md:py-24 dot-band relative overflow-hidden font-sans">
-=======
-        <section className="w-full py-20 md:py-24 dot-band relative overflow-hidden font-sans">
->>>>>>> 8020f5d (Initial commit for website frontend)
             {/*
               Decorative depth. Two out-of-focus brand blooms drifting on
               different clocks, so the band behind the cards is never quite
@@ -110,26 +106,16 @@ export function MissionCarousel({
             </div>
 
             <div className={SCREEN_CONTAINER}>
-<<<<<<< HEAD
                 <Reveal className="flex flex-col items-center text-center mb-8 sm:mb-12 md:mb-16">
                     {eyebrow && (
                         <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-5">
-=======
-                <Reveal className="flex flex-col items-center text-center mb-12 md:mb-16">
-                    {eyebrow && (
-                        <div className="flex items-center gap-4 mb-5">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             <span className="h-px w-10 bg-brand-300" />
                             <span className={`${EYEBROW} text-brand-600`}>{eyebrow}</span>
                             <span className="h-px w-10 bg-brand-300" />
                         </div>
                     )}
                     {heading && (
-<<<<<<< HEAD
                         <h2 className={`${SECTION_HEADING} text-brand-800 break-words`}>{heading}</h2>
-=======
-                        <h2 className={`${SECTION_HEADING} text-brand-800`}>{heading}</h2>
->>>>>>> 8020f5d (Initial commit for website frontend)
                     )}
                 </Reveal>
 
@@ -145,13 +131,8 @@ export function MissionCarousel({
                                 >
                                     <Tilt3D className="h-full" intensity={8} lift={1.02}>
                                         <div
-<<<<<<< HEAD
                                             className="group h-full flex flex-col rounded-3xl sm:rounded-[1.75rem] bg-white
                                                        border border-brand-100 p-5 sm:p-7 md:p-8 text-center
-=======
-                                            className="group h-full flex flex-col rounded-[1.75rem] bg-white
-                                                       border border-brand-100 p-7 md:p-8 text-center
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                        shadow-[0_10px_40px_-12px_rgb(28_46_104/0.18)]
                                                        transition-shadow duration-500
                                                        hover:shadow-[0_28px_60px_-18px_rgb(28_46_104/0.35)]"
@@ -161,11 +142,7 @@ export function MissionCarousel({
                                                 the plate sits physically above the card
                                                 face and parallaxes against it. */}
                                             <div
-<<<<<<< HEAD
                                                 className="mx-auto mb-4 sm:mb-6 flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center
-=======
-                                                className="mx-auto mb-6 flex h-16 w-16 items-center justify-center
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                            rounded-2xl bg-gradient-to-br from-brand-50 to-brand-100
                                                            ring-1 ring-brand-200/60 transition-transform duration-500
                                                            group-hover:scale-110"
@@ -192,11 +169,7 @@ export function MissionCarousel({
 
                                             {/* The accent rule that grows on hover. */}
                                             <span
-<<<<<<< HEAD
                                                 className="mx-auto mt-5 sm:mt-7 h-1 w-10 rounded-full bg-brand-600
-=======
-                                                className="mx-auto mt-7 h-1 w-10 rounded-full bg-brand-600
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                            transition-all duration-500 group-hover:w-20"
                                             />
                                         </div>

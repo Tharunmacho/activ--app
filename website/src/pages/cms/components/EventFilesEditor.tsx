@@ -8,8 +8,9 @@ import { resolveMediaUrl } from '@/config/api.config';
  * Events Admin alike).
  *
  * Any common file (PDF agenda, Word, Excel, slides, image, ZIP, up to 20 MB)
- * and one YouTube / video link. What is saved here reaches:
- *   - the public event page (download list + embedded video)
+ * and one YouTube / video link. What is saved here reaches ONLY the people who
+ * book — never the public event page or the public API (`withJoinLink` in
+ * cms.service strips both, like the joining link):
  *   - the booking email (links, and files up to 8 MB attached)
  *   - WhatsApp (each PDF / office document sent as a file after the confirmation)
  */
@@ -63,7 +64,8 @@ export default function EventFilesEditor({
             </h3>
             <p className="mt-1 text-[1.05rem] text-slate-500 dark:text-neutral-400">
                 Upload the agenda or any file (PDF, Word, Excel, slides, image, ZIP — up to 20 MB) and add a YouTube link.
-                They appear on the event page, in the booking email, and PDFs/documents are sent on WhatsApp.
+                They go to the people who register: linked (and small files attached) in the booking email, and
+                PDFs/documents sent on WhatsApp. They are not shown on the public event page.
             </p>
 
             {/* Video */}

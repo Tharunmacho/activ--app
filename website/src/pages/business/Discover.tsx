@@ -28,11 +28,7 @@ import { useActiveCompanyStore } from "@/contexts/ActiveCompanyContext";
 */
 import { dashboardPathFor } from '@/features/member/memberAccess';
 
-<<<<<<< HEAD
 import { CARD_TITLE } from './BusinessUI';
-=======
-import { CARD_TITLE } from '@/components/layout/appTypography';
->>>>>>> 8020f5d (Initial commit for website frontend)
 /**
  * Discover — the website's copy of `DiscoverScreen.tsx`.
  *
@@ -107,11 +103,7 @@ type DiscoverFilter = 'all' | 'companies' | 'products';
 
 /** One control style for the three region dropdowns. */
 const REGION_SELECT =
-<<<<<<< HEAD
     'h-10 flex-1 min-w-[8.5rem] max-w-full sm:flex-none sm:max-w-[12rem] rounded-lg border border-slate-200 bg-white px-3 '
-=======
-    'h-10 min-w-[8.5rem] max-w-[12rem] rounded-lg border border-slate-200 bg-white px-3 '
->>>>>>> 8020f5d (Initial commit for website frontend)
     + 'text-[1.25rem] font-medium text-slate-700 hover:border-slate-300 focus:outline-none '
     + 'focus:ring-2 focus:ring-blue-500 transition-colors disabled:bg-slate-50 '
     + 'disabled:text-slate-400';
@@ -143,19 +135,11 @@ const CountOnly = ({ companies, products, term, regionLabel, onJoin }: {
     regionLabel: string;
     onJoin: () => void;
 }) => (
-<<<<<<< HEAD
     <Card className="!p-5 sm:!p-8 text-center">
         <span className="mx-auto mb-3 sm:mb-4 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-blue-50">
             <Compass className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600" />
         </span>
         <p className="text-[1.625rem] sm:text-[2.125rem] font-bold text-slate-900 break-words">
-=======
-    <Card className="p-8 text-center">
-        <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
-            <Compass className="h-7 w-7 text-blue-600" />
-        </span>
-        <p className="text-[2.125rem] font-bold text-slate-900">
->>>>>>> 8020f5d (Initial commit for website frontend)
             {companies} {companies === 1 ? 'company' : 'companies'}
             {products > 0 ? ` · ${products} ${products === 1 ? 'product' : 'products'}` : ''}
         </p>
@@ -164,11 +148,7 @@ const CountOnly = ({ companies, products, term, regionLabel, onJoin }: {
             Membership opens the directory — names, catalogues and contact details for
             every one of them.
         </p>
-<<<<<<< HEAD
         <Button className="mt-5 sm:mt-6 h-11 w-full sm:w-auto bg-blue-600 hover:bg-blue-700" onClick={onJoin}>
-=======
-        <Button className="mt-6 bg-blue-600 hover:bg-blue-700" onClick={onJoin}>
->>>>>>> 8020f5d (Initial commit for website frontend)
             Become a member
         </Button>
     </Card>
@@ -635,11 +615,7 @@ const Discover = () => {
                         : trustedIds.has(String(item._id))
                             ? 'On your trust list — press to remove'
                             : 'Add to your trust list'}
-<<<<<<< HEAD
                     className={`absolute right-2 top-2 sm:right-3 sm:top-3 z-10 flex h-10 w-10 sm:h-9 sm:w-9 items-center justify-center
-=======
-                    className={`absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 rounded-full border transition-colors
                                 disabled:opacity-60 disabled:cursor-not-allowed ${
                         trustedIds.has(String(item._id))
@@ -653,28 +629,16 @@ const Discover = () => {
                     />
                 </button>
 
-<<<<<<< HEAD
                 <div className="flex items-start gap-3 sm:gap-4 pr-10">
-=======
-                <div className="flex items-start gap-4 pr-10">
->>>>>>> 8020f5d (Initial commit for website frontend)
                     {item.logo ? (
                         <img
                             src={resolveMediaUrl(item.logo)}
                             alt={item.businessName || 'Business'}
-<<<<<<< HEAD
                             className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl object-contain bg-white border border-slate-200 shrink-0"
                         />
                     ) : (
                         <span className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
                             <Building2 className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" />
-=======
-                            className="w-14 h-14 rounded-xl object-cover shrink-0"
-                        />
-                    ) : (
-                        <span className="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-                            <Building2 className="w-7 h-7 text-blue-600" />
->>>>>>> 8020f5d (Initial commit for website frontend)
                         </span>
                     )}
 
@@ -721,11 +685,7 @@ const Discover = () => {
                         </button>
                         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[1.25rem]
                                       text-slate-500">
-<<<<<<< HEAD
                             <span className="min-w-0 break-words">{item.businessType || '—'}</span>
-=======
-                            <span>{item.businessType || '—'}</span>
->>>>>>> 8020f5d (Initial commit for website frontend)
                             {/* No line at all when nobody has trusted them yet.
                                 “0 members trust this” is a fact about a company
                                 that has done nothing wrong, printed as though it
@@ -743,11 +703,7 @@ const Discover = () => {
                         </p>
 
                         <dl className="mt-3 space-y-1.5 text-[1.25rem]">
-<<<<<<< HEAD
                             <div className="flex items-center gap-2 text-slate-600 min-w-0">
-=======
-                            <div className="flex items-center gap-2 text-slate-600">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
                                 <span className="truncate">
                                     {item.location || 'Location not set'}
@@ -765,11 +721,7 @@ const Discover = () => {
                             ) : null}
 
                             {item.email ? (
-<<<<<<< HEAD
                                 <div className="flex items-center gap-2 text-slate-600 min-w-0">
-=======
-                                <div className="flex items-center gap-2 text-slate-600">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     <Mail className="w-4 h-4 text-slate-400 shrink-0" />
                                     <a href={`mailto:${item.email}`} className="truncate hover:underline">
                                         {item.email}
@@ -781,11 +733,7 @@ const Discover = () => {
                 </div>
 
                 {item.description ? (
-<<<<<<< HEAD
                     <p className="text-[1.25rem] text-slate-600 mt-3 sm:mt-4 line-clamp-2 break-words">{item.description}</p>
-=======
-                    <p className="text-[1.25rem] text-slate-600 mt-4 line-clamp-2">{item.description}</p>
->>>>>>> 8020f5d (Initial commit for website frontend)
                 ) : null}
 
                 {/*
@@ -808,11 +756,7 @@ const Discover = () => {
                   the member, which is the id this screen actually has; the
                   server is the authority either way.
                 */}
-<<<<<<< HEAD
                 <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-2">
-=======
-                <div className="mt-4 flex items-center gap-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                     {isOwnCompany(item) ? (
                         <span className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200
                                          bg-blue-50 px-3 py-1.5 text-[1.125rem] font-semibold text-blue-700">
@@ -825,15 +769,9 @@ const Discover = () => {
                             variant="outline"
                             disabled={trustPending === String(item._id)}
                             onClick={() => toggleTrust(String(item._id), item.businessName || 'Company')}
-<<<<<<< HEAD
                             className={`flex-1 sm:flex-none h-10 sm:h-9 ${trustedIds.has(String(item._id))
                                 ? 'border-blue-600 text-blue-700 hover:bg-blue-50'
                                 : 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}
-=======
-                            className={trustedIds.has(String(item._id))
-                                ? 'border-blue-600 text-blue-700 hover:bg-blue-50'
-                                : 'border-slate-200 text-slate-700 hover:bg-slate-50'}
->>>>>>> 8020f5d (Initial commit for website frontend)
                         >
                             {trustedIds.has(String(item._id))
                                 ? <ShieldCheck className="h-4 w-4 mr-1.5" />
@@ -845,11 +783,7 @@ const Discover = () => {
                     <Button
                         size="sm"
                         variant="outline"
-<<<<<<< HEAD
                         className="flex-1 sm:flex-none h-10 sm:h-9 border-slate-200 text-slate-700 hover:bg-slate-50"
-=======
-                        className="border-slate-200 text-slate-700 hover:bg-slate-50"
->>>>>>> 8020f5d (Initial commit for website frontend)
                         onClick={() => navigate(`/business/company/${item._id}`)}
                     >
                         View company
@@ -867,11 +801,7 @@ const Discover = () => {
                   the rest.
                 */}
                 {ordered.length > 0 ? (
-<<<<<<< HEAD
                     <div className="mt-auto border-t border-slate-200 pt-4 sm:pt-5">
-=======
-                    <div className="mt-auto border-t border-slate-200 pt-5">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         <p className="mb-3 text-[1.1875rem] font-semibold uppercase tracking-wider text-slate-500">
                             {hasQuery && !companyMatchesQuery(item)
                                 ? `Matching Products (${ordered.length})`
@@ -884,11 +814,7 @@ const Discover = () => {
                                 return (
                                     <div
                                         key={String(prod?._id || index)}
-<<<<<<< HEAD
                                         className={`flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-lg border ${isMatch
-=======
-                                        className={`flex items-center gap-3 p-3 rounded-lg border ${isMatch
->>>>>>> 8020f5d (Initial commit for website frontend)
                                             ? 'bg-blue-50 border-blue-200'
                                             : 'bg-slate-50 border-slate-200'
                                             }`}
@@ -897,17 +823,10 @@ const Discover = () => {
                                             <img
                                                 src={resolveMediaUrl(prod.imageUrl)}
                                                 alt={prod?.name || 'Item'}
-<<<<<<< HEAD
                                                 className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg object-cover shrink-0"
                                             />
                                         ) : (
                                             <span className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-=======
-                                                className="w-11 h-11 rounded-lg object-cover shrink-0"
-                                            />
-                                        ) : (
-                                            <span className="w-11 h-11 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 <Package className="w-5 h-5 text-blue-600" />
                                             </span>
                                         )}
@@ -964,11 +883,7 @@ const Discover = () => {
             subtitle="Search companies and products across the member network"
             width="wide"
         >
-<<<<<<< HEAD
             <div className="space-y-4 sm:space-y-6">
-=======
-            <div className="space-y-6">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 {/*
                     Search and filters as one sticky toolbar. Results are two
                     columns from xl up — this was a single centred column capped
@@ -986,11 +901,7 @@ const Discover = () => {
                   “Search any pro…”. It gets a row of its own, at full width,
                   because it is the control somebody actually types in.
                 */}
-<<<<<<< HEAD
                 <Card className="md:sticky md:top-0 md:z-10 flex flex-col gap-3 sm:gap-4">
-=======
-                <Card className="sticky top-0 z-10 flex flex-col gap-4">
->>>>>>> 8020f5d (Initial commit for website frontend)
                     <div className="relative w-full">
                         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                         <Input
@@ -1004,11 +915,7 @@ const Discover = () => {
                             <button
                                 type="button"
                                 onClick={() => setSearchQuery("")}
-<<<<<<< HEAD
                                 className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-600"
-=======
-                                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 aria-label="Clear search"
                             >
                                 <X className="w-4 h-4" />
@@ -1070,11 +977,7 @@ const Discover = () => {
                         Nadu" read as one run of six controls. */}
                     <span aria-hidden="true" className="hidden h-6 w-px bg-slate-200 sm:block" />
 
-<<<<<<< HEAD
                     <div className="flex w-full sm:w-auto flex-wrap items-center gap-2">
-=======
-                    <div className="flex flex-wrap items-center gap-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         <select
                             aria-label="State"
                             value={region.state}
@@ -1153,11 +1056,7 @@ const Discover = () => {
                             onClick={() => setViewMode('grid')}
                             aria-label="Card view"
                             aria-pressed={viewMode === 'grid'}
-<<<<<<< HEAD
                             className={`flex min-h-9 min-w-9 items-center justify-center rounded-md px-2.5 py-1.5 transition-colors ${viewMode === 'grid'
-=======
-                            className={`rounded-md px-2.5 py-1.5 transition-colors ${viewMode === 'grid'
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 ? 'bg-blue-50 text-blue-600'
                                 : 'text-slate-500 hover:bg-slate-100'}`}
                         >
@@ -1168,11 +1067,7 @@ const Discover = () => {
                             onClick={() => setViewMode('list')}
                             aria-label="List view"
                             aria-pressed={viewMode === 'list'}
-<<<<<<< HEAD
                             className={`flex min-h-9 min-w-9 items-center justify-center rounded-md px-2.5 py-1.5 transition-colors ${viewMode === 'list'
-=======
-                            className={`rounded-md px-2.5 py-1.5 transition-colors ${viewMode === 'list'
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 ? 'bg-blue-50 text-blue-600'
                                 : 'text-slate-500 hover:bg-slate-100'}`}
                         >
@@ -1242,11 +1137,7 @@ const Discover = () => {
                     />
                 ) : companyResults.length > 0 ? (
                     <>
-<<<<<<< HEAD
                         <h2 className={`${CARD_TITLE} text-slate-800 break-words`}>
-=======
-                        <h2 className={`${CARD_TITLE} text-slate-800`}>
->>>>>>> 8020f5d (Initial commit for website frontend)
                             {/* Not “Your Business” any more: with no search term this
                                 is the region, not the member's own company. */}
                             {hasQuery
@@ -1264,11 +1155,7 @@ const Discover = () => {
                         */}
                         {viewMode === 'grid' ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3
-<<<<<<< HEAD
                                             2xl:grid-cols-4 gap-3 sm:gap-4">
-=======
-                                            2xl:grid-cols-4 gap-4">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 {companyResults.map(renderCompanyCard)}
                             </div>
                         ) : (
@@ -1290,39 +1177,24 @@ const Discover = () => {
                                             <button
                                                 type="button"
                                                 onClick={() => navigate(`/business/company/${item._id}`)}
-<<<<<<< HEAD
                                                 className="flex w-full items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3.5 text-left
-=======
-                                                className="flex w-full items-center gap-4 px-5 py-3.5 text-left
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                            transition-colors hover:bg-slate-50"
                                             >
                                                 {item.logo ? (
                                                     <img
                                                         src={resolveMediaUrl(item.logo)}
                                                         alt=""
-<<<<<<< HEAD
                                                         className="h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-lg object-contain bg-white border border-slate-200"
                                                     />
                                                 ) : (
                                                     <span className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center
-=======
-                                                        className="h-11 w-11 shrink-0 rounded-lg object-cover"
-                                                    />
-                                                ) : (
-                                                    <span className="flex h-11 w-11 shrink-0 items-center
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                                      justify-center rounded-lg bg-blue-50">
                                                         <Building2 className="h-5 w-5 text-blue-600" />
                                                     </span>
                                                 )}
 
                                                 <span className="min-w-0 flex-1">
-<<<<<<< HEAD
                                                     <span className="flex min-w-0 items-center gap-1.5">
-=======
-                                                    <span className="flex items-center gap-1.5">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                         <span className="truncate text-[1.3125rem] font-bold
                                                                          text-slate-900">
                                                             {item.businessName || 'Business'}

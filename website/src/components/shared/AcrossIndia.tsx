@@ -2,14 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, ChevronDown, Globe2, MapPin } from 'lucide-react';
 import { Reveal } from '@/components/shared/Reveal';
-<<<<<<< HEAD
 import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
 import { getRegionMap, zoneName, type RegionMapEntry } from '@/services/cmsRegionsApi';
 import { getSiteSettings, getContactInfo, EMPTY_SITE, type SiteSettings } from '@/services/cmsApi';
-=======
-import { getRegionMap, type RegionMapEntry } from '@/services/cmsRegionsApi';
-import { getSiteSettings, EMPTY_SITE, type SiteSettings } from '@/services/cmsApi';
->>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * ============================================================================
@@ -56,7 +51,6 @@ import { getSiteSettings, EMPTY_SITE, type SiteSettings } from '@/services/cmsAp
  * asked for, and a band that says "could not load the regions" is an apology
  * for something the reader was not waiting on.
  */
-<<<<<<< HEAD
 /**
  * `variant="contact"` is the Contact page's copy of this band.
  *
@@ -78,9 +72,6 @@ export function AcrossIndia({ variant = 'pages' }: { variant?: 'pages' | 'contac
     const contact = variant === 'contact';
     /* Where a tile goes: the page, or that page's contact section. */
     const hash = contact ? '#contact' : '';
-=======
-export function AcrossIndia() {
->>>>>>> 8020f5d (Initial commit for website frontend)
     const [regions, setRegions] = useState<RegionMapEntry[] | null>(null);
     const [openKey, setOpenKey] = useState('');
 
@@ -98,13 +89,9 @@ export function AcrossIndia() {
      * Header & Footer screen changes it everywhere, which is what an editor
      * changing site furniture means.
      */
-<<<<<<< HEAD
     const [band, setBand] = useState<SiteSettings['acrossIndia']>(
         variant === 'contact' ? { ...EMPTY_SITE.acrossIndia, ...CONTACT_DEFAULTS } : EMPTY_SITE.acrossIndia,
     );
-=======
-    const [band, setBand] = useState<SiteSettings['acrossIndia']>(EMPTY_SITE.acrossIndia);
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     useEffect(() => {
         let cancelled = false;
@@ -117,7 +104,6 @@ export function AcrossIndia() {
         // request. A failure leaves the shipped wording rather than a band
         // of tiles with no heading.
         getSiteSettings()
-<<<<<<< HEAD
             .then((site) => {
                 if (cancelled || !site?.acrossIndia) return;
                 /* On the Contact page only the HIDDEN list comes from the site
@@ -146,13 +132,6 @@ export function AcrossIndia() {
 
         return () => { cancelled = true; };
     }, [contact]);
-=======
-            .then((site) => { if (!cancelled && site?.acrossIndia) setBand(site.acrossIndia); })
-            .catch(() => { /* the shipped wording stands */ });
-
-        return () => { cancelled = true; };
-    }, []);
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     /*
      * Regions the editor left out of this BAND.
@@ -184,39 +163,25 @@ export function AcrossIndia() {
     const openStates = (open?.states || []).filter((s) => s.hasPage);
 
     return (
-<<<<<<< HEAD
         <section className="w-full border-t border-gray-100 bg-gray-50/60 py-10 sm:py-14 md:py-16">
             {/* On the Contact page, the Contact page's own column — the tiles
                 used to run ~70px past the form and the cards above them on
                 each side, because this band has its own wider width. */}
             <div className={contact ? SCREEN_CONTAINER : 'mx-auto w-full max-w-[90rem] px-4 sm:px-6 lg:px-10'}>
                 <Reveal as="header" className="mb-6 sm:mb-8 text-center">
-=======
-        <section className="w-full border-t border-gray-100 bg-gray-50/60 py-14 md:py-16">
-            <div className="mx-auto w-full max-w-[90rem] px-6 lg:px-10">
-                <Reveal as="header" className="mb-8 text-center">
->>>>>>> 8020f5d (Initial commit for website frontend)
                     {band?.eyebrow && (
                         <p className="text-[1.0625rem] font-bold uppercase tracking-[0.18em] text-brand-500">
                             {band.eyebrow}
                         </p>
                     )}
                     {band?.heading && (
-<<<<<<< HEAD
                         <h2 className="mt-1.5 text-[1.625rem] sm:text-[2.25rem] font-black tracking-tight break-words
-=======
-                        <h2 className="mt-1.5 text-[1.875rem] sm:text-[2.25rem] font-black tracking-tight
->>>>>>> 8020f5d (Initial commit for website frontend)
                                        text-brand-900">
                             {band.heading}
                         </h2>
                     )}
                     {band?.subtitle && (
-<<<<<<< HEAD
                         <p className="mx-auto mt-3 max-w-2xl text-[1.0625rem] sm:text-[1.125rem] font-medium
-=======
-                        <p className="mx-auto mt-3 max-w-2xl text-[1.125rem] font-medium
->>>>>>> 8020f5d (Initial commit for website frontend)
                                       leading-relaxed text-gray-600">
                             {band.subtitle}
                         </p>
@@ -224,11 +189,7 @@ export function AcrossIndia() {
                 </Reveal>
 
                 <Reveal>
-<<<<<<< HEAD
                     <div className={`grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3 ${contact ? '2xl:grid-cols-6' : 'xl:grid-cols-6'}`}>
-=======
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         {/*
                           * THE COUNTRY FIRST, and drawn as the tier above rather
                           * than as a sixth region — solid where the others are
@@ -237,13 +198,8 @@ export function AcrossIndia() {
                           */}
                         {national && (
                             <Link
-<<<<<<< HEAD
                                 to={`/regions/${national.slug}${hash}`}
                                 className="group flex items-center gap-3 rounded-2xl bg-brand-900 px-4 py-3.5 sm:px-5 sm:py-4
-=======
-                                to={`/regions/${national.slug}`}
-                                className="group flex items-center gap-3 rounded-2xl bg-brand-900 px-5 py-4
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            text-white transition-all duration-300 hover:-translate-y-1
                                            hover:shadow-[0_18px_40px_-20px_rgba(28,46,104,0.6)]
                                            xl:col-span-1"
@@ -254,11 +210,7 @@ export function AcrossIndia() {
                                         {national.label}
                                     </span>
                                     <span className="block text-[1rem] text-white/60">
-<<<<<<< HEAD
                                         {contact ? 'National office' : 'The whole country'}
-=======
-                                        The whole country
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     </span>
                                 </span>
                                 <ArrowRight
@@ -275,13 +227,8 @@ export function AcrossIndia() {
                             return (
                                 <div
                                     key={region.key}
-<<<<<<< HEAD
                                     className={`flex items-center gap-2 rounded-2xl border bg-white pl-4 pr-1.5 sm:pr-2
                                                 py-3 sm:py-4 transition-all duration-300 ${isOpen
-=======
-                                    className={`flex items-center gap-2 rounded-2xl border bg-white pl-4 pr-2
-                                                py-4 transition-all duration-300 ${isOpen
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         ? 'border-brand-300 shadow-[0_14px_30px_-20px_rgba(28,46,104,0.5)]'
                                         : 'border-gray-200/80 hover:-translate-y-1 hover:border-brand-200'}`}
                                 >
@@ -293,11 +240,7 @@ export function AcrossIndia() {
                                       */}
                                     {region.hasPage ? (
                                         <Link
-<<<<<<< HEAD
                                             to={`/regions/${region.slug}${hash}`}
-=======
-                                            to={`/regions/${region.slug}`}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                             className="group min-w-0 flex-1"
                                         >
                                             <span className="flex items-center gap-2">
@@ -305,11 +248,7 @@ export function AcrossIndia() {
                                                 <span className="truncate text-[1.1875rem] font-extrabold
                                                                  text-brand-900 transition-colors
                                                                  group-hover:text-brand-600">
-<<<<<<< HEAD
                                                     {zoneName(region.label)}
-=======
-                                                    {region.label}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 </span>
                                             </span>
                                             <span className="mt-0.5 block pl-[1.4rem] text-[1rem] text-gray-500">
@@ -322,11 +261,7 @@ export function AcrossIndia() {
                                                 <MapPin size={15} className="shrink-0 text-gray-300" />
                                                 <span className="truncate text-[1.1875rem] font-extrabold
                                                                  text-gray-400">
-<<<<<<< HEAD
                                                     {zoneName(region.label)}
-=======
-                                                    {region.label}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 </span>
                                             </span>
                                             <span className="mt-0.5 block pl-[1.4rem] text-[1rem] text-gray-400">
@@ -340,13 +275,8 @@ export function AcrossIndia() {
                                         onClick={() => setOpenKey(isOpen ? '' : region.key)}
                                         disabled={!states.length}
                                         aria-expanded={isOpen}
-<<<<<<< HEAD
                                         aria-label={`${isOpen ? 'Hide' : 'Show'} the states of the ${zoneName(region.label)}`}
                                         className="shrink-0 rounded-lg p-3 sm:p-2 text-gray-400 transition-colors
-=======
-                                        aria-label={`${isOpen ? 'Hide' : 'Show'} the states of the ${region.label}`}
-                                        className="shrink-0 rounded-lg p-2 text-gray-400 transition-colors
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                    hover:bg-brand-50 hover:text-brand-700
                                                    disabled:opacity-30 disabled:hover:bg-transparent"
                                     >
@@ -370,27 +300,16 @@ export function AcrossIndia() {
                   * mind. Here the row is still, and only this strip changes.
                   */}
                 {open && openStates.length > 0 && (
-<<<<<<< HEAD
                     <div className="mt-4 rounded-2xl border border-brand-100 bg-white p-4 sm:p-5">
                         <p className="mb-3 text-[1rem] font-bold uppercase tracking-[0.14em] text-brand-500">
                             {zoneName(open.label)} · states
-=======
-                    <div className="mt-4 rounded-2xl border border-brand-100 bg-white p-5">
-                        <p className="mb-3 text-[1rem] font-bold uppercase tracking-[0.14em] text-brand-500">
-                            {open.label} · states
->>>>>>> 8020f5d (Initial commit for website frontend)
                         </p>
                         <div className="flex flex-wrap gap-2">
                             {openStates.map((state) => (
                                 <Link
                                     key={state.slug}
-<<<<<<< HEAD
                                     to={`/states/${state.slug}${hash}`}
                                     className="rounded-full border border-gray-200 px-3.5 py-2 sm:px-4 text-[1rem] sm:text-[1.0625rem]
-=======
-                                    to={`/states/${state.slug}`}
-                                    className="rounded-full border border-gray-200 px-4 py-2 text-[1.0625rem]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                font-semibold text-brand-700 transition-colors
                                                hover:border-brand-300 hover:bg-brand-50"
                                 >

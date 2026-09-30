@@ -1,15 +1,8 @@
 import { useEffect, useState } from 'react';
-<<<<<<< HEAD
 import { Mail, MailOpen, Archive, Trash2, Check, Undo2, Loader2 } from 'lucide-react';
 import {
     listContactMessages, setMessageStatus, deleteContactMessage,
     errorMessage, type ContactMessage, messageSourceLabel,
-=======
-import { Mail, MailOpen, Archive, Trash2, Check, Undo2 } from 'lucide-react';
-import {
-    listContactMessages, setMessageStatus, deleteContactMessage,
-    errorMessage, type ContactMessage,
->>>>>>> 8020f5d (Initial commit for website frontend)
 } from '@/services/cmsApi';
 import { CmsCard, CmsButton, CmsLoading, CmsError, CmsEmpty } from './components/CmsUI';
 
@@ -125,7 +118,6 @@ export default function MessagesInbox() {
         }
     };
 
-<<<<<<< HEAD
     /**
      * Deleting is confirmed, and the row is held while it happens.
      *
@@ -149,15 +141,6 @@ export default function MessagesInbox() {
             setError(errorMessage(err, 'Could not delete the message'));
         } finally {
             setRemoving(null);
-=======
-    const remove = async (m: ContactMessage) => {
-        if (!window.confirm(`Delete the message from ${m.name}? This cannot be undone.`)) return;
-        try {
-            await deleteContactMessage(m._id);
-            await load(filter);
-        } catch (err) {
-            setError(errorMessage(err, 'Could not delete the message'));
->>>>>>> 8020f5d (Initial commit for website frontend)
         }
     };
 
@@ -170,11 +153,7 @@ export default function MessagesInbox() {
                     <button
                         key={f.key}
                         onClick={() => setFilter(f.key)}
-<<<<<<< HEAD
                         className={`px-3 py-2 sm:py-1.5 rounded-lg text-[1.1875rem] transition-colors ${
-=======
-                        className={`px-3 py-1.5 rounded-lg text-[1.1875rem] transition-colors ${
->>>>>>> 8020f5d (Initial commit for website frontend)
                             filter === f.key ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-[#161616] text-slate-700 dark:text-neutral-300 hover:bg-slate-200 dark:hover:bg-[#242424]'
                         }`}
                     >
@@ -190,15 +169,9 @@ export default function MessagesInbox() {
                 {loading ? (
                     <CmsLoading label="Loading messages…" />
                 ) : messages.length === 0 ? (
-<<<<<<< HEAD
                     <CmsEmpty title="No messages" hint="Messages from the public contact form and from Help & Support in the member dashboard appear here." />
                 ) : (
                     <div className="divide-y divide-slate-200 dark:divide-[#1f1f1f]">
-=======
-                    <CmsEmpty title="No messages" hint="Submissions from the public contact form appear here." />
-                ) : (
-                    <div className="divide-y divide-slate-800">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         {messages.map((m) => (
                             <div key={m._id} className="py-3">
                                 <button
@@ -210,7 +183,6 @@ export default function MessagesInbox() {
                                         : <MailOpen className="w-4 h-4 text-neutral-500 shrink-0 mt-1" />}
 
                                     <div className="min-w-0 flex-1">
-<<<<<<< HEAD
                                         <div className="flex flex-wrap items-baseline gap-x-2 min-w-0">
                                             <p className={`truncate max-w-full ${m.status === 'new' ? 'font-semibold text-slate-900 dark:text-neutral-100' : 'text-slate-700 dark:text-neutral-300'}`}>
                                                 {m.name}
@@ -221,13 +193,6 @@ export default function MessagesInbox() {
                                                 : 'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-neutral-300'}`}>
                                                 {messageSourceLabel(m)}
                                             </span>
-=======
-                                        <div className="flex items-baseline gap-2">
-                                            <p className={`truncate ${m.status === 'new' ? 'font-semibold text-slate-900 dark:text-neutral-100' : 'text-slate-700 dark:text-neutral-300'}`}>
-                                                {m.name}
-                                            </p>
-                                            <span className="text-[1.0625rem] text-neutral-500 truncate">{m.email}</span>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         </div>
                                         <p className="text-[1.1875rem] text-neutral-500 dark:text-neutral-400 truncate">
                                             {m.subject || m.message}
@@ -244,7 +209,6 @@ export default function MessagesInbox() {
                                   within a button is invalid markup, and the
                                   browser's recovery is to drop one of them.
                                 */}
-<<<<<<< HEAD
                                 {/*
                                   * ==================================================
                                   * DELETE IS ON THE ROW, as it is on Leader enquiries
@@ -266,20 +230,12 @@ export default function MessagesInbox() {
                                   */}
                                 <div className="ml-7 mt-2 sm:mt-1.5 flex flex-wrap items-center gap-2">
                                     {m.status !== 'archived' && (
-=======
-                                {m.status !== 'archived' && (
-                                    <div className="ml-7 mt-1.5">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         <button
                                             type="button"
                                             disabled={marking === m._id}
                                             onClick={() => markAs(m, m.status === 'new' ? 'read' : 'new')}
                                             className="inline-flex items-center gap-1.5 rounded-lg border
-<<<<<<< HEAD
                                                        border-slate-300 px-2.5 py-2 sm:py-1 text-[1.0625rem]
-=======
-                                                       border-slate-300 px-2.5 py-1 text-[1.0625rem]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                        font-semibold text-slate-600 transition-colors
                                                        hover:border-blue-600 hover:text-blue-700
                                                        disabled:opacity-50 dark:border-[#2a2a2a]
@@ -289,7 +245,6 @@ export default function MessagesInbox() {
                                                 ? <><Check className="w-3.5 h-3.5" /> Mark as read</>
                                                 : <><Undo2 className="w-3.5 h-3.5" /> Mark as unread</>}
                                         </button>
-<<<<<<< HEAD
                                     )}
 
                                     {m.status !== 'archived' && (
@@ -335,20 +290,6 @@ export default function MessagesInbox() {
                                                 <dd className="text-slate-700 dark:text-neutral-300 inline">{m.phone}</dd></div>}
                                             {m.subject && <div className="sm:col-span-2"><dt className="text-neutral-500 inline">Subject: </dt>
                                                 <dd className="text-slate-700 dark:text-neutral-300 inline break-words">{m.subject}</dd></div>}
-=======
-                                    </div>
-                                )}
-
-                                {open === m._id && (
-                                    <div className="mt-3 ml-7 bg-slate-50 dark:bg-black border border-slate-200 dark:border-[#1f1f1f] rounded-lg p-4">
-                                        <dl className="grid gap-2 sm:grid-cols-2 text-[1.1875rem] mb-3">
-                                            <div><dt className="text-neutral-500 inline">Email: </dt>
-                                                <dd className="text-slate-700 dark:text-neutral-300 inline">{m.email}</dd></div>
-                                            {m.phone && <div><dt className="text-neutral-500 inline">Phone: </dt>
-                                                <dd className="text-slate-700 dark:text-neutral-300 inline">{m.phone}</dd></div>}
-                                            {m.subject && <div className="sm:col-span-2"><dt className="text-neutral-500 inline">Subject: </dt>
-                                                <dd className="text-slate-700 dark:text-neutral-300 inline">{m.subject}</dd></div>}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         </dl>
 
                                         {/* Plain text, deliberately. This is untrusted input. */}
@@ -356,29 +297,15 @@ export default function MessagesInbox() {
                                             {m.message}
                                         </p>
 
-<<<<<<< HEAD
                                         {/* Reply only. Archive and Delete moved up to
                                             the row, where they are reachable without
                                             opening the message — two copies of a
                                             delete a few centimetres apart is one of
                                             them pressed by accident. */}
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         <div className="flex flex-wrap gap-2 mt-4">
                                             <a href={`mailto:${m.email}?subject=${encodeURIComponent('Re: ' + (m.subject || 'Your message'))}`}>
                                                 <CmsButton type="button" variant="ghost">Reply by email</CmsButton>
                                             </a>
-<<<<<<< HEAD
-=======
-                                            {m.status !== 'archived' && (
-                                                <CmsButton type="button" variant="ghost" onClick={() => archive(m)}>
-                                                    <Archive className="w-4 h-4" /> Archive
-                                                </CmsButton>
-                                            )}
-                                            <CmsButton type="button" variant="danger" onClick={() => remove(m)}>
-                                                <Trash2 className="w-4 h-4" /> Delete
-                                            </CmsButton>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         </div>
                                     </div>
                                 )}

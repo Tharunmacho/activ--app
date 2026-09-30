@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { PosterFrame } from '@/components/shared/PosterFrame';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -7,28 +6,15 @@ import { Link } from 'react-router-dom';
 import { Search, MapPin, Clock, CalendarDays, ArrowRight, X, Landmark, Video } from 'lucide-react';
 import { eventWhere } from '@/lib/eventWhere';
 import type { CmsEvent, EventsSettings } from '@/services/cmsApi';
-=======
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, MapPin, Clock, ArrowRight, X, Landmark, Video } from 'lucide-react';
-import type { CmsEvent, EventsSettings } from '@/services/cmsApi';
-import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { CmsIcon } from '@/components/shared/CmsIcon';
 import { Reveal } from '@/components/shared/Reveal';
 import { sectionHidden, sectionFields } from '@/components/shared/cmsSections';
 import { CmsExtraFields } from '@/components/shared/CmsExtraFields';
-<<<<<<< HEAD
 import { SectionFields } from '@/components/shared/SectionFields';
 import { Tilt3D } from '@/components/shared/Tilt3D';
 import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
 import { CARD_TITLE, CARD_BODY, MICRO_LABEL } from '@/components/layout/typography';
 import { eventPath } from '@/lib/eventPath';
-=======
-import { Tilt3D } from '@/components/shared/Tilt3D';
-import { SCREEN_CONTAINER } from '@/components/layout/pageContainer';
-import { CARD_TITLE, CARD_BODY, MICRO_LABEL } from '@/components/layout/typography';
->>>>>>> 8020f5d (Initial commit for website frontend)
 
 /**
  * The Events page's search, filters and grid.
@@ -52,11 +38,7 @@ import { CARD_TITLE, CARD_BODY, MICRO_LABEL } from '@/components/layout/typograp
 
 /**
  * ==========================================================================
-<<<<<<< HEAD
  * THIS PAGE IS UPCOMING EVENTS.
-=======
- * THIS PAGE IS UPCOMING EVENTS. PAST ONES LIVE IN THE GALLERY.
->>>>>>> 8020f5d (Initial commit for website frontend)
  * ==========================================================================
  *
  * There was a date-window filter here — Upcoming / Past / All dates — and a
@@ -66,7 +48,6 @@ import { CARD_TITLE, CARD_BODY, MICRO_LABEL } from '@/components/layout/typograp
  * ever return nothing.
  *
  * The association's reasoning, and it is worth keeping: an events page is
-<<<<<<< HEAD
  * something a visitor reads to decide what to attend. The home page's events
  * band shows exactly this same list (`EventsGrid`), so the two never disagree.
  *
@@ -74,20 +55,10 @@ import { CARD_TITLE, CARD_BODY, MICRO_LABEL } from '@/components/layout/typograp
  * visitors to the gallery for past events, and a CMS button copying an event
  * into the gallery. Both are gone: the gallery holds photographs the editor
  * posts after an event, as albums of its own, and nothing links the two.
-=======
- * something a visitor reads to decide what to attend. Everything already
- * held is a record of what was done, and the place for that is the gallery,
- * where each one carries its photographs. Two pages answering the same
- * question differently is how a visitor ends up on the wrong one.
->>>>>>> 8020f5d (Initial commit for website frontend)
  *
  * So `upcomingOnly` below is not a default an editor can change — it is
  * what this page IS. An event with no date at all still shows: an unset
  * date is missing information, not a statement that it already happened.
-<<<<<<< HEAD
-=======
- * `pastLink` in the events settings is how a visitor is sent to the gallery.
->>>>>>> 8020f5d (Initial commit for website frontend)
  */
 
 /**
@@ -189,7 +160,6 @@ const splitDate = (iso: string | null) => {
     };
 };
 
-<<<<<<< HEAD
 /**
  * "– 12 OCT 2026" for an event that runs over more than one day, else ''.
  *
@@ -212,8 +182,6 @@ const lastDayLabel = (startAt: string | null, endAt: string | null) => {
     return to && to !== from ? to : '';
 };
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 /** "10:00 AM - 05:00 PM", or just the start when no end was set. */
 const formatTimeRange = (startAt: string | null, endAt: string | null) => {
     const time = (iso: string | null) => {
@@ -266,7 +234,6 @@ const EVENT_GRID: Record<number, string> = {
 };
 
 export function EventsExplorer({ events, settings }: Props) {
-<<<<<<< HEAD
     /*
      * EVERY FILTER LIVES IN THE ADDRESS: /events?state=Tamil+Nadu&district=
      * Dharmapuri&city=…&language=Tamil&category=…&mode=online&q=…
@@ -298,13 +265,6 @@ export function EventsExplorer({ events, settings }: Props) {
             .catch(() => { /* the events' own regions still fill the lists */ });
         return () => { live = false; };
     }, []);
-=======
-    const [query, setQuery] = useState('');
-    const [category, setCategory] = useState<string>(ALL);
-    const [location, setLocation] = useState<string>(ALL);
-
-    const [how, setHow] = useState<How>('all');
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     /*
      * The region filter, as three dependent choices rather than one flat list.
@@ -322,7 +282,6 @@ export function EventsExplorer({ events, settings }: Props) {
      * cleared when the level above it changes, and that is a conditional per
      * level whichever way it is stored.
      */
-<<<<<<< HEAD
     const [state, setState] = useState<string>(initial('state') || ALL);
     const [district, setDistrict] = useState<string>(initial('district') || ALL);
     const [block, setBlock] = useState<string>(initial('city') || ALL);
@@ -342,11 +301,6 @@ export function EventsExplorer({ events, settings }: Props) {
         // `params` is read to compare only; including it would loop.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [query, category, state, district, block, language, how]);
-=======
-    const [state, setState] = useState<string>(ALL);
-    const [district, setDistrict] = useState<string>(ALL);
-    const [block, setBlock] = useState<string>(ALL);
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     /* The Search-and-chips card can be removed — see `cmsSections`. It takes
        the chips with it; the search box is not authored and stays. */
@@ -404,18 +358,12 @@ export function EventsExplorer({ events, settings }: Props) {
     };
 
     const stateOptions = useMemo(
-<<<<<<< HEAD
         () => uniq([...tree.map((st) => st?.name || ''), ...regionIndex.map((r) => r.state)]),
         [regionIndex, tree],
-=======
-        () => uniq(regionIndex.map((r) => r.state)),
-        [regionIndex],
->>>>>>> 8020f5d (Initial commit for website frontend)
     );
 
     const districtOptions = useMemo(() => {
         if (state === ALL) return [];
-<<<<<<< HEAD
         const fromTree = tree.filter((st) => norm(st?.name) === norm(state))
             .flatMap((st) => (st.districts || []).map((d) => d?.name || ''));
         return uniq([...fromTree, ...regionIndex.filter((r) => norm(r.state) === norm(state)).map((r) => r.district)]);
@@ -459,17 +407,6 @@ export function EventsExplorer({ events, settings }: Props) {
         });
         return Array.from(seen.values()).sort((a, b) => a.localeCompare(b));
     }, [events]);
-=======
-        return uniq(regionIndex.filter((r) => norm(r.state) === norm(state)).map((r) => r.district));
-    }, [regionIndex, state]);
-
-    const blockOptions = useMemo(() => {
-        if (state === ALL || district === ALL) return [];
-        return uniq(regionIndex
-            .filter((r) => norm(r.state) === norm(state) && norm(r.district) === norm(district))
-            .map((r) => r.block));
-    }, [regionIndex, state, district]);
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     /*
      * Choosing a wider region clears the narrower ones inside it.
@@ -524,7 +461,6 @@ export function EventsExplorer({ events, settings }: Props) {
              * Hiding it when a visitor narrows to their own district would make
              * the filter subtract the events that matter most.
              */
-<<<<<<< HEAD
             /*
              * WHERE THE EVENT IS, in this order:
              *   1. the regions it was aimed at (targets): the organiser's answer;
@@ -558,19 +494,6 @@ export function EventsExplorer({ events, settings }: Props) {
              */
             const finish = event?.endAt || event?.startAt;
             const start = finish ? new Date(finish).getTime() : NaN;
-=======
-            if (regionPicked) {
-                const regions = regionsOf(event);
-                if (regions.length && !regions.some((target) => onSamePath(target, selection))) {
-                    return false;
-                }
-            }
-
-            // Upcoming only — see the note at the top of this file. An event
-            // with no usable date is kept: an unset date is missing
-            // information, not a statement that it already happened.
-            const start = event?.startAt ? new Date(event.startAt).getTime() : NaN;
->>>>>>> 8020f5d (Initial commit for website frontend)
             if (!Number.isNaN(start) && start < now) return false;
 
             if (needle) {
@@ -590,17 +513,10 @@ export function EventsExplorer({ events, settings }: Props) {
          * when something in this list changes, so a value used inside and
          * missing from it is a control wired to nothing.
          */
-<<<<<<< HEAD
     }, [events, query, category, location, how, state, district, block, language, tree]);
 
     const isFiltered = !!(query.trim()) || category !== ALL || location !== ALL
         || how !== 'all' || state !== ALL || district !== ALL || block !== ALL || language !== ALL;
-=======
-    }, [events, query, category, location, how, state, district, block]);
-
-    const isFiltered = !!(query.trim()) || category !== ALL || location !== ALL
-        || how !== 'all' || state !== ALL || district !== ALL || block !== ALL;
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     const reset = () => {
         setQuery('');
@@ -610,10 +526,7 @@ export function EventsExplorer({ events, settings }: Props) {
         setState(ALL);
         setDistrict(ALL);
         setBlock(ALL);
-<<<<<<< HEAD
         setLanguage(ALL);
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     };
 
     /**
@@ -629,10 +542,7 @@ export function EventsExplorer({ events, settings }: Props) {
         if (district !== ALL) return district;
         if (state !== ALL) return state;
         if (category !== ALL) return category;
-<<<<<<< HEAD
         if (language !== ALL) return `${language} events`;
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
         if (location !== ALL) return location;
         return 'that filter';
     };
@@ -641,7 +551,6 @@ export function EventsExplorer({ events, settings }: Props) {
         .replace('{query}', describeFilter());
 
     const banner = sectionHidden(settings?.sections, 'events.banner') ? undefined : settings?.banner;
-<<<<<<< HEAD
     /* The explorer's own type, handed down — see `SectionFields`. */
     const fieldsFor = (k: string) => (
         <SectionFields
@@ -668,33 +577,6 @@ export function EventsExplorer({ events, settings }: Props) {
            "All categories" / "Online and in person" were cut off. */
         'h-11 sm:h-12 min-w-0 rounded-xl border border-brand-100 bg-white px-2.5 sm:px-4 '
         + 'text-[1rem] sm:text-[1.25rem] font-semibold '
-=======
-    const showBanner = !!(banner?.enabled && (banner.title || banner.ctaLabel));
-
-    /*
-     * WHERE THE PAST EVENTS WENT.
-     *
-     * This page is upcoming events — see the note at the top of the file. A
-     * visitor who came for last year's conclave finds nothing here, and the
-     * difference between a page that lost its content and one that never
-     * held it is entirely this strip.
-     */
-    const pastLink = sectionHidden(settings?.sections, 'events.pastLink')
-        ? undefined
-        : settings?.pastLink;
-    const showPastLink = !!(pastLink?.enabled && (pastLink.title || pastLink.label));
-
-    /* The editor's own rows, per card, then the page's own list. */
-    const key = (k: string) => (sectionHidden(settings?.sections, k) ? [] : sectionFields(settings?.sections, k));
-    const ownRows = [
-        ...key('events.filters'), ...key('events.grid'),
-        ...key('events.banner'), ...key('events.pastLink'),
-        ...(settings?.extraFields || []),
-    ];
-
-    const selectClass =
-        'h-12 min-w-0 rounded-xl border border-brand-100 bg-white px-4 text-[1.25rem] font-semibold '
->>>>>>> 8020f5d (Initial commit for website frontend)
         + 'text-brand-800 outline-none transition-colors hover:border-brand-300 '
         + 'focus:border-brand-600 focus:ring-2 focus:ring-brand-600/15';
 
@@ -732,13 +614,9 @@ export function EventsExplorer({ events, settings }: Props) {
                             />
                         </label>
 
-<<<<<<< HEAD
                         {/* Two-up from the smallest phone: four full-width dropdowns
                             stacked were a screen of controls before any event. */}
                         <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:flex lg:items-center">
-=======
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:flex lg:items-center">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             {/* Offered only when the CMS has chips to offer. */}
                             {chips.length > 0 && (
                                 <select
@@ -754,22 +632,6 @@ export function EventsExplorer({ events, settings }: Props) {
                                 </select>
                             )}
 
-<<<<<<< HEAD
-=======
-                            {locations.length > 0 && (
-                                <select
-                                    aria-label="Location"
-                                    value={location}
-                                    onChange={(e) => setLocation(e.target.value)}
-                                    className={selectClass}
-                                >
-                                    <option value={ALL}>All locations</option>
-                                    {locations.map((l, i) => (
-                                        <option key={i} value={l}>{l}</option>
-                                    ))}
-                                </select>
-                            )}
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                             {/*
                               STATE, THEN DISTRICT, THEN BLOCK -- in that order,
@@ -821,20 +683,12 @@ export function EventsExplorer({ events, settings }: Props) {
 
                             {blockOptions.length > 0 && (
                                 <select
-<<<<<<< HEAD
                                     aria-label="City"
-=======
-                                    aria-label="Block"
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     value={block}
                                     onChange={(e) => setBlock(e.target.value)}
                                     className={selectClass}
                                 >
-<<<<<<< HEAD
                                     <option value={ALL}>All cities</option>
-=======
-                                    <option value={ALL}>All blocks</option>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     {blockOptions.map((b, i) => (
                                         <option key={i} value={b}>{b}</option>
                                     ))}
@@ -844,7 +698,6 @@ export function EventsExplorer({ events, settings }: Props) {
                             {/* The date window used to sit here. See the note at
                                 the top of this file: this page is upcoming events,
                                 so there is no window left to choose. */}
-<<<<<<< HEAD
                             {languageOptions.length > 0 && (
                                 <select
                                     aria-label="Language"
@@ -859,8 +712,6 @@ export function EventsExplorer({ events, settings }: Props) {
                                 </select>
                             )}
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                             <select
                                 aria-label="Online or in person"
                                 value={how}
@@ -889,12 +740,9 @@ export function EventsExplorer({ events, settings }: Props) {
                     </div>
                 </div>
 
-<<<<<<< HEAD
                 {/* This card's own rows, with the card — see `SectionFields`. */}
                 {fieldsFor('events.filters')}
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                 {/* ------------------------------------------------ chip rail */}
                 {chips.length > 0 && (
                     <div className="mt-8 -mx-4 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
@@ -960,10 +808,7 @@ export function EventsExplorer({ events, settings }: Props) {
                         {filtered.map((event, i) => {
                             const date = splitDate(event?.startAt);
                             const time = formatTimeRange(event?.startAt, event?.endAt);
-<<<<<<< HEAD
                             const lastDay = lastDayLabel(event?.startAt, event?.endAt);
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                             /*
                               WHO THE EVENT IS FOR, on the card.
@@ -1004,7 +849,6 @@ export function EventsExplorer({ events, settings }: Props) {
                                     className="h-full"
                                 >
                                     <Tilt3D className="h-full" intensity={8} lift={1.02} glare={false} perspective={850}>
-<<<<<<< HEAD
                                         {/*
                                           * THE WHOLE CARD OPENS THE EVENT.
                                           *
@@ -1056,26 +900,6 @@ export function EventsExplorer({ events, settings }: Props) {
                                                     {/* Keeps the badges legible over a bright photograph. */}
                                                     <div className="absolute inset-0 bg-gradient-to-t
                                                                     from-brand-900/45 via-transparent to-transparent" />
-=======
-                                        <article
-                                            className="group flex h-full flex-col overflow-hidden rounded-2xl
-                                                       border border-brand-100/80 bg-white
-                                                       shadow-[0_10px_36px_-16px_rgb(28_46_104/0.22)]
-                                                       transition-shadow duration-500
-                                                       hover:shadow-[0_28px_60px_-20px_rgb(28_46_104/0.42)]"
-                                        >
-                                            {/* No image is a valid event; a broken frame is not. */}
-                                            {event?.media?.url && (
-                                                <div className="relative h-44 w-full overflow-hidden">
-                                                    <CmsMediaFrame
-                                                        media={event.media}
-                                                        width={320}
-                                                        className="transition-transform duration-700 group-hover:scale-105"
-                                                    />
-                                                    {/* Keeps the badges legible over a bright photograph. */}
-                                                    <div className="absolute inset-0 bg-gradient-to-t
-                                                                    from-brand-900/70 via-brand-900/10 to-transparent" />
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                                                     {event?.category && (
                                                         <span className="absolute left-3 top-3 rounded-md bg-brand-900/85
@@ -1085,11 +909,7 @@ export function EventsExplorer({ events, settings }: Props) {
                                                             {event.category}
                                                         </span>
                                                     )}
-<<<<<<< HEAD
                                                 </PosterFrame>
-=======
-                                                </div>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                             )}
 
                                             <div className="relative flex flex-grow flex-col p-5">
@@ -1197,7 +1017,6 @@ export function EventsExplorer({ events, settings }: Props) {
                                                       nothing behind it.
                                                     */}
                                                     {event?.registrationEnabled && (
-<<<<<<< HEAD
                                                         <p className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
                                                             {/*
                                                               * THE PRICE IS THE BIGGEST THING ON THE CARD
@@ -1217,23 +1036,15 @@ export function EventsExplorer({ events, settings }: Props) {
                                                                 Number(event?.registrationFee) > 0
                                                                     ? 'text-brand-800'
                                                                     : 'text-emerald-600'}`}>
-=======
-                                                        <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1
-                                                                      text-[1.0625rem]">
-                                                            <span className="font-extrabold text-brand-800">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                                 {Number(event?.registrationFee) > 0
                                                                     ? `₹${Number(event.registrationFee).toLocaleString('en-IN')}`
                                                                     : 'Free'}
                                                             </span>
-<<<<<<< HEAD
                                                             {Number(event?.registrationFee) > 0 && (
                                                                 <span className="text-[1.0625rem] font-semibold text-gray-400">
                                                                     per seat
                                                                 </span>
                                                             )}
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                             {event?.hasMemberRate
                                                                 && Number(event?.memberPrice) < Number(event?.registrationFee) && (
                                                                 <span className="rounded-full bg-emerald-50 px-2.5 py-0.5
@@ -1284,7 +1095,6 @@ export function EventsExplorer({ events, settings }: Props) {
                                                                 Online{event?.onlinePlatform ? ` · ${event.onlinePlatform}` : ' event'}
                                                             </span>
                                                         </p>
-<<<<<<< HEAD
                                                     ) : (
                                                         /* No venue typed: the region it is for, never a blank. */
                                                         <p className="flex items-start gap-2 text-[1.125rem]
@@ -1295,15 +1105,6 @@ export function EventsExplorer({ events, settings }: Props) {
                                                             </span>
                                                         </p>
                                                     )}
-=======
-                                                    ) : event?.location ? (
-                                                        <p className="flex items-start gap-2 text-[1.125rem]
-                                                                      font-semibold text-gray-500">
-                                                            <MapPin size={16} className="mt-0.5 shrink-0 text-brand-400" />
-                                                            <span className="line-clamp-1">{event.location}</span>
-                                                        </p>
-                                                    ) : null}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                     {time && (
                                                         <p className="flex items-center gap-2 text-[1.125rem]
                                                                       font-semibold text-gray-500">
@@ -1311,7 +1112,6 @@ export function EventsExplorer({ events, settings }: Props) {
                                                             <span>{time}</span>
                                                         </p>
                                                     )}
-<<<<<<< HEAD
                                                     {/* A multi-day event says when it
                                                         finishes. The chip above can hold
                                                         one day, and a conclave that runs
@@ -1324,8 +1124,6 @@ export function EventsExplorer({ events, settings }: Props) {
                                                             <span>Runs to {lastDay}</span>
                                                         </p>
                                                     )}
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                     {/*
                                                       An undated event says so.
                                                       
@@ -1349,7 +1147,6 @@ export function EventsExplorer({ events, settings }: Props) {
                                                     {/* Its own page. This pointed back at the
                                                         list the card is already on, so "View
                                                         Details" showed no details. */}
-<<<<<<< HEAD
                                                     {/*
                                                       * NOT A LINK ANY MORE — the whole card is
                                                       * one (see the overlay above). A second
@@ -1365,14 +1162,6 @@ export function EventsExplorer({ events, settings }: Props) {
                                                         className={`${MICRO_LABEL} mt-1 inline-flex items-center gap-1.5
                                                                     py-3.5 text-brand-600 transition-colors
                                                                     group-hover:text-brand-800`}
-=======
-                                                    <Link
-                                                        to={`/events/${event?.id || ''}`}
-                                                        aria-label={`More about ${event?.title || 'this event'}`}
-                                                        className={`${MICRO_LABEL} mt-1 inline-flex items-center gap-1.5
-                                                                    py-3.5 text-brand-600 transition-colors
-                                                                    hover:text-brand-800`}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                     >
                                                         View Details
                                                         <ArrowRight
@@ -1380,11 +1169,7 @@ export function EventsExplorer({ events, settings }: Props) {
                                                             className="transition-transform duration-300
                                                                        group-hover:translate-x-1"
                                                         />
-<<<<<<< HEAD
                                                     </span>
-=======
-                                                    </Link>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 </div>
                                             </div>
                                         </article>
@@ -1395,58 +1180,6 @@ export function EventsExplorer({ events, settings }: Props) {
                     </div>
                 )}
 
-<<<<<<< HEAD
-=======
-                {/* ------------------------------------------- past events */}
-                {showPastLink && (
-                    <Reveal>
-                        <div className="mt-14 flex flex-col gap-4 rounded-2xl border border-brand-100
-                                        bg-white px-6 py-5 shadow-[0_18px_46px_-30px_rgb(28_46_104/0.45)]
-                                        sm:flex-row sm:items-center sm:gap-5">
-                            <span className="flex h-12 w-12 shrink-0 items-center justify-center
-                                             rounded-full bg-brand-50 text-brand-600">
-                                <CmsIcon name={pastLink?.icon} size={22} fallback="image" />
-                            </span>
-
-                            <div className="min-w-0 flex-1">
-                                {pastLink?.title && (
-                                    <p className="text-[1.375rem] font-extrabold text-brand-800">
-                                        {pastLink.title}
-                                    </p>
-                                )}
-                                {pastLink?.subtitle && (
-                                    <p className="mt-1 text-[1.125rem] font-medium leading-relaxed text-gray-600">
-                                        {pastLink.subtitle}
-                                    </p>
-                                )}
-                            </div>
-
-                            {pastLink?.label && (
-                                (pastLink.href || '/gallery').startsWith('/') ? (
-                                    <Link
-                                        to={pastLink.href || '/gallery'}
-                                        className="inline-flex shrink-0 items-center gap-2 rounded-full
-                                                   bg-brand-600 px-6 py-3 text-[1.125rem] font-bold
-                                                   text-white transition-colors hover:bg-brand-700"
-                                    >
-                                        {pastLink.label} <ArrowRight size={16} />
-                                    </Link>
-                                ) : (
-                                    <a
-                                        href={pastLink.href}
-                                        className="inline-flex shrink-0 items-center gap-2 rounded-full
-                                                   bg-brand-600 px-6 py-3 text-[1.125rem] font-bold
-                                                   text-white transition-colors hover:bg-brand-700"
-                                    >
-                                        {pastLink.label} <ArrowRight size={16} />
-                                    </a>
-                                )
-                            )}
-                        </div>
-                    </Reveal>
-                )}
-
->>>>>>> 8020f5d (Initial commit for website frontend)
                 {/* --------------------------------------------------- banner */}
                 {showBanner && (
                     <Reveal
@@ -1492,7 +1225,6 @@ export function EventsExplorer({ events, settings }: Props) {
                     </Reveal>
                 )}
 
-<<<<<<< HEAD
                 {/* The grid's own rows, then the banner's, then the PAGE's.
                     Each card's rows used to be pooled into one list printed
                     here, so a field added to the filters landed under the grid. */}
@@ -1505,10 +1237,6 @@ export function EventsExplorer({ events, settings }: Props) {
                 <div className={`${CARD_BODY} text-gray-600`}>
                     <CmsExtraFields fields={ownRows} className="mt-16" />
                 </div>
-=======
-                {/* Fields the editor added to this page. */}
-                <CmsExtraFields fields={ownRows} className="mt-16" />
->>>>>>> 8020f5d (Initial commit for website frontend)
             </div>
         </section>
     );

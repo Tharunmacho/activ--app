@@ -1,8 +1,5 @@
-<<<<<<< HEAD
 import { publicUrl } from '@/lib/share';
 import { eventPath } from '@/lib/eventPath';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 /**
  * Taking an event OFF the page — into a calendar, into a chat, into maps.
  *
@@ -93,12 +90,8 @@ export const eventPlace = (event: CalendarEventLike): string =>
  */
 export const eventPageUrl = (event: CalendarEventLike): string => {
     if (typeof window === 'undefined') return '';
-<<<<<<< HEAD
     // The public site's address, not this tab's: an admin on another host shares the live page.
     return publicUrl(eventPath(event));
-=======
-    return `${window.location.origin}/events/${event.id || ''}`;
->>>>>>> 8020f5d (Initial commit for website frontend)
 };
 
 /**
@@ -227,7 +220,6 @@ export const downloadIcs = (event: CalendarEventLike): void => {
  * search built from the venue name is not as precise as a dropped pin, but it
  * is the difference between one tap and copying an address by hand.
  */
-<<<<<<< HEAD
 /**
  * ==========================================================================
  * COORDINATES OUT OF A PASTED GOOGLE MAPS LINK
@@ -288,8 +280,6 @@ const coordsFromMapUrl = (url: string): string => {
  * `travelmode=driving` because the events are conclaves and conferences people
  * drive or are driven to, and Maps lets the reader change it in one tap.
  */
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 export const directionsUrl = (event: CalendarEventLike): string => {
     /*
      * AN ONLINE EVENT HAS NOWHERE TO GO.
@@ -301,7 +291,6 @@ export const directionsUrl = (event: CalendarEventLike): string => {
      */
     if (event.mode === 'online') return '';
 
-<<<<<<< HEAD
     const place = eventPlace(event);
     const destination = coordsFromMapUrl(event.venueMapUrl || '') || place;
 
@@ -315,12 +304,6 @@ export const directionsUrl = (event: CalendarEventLike): string => {
     return 'https://www.google.com/maps/dir/?api=1'
         + `&destination=${encodeURIComponent(destination)}`
         + '&travelmode=driving';
-=======
-    if (event.venueMapUrl) return event.venueMapUrl;
-    const place = eventPlace(event);
-    if (!place) return '';
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
->>>>>>> 8020f5d (Initial commit for website frontend)
 };
 
 /** "Tue, 20 Jan · 10:30" — the one-line summary a share message leads with. */

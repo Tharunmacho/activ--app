@@ -3,15 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Menu, ArrowLeft } from 'lucide-react';
 import BusinessSidebar from './BusinessSidebar';
 
-<<<<<<< HEAD
 import { PAGE_SUBTITLE } from '@/components/layout/appTypography';
 
 /* `appTypography.PAGE_TITLE` with a smaller phone step, so the title keeps
    more than one word beside the menu button and an action in a 64px bar. */
 const PAGE_TITLE = 'text-[1.625rem] sm:text-[2.5rem] font-semibold tracking-tight leading-[1.1]';
-=======
-import { PAGE_SUBTITLE, PAGE_TITLE } from '@/components/layout/appTypography';
->>>>>>> 8020f5d (Initial commit for website frontend)
 /**
  * The page shell every business screen renders inside.
  *
@@ -138,19 +134,11 @@ export default function BusinessPageShell({
                 {/* `px-4` and a tighter gap on a phone: the menu button and the
                     action group take a fixed bite out of a 390px bar, and the
                     title gets whatever is left. */}
-<<<<<<< HEAD
                 <header className="h-16 sm:h-[5.5rem] shrink-0 bg-white border-b border-slate-200 flex items-center gap-2 sm:gap-3 px-4 sm:px-5 lg:px-8">
                     {sidebar ? (
                         <button
                             type="button"
                             className="lg:hidden -ml-2 w-10 h-10 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 shrink-0"
-=======
-                <header className="h-[5.5rem] shrink-0 bg-white border-b border-slate-200 flex items-center gap-2 sm:gap-3 px-4 sm:px-5 lg:px-8">
-                    {sidebar ? (
-                        <button
-                            type="button"
-                            className="lg:hidden text-slate-500 hover:text-slate-700 shrink-0"
->>>>>>> 8020f5d (Initial commit for website frontend)
                             onClick={() => setDrawer(true)}
                             aria-label="Open menu"
                         >
@@ -161,11 +149,7 @@ export default function BusinessPageShell({
                         <button
                             type="button"
                             onClick={() => navigate(backTo || '/member/unpaid-dashboard')}
-<<<<<<< HEAD
                             className="shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-slate-200 bg-white
-=======
-                            className="shrink-0 w-12 h-12 rounded-full border border-slate-200 bg-white
->>>>>>> 8020f5d (Initial commit for website frontend)
                                        flex items-center justify-center text-slate-700
                                        hover:bg-slate-50 hover:border-slate-300 transition-colors"
                             aria-label="Back"
@@ -190,11 +174,7 @@ export default function BusinessPageShell({
                     </div>
 
                     {actions ? (
-<<<<<<< HEAD
                         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">{actions}</div>
-=======
-                        <div className="flex items-center gap-2 shrink-0">{actions}</div>
->>>>>>> 8020f5d (Initial commit for website frontend)
                     ) : null}
                 </header>
 

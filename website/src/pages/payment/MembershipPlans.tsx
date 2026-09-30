@@ -2,11 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-<<<<<<< HEAD
 import { CheckCircle, ArrowLeft, Lock, Shield, CreditCard, Zap, FileText, Mail, Star, Building2, Loader2, Crown, Sparkles, Award, GraduationCap } from 'lucide-react';
-=======
-import { CheckCircle, ArrowLeft, Lock, Shield, CreditCard, Zap, FileText, Mail, Star, Building2, Loader2, Crown, Sparkles, Award } from 'lucide-react';
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { resolvePlanEligibility, type MembershipPlan } from '@/features/member/membershipPlans';
 import { toast } from 'sonner';
 import MemberPageShell from '../member/MemberPageShell';
@@ -51,19 +47,15 @@ const DECOR: Record<string, Pick<Plan, 'icon' | 'accentColor' | 'bgGradient'>> =
     accentColor: '#0284c7',
     bgGradient: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
   },
-<<<<<<< HEAD
   student: {
     icon: GraduationCap,
     accentColor: '#2563eb',
     bgGradient: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)',
   },
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 };
 
 const decorate = (plan: MembershipPlan): Plan => ({
   ...plan,
-<<<<<<< HEAD
   // By key first; a plan the Super Admin added later takes its audience's look.
   ...(DECOR[plan.id] || DECOR[plan.audience] || DECOR.basic),
 });
@@ -71,11 +63,6 @@ const decorate = (plan: MembershipPlan): Plan => ({
 /** How the applicant's kind reads on this screen. */
 const KIND_LABEL: Record<string, string> = { business: 'Company', aspirant: 'Aspirant', student: 'Student' };
 
-=======
-  ...(DECOR[plan.id] || DECOR.basic),
-});
-
->>>>>>> 8020f5d (Initial commit for website frontend)
 /*
  * NO PLACEHOLDER PLANS.
  *
@@ -130,11 +117,7 @@ export default function MembershipPlans() {
       setLoadFailed(eligibility.failed);
 
       setUserData({
-<<<<<<< HEAD
         memberType: KIND_LABEL[eligibility.audience] || 'Company',
-=======
-        memberType: eligibility.isCompany ? 'Company' : 'Aspirant',
->>>>>>> 8020f5d (Initial commit for website frontend)
         experience: eligibility.experience,
         applicationId: eligibility.applicationId,
       });
@@ -232,24 +215,14 @@ export default function MembershipPlans() {
           <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
             style={{
-<<<<<<< HEAD
               background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
               boxShadow: '0 8px 24px -4px rgba(37, 99, 235, 0.4)'
-=======
-              background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-              boxShadow: '0 8px 24px -4px rgba(139, 92, 246, 0.4)'
->>>>>>> 8020f5d (Initial commit for website frontend)
             }}
           >
             <Loader2 className="w-8 h-8 animate-spin text-white" />
           </div>
-<<<<<<< HEAD
           <h2 className="text-[1.1875rem] font-semibold text-slate-900 mb-1">Loading Plans</h2>
           <p className="text-slate-500 text-[1.0625rem]">Please wait...</p>
-=======
-          <h2 className="text-lg font-semibold text-slate-900 mb-1">Loading Plans</h2>
-          <p className="text-slate-500 text-sm">Please wait...</p>
->>>>>>> 8020f5d (Initial commit for website frontend)
         </div>
       </div>
     );
@@ -269,7 +242,6 @@ export default function MembershipPlans() {
   if (!selectedPlan || plans.length === 0) {
     return (
       <MemberPageShell title="Membership">
-<<<<<<< HEAD
         <div className="max-w-md mx-auto py-12 sm:py-20 px-4 text-center">
           <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
             <FileText className="w-6 h-6 text-amber-600" />
@@ -278,16 +250,6 @@ export default function MembershipPlans() {
             {loadFailed ? 'Could not load the plans' : 'No membership plans are available'}
           </h2>
           <p className="text-slate-500 text-[1.0625rem] mb-6">
-=======
-        <div className="max-w-md mx-auto py-20 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
-            <FileText className="w-6 h-6 text-amber-600" />
-          </div>
-          <h2 className="text-lg font-semibold text-slate-900 mb-1">
-            {loadFailed ? 'Could not load the plans' : 'No membership plans are available'}
-          </h2>
-          <p className="text-slate-500 text-sm mb-6">
->>>>>>> 8020f5d (Initial commit for website frontend)
             {loadFailed
               ? 'The membership prices could not be read just now. Nothing has been charged.'
               : 'The association has not published a plan for your membership yet. '
@@ -303,7 +265,6 @@ export default function MembershipPlans() {
     );
   }
 
-<<<<<<< HEAD
   /* ------------------------------------------------------------------ design */
 
   const fmt = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
@@ -536,361 +497,6 @@ export default function MembershipPlans() {
           >
             {processing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Lock className="h-4 w-4" />} Pay now
           </button>
-=======
-  return (
-    <MemberPageShell
-      title="Choose Plan"
-      subtitle="Select the best option for your business"
-      width="standard"
-      sidebar={false}
-      actions={
-        <div className="flex items-center gap-2 text-xs text-slate-500 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
-          <Lock className="w-3.5 h-3.5 text-emerald-500" />
-          <span className="hidden sm:inline font-medium text-emerald-700">Secure Checkout</span>
-        </div>
-      }
-    >
-      <div className="py-2">
-        {/* Title */}
-        <div className="text-center mb-10">
-          <div
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4"
-            style={{ background: 'rgba(139, 92, 246, 0.1)' }}
-          >
-            <Star className="w-3.5 h-3.5 text-violet-500" />
-            <span className="text-xs font-medium text-violet-600">Membership Plans</span>
-          </div>
-          {/*
-            THE HEADING FOLLOWS THE ANSWER, because there are now two different
-            answers on one screen.
-
-            When the association prices by commencement year, an applicant is
-            shown ONE plan — theirs — and "choose a plan that fits your business
-            needs" invites them to look for the other two and conclude the page
-            is broken. When every plan is offered, the original wording is
-            right. Neither is a different screen; they differ by a sentence.
-          */}
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
-            {planLocked ? 'Your Membership' : 'Simple, Transparent Pricing'}
-          </h1>
-          <p className="text-slate-500 text-sm max-w-md mx-auto">
-            {planLocked
-              ? userData?.memberType === 'Aspirant'
-                ? 'This is the plan for an applicant without a registered business.'
-                : `Set for a business trading ${userData?.experience || 'this long'}.`
-              : 'Choose a plan that fits your business needs'}
-          </p>
-        </div>
-
-        {/*
-          Plan Cards.
-
-          The grid narrows to the number of plans actually offered. One card in
-          a three-column grid sits in the left third of an empty row, which reads
-          as two cards that failed to load rather than as the only plan there is.
-        */}
-        <div className={`grid gap-5 mb-10 ${
-          plans.length === 1
-            ? 'grid-cols-1 max-w-md mx-auto'
-            : plans.length === 2
-              ? 'grid-cols-1 md:grid-cols-2 max-w-3xl mx-auto'
-              : 'grid-cols-1 md:grid-cols-3'
-        }`}>
-          {plans.map((plan) => {
-            const Icon = plan.icon;
-            const isSelected = selectedPlan.id === plan.id;
-
-            return (
-              <div
-                key={plan.id}
-                className="relative cursor-pointer transition-all duration-300"
-                style={{
-                  transform: isSelected ? 'scale(1.02)' : 'scale(1)'
-                }}
-                onClick={() => handlePlanSelect(plan)}
-              >
-                {/* Popular Badge */}
-                {plan.popular && (
-                  <div
-                    className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10"
-                  >
-                    <span
-                      className="px-3 py-1 rounded-full text-xs font-bold text-white"
-                      style={{ background: plan.bgGradient }}
-                    >
-                      POPULAR
-                    </span>
-                  </div>
-                )}
-
-                <Card
-                  className="h-full overflow-hidden border-0 transition-all duration-300"
-                  style={{
-                    borderRadius: '20px',
-                    boxShadow: isSelected
-                      ? `0 20px 40px -12px ${plan.accentColor}40, 0 0 0 2px ${plan.accentColor}`
-                      : '0 4px 16px -4px rgba(0, 0, 0, 0.08)',
-                    background: '#ffffff'
-                  }}
-                >
-                  <CardContent className="p-6">
-                    {/* Plan Icon & Name */}
-                    <div className="flex items-center gap-3 mb-5">
-                      <div
-                        className="w-11 h-11 rounded-xl flex items-center justify-center"
-                        style={{ background: plan.bgGradient }}
-                      >
-                        <Icon className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-slate-900">{plan.name}</h3>
-                        <p className="text-xs text-slate-500">{plan.description}</p>
-                      </div>
-                    </div>
-
-                    {/* Price */}
-                    <div
-                      className="py-4 px-3 rounded-xl mb-5 text-center"
-                      style={{ background: '#f8fafc' }}
-                    >
-                      <div className="flex items-baseline justify-center gap-0.5">
-                        <span className="text-lg text-slate-500">₹</span>
-                        <span
-                          className="text-3xl font-bold"
-                          style={{ color: plan.accentColor }}
-                        >
-                          {plan.price.toLocaleString()}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-1">per year</p>
-                    </div>
-
-                    {/* Features */}
-                    <div className="space-y-2.5 mb-5">
-                      {plan.features.map((feature, index) => (
-                        <div key={index} className="flex items-start gap-2.5">
-                          <div
-                            className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                            style={{ background: plan.bgGradient }}
-                          >
-                            <CheckCircle className="w-2.5 h-2.5 text-white" />
-                          </div>
-                          <span className="text-xs text-slate-600 leading-relaxed">{feature}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Select Button */}
-                    <Button
-                      className="w-full py-4 text-sm font-semibold rounded-xl transition-all duration-200"
-                      style={{
-                        background: isSelected ? plan.bgGradient : '#f1f5f9',
-                        color: isSelected ? '#ffffff' : '#475569',
-                        boxShadow: isSelected ? `0 8px 20px -4px ${plan.accentColor}40` : 'none'
-                      }}
-                    >
-                      {isSelected ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <CheckCircle className="w-4 h-4" />
-                          Selected
-                        </span>
-                      ) : (
-                        'Select Plan'
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Bottom Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left - Info */}
-          <div className="lg:col-span-2 space-y-5">
-            {/* Secure Payment */}
-            <div
-              className="p-5 rounded-2xl"
-              style={{
-                background: 'linear-gradient(135deg, #0f766e 0%, #134e4a 100%)'
-              }}
-            >
-              <div className="flex items-start gap-4">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(255, 255, 255, 0.15)' }}
-                >
-                  <Lock className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-white mb-1">Secure Payment</h3>
-                  <p className="text-teal-100 text-xs leading-relaxed mb-3">
-                    Powered by Instamojo with SSL encryption and PCI compliance.
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="px-2 py-1 rounded-full text-xs"
-                      style={{ background: 'rgba(255, 255, 255, 0.15)', color: '#fff' }}
-                    >
-                      SSL
-                    </span>
-                    <span
-                      className="px-2 py-1 rounded-full text-xs"
-                      style={{ background: 'rgba(255, 255, 255, 0.15)', color: '#fff' }}
-                    >
-                      PCI Compliant
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* What's Next */}
-            <Card
-              className="border-0"
-              style={{ borderRadius: '20px', boxShadow: '0 4px 16px -4px rgba(0, 0, 0, 0.08)' }}
-            >
-              <CardContent className="p-5">
-                <h3 className="text-base font-bold text-slate-900 mb-4">What's Next?</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { icon: Zap, text: 'Instant activation', color: '#f59e0b' },
-                    { icon: FileText, text: 'Digital certificate', color: '#8b5cf6' },
-                    { icon: Mail, text: 'Email confirmation', color: '#0ea5e9' },
-                    { icon: Building2, text: 'Dashboard access', color: '#10b981' }
-                  ].map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-2.5 p-3 rounded-xl"
-                      style={{ background: '#f8fafc' }}
-                    >
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center"
-                        style={{ background: `${item.color}15` }}
-                      >
-                        <item.icon className="w-4 h-4" style={{ color: item.color }} />
-                      </div>
-                      <span className="text-xs font-medium text-slate-700">{item.text}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right - Summary */}
-          <div className="lg:col-span-1">
-            <Card
-              className="border-0 sticky top-24 overflow-hidden"
-              style={{
-                borderRadius: '20px',
-                boxShadow: '0 8px 32px -8px rgba(0, 0, 0, 0.12)'
-              }}
-            >
-              {/* Header */}
-              <div
-                className="p-5"
-                style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' }}
-              >
-                <div className="flex items-center gap-2.5">
-                  <CreditCard className="w-5 h-5 text-white" />
-                  <h2 className="text-base font-bold text-white">Summary</h2>
-                </div>
-              </div>
-
-              <CardContent className="p-5">
-                {/* Details */}
-                <div className="space-y-3 mb-5">
-                  <div
-                    className="flex justify-between items-center p-3 rounded-xl"
-                    style={{ background: '#f8fafc' }}
-                  >
-                    <span className="text-xs text-slate-500">Type</span>
-                    <span className="text-sm font-semibold text-slate-900">{userData.memberType}</span>
-                  </div>
-                  <div
-                    className="flex justify-between items-center p-3 rounded-xl"
-                    style={{ background: '#f8fafc' }}
-                  >
-                    <span className="text-xs text-slate-500">Experience</span>
-                    <span className="text-sm font-semibold text-slate-900">{selectedPlan.experience}</span>
-                  </div>
-                  <div
-                    className="flex justify-between items-center p-3 rounded-xl"
-                    style={{
-                      background: `${selectedPlan.accentColor}10`,
-                      border: `1px solid ${selectedPlan.accentColor}30`
-                    }}
-                  >
-                    <span className="text-xs" style={{ color: selectedPlan.accentColor }}>Plan</span>
-                    <span className="text-sm font-bold" style={{ color: selectedPlan.accentColor }}>{selectedPlan.name}</span>
-                  </div>
-                </div>
-
-                {/* Total */}
-                <div
-                  className="p-4 rounded-xl mb-5"
-                  style={{ background: '#f8fafc' }}
-                >
-                  <div className="flex justify-between items-center mb-1.5">
-                    <span className="text-xs text-slate-500">Subtotal</span>
-                    <span className="text-sm text-slate-900">₹{selectedPlan.price.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-xs text-slate-500">Tax</span>
-                    <span className="text-sm text-emerald-600">₹0</span>
-                  </div>
-                  <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
-                    <span className="text-sm font-bold text-slate-900">Total</span>
-                    <span
-                      className="text-2xl font-bold"
-                      style={{ color: selectedPlan.accentColor }}
-                    >
-                      ₹{selectedPlan.price.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Pay Button */}
-                <Button
-                  className="w-full py-5 text-sm font-semibold rounded-xl transition-all duration-200"
-                  style={{
-                    background: processing ? '#d1d5db' : selectedPlan.bgGradient,
-                    boxShadow: processing ? 'none' : `0 8px 24px -4px ${selectedPlan.accentColor}40`
-                  }}
-                  onClick={handlePayment}
-                  disabled={processing}
-                >
-                  {processing ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Processing...
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      Pay ₹{selectedPlan.price.toLocaleString()}
-                    </span>
-                  )}
-                </Button>
-
-                {/* Trust */}
-                <div className="mt-5 pt-4 border-t border-slate-100 text-center">
-                  <div className="flex items-center justify-center gap-4 text-slate-400">
-                    <div className="flex items-center gap-1">
-                      <Shield className="w-3 h-3" />
-                      <span className="text-xs">Secure</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Lock className="w-3 h-3" />
-                      <span className="text-xs">Encrypted</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
->>>>>>> 8020f5d (Initial commit for website frontend)
         </div>
       </div>
     </MemberPageShell>

@@ -167,11 +167,8 @@ export interface Applicant {
     memberId: string;
     fullName: string;
     email: string;
-<<<<<<< HEAD
     /** The photo the member uploaded (`/uploads/...`); resolve before use. */
     profilePhoto?: string;
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     phone: string;
     role: string;
     /** Declared on the application; drives the Aspirant vs Business label. */
@@ -291,7 +288,6 @@ const EMPTY_DASHBOARD: AdminDashboard = {
  * it found in `data.role`. Calling a second "admin login" endpoint is what the
  * website used to do, and that endpoint has never existed on this backend.
  */
-<<<<<<< HEAD
 export const login = async (
     email: string,
     password: string,
@@ -303,9 +299,6 @@ export const login = async (
      */
     portal?: 'member' | 'admin',
 ): Promise<LoginResult> => {
-=======
-export const login = async (email: string, password: string): Promise<LoginResult> => {
->>>>>>> 8020f5d (Initial commit for website frontend)
     /*
      * Forget the previous session before asking about the next one.
      *
@@ -324,7 +317,6 @@ export const login = async (email: string, password: string): Promise<LoginResul
     const res = await api.post(ENDPOINTS.AUTH.LOGIN, {
         email: String(email || '').toLowerCase().trim(),
         password,
-<<<<<<< HEAD
         ...(portal ? { portal } : {}),
     });
 
@@ -339,13 +331,6 @@ export const login = async (email: string, password: string): Promise<LoginResul
 const persistSession = (data: any, fallbackMessage = ''): LoginResult => {
     const token: string = data?.token || '';
     if (!token) throw new Error(fallbackMessage || 'Login failed');
-=======
-    });
-
-    const data = unwrap<any>(res, {});
-    const token: string = data?.token || '';
-    if (!token) throw new Error(res.data?.message || 'Login failed');
->>>>>>> 8020f5d (Initial commit for website frontend)
 
     const user = data.user || {};
     const role = (data.role || user.role || 'member') as UserRole;
@@ -400,16 +385,12 @@ export const register = async (payload: {
     district: string;
     block: string;
     city?: string;
-<<<<<<< HEAD
     /** Members outside India give a place instead of a state/district/block. */
     place?: string;
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 }): Promise<LoginResult> => {
     // `payload` is posted whole, so a new field reaches the server as soon as
     // the type admits it — unlike the wrapper in `shared/services/authService`,
     // which names each field and silently drops any it has not been told about.
-<<<<<<< HEAD
     /*
      * Forget whoever was signed in on this browser first, as `login()` does.
      *
@@ -419,8 +400,6 @@ export const register = async (payload: {
      * seeds itself from until the profile call lands.
      */
     clearSession();
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     const res = await api.post(ENDPOINTS.AUTH.REGISTER, payload);
     const data = unwrap<any>(res, {});
     const token: string = data?.token || '';
@@ -453,16 +432,11 @@ export const register = async (payload: {
              * why a brand-new account was welcomed as "Member". The register
              * response already carries it on `memberDetails`.
              */
-<<<<<<< HEAD
             const registeredName = String(data.memberDetails?.fullName || user.fullName || payload.fullName || '');
             localStorage.setItem(STORAGE_KEYS.USER_NAME, registeredName);
             localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
             localStorage.setItem('memberId', String(user.memberId || user.id || user._id || ''));
             localStorage.setItem('adminToken', token);
-=======
-            const registeredName = String(data.memberDetails?.fullName || user.fullName || '');
-            if (registeredName) localStorage.setItem(STORAGE_KEYS.USER_NAME, registeredName);
->>>>>>> 8020f5d (Initial commit for website frontend)
         } catch { /* ignore */ }
 
         setAuthToken(token);
@@ -499,7 +473,6 @@ export const verifyResetToken = async (token: string): Promise<boolean> => {
 export const resetPassword = async (token: string, newPassword: string) =>
     unwrap(await api.post(ENDPOINTS.AUTH.RESET_PASSWORD, { token, newPassword }), null);
 
-<<<<<<< HEAD
 /* ------------------------------------------------ social sign-in (members) */
 
 export interface SocialProvider { key: 'google' | 'facebook' | 'linkedin'; label: string; enabled: boolean }
@@ -521,8 +494,6 @@ export const completeSocialLogin = async (code: string): Promise<LoginResult> =>
     return persistSession(unwrap<any>(res, {}), res.data?.message);
 };
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 /** The stored role, for route guards. Client-side only — the server re-checks. */
 export const getStoredRole = (): UserRole | null => {
     try {
@@ -813,7 +784,6 @@ export interface Certificate {
     member: {
         name: string; membershipNumber: string; email: string;
         block: string; district: string; state: string;
-<<<<<<< HEAD
         /** Members outside India: no region — the place and country instead. */
         isInternational?: boolean; place?: string; country?: string;
         /** The member's own PAN (the donor PAN on the tax certificate). `''` when not on record. */
@@ -825,11 +795,6 @@ export interface Certificate {
     membershipType: 'annual' | 'lifetime' | '';
     /** 'platinum' for the lifetime tier the Super Admin grants. */
     membershipTier?: 'standard' | 'platinum';
-=======
-    };
-    /** `annual` | `lifetime` | `''`. The client words it for display. */
-    membershipType: 'annual' | 'lifetime' | '';
->>>>>>> 8020f5d (Initial commit for website frontend)
     memberSince: string | null;
     activatedAt: string | null;
     /**
@@ -850,7 +815,6 @@ export interface Certificate {
      * different years on the same document.
      */
     financialYear: string;
-<<<<<<< HEAD
     /**
      * What was actually received — the TAX certificate only, `null` on the other.
      *
@@ -873,8 +837,6 @@ export interface Certificate {
         /** Each paid membership order, oldest first — the payment-details table. */
         payments?: { date: string | null; amount: number | null; mode: string; reference: string }[];
     } | null;
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     /** A quotable reference, stable for a given membership on a given day. */
     reference: string;
     issuedAt: string;
@@ -1212,7 +1174,6 @@ export const getPaymentStatus = async (): Promise<'completed' | 'pending'> => {
          * a payment order for them. `PAID_STATUSES` in the backend's
          * `memberContext.js` is the same list.
          */
-<<<<<<< HEAD
         /*
          * A PAID STATUS PAST ITS END DATE IS NOT PAID. The nightly sweep writes
          * `expired`, but until it runs the row still says `active`; the
@@ -1221,8 +1182,6 @@ export const getPaymentStatus = async (): Promise<'completed' | 'pending'> => {
          * benefits the payment gate no longer honours.
          */
         if (String(profile?.renewal?.state || '') === 'expired') return 'pending';
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
         return status === 'active' || status === 'completed' ? 'completed' : 'pending';
     } catch {
         // Unknown is treated as unpaid: showing paid-only features to someone
@@ -1715,11 +1674,8 @@ export const sendTestNotification = async (channel: 'email' | 'whatsapp', to: st
 // ---- super admin -----------------------------------------------------------
 
 export const getSuperOverview = async () => unwrap<any>(await api.get(ENDPOINTS.ADMIN.SUPER_OVERVIEW), {});
-<<<<<<< HEAD
 /** The Hub's figures for a State / District admin — their own region (the super overview is Super Admin only). */
 export const getTeamOverview = async () => unwrap<any>(await api.get('/admin/team/overview'), {});
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 export const superSearch = async (q: string) =>
     unwrap<any>(await api.get(ENDPOINTS.ADMIN.SUPER_SEARCH, { params: { q } }), {});
 export const getSuperApplications = async (params: Record<string, any> = {}) =>
@@ -1873,7 +1829,6 @@ export interface BulkReport {
  * bundle: there is one price, and it is the association's to set.
  */
 
-<<<<<<< HEAD
 export type PlanAudience = 'business' | 'aspirant' | 'student' | 'platinum';
 
 /** Any stored audience, as one of the four; an unknown value is a business plan. */
@@ -1882,23 +1837,17 @@ export const toPlanAudience = (value: unknown): PlanAudience => {
     return v === 'aspirant' || v === 'student' || v === 'platinum' ? v : 'business';
 };
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 export interface MembershipPlanRow {
     key: string;
     name: string;
     description: string;
     /** Rupees. The server stores paise and converts at the edge. */
     price: number;
-<<<<<<< HEAD
     /**
      * Who the plan is for. `platinum` is the lifetime tier the Super Admin
      * grants by hand (paid offline) — never offered to an applicant to pay.
      */
     audience: PlanAudience;
-=======
-    audience: 'business' | 'aspirant';
->>>>>>> 8020f5d (Initial commit for website frontend)
     minYears: number;
     /** `null` is the open-ended top band — "10 and above". */
     maxYears: number | null;
@@ -1921,11 +1870,7 @@ export const getMyMembershipPlans = async () =>
         plans: MembershipPlanRow[];
         matched: MembershipPlanRow | null;
         years: number | null;
-<<<<<<< HEAD
         reason: 'band' | 'aspirant' | 'student' | 'all' | 'no-year' | 'no-band';
-=======
-        reason: 'band' | 'aspirant' | 'all' | 'no-year' | 'no-band';
->>>>>>> 8020f5d (Initial commit for website frontend)
         showAllPlans: boolean;
     }>(await api.get('/membership/plans/mine'), {
         plans: [], matched: null, years: null, reason: 'no-year', showAllPlans: false,
@@ -1978,11 +1923,7 @@ export const getMembershipPlanCatalogue = async (): Promise<MembershipPlanRow[]>
         name: String(row.name || ''),
         description: String(row.tagline || row.description || ''),
         price: Number(row.amount ?? (Number(row.amountPaise || 0) / 100)),
-<<<<<<< HEAD
         audience: toPlanAudience(row.audience),
-=======
-        audience: row.audience === 'aspirant' ? 'aspirant' : 'business',
->>>>>>> 8020f5d (Initial commit for website frontend)
         minYears: Number(row.minYears || 0),
         maxYears: row.maxYears === null || row.maxYears === undefined ? null : Number(row.maxYears),
         experience: String(row.experience || ''),

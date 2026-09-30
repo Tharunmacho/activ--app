@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import EventFilesEditor from './components/EventFilesEditor';
 import type { EventAttachment } from '@/services/cmsApi';
 import { useCardTable } from '@/lib/useCardTable';
@@ -12,19 +11,6 @@ import {
     getEventsSettings, updateEventsSettings,
     errorMessage, EMPTY_MEDIA,
     type CmsEvent, type EventsSettings, type CmsMedia, type CmsEventDay,
-=======
-import { useEffect, useState } from 'react';
-import {
-    Plus, Pencil, Trash2, X, Save, Check, Loader2,
-    Lock, Globe, Building2, MapPin, Shield, Video, Home, Eye, EyeOff, Images, Search,
-} from 'lucide-react';
-import {
-    getCmsEvents, createCmsEvent, updateCmsEvent, deleteCmsEvent, invalidateCmsCache,
-    sendEventToGallery,
-    getEventsSettings, updateEventsSettings,
-    errorMessage, EMPTY_MEDIA,
-    type CmsEvent, type EventsSettings, type CmsMedia,
->>>>>>> 8020f5d (Initial commit for website frontend)
 } from '@/services/cmsApi';
 import {
     CmsCard,
@@ -43,27 +29,18 @@ import {
     CmsSection,
     CmsStep,
     CmsSteps,
-<<<<<<< HEAD
     SaveNowProvider,
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     SectionToolsProvider,
     CmsChoice,
     CmsCheck,
 } from './components/CmsUI';
 import MediaPicker from './components/MediaPicker';
-<<<<<<< HEAD
 import TimeField from './components/TimeField';
 import EventDaysEditor, { addDays, dayDelta, shiftDays, daysInRange } from './components/EventDaysEditor';
 import RegionTargetPicker from './components/RegionTargetPicker';
 import { StatList, IconPicker, RepeatableList , ExtraFieldsEditor } from './components/CmsEditors';
 import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
 import { EventQrDialog } from '@/components/shared/EventQr';
-=======
-import RegionTargetPicker from './components/RegionTargetPicker';
-import { StatList, IconPicker, RepeatableList , ExtraFieldsEditor } from './components/CmsEditors';
-import { CmsMediaFrame } from '@/components/shared/CmsMediaFrame';
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { CARD_TITLE } from '@/components/layout/appTypography';
 import EventDetailFields, {
     BLANK_DETAIL, toLocalDateTimeInput, type EventDetail,
@@ -107,7 +84,6 @@ const BLANK = {
     description: '',
     date: '',
     time: '',
-<<<<<<< HEAD
     /*
      * A CONFERENCE RUNS FOR THREE DAYS, and the form could only say one.
      *
@@ -126,9 +102,6 @@ const BLANK = {
     /* The per-day programme. Empty for a one-day event — the editor for it is
        not even drawn until the Last day makes the event longer than a day. */
     days: [] as CmsEventDay[],
-=======
-    endTime: '',
->>>>>>> 8020f5d (Initial commit for website frontend)
     location: '',
     category: '',
     /*
@@ -157,24 +130,11 @@ const BLANK = {
      * and a CMS event is onboarding content by definition.
      */
     showOnOnboarding: false,
-<<<<<<< HEAD
     // The QR card on the event page; on for every new event (see EventQr).
     showQrOnPage: true,
     // Documents (agenda PDF …) and a video link — see EventFilesEditor.
     attachments: [] as EventAttachment[],
     videoUrl: '',
-=======
-    /*
-     * On the home page's upcoming strip.
-     *
-     * TRUE on a blank form, unlike the flag above. A new event goes on the
-     * home page with no second step, which is the behaviour that exists
-     * today; the switch is how an editor takes one OFF. The opposite
-     * default would make every event a two-step publish and empty the
-     * strip until somebody noticed.
-     */
-    showOnHome: true,
->>>>>>> 8020f5d (Initial commit for website frontend)
     /*
      * "Everyone in the association" — the first of the two audience cards.
      *
@@ -263,7 +223,6 @@ const toTimeInput = (iso: string | null) => {
  * 8pm. Building the instant here — where the editor's timezone IS the intended
  * one — removes the guess.
  */
-<<<<<<< HEAD
 /**
  * "10 Oct 2026, 09:00 AM" — the WHEN column of the events table.
  *
@@ -283,8 +242,6 @@ const listWhen = (iso: string): string => {
     }).replace(/\b(am|pm)\b/i, (m) => m.toUpperCase());
 };
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 const toInstant = (date: string, time: string): string => {
     if (!date) return '';
     const [h, m] = (time || '00:00').split(':').map(Number);
@@ -305,16 +262,11 @@ const toInstant = (date: string, time: string): string => {
  * that has not happened.
  */
 const hasBeenHeld = (e: CmsEvent) => {
-<<<<<<< HEAD
     /* The END, falling back to the start. A three-day conclave is not a past
        event on its second morning, and reading `startAt` alone said it was. */
     const when = e?.endAt || e?.startAt;
     if (!when) return false;
     const t = new Date(when).getTime();
-=======
-    if (!e?.startAt) return false;
-    const t = new Date(e.startAt).getTime();
->>>>>>> 8020f5d (Initial commit for website frontend)
     return !Number.isNaN(t) && t < Date.now();
 };
 
@@ -350,7 +302,6 @@ export default function EventsManager({
      */
     channel?: 'public' | 'members';
 } = {}) {
-<<<<<<< HEAD
     const cardTableRef = useCardTable();
     const [events, setEvents] = useState<CmsEvent[]>([]);
     /*
@@ -380,10 +331,6 @@ export default function EventsManager({
         setSettingsClean(next);
         setCopyDirty(true);
     };
-=======
-    const [events, setEvents] = useState<CmsEvent[]>([]);
-    const [settings, setSettings] = useState<EventsSettings | null>(null);
->>>>>>> 8020f5d (Initial commit for website frontend)
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -393,11 +340,8 @@ export default function EventsManager({
     const [editing, setEditing] = useState<string | null>(null);
     const [form, setForm] = useState<typeof BLANK>({ ...BLANK });
     const [showForm, setShowForm] = useState(false);
-<<<<<<< HEAD
     // The QR panel: opened for a just-created event, or from a row's QR button.
     const [qrFor, setQrFor] = useState<{ event: CmsEvent; justCreated: boolean } | null>(null);
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
     /**
      * Which audience the list is showing.
      *
@@ -429,7 +373,6 @@ export default function EventsManager({
      * with — the public page shows what is upcoming, so an editor comparing
      * the two needs to see the same slice here.
      */
-<<<<<<< HEAD
     /*
      * THE TABS, like Regions & States: Upcoming, Past, and the page's wording.
      * `when` is what the list filters on; the wording tab shows the section
@@ -437,9 +380,6 @@ export default function EventsManager({
      */
     const [when, setWhen] = useState<'all' | 'upcoming' | 'past'>('upcoming');
     const [wordingTab, setWordingTab] = useState(false);
-=======
-    const [when, setWhen] = useState<'all' | 'upcoming' | 'past'>('all');
->>>>>>> 8020f5d (Initial commit for website frontend)
     const [query, setQuery] = useState('');
     const originOf = (e: CmsEvent) => ((e.channel || 'public') === 'public' ? 'cms' : 'admin');
     const adminPosted = events.filter((e) => originOf(e) === 'admin').length;
@@ -473,15 +413,9 @@ export default function EventsManager({
         try {
             // Together: the list and the copy around it are independent, and
             // waiting for one before asking for the other doubles the delay.
-<<<<<<< HEAD
             const [list, config] = await Promise.all([getCmsEventsForEditor(), getEventsSettings()]);
             setEvents(list);
             setSettingsClean(config);
-=======
-            const [list, config] = await Promise.all([getCmsEvents(), getEventsSettings()]);
-            setEvents(list);
-            setSettings(config);
->>>>>>> 8020f5d (Initial commit for website frontend)
             return list;
         } catch (err) {
             setError(errorMessage(err, 'Could not load events'));
@@ -544,12 +478,8 @@ export default function EventsManager({
         setSavedCopy(false);
         setError('');
         try {
-<<<<<<< HEAD
             setSettingsClean(await updateEventsSettings(settings));
             setCopyDirty(false);
-=======
-            setSettings(await updateEventsSettings(settings));
->>>>>>> 8020f5d (Initial commit for website frontend)
             setSavedCopy(true);
             cmsSaved('Section copy');
             setTimeout(() => setSavedCopy(false), 2500);
@@ -566,7 +496,6 @@ export default function EventsManager({
         setForm({
             ...BLANK,
             /*
-<<<<<<< HEAD
              * The onboarding answer a new event opens at: ON, on every surface.
              *
              * The association wants every event it posts — from the CMS, the
@@ -577,18 +506,6 @@ export default function EventsManager({
              * rare event that must stay inside the association.
              */
             showOnOnboarding: true,
-=======
-             * The onboarding answer this surface opens at.
-             *
-             * `true` in the CMS: that screen exists to post the onboarding
-             * site's programme, so anything written there is public content
-             * unless the editor says otherwise. `false` in the admin area,
-             * where an event is the association's own until someone chooses to
-             * advertise it. Both defaults are the answer the editor would have
-             * given, which is the only reason a default is safe here.
-             */
-            showOnOnboarding: channel === 'public',
->>>>>>> 8020f5d (Initial commit for website frontend)
             reachEveryone: true,
             detail: { ...BLANK.detail, audience: defaultAudience },
         });
@@ -602,7 +519,6 @@ export default function EventsManager({
             description: e.description || '',
             date: toDateInput(e.startAt),
             time: toTimeInput(e.startAt),
-<<<<<<< HEAD
             /* Only a DIFFERENT day is an end date. An event that starts and
                finishes on one day has an `endAt` carrying the end time and the
                same date, and echoing that back into the field would show every
@@ -618,9 +534,6 @@ export default function EventsManager({
                 endTime: d.endTime || '',
                 agenda: d.agenda || [],
             })),
-=======
-            endTime: toTimeInput(e.endAt),
->>>>>>> 8020f5d (Initial commit for website frontend)
             location: e.location || '',
             category: e.category || '',
             /*
@@ -655,17 +568,11 @@ export default function EventsManager({
              * would have told them that was the state it was already in.
              */
             showOnOnboarding: isOnPublicSite(e),
-<<<<<<< HEAD
             showQrOnPage: e.showQrOnPage !== false,
             attachments: Array.isArray(e.attachments) ? e.attachments : [],
             videoUrl: e.videoUrl || '',
             // `!== false`: the field postdates every event in the
             // collection, and those belong on the home page as before.
-=======
-            // `!== false`: the field postdates every event in the
-            // collection, and those belong on the home page as before.
-            showOnHome: e?.showOnHome !== false,
->>>>>>> 8020f5d (Initial commit for website frontend)
             /*
              * Restored from the event, with a fallback for every row written
              * before the field existed: those express "everyone" as an empty
@@ -719,11 +626,8 @@ export default function EventsManager({
                  */
                 memberFee: e.memberFee == null ? '' : String(e.memberFee),
                 registrationNote: e.registrationNote || '',
-<<<<<<< HEAD
                 topic: e.topic || '',
                 language: e.language || '',
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                 registrationFields: Array.isArray(e.registrationFields) ? e.registrationFields : [],
                 reminderOffsetsHours: Array.isArray(e.reminderOffsetsHours) ? e.reminderOffsetsHours : [],
             },
@@ -744,26 +648,10 @@ export default function EventsManager({
      * screen that locks scrolling for its own reasons is not unlocked by
      * closing this.
      */
-<<<<<<< HEAD
     /* The form opens as its own screen (see the render), so it starts at the
        top of the page rather than wherever the table was scrolled to. */
     useEffect(() => {
         if (showForm) window.scrollTo({ top: 0 });
-=======
-    useEffect(() => {
-        if (!showForm) return;
-
-        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowForm(false); };
-        window.addEventListener('keydown', onKey);
-
-        const previous = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
-
-        return () => {
-            window.removeEventListener('keydown', onKey);
-            document.body.style.overflow = previous;
-        };
->>>>>>> 8020f5d (Initial commit for website frontend)
     }, [showForm]);
 
     const handleSubmit = async (ev: React.FormEvent) => {
@@ -775,7 +663,6 @@ export default function EventsManager({
                 title: form.title,
                 description: form.description,
                 startAt: toInstant(form.date, form.time),
-<<<<<<< HEAD
                 /*
                  * THE END, from whichever of the two fields was given.
                  *
@@ -798,10 +685,6 @@ export default function EventsManager({
                  * The server's `parseArray` reads it back on both transports.
                  */
                 days: JSON.stringify(daysInRange(form.days || [], form.date, form.endDate)),
-=======
-                // An end time is optional, and only means anything with a start.
-                endAt: form.endTime ? toInstant(form.date, form.endTime) : '',
->>>>>>> 8020f5d (Initial commit for website frontend)
                 location: form.location,
                 category: form.category,
                 /*
@@ -839,14 +722,10 @@ export default function EventsManager({
                  * could account for. Sending what was loaded keeps one answer.
                  */
                 showOnOnboarding: form.showOnOnboarding,
-<<<<<<< HEAD
                 showQrOnPage: form.showQrOnPage,
                 // JSON for the same reason the agenda is: this payload may become FormData.
                 attachments: JSON.stringify(form.attachments || []),
                 videoUrl: form.videoUrl || '',
-=======
-                showOnHome: form.showOnHome,
->>>>>>> 8020f5d (Initial commit for website frontend)
                 // Sent alongside `targets`, never instead of it — the pair is
                 // what lets a reopened event show back both cards.
                 reachEveryone: form.reachEveryone,
@@ -863,7 +742,6 @@ export default function EventsManager({
                 speakers: JSON.stringify(form.detail.speakers),
                 reminderOffsetsHours: JSON.stringify(form.detail.reminderOffsetsHours),
 
-<<<<<<< HEAD
                 /*
                  * HOW IT IS ATTENDED. These three were loaded into the form
                  * and never sent back, so "Online" and the joining link were
@@ -873,8 +751,6 @@ export default function EventsManager({
                 mode: form.detail.mode,
                 onlinePlatform: form.detail.onlinePlatform,
                 onlineUrl: form.detail.onlineUrl,
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                 venueAddress: form.detail.venueAddress,
                 venueMapUrl: form.detail.venueMapUrl,
                 contactName: form.detail.contactName,
@@ -900,12 +776,9 @@ export default function EventsManager({
                     ? ''
                     : Number(form.detail.memberFee) || 0,
                 registrationNote: form.detail.registrationNote,
-<<<<<<< HEAD
                 // Printed in the booking email and WhatsApp message.
                 topic: form.detail.topic,
                 language: form.detail.language,
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                 // JSON-encoded for the same reason the agenda is: this payload
                 // becomes `FormData` whenever there is an image, and
                 // `FormData.append` would stringify the array to
@@ -913,7 +786,6 @@ export default function EventsManager({
                 registrationFields: JSON.stringify(form.detail.registrationFields),
             };
 
-<<<<<<< HEAD
             if (editing) {
                 await updateCmsEvent(editing, payload);
             } else {
@@ -934,10 +806,6 @@ export default function EventsManager({
                     });
                 }
             }
-=======
-            if (editing) await updateCmsEvent(editing, payload);
-            else await createCmsEvent(payload);
->>>>>>> 8020f5d (Initial commit for website frontend)
             cmsSaved(editing ? 'Event' : 'New event');
             setShowForm(false);
             await load({ quiet: true });
@@ -952,129 +820,14 @@ export default function EventsManager({
         }
     };
 
-<<<<<<< HEAD
-=======
-    /**
-     * ======================================================================
-     * PUT AN EVENT ON THE HOME PAGE, OR TAKE IT OFF, FROM THE LIST
-     * ======================================================================
-     *
-     * The picker above this table shows the UPCOMING events, because those
-     * are the only ones the strip can carry. This is the whole list, and an
-     * editor reading it wants the answer on the row in front of them rather
-     * than in a different card further up the page.
-     *
-     * It writes the event and nothing else — one field, straight away, the
-     * same `showOnHome` the picker and the event form both set. Three
-     * controls, one answer.
-     *
-     * The row is replaced from the server's reply rather than assumed: a
-     * switch that paints the new state and then silently fails to store it
-     * is worse than one that does not move.
-     */
-    const [homeBusy, setHomeBusy] = useState<string | null>(null);
-
->>>>>>> 8020f5d (Initial commit for website frontend)
     /*
      * Already held.
      *
      * An event with NO date is not past: an unset date is missing
-<<<<<<< HEAD
      * information, not a statement that it already happened.
      */
     const isPastEvent = hasBeenHeld;
 
-=======
-     * information, and the home strip carries it — see `EventsExplorer`.
-     */
-    const isPastEvent = hasBeenHeld;
-
-    const toggleHome = async (e: CmsEvent) => {
-        const next = e.showOnHome === false;
-        setHomeBusy(e.id);
-        setError('');
-        try {
-            await updateCmsEvent(e.id, { showOnHome: next });
-            setEvents((list) => list.map((row) => (
-                row.id === e.id ? { ...row, showOnHome: next } : row
-            )));
-            invalidateCmsCache('events');
-            cmsSaved(next ? 'Added to the home page' : 'Taken off the home page');
-        } catch (err) {
-            const message = errorMessage(err, 'Could not change that event');
-            setError(message);
-            cmsFailed('the event', message);
-        } finally {
-            setHomeBusy(null);
-        }
-    };
-
-    /**
-     * ======================================================================
-     * A FINISHED EVENT BELONGS IN THE GALLERY
-     * ======================================================================
-     *
-     * `/events` carries upcoming events and tells a visitor that everything
-     * already held is in the gallery. Until now getting it there meant
-     * retyping the title, the date, the venue and the write-up into a new
-     * gallery item and re-uploading the picture.
-     *
-     * A COPY, and the confirmation says so: the event keeps its own page and
-     * its URL, which people hold links to and bookings point at. It is only
-     * switched off the home strip. Deleting it afterwards is the editor's
-     * call, from the Delete beside this button.
-     */
-    const [toGallery, setToGallery] = useState<string | null>(null);
-
-    const archiveToGallery = async (e: CmsEvent) => {
-        const name = e.title || 'this event';
-
-        /*
-         * THE DATE IS A WARNING HERE, not a locked button.
-         *
-         * Which events belong in the gallery is the editor's call — a
-         * postponed event, one held early, one whose date was never right
-         * in the first place. A button that simply is not there cannot be
-         * argued with; a sentence can be read and overruled.
-         */
-        const ok = window.confirm(
-            (e.inGallery
-                ? `Update the gallery copy of “${name}”?`
-                : `Add “${name}” to the gallery?`)
-            + '\n\nIts picture, title, date, venue and write-up are copied across.'
-            + (e.inGallery
-                ? ' The existing gallery item is refreshed — no second copy is made.'
-                : '')
-            + (isPastEvent(e)
-                ? ''
-                : '\n\nNOTE: this event has not been held yet. The gallery is where'
-                  + ' past events live, so a visitor will read it as one that has.')
-            + '\n\nThe event itself is kept — its own page and link still work.'
-            + ' It is taken off the home page strip.',
-        );
-        if (!ok) return;
-
-        setToGallery(e.id);
-        setError('');
-        try {
-            const result = await sendEventToGallery(e.id);
-            cmsDone(
-                result.updated
-                    ? `“${result.title}” was already in the gallery — updated`
-                    : `“${result.title}” added to the gallery`,
-                'The event itself is kept. It has been taken off the home page strip.',
-            );
-            await load({ quiet: true });
-        } catch (err) {
-            const message = errorMessage(err, 'Could not add it to the gallery');
-            setError(message);
-            cmsFailed('the gallery item', message);
-        } finally {
-            setToGallery(null);
-        }
-    };
-
->>>>>>> 8020f5d (Initial commit for website frontend)
     const handleDelete = async (e: CmsEvent) => {
         if (!window.confirm(`Delete "${e.title || 'Untitled event'}"? This removes it from the public site and from the member app.`)) return;
         try {
@@ -1097,7 +850,6 @@ export default function EventsManager({
             {/* The wording around the onboarding page's grid -- CMS only. The
                 grid itself is the list below, the same events the member app
                 shows, so publishing once is enough for both. */}
-<<<<<<< HEAD
             {/* The tabs — hidden while an event is open, which is its own screen. */}
             {!showForm && (
                 <div className="mb-6 flex flex-wrap gap-2 border-b border-slate-200 dark:border-[#1f1f1f]">
@@ -1129,9 +881,6 @@ export default function EventsManager({
             )}
 
             {!showForm && wordingTab && showSectionCopy && settings && (
-=======
-            {showSectionCopy && settings && (
->>>>>>> 8020f5d (Initial commit for website frontend)
                 <CmsCard
                     title="Section copy"
                     description="The heading above the events grid, on the home page and on /events."
@@ -1145,14 +894,9 @@ export default function EventsManager({
                     {/* 32px between the cards, like Home and the gallery.
                         At zero, one card's last field and the next card's
                         heading read as one continuous column. */}
-<<<<<<< HEAD
                     <SaveNowProvider value={{ save: saveCopy, saving: savingCopy, dirty: copyDirty }}>
                     <CmsSteps>
                         <CmsStep sectionKey="events.header" fieldMode="content" step="Section 1" title="Heading">
-=======
-                    <CmsSteps>
-                        <CmsStep sectionKey="events.header" step="Section 1" title="Heading">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         <div className="grid gap-4 sm:grid-cols-2">
                             <CmsField label="Eyebrow">
                                 <CmsInput
@@ -1226,11 +970,8 @@ export default function EventsManager({
                         {/* ----------------------------------------- hero band */}
                         <CmsStep
                             sectionKey="events.hero"
-<<<<<<< HEAD
                             /* Words over a photograph; no details card. */
                             fieldMode="content"
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                             step="Section 2"
                             title="Hero band"
                         >
@@ -1289,7 +1030,6 @@ export default function EventsManager({
                         {/* ------------------------------------ search and chips */}
                         <CmsStep
                             sectionKey="events.filters"
-<<<<<<< HEAD
                             /*
                              * THIS CARD'S LOGIC IS CHIPS, so its extra rows
                              * are shaped like a chip: a mark and a name, with
@@ -1299,8 +1039,6 @@ export default function EventsManager({
                              */
                             fieldMode="card"
                             fieldNoun="label"
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                             step="Section 3"
                             title="Search and filter chips"
                             hint={CHIP_HINT}
@@ -1319,7 +1057,6 @@ export default function EventsManager({
                                     onChange={(categories) => setSettings({ ...settings, categories })}
                                     noun="chip"
                                     blank={() => ({ label: '', icon: 'calendar-days' })}
-<<<<<<< HEAD
                                     /*
                                      * A CHIP IS NAMED BY `label`, NOT `title`.
                                      *
@@ -1332,8 +1069,6 @@ export default function EventsManager({
                                      * field this shape does not have.
                                      */
                                     summary={(chip) => ({ title: chip.label, subtitle: chip.icon })}
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     row={(chip, update) => (
                                         <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-3">
                                             <IconPicker value={chip.icon} onChange={(icon) => update({ icon })} />
@@ -1443,7 +1178,6 @@ export default function EventsManager({
                         />
                         </CmsStep>
 
-<<<<<<< HEAD
                     </CmsSteps>
                     </SaveNowProvider>
                     </SectionToolsProvider>
@@ -1463,118 +1197,10 @@ export default function EventsManager({
                       * of them calls `saveCopy`, and this button called the
                       * same function.
                       */}
-=======
-                        {/*
-                          * WHERE THE PAST EVENTS WENT
-                          *
-                          * `/events` shows upcoming events only. This strip is
-                          * the only thing on that page telling a visitor who
-                          * came looking for last year's conclave where to find
-                          * it — so it is on by default, and blanking a field
-                          * falls back to the shipped wording rather than
-                          * leaving the question unanswered.
-                          */}
-                        <CmsStep
-                            sectionKey="events.pastLink"
-                            step="Section 6"
-                            title="Where past events are"
-                            hint="A strip under the grid pointing at the gallery, which holds every event already held."
-                            actions={
-                                <label className="flex items-center gap-2 text-[1.1875rem] text-slate-600 dark:text-neutral-300 shrink-0">
-                                    <input
-                                        type="checkbox"
-                                        checked={settings.pastLink.enabled}
-                                        onChange={(e) => setSettings({
-                                            ...settings,
-                                            pastLink: { ...settings.pastLink, enabled: e.target.checked },
-                                        })}
-                                        className="rounded border-slate-400"
-                                    />
-                                    Shown
-                                </label>
-                            }
-                        >
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <CmsField label="Heading">
-                                    <CmsInput
-                                        value={settings.pastLink.title}
-                                        onChange={(e) => setSettings({
-                                            ...settings,
-                                            pastLink: { ...settings.pastLink, title: e.target.value },
-                                        })}
-                                        placeholder="Looking for an event that has already happened?"
-                                    />
-                                </CmsField>
-                                <CmsField label="Icon">
-                                    <IconPicker
-                                        value={settings.pastLink.icon}
-                                        onChange={(icon) => setSettings({
-                                            ...settings,
-                                            pastLink: { ...settings.pastLink, icon },
-                                        })}
-                                    />
-                                </CmsField>
-                            </div>
-
-                            <div className="mt-4">
-                                <CmsField label="Explanation">
-                                    <CmsTextarea
-                                        rows={2}
-                                        value={settings.pastLink.subtitle}
-                                        onChange={(e) => setSettings({
-                                            ...settings,
-                                            pastLink: { ...settings.pastLink, subtitle: e.target.value },
-                                        })}
-                                        placeholder="Every conclave, seminar and meeting we have held is in the gallery, with its photographs."
-                                    />
-                                </CmsField>
-                            </div>
-
-                            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                                <CmsField label="Button label">
-                                    <CmsInput
-                                        value={settings.pastLink.label}
-                                        onChange={(e) => setSettings({
-                                            ...settings,
-                                            pastLink: { ...settings.pastLink, label: e.target.value },
-                                        })}
-                                        placeholder="Open the gallery"
-                                    />
-                                </CmsField>
-                                <CmsField label="Button link">
-                                    <CmsInput
-                                        value={settings.pastLink.href}
-                                        onChange={(e) => setSettings({
-                                            ...settings,
-                                            pastLink: { ...settings.pastLink, href: e.target.value },
-                                        })}
-                                        placeholder="/gallery"
-                                    />
-                                </CmsField>
-                            </div>
-                        </CmsStep>
-                    </CmsSteps>
-                    </SectionToolsProvider>
-
-                    <div className="mt-6">
-                        <button
-                            type="button"
-                            disabled={savingCopy}
-                            onClick={saveCopy}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-500
-                                       text-white rounded-lg text-[1.25rem] font-medium transition-colors disabled:opacity-50"
-                        >
-                            {savingCopy ? <Loader2 size={16} className="animate-spin" />
-                                : savedCopy ? <Check size={16} /> : <Save size={16} />}
-                            {savingCopy ? 'Saving...' : savedCopy ? 'Saved -- live page updated' : 'Save section copy'}
-                        </button>
-                    </div>
->>>>>>> 8020f5d (Initial commit for website frontend)
                 </CmsCard>
             )}
 
             {showForm && (
-<<<<<<< HEAD
                 /*
                  * AN EVENT OPENS ON A SCREEN OF ITS OWN, the way a state page
                  * does in Regions & States. It was a dialog over the table — a
@@ -1590,21 +1216,6 @@ export default function EventsManager({
                     >
                         <ArrowLeft className="h-4 w-4" /> Back to the events
                     </button>
-=======
-                <div
-                    className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-0 sm:p-6"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label={editing ? 'Edit event' : 'New event'}
-                >
-                    {/* The backdrop closes it, like the × and Escape do. */}
-                    <button
-                        type="button"
-                        aria-label="Close"
-                        onClick={() => setShowForm(false)}
-                        className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
-                    />
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                     {/*
                       * `max-h` and a THREE-PART COLUMN: header, scrolling body,
@@ -1628,19 +1239,10 @@ export default function EventsManager({
                       * border is there for the same reason: on a light
                       * background a shadow alone does not draw an edge.
                       */}
-<<<<<<< HEAD
                     <div className="relative w-full bg-white dark:bg-[#0b0b0b] rounded-2xl
                                     border border-slate-200 dark:border-[#1f1f1f] flex flex-col">
 
                         <header className="shrink-0 flex items-start gap-3 sm:gap-4 px-4 sm:px-7 py-4 sm:py-5
-=======
-                    <div className="relative w-full sm:max-w-2xl h-full sm:h-auto sm:max-h-[88vh]
-                                    bg-white dark:bg-[#0b0b0b] sm:rounded-2xl shadow-2xl
-                                    border border-slate-200 dark:border-[#1f1f1f]
-                                    flex flex-col overflow-hidden">
-
-                        <header className="shrink-0 flex items-start gap-4 px-5 sm:px-7 py-5
->>>>>>> 8020f5d (Initial commit for website frontend)
                                            border-b border-slate-200 dark:border-[#1f1f1f]">
                             <div className="min-w-0 flex-1">
                                 <h2 className={`${CARD_TITLE} text-slate-900 dark:text-neutral-100`}>
@@ -1663,11 +1265,7 @@ export default function EventsManager({
                         </header>
 
                     <form id="event-form" onSubmit={handleSubmit}
-<<<<<<< HEAD
                           className="px-4 sm:px-7 py-5 sm:py-6
-=======
-                          className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-7 py-6
->>>>>>> 8020f5d (Initial commit for website frontend)
                                      grid gap-4 sm:grid-cols-2 content-start">
                         <div className="sm:col-span-2">
                             {/*
@@ -1697,7 +1295,6 @@ export default function EventsManager({
                         </div>
 
                         <CmsField label="Date">
-<<<<<<< HEAD
                             {/* MOVING THE START MOVES THE EVENT: the last day
                                 and every day's hours and sessions go with it
                                 (see `shiftDays`), the way a calendar moves a
@@ -1779,35 +1376,6 @@ export default function EventsManager({
                             />
                         </div>
 
-=======
-                            <CmsInput type="date" value={form.date}
-                                onChange={(e) => setForm({ ...form, date: e.target.value })} />
-                        </CmsField>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            {/*
-                              * `lang="en-US"` — AM/PM, not a 24-hour clock.
-                              *
-                              * A native time input renders in the BROWSER's
-                              * locale, and on an en-GB browser that is 24-hour:
-                              * "10:00" gives no way to tell a morning session
-                              * from an evening one, which is the one thing the
-                              * field exists to say. The attribute pins the
-                              * control's display to a 12-hour clock; the VALUE
-                              * is unaffected — it is always "HH:MM" on the wire,
-                              * so nothing downstream has to know.
-                              */}
-                            <CmsField label="Starts">
-                                <CmsInput type="time" lang="en-US" value={form.time}
-                                    onChange={(e) => setForm({ ...form, time: e.target.value })} />
-                            </CmsField>
-                            <CmsField label="Ends">
-                                <CmsInput type="time" lang="en-US" value={form.endTime}
-                                    onChange={(e) => setForm({ ...form, endTime: e.target.value })} />
-                            </CmsField>
-                        </div>
-
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                         {/*
                           * ONE COLUMN OR TWO, DEPENDING ON WHETHER THE VENUE
@@ -1929,7 +1497,6 @@ export default function EventsManager({
                                         ))}
                                 </select>
                             </CmsField>
-<<<<<<< HEAD
 
                             {/* WHAT IT IS ABOUT, AND IN WHICH LANGUAGE — both go
                                 into the booking email and WhatsApp message. */}
@@ -1949,8 +1516,6 @@ export default function EventsManager({
                                     placeholder="Tamil & English"
                                 />
                             </CmsField>
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                         </div>
 
                         {/* ===================== 2b · HOW IT IS ATTENDED
@@ -2036,21 +1601,12 @@ export default function EventsManager({
                                             />
                                         </CmsField>
                                         <CmsField
-<<<<<<< HEAD
                                             label="Registration link"
                                             hint="The Zoom (or other) registration form. Not shown publicly — it is sent to the people who book, and the platform then emails each of them their joining link."
                                         >
                                             <CmsInput
                                                 value={form.detail.onlineUrl}
                                                 placeholder="https://zoom.us/meeting/register/…"
-=======
-                                            label="Joining link"
-                                            hint="Not shown publicly. It reaches the people who book, on their confirmation."
-                                        >
-                                            <CmsInput
-                                                value={form.detail.onlineUrl}
-                                                placeholder="https://zoom.us/j/…"
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 onChange={(e) => setForm({
                                                     ...form,
                                                     detail: { ...form.detail, onlineUrl: e.target.value },
@@ -2085,7 +1641,6 @@ export default function EventsManager({
                         </div>
 
                         <div className="sm:col-span-2">
-<<<<<<< HEAD
                             {/*
                               * 16/9 — the shape of the banner on an event card.
                               *
@@ -2107,15 +1662,6 @@ export default function EventsManager({
                                     + 'with the frame padded either side, unless you set Fit to "Fill frame".'}
                                 value={form.media}
                                 onChange={(media) => setForm({ ...form, media })}
-=======
-                            {/* 16/9 — the shape of the banner on an event card. */}
-                            <MediaPicker
-                                label="Banner"
-                                aspect="16 / 9"
-                                value={form.media}
-                                onChange={(media) => setForm({ ...form, media })}
-
->>>>>>> 8020f5d (Initial commit for website frontend)
                             />
                         </div>
 
@@ -2213,30 +1759,6 @@ export default function EventsManager({
                                     />
 
                                     {/*
-<<<<<<< HEAD
-=======
-                                      A THIRD question, and a checkbox for the
-                                      same reason the one above it is: it is not
-                                      an alternative to anything. The event is on
-                                      /events either way — this decides whether it
-                                      is one of the FEW on the landing page.
-
-                                      The same answer the Home screen's picker
-                                      sets, because it is the same field on the
-                                      same event. Two screens, one answer.
-                                    */}
-                                    <div className="mt-3">
-                                        <CmsCheck
-                                            checked={form.showOnHome}
-                                            onChange={(showOnHome) => setForm({ ...form, showOnHome })}
-                                            icon={<Home className="w-4 h-4" />}
-                                            title="Allow it on the home page"
-                                            detail="The landing page carries the soonest few of these. Untick to keep it on /events only."
-                                        />
-                                    </div>
-
-                                    {/*
->>>>>>> 8020f5d (Initial commit for website frontend)
                                       Shown only when both are true, because that
                                       is the combination whose consequence is not
                                       obvious from either control on its own: the
@@ -2266,7 +1788,6 @@ export default function EventsManager({
                             </div>
                         )}
 
-<<<<<<< HEAD
                         <CmsCheck
                             checked={form.showQrOnPage}
                             onChange={(showQrOnPage) => setForm({ ...form, showQrOnPage })}
@@ -2280,14 +1801,11 @@ export default function EventsManager({
                             videoUrl={form.videoUrl || ''}
                             onChange={(next) => setForm({ ...form, ...next })}
                         />
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                         <EventDetailFields
                             value={form.detail}
                             onChange={(detail) => setForm({ ...form, detail })}
                             eventId={editing}
-<<<<<<< HEAD
                             /*
                              * Decided from the DATES, which live on this form
                              * rather than inside that component. A multi-day
@@ -2298,8 +1816,6 @@ export default function EventsManager({
                              * prints.
                              */
                             multiDay={!!form.endDate && form.endDate !== form.date}
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                         />
 
                         <CmsField label="Visibility">
@@ -2324,16 +1840,10 @@ export default function EventsManager({
                           * here — a submit button outside its form needs the id,
                           * or the button does nothing and nothing says why.
                           */}
-<<<<<<< HEAD
                         <footer className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-2 sm:gap-3 rounded-b-2xl px-4 sm:px-7 py-3 sm:py-4
                                            [&>button]:flex-1 sm:[&>button]:flex-none
                                            border-t border-slate-200 dark:border-[#1f1f1f]
                                            bg-slate-50/95 backdrop-blur dark:bg-[#0d0d0d]/95">
-=======
-                        <footer className="shrink-0 flex flex-wrap justify-end gap-3 px-5 sm:px-7 py-4
-                                           border-t border-slate-200 dark:border-[#1f1f1f]
-                                           bg-slate-50/80 dark:bg-[#0d0d0d]">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             <CmsButton type="button" variant="ghost" onClick={() => setShowForm(false)}>
                                 Cancel
                             </CmsButton>
@@ -2345,10 +1855,7 @@ export default function EventsManager({
                 </div>
             )}
 
-<<<<<<< HEAD
             {!showForm && !wordingTab && (
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
             <CmsCard
                 /* “3 of 8” whenever ANY filter is narrowing. The old count
                    watched the target filter alone, so a search or a date
@@ -2357,11 +1864,7 @@ export default function EventsManager({
                 title={`Events (${visibleEvents.length}`
                     + `${visibleEvents.length === events.length ? '' : ' of ' + events.length})`}
                 description={channel === 'public'
-<<<<<<< HEAD
                     ? 'Everything on the onboarding site — the programme written here and every event posted from the admin portal.'
-=======
-                    ? 'Everything on the onboarding site — the programme written here and anything the Super Admin posted there.'
->>>>>>> 8020f5d (Initial commit for website frontend)
                     : 'Aim an event at a region when you create it.'}
                 actions={
                     /* ONE control in the header, and it is the one that
@@ -2381,43 +1884,23 @@ export default function EventsManager({
                     {/*
                       WHY THE PUBLIC PAGE SHOWS FEWER THAN THIS LIST.
 
-<<<<<<< HEAD
                       `/events` and the home page carry what is still to come.
                       Eight here and three there is the rule working — but no
                       screen said so, so it read as a fault. It is stated where
                       the question gets asked.
-=======
-                      `/events` carries what is still to come; everything
-                      already held is in the gallery, which is what the strip
-                      under that page says. Eight here and three there is the
-                      rule working — but no screen said so, so it read as a
-                      fault. It is stated where the question gets asked.
->>>>>>> 8020f5d (Initial commit for website frontend)
                     */}
                     {events.length > upcomingCount && (
                         <p className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg
                                       border border-slate-200 bg-slate-50 px-3 py-2.5
-<<<<<<< HEAD
                                       text-[1.1875rem] text-slate-600 dark:border-[#2a2a2a]
-=======
-                                      text-[1.125rem] text-slate-600 dark:border-[#2a2a2a]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                       dark:bg-[#0f0f0f] dark:text-neutral-300">
                             <span>
                                 <strong className="font-semibold text-slate-900 dark:text-white">
                                     {upcomingCount} of these {upcomingCount === 1 ? 'is' : 'are'} on the
-<<<<<<< HEAD
                                     events page and the home page.
                                 </strong>{' '}
                                 The other {events.length - upcomingCount} have already been held —
                                 the events page and the home page show what is still to come.
-=======
-                                    public events page.
-                                </strong>{' '}
-                                The other {events.length - upcomingCount} have already been held —
-                                that page carries what is still to come, and points readers at the
-                                gallery for the rest.
->>>>>>> 8020f5d (Initial commit for website frontend)
                             </span>
                             <button
                                 type="button"
@@ -2447,7 +1930,6 @@ export default function EventsManager({
                                 value={originFilter}
                                 onChange={(e) => setOriginFilter(e.target.value as 'all' | 'cms' | 'admin')}
                                 aria-label="Filter events by where they came from"
-<<<<<<< HEAD
                                 className={`${FILTER_SELECT} w-full sm:w-auto`}
                             >
                                 <option value="all">Everything on the site</option>
@@ -2456,28 +1938,6 @@ export default function EventsManager({
                             </select>
                         )}
 
-=======
-                                className={FILTER_SELECT}
-                            >
-                                <option value="all">Everything on the site</option>
-                                <option value="cms">Written here</option>
-                                <option value="admin">Posted by the Super Admin ({adminPosted})</option>
-                            </select>
-                        )}
-
-                        {/* Upcoming, or already held — the same question the
-                            public page answers for itself. */}
-                        <select
-                            value={when}
-                            onChange={(e) => setWhen(e.target.value as 'all' | 'upcoming' | 'past')}
-                            aria-label="Filter events by date"
-                            className={FILTER_SELECT}
-                        >
-                            <option value="all">Every date ({events.length})</option>
-                            <option value="upcoming">Still to come ({upcomingCount})</option>
-                            <option value="past">Already held ({events.length - upcomingCount})</option>
-                        </select>
->>>>>>> 8020f5d (Initial commit for website frontend)
 
                         {/* Only targets actually in use. Offering the whole
                             region tree here would be 6,966 blocks, nearly all
@@ -2487,11 +1947,7 @@ export default function EventsManager({
                                 value={targetFilter}
                                 onChange={(e) => setTargetFilter(e.target.value)}
                                 aria-label="Filter events by who sees them"
-<<<<<<< HEAD
                                 className={`${FILTER_SELECT} w-full sm:w-auto`}
-=======
-                                className={FILTER_SELECT}
->>>>>>> 8020f5d (Initial commit for website frontend)
                             >
                                 <option value="all">Every audience</option>
                                 {targetOptions.map(t => (
@@ -2523,7 +1979,6 @@ export default function EventsManager({
                             hint="No event answers all of the filters above. Clear one of them."
                         />
                     ) : (
-<<<<<<< HEAD
                     <div ref={cardTableRef} className="overflow-x-auto card-table">
                         <table className="w-full text-[1.25rem]">
                             <thead>
@@ -2534,20 +1989,6 @@ export default function EventsManager({
                                     <th className="pb-4 pr-4 text-[1.1875rem] sm:text-[1.0625rem] font-semibold uppercase tracking-wider">Where</th>
                                     <th className="pb-4 pr-4 text-[1.1875rem] sm:text-[1.0625rem] font-semibold uppercase tracking-wider">Status</th>
                                     <th className="pb-4 text-[1.1875rem] sm:text-[1.0625rem] font-semibold uppercase tracking-wider text-right">Actions</th>
-=======
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-[1.25rem]">
-                            <thead>
-                                <tr className="text-left text-neutral-500 dark:text-neutral-400 border-b border-slate-200 dark:border-[#1f1f1f]">
-                                    <th className="pb-4 pr-4 text-[1.1875rem] sm:text-[1rem] font-semibold uppercase tracking-wider w-16">Banner</th>
-                                    <th className="pb-4 pr-4 text-[1.1875rem] sm:text-[1rem] font-semibold uppercase tracking-wider">Title</th>
-                                    <th className="pb-4 pr-4 text-[1.1875rem] sm:text-[1rem] font-semibold uppercase tracking-wider">When</th>
-                                    <th className="pb-4 pr-4 text-[1.1875rem] sm:text-[1rem] font-semibold uppercase tracking-wider">Where</th>
-                                    <th className="pb-4 pr-4 text-[1.1875rem] sm:text-[1rem] font-semibold uppercase tracking-wider">Status</th>
-                                    {/* Which events the landing page carries — see `toggleHome`. */}
-                                    <th className="pb-4 pr-4 text-[1.1875rem] sm:text-[1rem] font-semibold uppercase tracking-wider">Home page</th>
-                                    <th className="pb-4 text-[1.1875rem] sm:text-[1rem] font-semibold uppercase tracking-wider text-right">Actions</th>
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 </tr>
                             </thead>
                             <tbody>
@@ -2628,11 +2069,7 @@ export default function EventsManager({
                                                 members-only event and a published open one
                                                 both read "published". */}
                                             {e.audience === 'paid' ? (
-<<<<<<< HEAD
                                                 <span className="inline-flex items-center gap-1 text-[1.0625rem]
-=======
-                                                <span className="inline-flex items-center gap-1 text-[0.75rem]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                                  font-bold uppercase tracking-wide px-1.5 py-0.5
                                                                  rounded-full bg-blue-100 dark:bg-blue-950
                                                                  text-blue-700 dark:text-blue-400">
@@ -2658,18 +2095,13 @@ export default function EventsManager({
                                               reason.
                                             */}
                                             {channel === 'members' && isOnPublicSite(e) ? (
-<<<<<<< HEAD
                                                 <span className="inline-flex items-center gap-1 text-[1.0625rem]
-=======
-                                                <span className="inline-flex items-center gap-1 text-[0.75rem]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                                  font-bold uppercase tracking-wide px-1.5 py-0.5
                                                                  rounded-full bg-emerald-100 dark:bg-emerald-950
                                                                  text-emerald-700 dark:text-emerald-400">
                                                     <Globe className="w-2.5 h-2.5" /> Onboarding
                                                 </span>
                                             ) : null}
-<<<<<<< HEAD
                                             {/* The other answer, said out loud. Without
                                                 it a members-only row looked like every
                                                 other row, and the first sign it was not
@@ -2683,8 +2115,6 @@ export default function EventsManager({
                                                     <Lock className="w-2.5 h-2.5" /> Members only
                                                 </span>
                                             ) : null}
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                                             {/* WHOSE EVENT THIS IS. On the CMS
                                                 surface a members-channel row is
                                                 the super admin's, posted to the
@@ -2694,7 +2124,6 @@ export default function EventsManager({
                                                 write and may not expect to
                                                 find. */}
                                             {channel === 'public' && (e.channel || 'public') !== 'public' ? (
-<<<<<<< HEAD
                                                 <span className="inline-flex items-center gap-1 text-[1.0625rem]
                                                                  font-bold uppercase tracking-wide px-1.5 py-0.5
                                                                  rounded-full bg-violet-100 dark:bg-violet-950
@@ -2705,18 +2134,6 @@ export default function EventsManager({
                                             ) : null}
                                             {channel === 'public' && !isOnPublicSite(e) ? (
                                                 <span className="inline-flex items-center gap-1 text-[1.0625rem]
-=======
-                                                <span className="inline-flex items-center gap-1 text-[0.75rem]
-                                                                 font-bold uppercase tracking-wide px-1.5 py-0.5
-                                                                 rounded-full bg-violet-100 dark:bg-violet-950
-                                                                 text-violet-700 dark:text-violet-400 align-middle"
-                                                    title="Posted from the Super Admin's events screen. Editable here as well.">
-                                                    <Shield className="w-2.5 h-2.5" /> Super Admin
-                                                </span>
-                                            ) : null}
-                                            {channel === 'public' && !isOnPublicSite(e) ? (
-                                                <span className="inline-flex items-center gap-1 text-[0.75rem]
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                                  font-bold uppercase tracking-wide px-1.5 py-0.5
                                                                  rounded-full bg-amber-100 dark:bg-amber-950/60
                                                                  text-amber-700 dark:text-amber-400 align-middle"
@@ -2745,21 +2162,13 @@ export default function EventsManager({
                                               label you can see.
                                             */}
                                             {e.registrationEnabled ? (
-<<<<<<< HEAD
                                                 <span className="text-[1.0625rem] font-medium
-=======
-                                                <span className="text-[0.75rem] font-medium
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                                  text-emerald-600">
                                                     registration open
                                                 </span>
                                             ) : (
                                                 <span className="inline-flex items-center gap-1
-<<<<<<< HEAD
                                                                  text-[1.0625rem] font-semibold uppercase
-=======
-                                                                 text-[0.75rem] font-semibold uppercase
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                                  tracking-wide px-1.5 py-0.5 rounded-full
                                                                  bg-amber-100 dark:bg-amber-950
                                                                  text-amber-700 dark:text-amber-400">
@@ -2769,7 +2178,6 @@ export default function EventsManager({
                                             </span>
                                         </td>
                                         <td className="py-4 pr-4 text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
-<<<<<<< HEAD
                                             {/*
                                               * NO SECONDS.
                                               *
@@ -2783,9 +2191,6 @@ export default function EventsManager({
                                               * like two different things in two places.
                                               */}
                                             {e.startAt ? listWhen(e.startAt) : '—'}
-=======
-                                            {e.startAt ? new Date(e.startAt).toLocaleString() : '—'}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         </td>
                                         <td className="py-4 pr-4 text-neutral-500 dark:text-neutral-400">
                                             {/*
@@ -2827,77 +2232,12 @@ export default function EventsManager({
                                             </span>
                                         </td>
 
-<<<<<<< HEAD
-=======
-                                        {/*
-                                          ON THE HOME PAGE, OR NOT.
-
-                                          Whatever its date. An event already held is
-                                          labelled under the switch, because putting
-                                          one on the landing page is worth doing
-                                          deliberately — but the switch is the answer,
-                                          and a control that silently refuses is worse
-                                          than one that lets you choose badly.
-                                        */}
-                                        {/* A column, not a run of inline spans: the
-                                            switch and the two things true of this row
-                                            read as "Off" then "already held" then "in
-                                            the gallery", one under the other. */}
-                                        <td className="py-4 pr-4 align-top">
-                                          <div className="flex flex-col items-start gap-1.5">
-                                            <button
-                                                type="button"
-                                                onClick={() => toggleHome(e)}
-                                                disabled={homeBusy === e.id}
-                                                title={e.showOnHome === false
-                                                    ? 'Put this event on the home page'
-                                                    : 'Take it off the home page'}
-                                                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5
-                                                            text-[1.1875rem] font-semibold transition-colors
-                                                            disabled:opacity-50 ${e.showOnHome === false
-                                                        ? 'border-slate-300 dark:border-[#2a2a2a] text-neutral-500'
-                                                            + ' dark:text-neutral-400 hover:bg-slate-100 dark:hover:bg-[#161616]'
-                                                        : 'border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30'
-                                                            + ' text-blue-700 dark:text-blue-300 hover:bg-blue-100'}`}
-                                            >
-                                                {homeBusy === e.id
-                                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                    : e.showOnHome === false
-                                                        ? <EyeOff className="w-3.5 h-3.5" />
-                                                        : <Eye className="w-3.5 h-3.5" />}
-                                                {e.showOnHome === false ? 'Off' : 'On'}
-                                            </button>
-
-                                            {isPastEvent(e) && e.showOnHome !== false && (
-                                                <span className="text-[0.75rem] font-medium text-neutral-400">
-                                                    already held
-                                                </span>
-                                            )}
-
-                                            {/* What the button already did to this row.
-                                                Without it the control's only effect is
-                                                in another screen, and an editor working
-                                                down a season cannot see where they got
-                                                to. */}
-                                            {e.inGallery && (
-                                                <span className="inline-flex items-center gap-1 rounded-full
-                                                                   bg-emerald-50 px-2 py-0.5 text-[0.75rem]
-                                                                   font-semibold text-emerald-700
-                                                                   dark:bg-emerald-950/40 dark:text-emerald-400">
-                                                    <Images className="h-3 w-3" /> in the gallery
-                                                </span>
-                                            )}
-                                          </div>
-                                        </td>
-
->>>>>>> 8020f5d (Initial commit for website frontend)
                                         {/* A flex row with a real gap. The three
                                             controls were `mr-1`/`ml-1` siblings, so
                                             "Update copy" and "Delete" met with two
                                             pixels between them. */}
                                         <td className="py-4 text-right">
                                             <div className="flex flex-wrap items-center justify-end gap-2">
-<<<<<<< HEAD
                                             {/* The same 36px box as the delete beside
                                                 it, so the two icons line up. */}
                                             <button
@@ -2912,46 +2252,6 @@ export default function EventsManager({
                                             >
                                                 <QrCode className="w-4 h-4" />
                                             </button>
-=======
-                                            {/*
-                                              ON EVERY ROW. Which events belong in the
-                                              gallery is the editor's decision, and a
-                                              button that appears only once a date has
-                                              passed makes it the calendar's. An event
-                                              not yet held is warned about in the
-                                              confirmation instead.
-
-                                              `inGallery` changes the label rather than
-                                              hiding the button: pressing it again is a
-                                              refresh, which is worth doing after the
-                                              write-up has been corrected.
-                                            */}
-                                            <button
-                                                type="button"
-                                                onClick={() => archiveToGallery(e)}
-                                                disabled={toGallery === e.id}
-                                                title={e.inGallery
-                                                    ? 'Refresh this event\u2019s gallery item'
-                                                    : 'Copy this event into the gallery'}
-                                                className={`inline-flex items-center gap-1.5 rounded-lg
-                                                            border px-2.5 py-1.5 text-[1.1875rem] font-medium
-                                                            transition-colors disabled:opacity-50 ${e.inGallery
-                                                    ? 'border-slate-300 text-neutral-500 hover:bg-slate-100'
-                                                        + ' dark:border-[#2a2a2a] dark:text-neutral-400'
-                                                        + ' dark:hover:bg-[#161616]'
-                                                    : 'border-blue-200 text-blue-700 hover:bg-blue-50'
-                                                        + ' dark:border-blue-900 dark:text-blue-400'
-                                                        + ' dark:hover:bg-blue-950/40'}`}
-                                            >
-                                                {toGallery === e.id
-                                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                    : <Images className="w-3.5 h-3.5" />}
-                                                {e.inGallery ? 'Update copy' : 'To gallery'}
-                                            </button>
-
-                                            {/* The same 36px box as the delete beside
-                                                it, so the two icons line up. */}
->>>>>>> 8020f5d (Initial commit for website frontend)
                                             <button
                                                 type="button"
                                                 onClick={() => openEdit(e)}
@@ -2999,7 +2299,6 @@ export default function EventsManager({
                   </>
                 )}
             </CmsCard>
-<<<<<<< HEAD
             )}
 
             {qrFor && (
@@ -3021,8 +2320,6 @@ export default function EventsManager({
                     }}
                 />
             )}
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
         </CmsPage>
     );
 }

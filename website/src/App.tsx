@@ -1,19 +1,12 @@
-<<<<<<< HEAD
 import { lazy, Suspense, useEffect } from "react";
-=======
-import { lazy, Suspense } from "react";
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { Toaster } from "@/shared/components/ui/toaster";
 import { Toaster as Sonner } from "@/shared/components/ui/sonner";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ScrollToTop from "@/components/layout/ScrollToTop";
-<<<<<<< HEAD
 import RoleGate from "@/components/layout/RoleGate";
 import FloatingLaunchers from "@/components/layout/FloatingLaunchers";
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 import { CartProvider } from "@/contexts/CartContext";
 import { ProfileProvider } from "@/contexts/ProfileContext";
 import { ActiveCompanyProvider } from "@/contexts/ActiveCompanyContext";
@@ -27,7 +20,6 @@ import { ActiveCompanyProvider } from "@/contexts/ActiveCompanyContext";
  * Splitting at the route boundary means someone reading the About or Contact
  * page fetches those two pages and nothing else.
  *
-<<<<<<< HEAD
  * ONLY THE LANDING PAGE IS IN THE ENTRY BUNDLE NOW. The other public pages,
  * the login and a dozen member and business screens were eager too, which made
  * the one file every first visit waits on 1.15 MB — seconds on a phone before
@@ -83,37 +75,18 @@ const StatePage = lazy(() => import("./pages/onboarding/StatePage"));
 /* "View All" — one list in full, on its own screen. Replaces the old feed page,
    which 404'd on the two types that are not feeds (About and Leadership). */
 const StateDetailPage = lazy(() => import("./pages/onboarding/StateDetailPage"));
-=======
- * The five public routes and the login stay eager on purpose: they are the
- * entry points, and a Suspense fallback flashing on the first paint of the
- * landing page is worse than the few kilobytes it would save.
- */
-import Hero from "./pages/onboarding/Hero";
-import AboutPage from "./pages/onboarding/AboutPage";
-import EventsPage from "./pages/onboarding/EventsPage";
-import GalleryPage from "./pages/onboarding/GalleryPage";
-import RegionPage from "./pages/onboarding/RegionPage";
-import StatePage from "./pages/onboarding/StatePage";
-/* "View All" — one list in full, on its own screen. Replaces the old feed page,
-   which 404'd on the two types that are not feeds (About and Leadership). */
-import StateDetailPage from "./pages/onboarding/StateDetailPage";
->>>>>>> 8020f5d (Initial commit for website frontend)
 /* One item's own page. Lazy: it is reached by a click from the landing page or
    the gallery, never as a first paint, so it does not belong in the entry
    bundle the landing page waits on. */
 const GalleryDetailPage = lazy(() => import("./pages/onboarding/GalleryDetailPage"));
-<<<<<<< HEAD
 /* One photograph out of an album, on a page of its own — see the note at the
    head of the file. Lazy for the same reason the album page is: most visits to
    the site never reach it. */
 const GalleryPhotoPage = lazy(() => import("./pages/onboarding/GalleryPhotoPage"));
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 /* The newsroom and one article. Lazy, like the gallery detail: most visits to
    the site never open either, and the schemes band brings its own icons. */
 const NewsPage = lazy(() => import("./pages/onboarding/NewsPage"));
 const NewsDetailPage = lazy(() => import("./pages/onboarding/NewsDetailPage"));
-<<<<<<< HEAD
 /* Government schemes — their own section now, out of the newsroom. */
 const SchemesPage = lazy(() => import("./pages/onboarding/SchemesPage"));
 const SchemeDetailPage = lazy(() => import("./pages/onboarding/SchemeDetailPage"));
@@ -126,12 +99,6 @@ const DonatePage = lazy(() => import("./pages/donate/DonatePage"));
 const DonateThankYou = lazy(() => import("./pages/donate/DonateThankYou"));
 const DonationReceiptPage = lazy(() => import("./pages/donate/DonationDocumentPage").then((m) => ({ default: m.DonationReceiptPage })));
 const DonationStatementPage = lazy(() => import("./pages/donate/DonationDocumentPage").then((m) => ({ default: m.DonationStatementPage })));
-=======
-/* One event's own page. Lazy for the same reason: reached by a click, never
-   as a first paint. */
-const EventDetailPage = lazy(() => import("./pages/onboarding/EventDetailPage"));
-import ContactPage from "./pages/onboarding/ContactPage";
->>>>>>> 8020f5d (Initial commit for website frontend)
 /*
  * The membership prospectus. Lazy, like the other leaf pages: it is reached
  * from a nav link, never as a first paint, and it carries the whole of the
@@ -147,16 +114,11 @@ const MembershipPage = lazy(() => import("./pages/onboarding/MembershipPage"));
 const LegalPage = lazy(() => import("./pages/onboarding/LegalPage"));
 /* The public Book Now flow. Lazy for the same reason the detail page is. */
 const EventBookingPage = lazy(() => import("./pages/onboarding/EventBookingPage"));
-<<<<<<< HEAD
 const EnhancedLoginPage = lazy(() => import("./shared/components/EnhancedLoginPage"));
-=======
-import EnhancedLoginPage from "./shared/components/EnhancedLoginPage";
->>>>>>> 8020f5d (Initial commit for website frontend)
 
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/auth/ResetPassword"));
-<<<<<<< HEAD
 const SocialSignIn = lazy(() => import("./pages/auth/SocialSignIn"));
 
 // Member Feature Imports
@@ -164,29 +126,14 @@ const MemberRegister = lazy(() => import("./pages/member/Register"));
 
 const MemberProfile = lazy(() => import("./pages/member/Profile"));
 const ProfileView = lazy(() => import("./features/member/pages/ProfileView"));
-=======
-
-// Member Feature Imports
-import MemberRegister from "./pages/member/Register";
-
-import MemberProfile from "./pages/member/Profile";
-import ProfileView from "./features/member/pages/ProfileView";
->>>>>>> 8020f5d (Initial commit for website frontend)
 const PersonalForm = lazy(() => import("./pages/member/PersonalForm"));
 const BusinessForm = lazy(() => import("./pages/member/BusinessForm"));
 const DeclarationForm = lazy(() => import("./pages/member/DeclarationForm"));
 const ApplicationSubmitted = lazy(() => import("./pages/member/ApplicationSubmitted"));
-<<<<<<< HEAD
 const ApplicationStatus = lazy(() => import("./pages/member/ApplicationStatus"));
 const PaymentPage = lazy(() => import("./pages/member/Payment"));
 const PaymentSuccess = lazy(() => import("./pages/member/PaymentSuccess"));
 const UnpaidDashboard = lazy(() => import("./features/member/pages/UnpaidDashboard"));
-=======
-import ApplicationStatus from "./pages/member/ApplicationStatus";
-const PaymentPage = lazy(() => import("./pages/member/Payment"));
-const PaymentSuccess = lazy(() => import("./pages/member/PaymentSuccess"));
-import UnpaidDashboard from "./features/member/pages/UnpaidDashboard";
->>>>>>> 8020f5d (Initial commit for website frontend)
 /*
  * The paid member area's four screens.
  *
@@ -214,19 +161,14 @@ const DonationCertificatePage = lazy(
   () => import("./features/member/pages/DonationCertificatePage"));
 /* What "View plan details" opens — see the note at the head of the file. */
 const MembershipPlanDetails = lazy(() => import("./features/member/pages/MembershipPlanDetails"));
-<<<<<<< HEAD
 // Account settings — photo, password, contact, sign out. The application itself is edited in My Profile.
 const MemberSettings = lazy(() => import("./features/member/pages/AccountSettings"));
-=======
-import MemberSettings from "./pages/member/Settings";
->>>>>>> 8020f5d (Initial commit for website frontend)
 
 // Payment Feature Imports
 const PaymentRegistration = lazy(() => import("./pages/payment/PaymentRegistration"));
 const PaymentConfirmation = lazy(() => import("./pages/payment/PaymentConfirmation"));
 const MockPayment = lazy(() => import("./pages/payment/MockPayment"));
 const PaymentGateway = lazy(() => import("./pages/payment/PaymentGateway"));
-<<<<<<< HEAD
 /* Where Instamojo returns the member to — `redirect_url` on every payment
    request the server creates is `${FRONTEND_URL}/payment-success`. */
 const PaymentReturn = lazy(() => import("./pages/payment/PaymentReturn"));
@@ -242,20 +184,6 @@ const EditProduct = lazy(() => import("./pages/business/EditProduct"));
 const Discover = lazy(() => import("./pages/business/Discover"));
 const Analytics = lazy(() => import("./pages/business/Analytics"));
 const BusinessSettings = lazy(() => import("./pages/business/Settings"));
-=======
-import PaymentMemberDashboard from "./features/member/pages/PaidDashboard";
-const MembershipPlans = lazy(() => import("./pages/payment/MembershipPlans"));
-
-// Business Feature Imports
-import BusinessProfile from "./pages/business/BusinessProfile";
-import BusinessDashboard from "./pages/business/Dashboard";
-import Products from "./pages/business/Products";
-const AddProduct = lazy(() => import("./pages/business/AddProduct"));
-const EditProduct = lazy(() => import("./pages/business/EditProduct"));
-import Discover from "./pages/business/Discover";
-import Analytics from "./pages/business/Analytics";
-import BusinessSettings from "./pages/business/Settings";
->>>>>>> 8020f5d (Initial commit for website frontend)
 const MyCompanies = lazy(() => import("./pages/business/MyCompanies"));
 const AddEditCompany = lazy(() => import("./pages/business/AddEditCompany"));
 const CompanyDetails = lazy(() => import("./pages/business/CompanyDetails"));
@@ -292,11 +220,8 @@ const SuperSettings = lazy(() => import("./features/admin/super-admin/pages/Sett
 const SuperManageAdmins = lazy(() => import("./features/admin/super-admin/pages/ManageAdmins"));
 const SuperEvents = lazy(() => import("./features/admin/super-admin/pages/Events"));
 const SuperMembership = lazy(() => import("./features/admin/super-admin/pages/Membership"));
-<<<<<<< HEAD
 const SuperDonations = lazy(() => import("./features/admin/super-admin/pages/Donations"));
 const SuperDonorDetail = lazy(() => import("./features/admin/super-admin/pages/DonorDetail"));
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 /* Who is coming to which event, and who has paid. The organiser end of the
    public Book Now flow. */
 const SuperBookings = lazy(() => import("./features/admin/super-admin/pages/Bookings"));
@@ -308,7 +233,6 @@ const SuperBookingEvents = lazy(() => import("./features/admin/super-admin/pages
 const SuperEventCategories = lazy(() => import("./features/admin/super-admin/pages/EventCategories"));
 const SuperUpdates = lazy(() => import("./features/admin/super-admin/pages/Updates"));
 const SuperNotifications = lazy(() => import("./features/admin/super-admin/pages/Notifications"));
-<<<<<<< HEAD
 /* The Events Admin portal: its own dashboard, and the super admin's own event
    screens (All events, Categories, Bookings) mounted under /events-admin. */
 const EventsAdminDashboard = lazy(() => import("./features/admin/events-admin/pages/Dashboard"));
@@ -316,8 +240,6 @@ const EventsAdminSettings = lazy(() => import("./features/admin/events-admin/pag
 const EventsAdminGallery = lazy(() => import("./features/admin/events-admin/pages/Gallery"));
 const EventsAdminNews = lazy(() => import("./features/admin/events-admin/pages/News"));
 const EventsAdminSchemes = lazy(() => import("./features/admin/events-admin/pages/Schemes"));
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 
 // CMS (public-site content management, super admin only)
 const CmsLayout = lazy(() => import("./pages/cms/CmsLayout"));
@@ -328,10 +250,7 @@ const AboutManager = lazy(() => import("./pages/cms/AboutManager"));
 const EventsManager = lazy(() => import("./pages/cms/EventsManager"));
 const GalleryManager = lazy(() => import("./pages/cms/GalleryManager"));
 const NewsManager = lazy(() => import("./pages/cms/NewsManager"));
-<<<<<<< HEAD
 const SchemesManager = lazy(() => import("./pages/cms/SchemesManager"));
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 const MembershipManager = lazy(() => import("./pages/cms/MembershipManager"));
 const ContactManager = lazy(() => import("./pages/cms/ContactManager"));
 const MessagesInbox = lazy(() => import("./pages/cms/MessagesInbox"));
@@ -380,11 +299,8 @@ const App = () => (
                 the offset it had, so pressing a link from the foot of one page
                 lands on the footer of the next — see the component. */}
             <ScrollToTop />
-<<<<<<< HEAD
             <PreloadPublicPages />
             <FloatingLaunchers />
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
             <Suspense fallback={<RouteFallback />}>
               <Routes>
               <Route path="/" element={<Hero />} />
@@ -423,7 +339,6 @@ const App = () => (
               <Route path="/news" element={<NewsPage />} />
               <Route path="/news/:slug" element={<NewsDetailPage />} />
 
-<<<<<<< HEAD
               {/* Schemes, chosen from the header's Schemes dropdown: Central,
                   or a state. `/schemes` opens the central list; the old
                   states-grid address goes there too, for any saved link.
@@ -435,14 +350,11 @@ const App = () => (
               <Route path="/schemes/state/:slug" element={<SchemesPage view="state" />} />
               <Route path="/schemes/view/:slug" element={<SchemeDetailPage />} />
 
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
               <Route path="/gallery" element={<GalleryPage />} />
               {/* Where a poster goes when it is clicked, on the landing page or
                   in the gallery grid. Below /gallery, so the list keeps the
                   bare path. */}
               <Route path="/gallery/:id" element={<GalleryDetailPage />} />
-<<<<<<< HEAD
               {/*
                 ONE PHOTOGRAPH OUT OF THAT ALBUM.
 
@@ -458,9 +370,6 @@ const App = () => (
               <Route path="/donate/thank-you" element={<DonateThankYou />} />
               <Route path="/donate/receipt/:token" element={<DonationReceiptPage />} />
               <Route path="/donate/statement/:token" element={<DonationStatementPage />} />
-=======
-              <Route path="/contact" element={<ContactPage />} />
->>>>>>> 8020f5d (Initial commit for website frontend)
 
               {/*
                 The four legal documents, at the literal paths the footer links
@@ -477,17 +386,13 @@ const App = () => (
               <Route path="/legal/:slug" element={<LegalPage />} />
 
               <Route path="/login" element={<EnhancedLoginPage />} />
-<<<<<<< HEAD
               {/* Admins sign in on their own screen: no social sign-in, no
                   "Create an account", and members are sent back to /login. */}
               <Route path="/admin/login" element={<EnhancedLoginPage audience="admin" />} />
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
               {/* The login page has linked to /forgot-password all along;
                   neither route existed, so it fell through to the 404 page. */}
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-<<<<<<< HEAD
               {/* The admin screens reach ONLY admin accounts the Super Admin
                   created; the member ones only member accounts (`portal`). */}
               <Route path="/admin/forgot-password" element={<ForgotPassword audience="admin" />} />
@@ -506,12 +411,6 @@ const App = () => (
 
               {/* A link that used to be printed on the payment page; the dashboard lives at /payment/member-dashboard. */}
               <Route path="/member/dashboard" element={<Navigate to="/payment/member-dashboard" replace />} />
-=======
-              <Route path="/register" element={<MemberRegister />} />
-
-              {/* Member Routes */}
-
->>>>>>> 8020f5d (Initial commit for website frontend)
               <Route path="/member/unpaid-dashboard" element={<UnpaidDashboard />} />
 
               {/* The paid member area (MEM-001, EVT-001/2, DIR-001). */}
@@ -588,7 +487,6 @@ const App = () => (
               {/* PaymentGateway existed but was never routed, so nothing could
                   reach it — and it is the step that records the payment. */}
               <Route path="/payment/gateway" element={<PaymentGateway />} />
-<<<<<<< HEAD
               </Route>
               {/*
                 * TOP LEVEL, not under /member, and not negotiable: this exact
@@ -600,8 +498,6 @@ const App = () => (
               <Route path="/payment-success" element={<PaymentReturn />} />
               {/* Outside the gate, above: guests pay for event bookings too. */}
               <Route element={<RoleGate area="member" />}>
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
               <Route path="/payment/member-dashboard" element={<PaymentMemberDashboard />} />
               <Route path="/payment/membership-plans" element={<MembershipPlans />} />
 
@@ -631,7 +527,6 @@ const App = () => (
               */}
               <Route path="/business/company/:id" element={<CompanyPublicView />} />
               <Route path="/business/companies/:id" element={<CompanyDetails />} />
-<<<<<<< HEAD
               </Route>
 
               {/* EVERY ADMIN PORTAL, to the legacy routes below: a guest goes to
@@ -640,9 +535,6 @@ const App = () => (
               {/* ONE GATE PER PORTAL: a wrong-tier admin is sent to their own
                   portal (super_admin may open any). See RoleGate `roles`. */}
               <Route element={<RoleGate area="admin" roles={['block_admin']} />}>
-=======
-
->>>>>>> 8020f5d (Initial commit for website frontend)
               {/* Block Admin Routes */}
               <Route path="/block-admin/dashboard" element={<BlockDashboard />} />
               <Route path="/block-admin/approvals" element={<BlockApprovals />} />
@@ -650,12 +542,9 @@ const App = () => (
               <Route path="/block-admin/members" element={<BlockMembers />} />
               <Route path="/block-admin/settings" element={<BlockSettings />} />
 
-<<<<<<< HEAD
               </Route>
 
               <Route element={<RoleGate area="admin" roles={['district_admin']} />}>
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
               {/* District Admin Routes */}
               <Route path="/district-admin/dashboard" element={<DistrictDashboard />} />
               <Route path="/district-admin/approvals" element={<DistrictApprovals />} />
@@ -666,12 +555,9 @@ const App = () => (
                   admin Hub, narrowed by the server to this patch. */}
               <Route path="/district-admin/hub" element={<DistrictHub />} />
 
-<<<<<<< HEAD
               </Route>
 
               <Route element={<RoleGate area="admin" roles={['state_admin']} />}>
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
               {/* State Admin Routes */}
               <Route path="/state-admin/dashboard" element={<StateDashboard />} />
               <Route path="/state-admin/approvals" element={<StateApprovals />} />
@@ -681,12 +567,9 @@ const App = () => (
               {/* The districts and blocks of this state, with their queues. */}
               <Route path="/state-admin/hub" element={<StateHub />} />
 
-<<<<<<< HEAD
               </Route>
 
               <Route element={<RoleGate area="admin" roles={['super_admin']} />}>
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
               {/* Super Admin Routes */}
               <Route path="/super-admin/dashboard" element={<SuperHub />} />
               <Route path="/super-admin/approvals" element={<SuperApprovals />} />
@@ -712,18 +595,14 @@ const App = () => (
               <Route path="/super-admin/bookings" element={<SuperBookingEvents />} />
               <Route path="/super-admin/bookings/:eventId" element={<SuperBookings />} />
               <Route path="/super-admin/membership" element={<SuperMembership />} />
-<<<<<<< HEAD
               <Route path="/super-admin/donations" element={<SuperDonations />} />
               <Route path="/super-admin/donations/:id" element={<SuperDonorDetail />} />
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
               {/* Association Updates (MEM-001) — authored here, delivered to the
                   dashboard of every member whose region matches. */}
               <Route path="/super-admin/updates" element={<SuperUpdates />} />
               {/* Delivery oversight for the email and WhatsApp channels. */}
               <Route path="/super-admin/notifications" element={<SuperNotifications />} />
 
-<<<<<<< HEAD
               </Route>
 
               <Route element={<RoleGate area="admin" roles={['events_admin']} />}>
@@ -751,8 +630,6 @@ const App = () => (
 
               {/* The legacy /admin/* paths render the BLOCK screens. */}
               <Route element={<RoleGate area="admin" roles={['block_admin']} />}>
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
               {/* Legacy Admin Routes - Redirect to Block Admin */}
               <Route path="/admin/dashboard" element={<BlockDashboard />} />
               <Route path="/admin/block/dashboard" element={<BlockDashboard />} />
@@ -760,10 +637,7 @@ const App = () => (
               <Route path="/admin/approvals" element={<BlockApprovals />} />
               <Route path="/admin/members" element={<BlockMembers />} />
               <Route path="/admin/settings" element={<BlockSettings />} />
-<<<<<<< HEAD
               </Route>
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
 
               
 
@@ -778,10 +652,7 @@ const App = () => (
                 <Route path="events" element={<EventsManager />} />
                 <Route path="gallery" element={<GalleryManager />} />
                 <Route path="news" element={<NewsManager />} />
-<<<<<<< HEAD
                 <Route path="schemes" element={<SchemesManager />} />
-=======
->>>>>>> 8020f5d (Initial commit for website frontend)
                 <Route path="membership" element={<MembershipManager />} />
                 <Route path="contact" element={<ContactManager />} />
                 <Route path="regions" element={<RegionsManager />} />

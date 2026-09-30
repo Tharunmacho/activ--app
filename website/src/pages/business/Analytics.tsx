@@ -129,26 +129,17 @@ const Analytics = () => {
             {/* One rhythm down the page. The company card, the tiles and the
                 chart were `space-y-6` against tiles gapped at 12px, so the
                 vertical spacing changed twice between the top and the chart. */}
-<<<<<<< HEAD
             <div className="space-y-4 sm:space-y-5">
-=======
-            <div className="space-y-5">
->>>>>>> 8020f5d (Initial commit for website frontend)
                 {/*
                     Which company these figures describe. Read-only, as on mobile:
                     switching happens once, on the Business dashboard or My
                     Companies, never from a reporting screen.
                 */}
-<<<<<<< HEAD
                 <Card className="flex items-center gap-3 sm:gap-5">
-=======
-                <Card className="flex items-center gap-4 sm:gap-5">
->>>>>>> 8020f5d (Initial commit for website frontend)
                     {activeCompany?.logo ? (
                         <img
                             src={resolveMediaUrl(activeCompany.logo)}
                             alt={companyName(activeCompany)}
-<<<<<<< HEAD
                             className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl object-contain bg-white border border-slate-200 shrink-0"
                         />
                     ) : (
@@ -157,16 +148,6 @@ const Analytics = () => {
                         </span>
                     )}
                     <div className="min-w-0 flex-1">
-=======
-                            className="w-12 h-12 rounded-xl object-cover shrink-0"
-                        />
-                    ) : (
-                        <span className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-                            <Store className="h-6 w-6 text-blue-600" />
-                        </span>
-                    )}
-                    <div className="min-w-0">
->>>>>>> 8020f5d (Initial commit for website frontend)
                         <p className="text-[1.1875rem] text-blue-600 font-semibold uppercase tracking-wider">
                             Analytics for
                         </p>
@@ -202,7 +183,6 @@ const Analytics = () => {
                       because those are the reasons to join and this is the
                       screen where somebody is already asking for them.
                     */
-<<<<<<< HEAD
                     <Card className="!p-5 sm:!p-8 md:!p-10">
                         <div className="text-center">
                             <span className="mx-auto mb-3 sm:mb-4 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center
@@ -210,15 +190,6 @@ const Analytics = () => {
                                 <Lock className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600" />
                             </span>
                             <h2 className="text-[1.5rem] sm:text-[1.75rem] font-bold text-slate-900">
-=======
-                    <Card className="p-8 sm:p-10">
-                        <div className="text-center">
-                            <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center
-                                             rounded-2xl bg-blue-50">
-                                <Lock className="h-7 w-7 text-blue-600" />
-                            </span>
-                            <h2 className="text-[1.75rem] font-bold text-slate-900">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 Analytics opens with membership
                             </h2>
                             <p className="mx-auto mt-2 max-w-xl text-[1.25rem] text-slate-600">
@@ -227,11 +198,7 @@ const Analytics = () => {
                             </p>
                         </div>
 
-<<<<<<< HEAD
                         <div className="mt-5 sm:mt-8 grid gap-4 border-t border-slate-200 pt-5 sm:pt-8 sm:grid-cols-2">
-=======
-                        <div className="mt-8 grid gap-4 border-t border-slate-200 pt-8 sm:grid-cols-2">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             {[
                                 {
                                     icon: Eye,
@@ -263,15 +230,9 @@ const Analytics = () => {
                             ))}
                         </div>
 
-<<<<<<< HEAD
                         <div className="mt-5 sm:mt-8 text-center">
                             <Button
                                 className="h-12 w-full sm:w-auto bg-blue-600 px-8 text-[1.25rem] font-bold hover:bg-blue-700"
-=======
-                        <div className="mt-8 text-center">
-                            <Button
-                                className="h-12 bg-blue-600 px-8 text-[1.25rem] font-bold hover:bg-blue-700"
->>>>>>> 8020f5d (Initial commit for website frontend)
                                 /* The unpaid dashboard, not the plans — the same
                                    destination Discover uses. The plans screen is a
                                    Pay button with no idea whether an admin has
@@ -295,11 +256,7 @@ const Analytics = () => {
                             columns the figures stacked into two tall rows on
                             every laptop and pushed the chart below the fold —
                             and the chart is what the figures are a summary of. */}
-<<<<<<< HEAD
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-5">
-=======
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
->>>>>>> 8020f5d (Initial commit for website frontend)
                             <StatTile
                                 label="Product Views"
                                 value={stats.profileViews}
@@ -342,11 +299,7 @@ const Analytics = () => {
                                 than drawing an axis with nothing on it.
                             */}
                             {stats.topViewed.some((row) => row.views > 0) ? (
-<<<<<<< HEAD
                                 <div className="h-60 sm:h-72 w-full min-w-0">
-=======
-                                <div className="h-72 w-full">
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart
                                             data={stats.topViewed}
@@ -361,11 +314,7 @@ const Analytics = () => {
                                                 interval={0}
                                                 height={48}
                                                 tickFormatter={(value: string) => (
-<<<<<<< HEAD
                                                     (value || '').length > 14 ? `${(value || '').slice(0, 13)}…` : (value || '')
-=======
-                                                    value.length > 14 ? `${value.slice(0, 13)}…` : value
->>>>>>> 8020f5d (Initial commit for website frontend)
                                                 )}
                                             />
                                             <YAxis
@@ -389,15 +338,9 @@ const Analytics = () => {
                                     </ResponsiveContainer>
                                 </div>
                             ) : (
-<<<<<<< HEAD
                                 <div className="flex flex-col items-center justify-center py-10 sm:py-16 px-4 rounded-xl
                                                 bg-slate-50 border border-slate-200">
                                     <BarChart3 className="h-10 w-10 sm:h-12 sm:w-12 text-blue-300 mb-3" />
-=======
-                                <div className="flex flex-col items-center justify-center py-16 px-4 rounded-xl
-                                                bg-slate-50 border border-slate-200">
-                                    <BarChart3 className="h-12 w-12 text-blue-300 mb-3" />
->>>>>>> 8020f5d (Initial commit for website frontend)
                                     <p className="text-[1.25rem] text-slate-500 text-center max-w-md">
                                         Nobody has opened one of your products yet. Each time somebody
                                         outside your company does, it is counted here.
