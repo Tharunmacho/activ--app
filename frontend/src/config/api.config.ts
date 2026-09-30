@@ -12,7 +12,7 @@ const API_CONFIG = {
     timeout: 12000,
   },
   production: {
-    baseURL: 'https://activ.org.in/api/v1',
+    baseURL: 'https://api.activ.org.in/api/v1',
     timeout: 75000, // Cold start handling
   },
 };
