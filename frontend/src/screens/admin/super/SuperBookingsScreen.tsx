@@ -1,10 +1,11 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
-  Screen, AppHeader, IconButton, Field, Loading, ErrorState, EmptyState, Notice, SegmentedTabs, StatTile, StatGrid,
-  PALETTE, SPACE, RADIUS, SHADOW, money, shortDate,
+  PALETTE, SPACE, TYPE, money, shortDate,
+  ConsoleFrame, ConsoleHeader, ConsoleGrid, ConsoleStatTile, ConsoleCard, ConsoleChip, ConsoleTabs,
+  ConsoleSearch, ConsoleSkeleton, ConsoleState, ConsoleNote, CoverageRing, GlassIconButton, CONSOLE_LIST,
 } from '../../../ui';
 import { listBookingOverview, errorText } from '../../../services/superApi';
 import { ToggleRow } from './superKit';
@@ -26,26 +27,20 @@ import { BookingPeoplePane } from './SuperBookingPeopleScreen';
  *               Draft / Bookings off / category chips. Searchable by name,
  *               venue or category. Tap for the event's bookings.
  *   People tab  everyone who has booked (BookingPeoplePane).
+ *
+ * Money is Super Admin only — the server's BOOKING_VIEWERS; the events admin
+ * never reaches this screen.
  */
 
 type Tab = 'events' | 'people';
 
-const fullness = (e: any) => (Number(e?.totalSeats || 0) > 0 ? Math.min(1, Number(e?.bookedSeats || 0) / Number(e.totalSeats)) : null);
-
-function Chip({ text, fg, bg, icon }: { text: string; fg: string; bg: string; icon?: string }) {
-  return (
-    <View style={[s.chip, { backgroundColor: bg }]}>
-      {icon ? <Icon name={icon} size={12} color={fg} /> : null}
-      <Text style={[s.chipText, { color: fg }]} numberOfLines={1}>{text}</Text>
-    </View>
-  );
-}
+const fullness = (e: any) => (Number(e?.totalSeats || 0) > 0 ? Math.min(1, Number(e?.bookedSeats || 0) / Number(e?.totalSeats || 1)) : null);
 
 function Figure({ label, value, color, children }: { label: string; value: string; color?: string; children?: React.ReactNode }) {
   return (
     <View style={s.figure}>
-      <Text style={[s.figValue, color ? { color } : null]} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
-      <Text style={s.figLabel}>{label}</Text>
+      <Text style={[s.figValue, color ? { color } : null]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2}>{value}</Text>
+      <Text style={s.figLabel} numberOfLines={1} maxFontSizeMultiplier={1.2}>{label}</Text>
       {children}
     </View>
   );
@@ -56,55 +51,65 @@ function EventCard({ e, index, onOpen }: { e: any; index: number; onOpen: () => 
   const booked = Number(e?.bookedSeats || 0);
   const remaining = e?.remainingSeats === null || e?.remainingSeats === undefined ? null : Number(e.remainingSeats);
   const share = fullness(e);
-  const barColor = share === null ? PALETTE.green : share >= 1 ? PALETTE.red : share >= 0.8 ? PALETTE.amber : PALETTE.green;
+  const ringAccent = share === null ? 'green' : share >= 1 ? 'red' : share >= 0.8 ? 'amber' : 'green';
   const price = Number(e?.price || 0);
+  const title = e?.title || 'Untitled event';
   return (
-    <TouchableOpacity activeOpacity={0.85} onPress={onOpen} accessibilityRole="button" accessibilityLabel={`Booking details for ${e?.title || 'Untitled event'}`}>
-      <View style={[s.card, SHADOW.card]}>
-        <View style={s.row}>
-          <Text style={s.sno}>{index + 1}</Text>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={s.title} numberOfLines={2}>{e?.title || 'Untitled event'}</Text>
+    <ConsoleCard
+      style={s.card}
+      onPress={onOpen}
+      accent={e?.status !== 'published' ? PALETTE.textFaint : undefined}
+      accessibilityLabel={`Booking details for ${title}`}
+    >
+      <View style={s.row}>
+        <View style={s.flexText}>
+          <View style={s.chips}>
+            <ConsoleChip label={`#${index + 1}`} kind="neutral" dot={false} />
+            {e?.category ? <ConsoleChip label={String(e.category)} kind="info" dot={false} /> : null}
+            {e?.status !== 'published' ? <ConsoleChip label="Draft" kind="neutral" /> : null}
+            {!e?.registrationEnabled ? <ConsoleChip label="Bookings off" kind="warning" icon="block" /> : null}
+          </View>
+          <Text style={s.title} numberOfLines={2} maxFontSizeMultiplier={1.3}>{title}</Text>
+          <View style={s.meta}>
+            <Icon name="event" size={15} color={PALETTE.textMuted} />
+            <Text style={s.metaText} numberOfLines={1} maxFontSizeMultiplier={1.3}>{shortDate(e?.startAt) || 'Date to be confirmed'}</Text>
+          </View>
+          {e?.venue ? (
             <View style={s.meta}>
-              <Icon name="event" size={14} color={PALETTE.textMuted} />
-              <Text style={s.sub}>{shortDate(e?.startAt) || 'Date to be confirmed'}</Text>
+              <Icon name="place" size={15} color={PALETTE.textMuted} />
+              <Text style={s.metaText} numberOfLines={1} maxFontSizeMultiplier={1.3}>{e.venue}</Text>
             </View>
-            {e?.venue ? (
-              <View style={s.meta}>
-                <Icon name="place" size={14} color={PALETTE.textMuted} />
-                <Text style={[s.sub, { flex: 1 }]} numberOfLines={1}>{e.venue}</Text>
-              </View>
-            ) : null}
-          </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={s.price}>{price > 0 ? money(price) : 'Free'}</Text>
-            {e?.hasMemberRate ? <Text style={s.memberRate}>Members {money(e?.memberPrice || 0)}</Text> : null}
+          ) : null}
+          <View style={s.meta}>
+            <Icon name="sell" size={15} color={PALETTE.textMuted} />
+            <Text style={[s.metaText, s.price]} numberOfLines={1} maxFontSizeMultiplier={1.3}>
+              {price > 0 ? money(price) : 'Free'}{e?.hasMemberRate ? `  ·  Members ${money(Number(e?.memberPrice || 0))}` : ''}
+            </Text>
           </View>
         </View>
-
-        <View style={s.chips}>
-          {e?.category ? <Chip text={String(e.category)} fg="#6D28D9" bg="#EDE9FE" /> : null}
-          {e?.status !== 'published' ? <Chip text="Draft" fg={PALETTE.textSoft} bg="#E2E8F0" /> : null}
-          {!e?.registrationEnabled ? <Chip text="Bookings off" icon="block" fg="#B45309" bg={PALETTE.amberSoft} /> : null}
-        </View>
-
-        <View style={s.figures}>
-          <Figure label="Total seat" value={total > 0 ? String(total) : 'Unlimited'} color={total > 0 ? '#BE123C' : PALETTE.textFaint} />
-          <Figure label="Booked" value={String(booked)} color="#047857" />
-          <Figure label="Remaining" value={remaining === null ? '—' : String(remaining)} color={remaining === null ? PALETTE.textFaint : remaining === 0 ? '#BE123C' : PALETTE.blueDark}>
-            {Number(e?.waitlistedSeats || 0) > 0 ? <Text style={s.waiting}>+{Number(e.waitlistedSeats)} waiting</Text> : null}
-          </Figure>
-        </View>
-        {share !== null ? <View style={s.barTrack}><View style={[s.barFill, { width: `${Math.round(share * 100)}%`, backgroundColor: barColor }]} /></View> : null}
-
-        <View style={s.money}>
-          <Text style={s.stat}><Text style={s.statStrong}>{Number(e?.bookings || 0)}</Text> booking{Number(e?.bookings) === 1 ? '' : 's'}</Text>
-          <Text style={[s.stat, { color: PALETTE.text }]}>Collected <Text style={s.statStrong}>{money(Number(e?.collected || 0))}</Text></Text>
-          {Number(e?.pendingAmount || 0) > 0 ? <Text style={[s.stat, { color: '#B45309', fontWeight: '800' }]}>{money(e.pendingAmount)} unpaid</Text> : null}
-        </View>
-        <View style={s.more}><Icon name="visibility" size={16} color={PALETTE.indigo} /><Text style={s.moreText}>Booking Details</Text><Icon name="chevron-right" size={20} color={PALETTE.indigo} /></View>
+        {share !== null ? (
+          <CoverageRing progress={share} accent={ringAccent as any} center={`${Math.round(share * 100)}%`} caption="full" />
+        ) : null}
       </View>
-    </TouchableOpacity>
+
+      <View style={s.figures}>
+        <Figure label="Total seats" value={total > 0 ? String(total) : 'Unlimited'} color={total > 0 ? PALETTE.text : PALETTE.textFaint} />
+        <Figure label="Booked" value={String(booked)} color={PALETTE.greenDark} />
+        <Figure label="Remaining" value={remaining === null ? '—' : String(remaining)} color={remaining === null ? PALETTE.textFaint : remaining === 0 ? PALETTE.redDark : PALETTE.indigo}>
+          {Number(e?.waitlistedSeats || 0) > 0 ? <Text style={s.waiting} maxFontSizeMultiplier={1.2}>+{Number(e?.waitlistedSeats || 0)} waiting</Text> : null}
+        </Figure>
+      </View>
+
+      <View style={s.moneyRow}>
+        <Text style={s.stat} maxFontSizeMultiplier={1.3}><Text style={s.statStrong}>{Number(e?.bookings || 0)}</Text> booking{Number(e?.bookings || 0) === 1 ? '' : 's'}</Text>
+        <Text style={s.stat} maxFontSizeMultiplier={1.3}>Collected <Text style={[s.statStrong, { color: PALETTE.greenDark }]}>{money(Number(e?.collected || 0))}</Text></Text>
+        {Number(e?.pendingAmount || 0) > 0 ? <Text style={[s.stat, s.unpaid]} maxFontSizeMultiplier={1.3}>{money(Number(e?.pendingAmount || 0))} unpaid</Text> : null}
+      </View>
+      <View style={s.more}>
+        <Text style={s.moreText} maxFontSizeMultiplier={1.2}>Booking Details</Text>
+        <Icon name="chevron-right" size={18} color={PALETTE.indigo} />
+      </View>
+    </ConsoleCard>
   );
 }
 
@@ -118,11 +123,20 @@ const SuperBookingsScreen: React.FC = () => {
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [peopleKey, setPeopleKey] = useState(0);
+  const seq = useRef(0);
 
   const load = useCallback(async (mode: 'load' | 'refresh' | 'quiet' = 'load') => {
+    const mine = ++seq.current;
     if (mode === 'refresh') setRefreshing(true); else if (mode === 'load') setLoading(true);
     setError('');
-    try { setData(await listBookingOverview(drafts)); } catch (err) { setError(errorText(err, 'The events could not be loaded')); } finally { setLoading(false); setRefreshing(false); }
+    try {
+      const d = await listBookingOverview(drafts);
+      if (mine === seq.current) setData(d || {});
+    } catch (err) {
+      if (mine === seq.current) setError(errorText(err, 'The events could not be loaded'));
+    } finally {
+      if (mine === seq.current) { setLoading(false); setRefreshing(false); }
+    }
   }, [drafts]);
   // Quiet refetch on return from an event (a payment or a cancellation moves these figures).
   const loadedOnce = useRef(false);
@@ -139,100 +153,113 @@ const SuperBookingsScreen: React.FC = () => {
 
   const refreshAll = () => { if (tab === 'people') setPeopleKey((k) => k + 1); else load('refresh'); };
 
+  const openEvent = useCallback((item: any) => navigation.navigate('SuperEventBookings', {
+    eventId: String(item?.id || ''), title: item?.title || 'Untitled event', capacity: Number(item?.totalSeats || 0),
+  }), [navigation]);
+
   const top = (
-    <View>
-      <AppHeader tone="admin" title="Booking Details" subtitle="Every event, how full it is, and what has been taken" onBack={() => navigation.goBack()}
-        right={<IconButton icon="refresh" accessibilityLabel="Refresh" onPress={refreshAll} color={PALETTE.indigo} />} />
-      <StatGrid>
-        <StatTile label="Seats booked" value={Number(t.seats || 0)} icon="groups" color={PALETTE.blueDark} soft={PALETTE.blueSoft}
-          hint={Number(t.capacity) > 0 ? `of ${t.capacity} across ${t.events} events` : `across ${t.events} events`} />
-        <StatTile label="Bookings" hint="one booking may hold several seats" value={Number(t.bookings || 0)} icon="confirmation-number" color="#6D28D9" soft="#EDE9FE" />
-        <StatTile label="Collected" hint="money actually received" value={money(Number(t.collected || 0))} icon="payments" color={PALETTE.green} soft={PALETTE.greenSoft} />
-        <StatTile label="Awaiting payment" hint="held, not taken" value={money(Number(t.pending || 0))} icon="schedule" color={PALETTE.amber} soft={PALETTE.amberSoft} />
-      </StatGrid>
-      {error && data ? <Notice kind="danger" text={error} /> : null}
-      <SegmentedTabs<Tab> tone="admin" value={tab} onChange={setTab}
-        options={[{ value: 'events', label: 'Events' }, { value: 'people', label: 'People' }]} />
-    </View>
+    <>
+      <ConsoleHeader
+        compact
+        eyebrow="Super Admin · bookings & revenue"
+        title="Booking Details"
+        subtitle="Every event, how full it is, and what has been taken"
+        left={<GlassIconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => navigation?.goBack?.()} />}
+        right={<GlassIconButton icon="refresh" accessibilityLabel="Refresh" onPress={refreshAll} />}
+      />
+      {loading && !data ? <ConsoleSkeleton variant="tiles" style={s.overlap} /> : (
+        <ConsoleGrid overlap>
+          <ConsoleStatTile label="Seats booked" value={Number(t.seats || 0)} icon="groups" accent="indigo"
+            hint={Number(t.capacity) > 0 ? `of ${t.capacity} across ${t.events} events` : `across ${t.events} events`} />
+          <ConsoleStatTile label="Bookings" value={Number(t.bookings || 0)} icon="confirmation-number" accent="sky" hint="one booking may hold several seats" delay={60} />
+          <ConsoleStatTile label="Collected" value={money(Number(t.collected || 0))} icon="payments" accent="green" hint="money actually received" delay={120} />
+          <ConsoleStatTile label="Awaiting payment" value={money(Number(t.pending || 0))} icon="schedule" accent="amber" hint="held, not taken" delay={180} />
+        </ConsoleGrid>
+      )}
+      <ConsoleTabs<Tab>
+        value={tab}
+        onChange={setTab}
+        options={[{ value: 'events', label: 'Events' }, { value: 'people', label: 'People' }]}
+        style={s.tabs}
+      />
+    </>
   );
 
   if (tab === 'people') {
-    return <Screen tone="admin" scroll={false}><BookingPeoplePane header={top} refreshKey={peopleKey} /></Screen>;
+    return (
+      <ConsoleFrame>
+        <BookingPeoplePane header={top} refreshKey={peopleKey} />
+      </ConsoleFrame>
+    );
   }
 
   const header = (
-    <View>
+    <>
       {top}
-      <View style={{ paddingHorizontal: SPACE.lg, marginTop: SPACE.md }}>
-        <Field icon="search" placeholder="Search an event by name, venue or category" value={query} onChangeText={setQuery} autoCorrect={false} />
-      </View>
-      <View style={[s.card, { paddingVertical: SPACE.xs }]}>
-        <ToggleRow label="Include drafts" hint="An unpublished event has no public booking page." value={drafts} onChange={setDrafts} last />
-      </View>
-    </View>
+      <ConsoleSearch value={query} onChangeText={setQuery} placeholder="Search an event by name, venue or category" />
+      <ConsoleCard style={s.toggleCard} padded={false}>
+        <View style={s.togglePad}>
+          <ToggleRow label="Include drafts" hint="An unpublished event has no public booking page." value={drafts} onChange={setDrafts} last />
+        </View>
+      </ConsoleCard>
+      {error && data ? <ConsoleNote kind="red" icon="error-outline" text={error} style={s.note} action="Try again" onAction={() => load('load')} /> : null}
+      {error && !data ? <ConsoleState kind="error" title="Could not load the events" message={error} action="Try again" onAction={() => load('load')} /> : null}
+      {loading && !data && !error ? <ConsoleSkeleton rows={3} /> : null}
+    </>
   );
 
-  if (loading && !data) return <Screen tone="admin">{top}<Loading tone="admin" /></Screen>;
-  if (error && !data) return <Screen tone="admin">{top}<ErrorState tone="admin" message={error} onRetry={() => load()} /></Screen>;
-
   return (
-    <Screen tone="admin" scroll={false}>
+    <ConsoleFrame>
       <FlatList
-        data={visible}
+        data={loading && !data ? [] : error && !data ? [] : visible}
         keyExtractor={(e, i) => String(e?.id || i)}
         initialNumToRender={10}
         maxToRenderPerBatch={10}
+        contentContainerStyle={CONSOLE_LIST}
         ListHeaderComponent={header}
-        refreshing={refreshing}
-        onRefresh={() => load('refresh')}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('refresh')} tintColor={PALETTE.indigo} />}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: SPACE.xxl * 2 }}
-        ListEmptyComponent={events.length
-          ? <EmptyState tone="admin" icon="filter-alt-off" title="Nothing matches" message="No event answers that search." />
-          : <EmptyState tone="admin" icon="confirmation-number" title="No published events yet" message="Create one under Events and it appears here the moment it is saved." />}
-        ListFooterComponent={events.length ? (
-          <Text style={s.foot}>
-            <Text style={{ fontWeight: '800', color: PALETTE.textSoft }}>Booked</Text> counts seats on live bookings taken through the public
-            Book Now page together with members' own registrations — both fill the same room. A checkout somebody abandoned holds its seats
-            for thirty minutes and then releases them, so this figure can go down as well as up. Open an event for the names, the payments
-            and the door list.
-          </Text>
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={loading || (error && !data) ? null : events.length
+          ? <ConsoleState title="Nothing matches" message="No event answers that search." />
+          : <ConsoleState title="No published events yet" message="Create one under Events and it appears here the moment it is saved." />}
+        ListFooterComponent={events.length && !loading ? (
+          <ConsoleNote
+            style={s.note}
+            text="Booked counts seats on live bookings taken through the public Book Now page together with members' own registrations — both fill the same room. A checkout somebody abandoned holds its seats for thirty minutes and then releases them, so this figure can go down as well as up. Open an event for the names, the payments and the door list."
+          />
         ) : null}
-        renderItem={({ item, index }) => (
-          <EventCard e={item} index={index} onOpen={() => navigation.navigate('SuperEventBookings', {
-            eventId: String(item?.id || ''), title: item?.title || 'Untitled event', capacity: Number(item?.totalSeats || 0),
-          })} />
-        )}
+        renderItem={({ item, index }) => <EventCard e={item} index={index} onOpen={() => openEvent(item)} />}
       />
-    </Screen>
+    </ConsoleFrame>
   );
 };
 
 const s = StyleSheet.create({
-  card: { backgroundColor: PALETTE.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: PALETTE.border, padding: SPACE.lg, marginHorizontal: SPACE.lg, marginBottom: SPACE.md },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.sm },
-  sno: { width: 18, fontSize: 13, fontWeight: '800', color: PALETTE.textFaint, marginTop: 2 },
-  title: { fontSize: 15, fontWeight: '800', color: PALETTE.text },
-  meta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  sub: { fontSize: 12, color: PALETTE.textMuted },
-  price: { fontSize: 15, fontWeight: '800', color: PALETTE.text },
-  memberRate: { fontSize: 11, fontWeight: '800', color: '#047857', marginTop: 2 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: SPACE.sm },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill },
-  chipText: { fontSize: 11, fontWeight: '800' },
+  overlap: { marginTop: -30 },
+  tabs: { marginTop: SPACE.md, marginBottom: SPACE.md },
+  toggleCard: { marginHorizontal: SPACE.lg, marginTop: SPACE.md, marginBottom: SPACE.md },
+  togglePad: { paddingHorizontal: SPACE.lg },
+  note: { marginHorizontal: SPACE.lg, marginTop: SPACE.sm, marginBottom: SPACE.md },
+  card: { marginHorizontal: SPACE.lg, marginBottom: SPACE.md },
+  row: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
+  flexText: { flex: 1, minWidth: 0 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.xs, marginBottom: SPACE.xs },
+  title: { ...TYPE.heading, fontSize: 17 },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs, marginTop: SPACE.xs },
+  metaText: { ...TYPE.caption, flex: 1, minWidth: 0 },
+  price: { color: PALETTE.text, fontWeight: '800' },
   figures: { flexDirection: 'row', gap: SPACE.sm, marginTop: SPACE.md },
-  figure: { flex: 1, backgroundColor: PALETTE.field, borderRadius: RADIUS.md, paddingVertical: SPACE.sm, alignItems: 'center' },
-  figValue: { fontSize: 17, fontWeight: '800', color: PALETTE.text },
+  figure: { flex: 1, minWidth: 0, backgroundColor: PALETTE.canvasAdmin, borderRadius: 14, paddingVertical: SPACE.sm, paddingHorizontal: SPACE.xs, alignItems: 'center' },
+  figValue: { fontSize: 18, fontWeight: '800', color: PALETTE.text },
   figLabel: { fontSize: 11, fontWeight: '700', color: PALETTE.textMuted, marginTop: 2 },
-  waiting: { fontSize: 10, fontWeight: '800', color: '#B45309', marginTop: 2 },
-  barTrack: { height: 6, borderRadius: 3, backgroundColor: PALETTE.field, marginTop: SPACE.sm, overflow: 'hidden' },
-  barFill: { height: 6, borderRadius: 3 },
-  money: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.md, marginTop: SPACE.md },
+  waiting: { fontSize: 10, fontWeight: '800', color: PALETTE.amberDark, marginTop: 2 },
+  moneyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.md, marginTop: SPACE.md },
   stat: { fontSize: 12, color: PALETTE.textMuted, fontWeight: '600' },
   statStrong: { color: PALETTE.text, fontWeight: '800' },
-  more: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4, marginTop: SPACE.sm },
+  unpaid: { color: PALETTE.amberDark, fontWeight: '800' },
+  more: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 2, marginTop: SPACE.sm },
   moreText: { fontSize: 12, fontWeight: '800', color: PALETTE.indigo },
-  foot: { fontSize: 12, lineHeight: 18, color: PALETTE.textMuted, paddingHorizontal: SPACE.lg, marginTop: SPACE.sm },
 });
 
 export default SuperBookingsScreen;

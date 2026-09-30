@@ -1,8 +1,10 @@
-import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, Alert, Image } from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Alert, Image, RefreshControl } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import {
-  Screen, AppHeader, Hero, Card, InfoRow, Field, PrimaryButton, Loading, ErrorState, Badge, Notice, PALETTE, SPACE, RADIUS, shortDate, money,
+  PALETTE, SPACE, TYPE, shortDate, money,
+  ConsoleScroll, ConsoleHeader, ConsoleCard, ConsoleChip, ConsoleButton, ConsoleNote, ConsoleSectionTitle,
+  ConsoleSkeleton, ConsoleState, GlassIconButton, GradientAvatar, PremiumInput, type ConsoleChipKind,
 } from '../../../ui';
 import { getPlatinumRequestDetail, updatePlatinumRequest, PlatinumRequestStatus, errorText } from '../../../services/superApi';
 import { resolveMediaUrl } from '../../../config/api.config';
@@ -27,34 +29,53 @@ const yesNo = (v?: boolean) => (v ? 'Yes' : 'No');
 const join = (v: any) => (Array.isArray(v) ? v.filter(Boolean).join(', ') : String(v || ''));
 const CONTACT_LABEL: Record<string, string> = { call: 'a phone call', whatsapp: 'WhatsApp', email: 'email' };
 const STATUS_WORD: Record<string, string> = { new: 'New', contacted: 'Contacted', converted: 'Platinum granted', declined: 'Declined' };
+const statusKind = (st?: string): ConsoleChipKind => (st === 'converted' ? 'approved' : st === 'declined' ? 'rejected' : 'pending');
 
 /** Absent values are left out rather than printed as dashes (website `Row`). */
 function Row({ label, value }: { label: string; value?: string | number | null }) {
   if (value === undefined || value === null || value === '') return null;
-  return <InfoRow label={label} value={value} />;
+  return (
+    <View style={s.detail}>
+      <Text style={s.detailLabel} maxFontSizeMultiplier={1.3}>{label}</Text>
+      <Text style={s.detailValue} selectable maxFontSizeMultiplier={1.3}>{String(value)}</Text>
+    </View>
+  );
+}
+
+function Section({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
+  return (
+    <>
+      <ConsoleSectionTitle title={title} icon={icon} style={s.section} />
+      <ConsoleCard style={s.card}>{children}</ConsoleCard>
+    </>
+  );
 }
 
 const SuperPlatinumRequestScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const id: string = route?.params?.id || '';
+  const id: string = String(route?.params?.id || '');
   const blockedReason: string = String(route?.params?.blockedReason || '');
 
   const [detail, setDetail] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
+  const loadedOnce = useRef(false);
 
-  const load = useCallback(async () => {
-    setLoading(true); setError('');
+  const load = useCallback(async (mode: 'load' | 'refresh' | 'quiet' = 'load') => {
+    if (!id) { setLoading(false); setError('No request was chosen.'); return; }
+    if (mode === 'refresh') setRefreshing(true); else if (mode === 'load') setLoading(true);
+    setError('');
     try {
       const d = await getPlatinumRequestDetail(id);
-      setDetail(d);
+      setDetail(d || {});
       setNotes(String(d?.request?.notes || ''));
-    } catch (err) { setError(errorText(err, 'Could not load the member’s details')); } finally { setLoading(false); }
+    } catch (err) { setError(errorText(err, 'Could not load the member’s details')); } finally { setLoading(false); setRefreshing(false); }
   }, [id]);
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => { load(loadedOnce.current ? 'quiet' : 'load'); loadedOnce.current = true; }, [load]));
 
   const setStatus = async (status: PlatinumRequestStatus) => {
     if (status === 'declined' && !(await confirm('Decline this request?', 'The note above is kept as the reason, for your records. The member stays on their current membership.', 'Decline', true))) return;
@@ -62,7 +83,7 @@ const SuperPlatinumRequestScreen: React.FC = () => {
     try {
       await updatePlatinumRequest(id, { status, notes: (notes || '').trim() });
       Alert.alert('Updated', status === 'contacted' ? 'Marked as contacted' : status === 'declined' ? 'Request declined' : 'Updated');
-      await load();
+      await load('quiet');
     } catch (err) { Alert.alert('Could not update the request', errorText(err)); } finally { setBusy(false); }
   };
   const saveNotes = async () => {
@@ -75,7 +96,7 @@ const SuperPlatinumRequestScreen: React.FC = () => {
     const p = detail?.personal || {};
     const mem = detail?.membership || {};
     if (!r?.memberId) { Alert.alert('Not possible', 'This request is not linked to a member record.'); return; }
-    navigation.navigate('SuperPlatinumGrant', {
+    navigation?.navigate?.('SuperPlatinumGrant', {
       member: {
         id: r.memberId, fullName: r?.name || p?.fullName, email: r?.email || p?.email, phoneNumber: r?.phone || p?.phoneNumber,
         block: p?.block, district: p?.district, state: p?.state, membershipNumber: mem?.memberNumber,
@@ -84,11 +105,23 @@ const SuperPlatinumRequestScreen: React.FC = () => {
     });
   };
 
-  if (loading && !detail) return <Screen tone="admin"><AppHeader tone="admin" title="Platinum request" onBack={() => navigation.goBack()} /><Loading tone="admin" label="Loading the member’s details…" /></Screen>;
-  if (error && !detail) return <Screen tone="admin"><AppHeader tone="admin" title="Platinum request" onBack={() => navigation.goBack()} /><ErrorState tone="admin" message={error} onRetry={load} /></Screen>;
-
   const r = detail?.request || {};
   const p = detail?.personal || {};
+  const header = (
+    <ConsoleHeader
+      compact
+      eyebrow="Super Admin · wants Platinum"
+      title={r?.name || p?.fullName || 'Platinum request'}
+      subtitle={detail ? `Prefers ${CONTACT_LABEL[String(r?.preferredContact || '')] || 'a phone call'}${r?.preferredTime ? ` · ${r.preferredTime}` : ''}${r?.createdAt ? ` · asked ${shortDate(r.createdAt)}` : ''}` : 'Loading the member’s details…'}
+      left={<GlassIconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => navigation?.goBack?.()} />}
+    />
+  );
+
+  if (loading && !detail) return <ConsoleScroll>{header}<ConsoleSkeleton rows={3} /></ConsoleScroll>;
+  if (error && !detail) {
+    return <ConsoleScroll>{header}<ConsoleState kind="error" title="Could not load this request" message={error} action="Try again" onAction={() => load('load')} /></ConsoleScroll>;
+  }
+
   const mem = detail?.membership || {};
   const biz = detail?.business || null;
   const decl = detail?.declaration || null;
@@ -100,28 +133,36 @@ const SuperPlatinumRequestScreen: React.FC = () => {
   /** Sister concerns and company names are business answers only. */
   const trading = !!biz?.doingBusiness && !['aspirant', 'student'].includes(String(biz?.registrationType || mem?.memberType || '').toLowerCase());
   const lifetime = mem?.tier === 'platinum' || mem?.type === 'lifetime';
+  const phone = r?.phone || p?.phoneNumber;
+  const wa = p?.whatsappNumber || r?.phone;
 
   return (
-    <Screen tone="admin">
-      <AppHeader tone="admin" title="Platinum request" subtitle={shortDate(r?.createdAt)} onBack={() => navigation.goBack()} />
-      <Hero colors={['#0B1F5C', '#1E3A8A', '#2563EB']} eyebrow="WANTS PLATINUM" title={r?.name || p?.fullName || 'Member'}
-        subtitle={`Prefers ${CONTACT_LABEL[r?.preferredContact] || 'a phone call'}${r?.preferredTime ? ` · ${r.preferredTime}` : ''}`} icon="contact-phone">
-        <View style={s.heroActions}>
-          <MiniAction icon="call" label={r?.phone || 'Call'} color="#FFFFFF" onPress={() => callNumber(r?.phone || p?.phoneNumber)} disabled={!(r?.phone || p?.phoneNumber)} />
-          <MiniAction icon="chat" label="WhatsApp" color="#FFFFFF" onPress={() => whatsappNumber(p?.whatsappNumber || r?.phone, `Hello ${r?.name || ''}, this is the ACTIV office about your Platinum membership request.`)} disabled={!(p?.whatsappNumber || r?.phone)} />
-          <MiniAction icon="email" label="Email" color="#FFFFFF" onPress={() => openUrl(r?.email ? `mailto:${r.email}?subject=${encodeURIComponent('Your ACTIV Platinum membership request')}` : '')} disabled={!r?.email} />
+    <ConsoleScroll avoidKeyboard refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('refresh')} tintColor={PALETTE.indigo} />}>
+      {header}
+
+      <ConsoleCard style={[s.card, s.overlap]} accent={open ? PALETTE.indigo : undefined}>
+        <View style={s.row}>
+          <GradientAvatar name={r?.name || p?.fullName || '?'} uri={photo} size={52} tone="admin" />
+          <View style={s.flexText}>
+            <ConsoleChip label={STATUS_WORD[String(r?.status || '')] || String(r?.status || 'New')} kind={statusKind(r?.status)} style={s.chip} />
+            {r?.handledBy ? <Text style={s.sub} maxFontSizeMultiplier={1.3}>{r.handledBy} · {shortDate(r?.handledAt)}</Text> : null}
+          </View>
         </View>
-      </Hero>
+        <View style={s.actions}>
+          <MiniAction icon="call" label={r?.phone || 'Call'} onPress={() => callNumber(phone)} disabled={!phone} />
+          <MiniAction icon="chat" label="WhatsApp" color={PALETTE.green} onPress={() => whatsappNumber(wa, `Hello ${r?.name || ''}, this is the ACTIV office about your Platinum membership request.`)} disabled={!wa} />
+          <MiniAction icon="email" label="Email" color={PALETTE.textSoft} onPress={() => openUrl(r?.email ? `mailto:${r.email}?subject=${encodeURIComponent('Your ACTIV Platinum membership request')}` : '')} disabled={!r?.email} />
+        </View>
+      </ConsoleCard>
 
-      <View style={s.statusRow}>
-        <Badge label={STATUS_WORD[r?.status] || String(r?.status || 'New')} status={r?.status === 'converted' ? 'approved' : r?.status === 'declined' ? 'rejected' : 'pending'} />
-        {r?.handledBy ? <Text style={s.small}>{r.handledBy} · {shortDate(r?.handledAt)}</Text> : null}
-      </View>
-      {r?.message ? <Card style={s.card}><Text style={s.cardTitle}>Their message</Text><Text style={s.body}>“{r.message}”</Text></Card> : null}
-      {open && blockedReason ? <Notice kind="warning" text={blockedReason} /> : null}
+      {r?.message ? (
+        <Section title="Their message" icon="format-quote">
+          <Text style={s.body} maxFontSizeMultiplier={1.3}>“{r.message}”</Text>
+        </Section>
+      ) : null}
+      {open && blockedReason ? <ConsoleNote kind="amber" icon="warning-amber" text={blockedReason} style={s.note} /> : null}
 
-      <Card style={s.card}>
-        <Text style={s.cardTitle}>Personal</Text>
+      <Section title="Personal" icon="person">
         {photo ? <Image source={{ uri: photo }} style={s.photo} /> : null}
         <Row label="Full name" value={p?.fullName} />
         <Row label="Email" value={p?.email || r?.email} />
@@ -134,10 +175,9 @@ const SuperPlatinumRequestScreen: React.FC = () => {
         <Row label={p?.isInternational ? 'Place' : 'Block · District · State'} value={region} />
         <Row label="City" value={p?.city} />
         <Row label="Registered on" value={shortDate(p?.registeredOn)} />
-      </Card>
+      </Section>
 
-      <Card style={s.card}>
-        <Text style={s.cardTitle}>Membership & application</Text>
+      <Section title="Membership & application" icon="badge">
         <Row label="Member ID" value={mem?.memberNumber} />
         <Row label="Member type" value={words(mem?.memberType)} />
         <Row label="Membership" value={`${words(mem?.status)}${mem?.type && mem.type !== 'none' ? ` · ${words(mem.type)}` : ''}${mem?.tier === 'platinum' ? ' · Platinum' : ''}`} />
@@ -152,10 +192,9 @@ const SuperPlatinumRequestScreen: React.FC = () => {
             <Row label="Submitted" value={shortDate(app?.submittedAt)} />
           </>
         ) : <Row label="Application" value="Not submitted yet" />}
-      </Card>
+      </Section>
 
-      <Card style={s.card}>
-        <Text style={s.cardTitle}>Business</Text>
+      <Section title="Business" icon="business">
         {biz ? (
           <>
             <Row label="Doing business" value={yesNo(biz?.doingBusiness)} />
@@ -170,10 +209,9 @@ const SuperPlatinumRequestScreen: React.FC = () => {
             <Row label="Government registrations" value={join(biz?.govtOrganizations)} />
           </>
         ) : <Row label="Business details" value="Not filled in yet" />}
-      </Card>
+      </Section>
 
-      <Card style={s.card}>
-        <Text style={s.cardTitle}>Declaration</Text>
+      <Section title="Declaration" icon="gavel">
         {decl ? (
           <>
             {trading ? <Row label="Sister concerns" value={String(decl?.sisterConcerns ?? '')} /> : null}
@@ -181,42 +219,49 @@ const SuperPlatinumRequestScreen: React.FC = () => {
             {trading ? <Row label="Company names" value={join(decl?.companyNames)} /> : null}
           </>
         ) : <Row label="Declaration" value="Not filled in yet" />}
-      </Card>
+      </Section>
 
       {earlier.length ? (
-        <Card style={s.card}>
-          <Text style={s.cardTitle}>Earlier Platinum requests</Text>
-          {earlier.map((h) => (
-            <Row key={String(h?.id)} label={shortDate(h?.createdAt) || '—'} value={`${words(h?.status)}${h?.notes ? ` — ${h.notes}` : ''}`} />
+        <Section title="Earlier Platinum requests" icon="history">
+          {earlier.map((h, i) => (
+            <Row key={String(h?.id || i)} label={shortDate(h?.createdAt) || '—'} value={`${words(h?.status)}${h?.notes ? ` — ${h.notes}` : ''}`} />
           ))}
-        </Card>
+        </Section>
       ) : null}
 
-      <Card style={s.card}>
-        <Text style={s.cardTitle}>Office notes</Text>
-        <Field value={notes} onChangeText={setNotes} multiline placeholder={open ? 'What was agreed on the call, or the reason if you decline (optional, for your records)' : 'Notes'} />
-        <PrimaryButton tone="admin" variant="outline" icon="save" label="Save notes" onPress={saveNotes} disabled={busy} />
-      </Card>
+      <Section title="Office notes" icon="edit-note">
+        <PremiumInput tone="admin" value={notes} onChangeText={setNotes} multiline accessibilityLabel="Office notes"
+          placeholder={open ? 'What was agreed on the call, or the reason if you decline (optional, for your records)' : 'Notes'} />
+        <ConsoleButton kind="soft" size="sm" icon="save" label="Save notes" onPress={saveNotes} disabled={busy} />
+      </Section>
 
       {open ? (
-        <View style={{ paddingHorizontal: SPACE.lg, marginTop: SPACE.xl, gap: SPACE.md }}>
-          <PrimaryButton tone="admin" variant="gold" icon="diamond" label="Grant Platinum" onPress={grant} loading={busy} disabled={!!blockedReason} />
-          {r?.status === 'new' ? <PrimaryButton tone="admin" icon="done" label="Mark contacted" onPress={() => setStatus('contacted')} disabled={busy} /> : null}
-          <PrimaryButton tone="admin" variant="danger" icon="close" label="Decline" onPress={() => setStatus('declined')} disabled={busy} />
+        <View style={s.decide}>
+          <ConsoleButton icon="diamond" label="Grant Platinum" onPress={grant} loading={busy} disabled={!!blockedReason} />
+          {r?.status === 'new' ? <ConsoleButton kind="soft" icon="done" label="Mark contacted" onPress={() => setStatus('contacted')} disabled={busy} /> : null}
+          <ConsoleButton kind="danger" icon="close" label="Decline" onPress={() => setStatus('declined')} disabled={busy} />
         </View>
       ) : null}
-    </Screen>
+    </ConsoleScroll>
   );
 };
 
 const s = StyleSheet.create({
-  card: { marginHorizontal: SPACE.lg, marginTop: SPACE.lg },
-  cardTitle: { fontSize: 15, fontWeight: '800', color: PALETTE.text, marginBottom: SPACE.sm },
+  overlap: { marginTop: -SPACE.lg },
+  card: { marginHorizontal: SPACE.lg },
+  section: { marginHorizontal: SPACE.lg, marginTop: SPACE.xl, marginBottom: SPACE.md },
+  note: { marginHorizontal: SPACE.lg, marginTop: SPACE.md },
+  row: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
+  flexText: { flex: 1, minWidth: 0, alignItems: 'flex-start' },
+  chip: { marginBottom: SPACE.xs },
+  sub: { ...TYPE.caption },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.md },
   body: { fontSize: 14, color: PALETTE.textSoft, lineHeight: 21 },
-  small: { fontSize: 12, color: PALETTE.textMuted, flexShrink: 1 },
-  heroActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  statusRow: { paddingHorizontal: SPACE.lg, marginTop: SPACE.lg, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  photo: { width: 80, height: 80, borderRadius: RADIUS.md, marginBottom: SPACE.sm, backgroundColor: PALETTE.border },
+  detail: { paddingVertical: SPACE.sm, borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: PALETTE.divider },
+  detailLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 0.8, color: PALETTE.textFaint, textTransform: 'uppercase' },
+  detailValue: { fontSize: 14, lineHeight: 20, color: PALETTE.text, marginTop: 2 },
+  photo: { width: 80, height: 80, borderRadius: 14, marginBottom: SPACE.sm, backgroundColor: PALETTE.divider },
+  decide: { paddingHorizontal: SPACE.lg, marginTop: SPACE.xl, gap: SPACE.md },
 });
 
 export default SuperPlatinumRequestScreen;

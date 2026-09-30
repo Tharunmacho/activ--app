@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Screen, AppHeader, Card, Field, PrimaryButton, PALETTE, SPACE } from '../../../ui';
+import {
+  PALETTE, SPACE, TYPE,
+  ConsoleScroll, ConsoleHeader, ConsoleCard, ConsoleButton, GlassIconButton, PremiumInput, BottomActionBar,
+} from '../../../ui';
 import { createAnnouncement, updateAnnouncement, UpdateCategory, errorText } from '../../../services/superApi';
 import { ChipRow, ToggleRow, useRegionTreeAll, useRegionNames } from './superKit';
 import { InlineSelect, Choice, DateField } from './events/eventKit';
@@ -104,22 +107,36 @@ const SuperUpdateEditorScreen: React.FC = () => {
   };
 
   return (
-    <Screen tone="admin">
-      <AppHeader tone="admin" title={editing ? 'Edit update' : 'New update'} subtitle="Members read it on their dashboard" onBack={() => navigation.goBack()} />
+    <ConsoleScroll
+      avoidKeyboard
+      footer={(
+        <BottomActionBar>
+          <ConsoleButton kind="soft" icon="save" label="Save as draft" onPress={() => save('draft')} disabled={saving} style={s.footDraft} />
+          <ConsoleButton icon="publish" label="Publish" onPress={() => save('published')} loading={saving} style={s.footPublish} />
+        </BottomActionBar>
+      )}
+    >
+      <ConsoleHeader
+        compact
+        eyebrow="Super Admin · communication"
+        title={editing ? 'Edit update' : 'New update'}
+        subtitle="Members read it on their dashboard"
+        left={<GlassIconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => navigation.goBack()} />}
+      />
 
-      <Card style={s.card}>
-        <Field label="Headline" value={title} onChangeText={setTitle} placeholder="What is it about?" />
-        <Field label="Standfirst" value={summary} onChangeText={setSummary} placeholder="One line, shown on the dashboard card"
+      <ConsoleCard style={[s.card, s.first]}>
+        <PremiumInput tone="admin" label="Headline" value={title} onChangeText={setTitle} placeholder="What is it about?" />
+        <PremiumInput tone="admin" label="Standfirst" value={summary} onChangeText={setSummary} placeholder="One line, shown on the dashboard card"
           hint="Left blank, the opening of the body is used." />
-        <Field label="The update" value={body} onChangeText={setBody} multiline placeholder="The whole update" inputStyle={{ minHeight: 140 }} />
-      </Card>
+        <PremiumInput tone="admin" label="The update" value={body} onChangeText={setBody} multiline placeholder="The whole update" inputStyle={{ minHeight: 140 }} />
+      </ConsoleCard>
 
-      <Card style={s.card}>
+      <ConsoleCard style={s.card}>
         <Text style={s.title}>Category</Text>
-        <View style={{ marginHorizontal: -SPACE.lg }}><ChipRow<UpdateCategory> options={CATEGORIES} value={category} onChange={setCategory} /></View>
-      </Card>
+        <View style={s.bleed}><ChipRow<UpdateCategory> options={CATEGORIES} value={category} onChange={setCategory} /></View>
+      </ConsoleCard>
 
-      <Card style={s.card}>
+      <ConsoleCard style={s.card}>
         <Text style={s.title}>Who it reaches</Text>
         <Text style={s.hint}>Leave a region blank to reach everyone below that level. A block-level update goes only to that block.</Text>
         {/*
@@ -140,39 +157,40 @@ const SuperUpdateEditorScreen: React.FC = () => {
           { value: 'all', icon: 'public', title: 'All members', detail: 'Everyone signed in, whether or not they have paid.' },
           { value: 'paid', icon: 'lock', title: 'Paid members only', detail: 'Only members with an active membership can open it.' },
         ]} />
-        <View style={{ height: SPACE.sm }} />
+        <View style={s.gap} />
         <ToggleRow label="Pin to the top of every feed" value={pinned} onChange={setPinned} last />
-      </Card>
+      </ConsoleCard>
 
-      <Card style={s.card}>
+      <ConsoleCard style={s.card}>
         <DateField label="Stop showing after (optional)" value={expiresAt} onChange={setExpiresAt}
           hint="Blank means it stays up. It stays up to the end of that day." />
-      </Card>
+      </ConsoleCard>
 
-      <Card style={s.card}>
+      <ConsoleCard style={s.card}>
         <Text style={s.title}>Banner and attachment</Text>
-        <Field label="Banner image URL (optional)" value={bannerUrl} onChangeText={setBannerUrl} placeholder="https://…"
+        <PremiumInput tone="admin" label="Banner image URL (optional)" value={bannerUrl} onChangeText={setBannerUrl} placeholder="https://…"
           autoCapitalize="none" keyboardType="url" hint="A circular or poster reads best whole." />
         {bannerUrl ? (
-          <Field label="Banner description (optional)" value={bannerAlt} onChangeText={setBannerAlt} placeholder="What the picture shows" />
+          <PremiumInput tone="admin" label="Banner description (optional)" value={bannerAlt} onChangeText={setBannerAlt} placeholder="What the picture shows" />
         ) : null}
-        <Field label="Attachment URL (optional)" value={attachmentUrl} onChangeText={setAttachmentUrl} placeholder="https://…"
+        <PremiumInput tone="admin" label="Attachment URL (optional)" value={attachmentUrl} onChangeText={setAttachmentUrl} placeholder="https://…"
           autoCapitalize="none" keyboardType="url" hint="A circular or form members can open." />
-        <Field label="Attachment label (optional)" value={attachmentLabel} onChangeText={setAttachmentLabel} placeholder="Circular 14/2026" />
-      </Card>
+        <PremiumInput tone="admin" label="Attachment label (optional)" value={attachmentLabel} onChangeText={setAttachmentLabel} placeholder="Circular 14/2026" />
+      </ConsoleCard>
 
-      <View style={{ paddingHorizontal: SPACE.lg, marginTop: SPACE.xl, gap: SPACE.md }}>
-        <PrimaryButton tone="admin" icon="publish" label="Publish" onPress={() => save('published')} loading={saving} />
-        <PrimaryButton tone="admin" variant="outline" icon="save" label="Save as draft" onPress={() => save('draft')} disabled={saving} />
-      </View>
-    </Screen>
+    </ConsoleScroll>
   );
 };
 
 const s = StyleSheet.create({
   card: { marginHorizontal: SPACE.lg, marginTop: SPACE.lg },
-  title: { fontSize: 15, fontWeight: '800', color: PALETTE.text, marginBottom: SPACE.sm },
-  hint: { fontSize: 12, color: PALETTE.textMuted, marginBottom: SPACE.md, lineHeight: 17 },
+  first: { marginTop: -SPACE.lg },
+  bleed: { marginHorizontal: -SPACE.lg },
+  gap: { height: SPACE.sm },
+  title: { ...TYPE.subheading, fontWeight: '800', marginBottom: SPACE.sm },
+  hint: { ...TYPE.caption, marginBottom: SPACE.md, lineHeight: 17 },
+  footDraft: { flex: 1 },
+  footPublish: { flex: 1 },
 });
 
 export default SuperUpdateEditorScreen;

@@ -357,3 +357,37 @@ export const errorText = (err: any, fallback = 'Something went wrong. Please try
   if (!err?.response) return 'Cannot reach the server. Check your internet connection.';
   return String(err?.response?.data?.message || err?.message || fallback);
 };
+
+/* ======================================================= SITE STAFF ACCOUNTS */
+/**
+ * The CMS admin and the events admin. The Super Admin maintains their
+ * credentials — name, email, phone, active, and a new password. The server
+ * refuses super admin and tier-admin records on this path whatever id is sent.
+ * Same endpoints as the website's `listStaffAccounts` / `updateStaffAccount`.
+ */
+export interface StaffAccount {
+  id: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  role: string;
+  roleLabel: string;
+  active: boolean;
+  lastLoginAt: string | null;
+  updatedAt: string | null;
+}
+
+/** GET /admin/super/staff-accounts */
+export const listStaffAccounts = async (): Promise<StaffAccount[]> => {
+  const data = unwrap<any>(await api.get('/admin/super/staff-accounts'), {});
+  return Array.isArray(data?.accounts) ? data.accounts : [];
+};
+
+/** PUT /admin/super/staff-accounts/:id — `password` only when setting a new one. */
+export const updateStaffAccount = async (
+  id: string,
+  payload: { fullName?: string; email?: string; phoneNumber?: string; active?: boolean; password?: string },
+) => unwrap<{ account?: StaffAccount; changed?: string[] }>(
+  await api.put(`/admin/super/staff-accounts/${enc(String(id || ''))}`, payload),
+  {},
+);

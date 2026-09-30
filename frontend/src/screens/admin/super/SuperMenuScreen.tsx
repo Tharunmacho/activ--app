@@ -16,15 +16,14 @@ import { confirm } from './superKit';
 
 /**
  * ============================================================================
- * SUPER ADMIN — "More": admin maintenance
+ * SUPER ADMIN — "More": every feature of the website's Super Admin sidebar
  * ============================================================================
  *
- * In the app the Super Admin maintains admins and the three admin tiers only:
- * Hub, Approvals, Members, Admins, Settings — and sign out. The one events
- * screen is Event attendance, READ-ONLY (who came, when, admitted by whom;
- * search and CSV) — SuperEventAttendance. Writing events, bookings, payments,
- * donors, membership plans, Platinum, updates, notifications and the CMS are
- * website-only by decision.
+ * FULL PARITY WITH THE WEBSITE SUPER ADMIN (decided 2026-09-30), except the CMS
+ * content pages: applications and members; membership plans, Platinum,
+ * bookings and revenue, donations; events, categories and attendance; member
+ * updates and notifications (Automation delivery log, raw log, setup,
+ * routing). Events also has its own tab. Stack screens: routes/superRoutes.tsx.
  *
  * Premium: the indigo wave header with the admin console art, and a grid of
  * gradient tiles that spring when pressed.
@@ -46,14 +45,29 @@ const SECTIONS: { title: string; items: Item[] }[] = [
     ],
   },
   {
+    title: 'Membership & money',
+    items: [
+      { key: 'plans', icon: 'card-membership', label: 'Membership plans', hint: 'Prices, bands, show-all', accent: 'indigo', go: stack('SuperMembership', { tab: 'plans' }) },
+      { key: 'platinum', icon: 'workspace-premium', label: 'Platinum', hint: 'Grant, requests', accent: 'gold', go: stack('SuperMembership', { tab: 'platinum' }) },
+      { key: 'bookings', icon: 'confirmation-number', label: 'Bookings & revenue', hint: 'Seats sold, paid, unpaid', accent: 'green', go: stack('SuperBookings') },
+      { key: 'donations', icon: 'volunteer-activism', label: 'Donations', hint: 'Donors, receipts, totals', accent: 'red', go: stack('SuperDonors') },
+    ],
+  },
+  {
     title: 'Events',
     items: [
+      { key: 'events', icon: 'event', label: 'Events', hint: 'Create, edit, QR, targets', accent: 'sky', go: tab('Events') },
+      { key: 'categories', icon: 'category', label: 'Event categories', hint: 'Names, order, mode', accent: 'slate', go: stack('SuperEventCategories') },
+      { key: 'people', icon: 'person-search', label: 'Booking people', hint: 'Everyone who has booked', accent: 'indigo', go: stack('SuperBookingPeople') },
       { key: 'attendance', icon: 'how-to-reg', label: 'Event attendance', hint: 'Who came · read-only', accent: 'gold', go: stack('SuperEventAttendance') },
     ],
   },
   {
-    title: 'Account',
+    title: 'Communication',
     items: [
+      { key: 'updates', icon: 'campaign', label: 'Member updates', hint: 'Announcements to members', accent: 'amber', go: stack('SuperUpdates') },
+      { key: 'automation', icon: 'mark-email-read', label: 'Message delivery', hint: 'Delivered, read, failed', accent: 'green', go: stack('SuperNotifications', { view: 'automation' }) },
+      { key: 'notifications', icon: 'notifications-active', label: 'Notifications', hint: 'Log, setup, test send', accent: 'sky', go: stack('SuperNotifications', { view: 'log' }) },
       { key: 'settings', icon: 'settings', label: 'Settings & audit', hint: 'Profile, password, audit log', accent: 'slate', go: tab('Settings') },
     ],
   },
@@ -104,7 +118,7 @@ const SuperMenuScreen: React.FC = () => {
         right={<GradientAvatar name={adminName || 'Super Admin'} uri={adminProfilePhoto ? resolveMediaUrl(adminProfilePhoto) : ''} size={44} tone="admin" status="online" />}
         eyebrow="Super Admin"
         title={adminName ? String(adminName) : 'Everything, in one place'}
-        subtitle={adminEmail ? String(adminEmail) : 'Admin maintenance, built for your phone.'}
+        subtitle={adminEmail ? String(adminEmail) : 'The whole association, built for your phone.'}
         art={<AdminConsole3D size={100} />}
         badges={[{ icon: 'public', label: 'All India' }, { icon: 'verified-user', label: 'Full access' }]}
         waveHeight={62}
@@ -118,7 +132,7 @@ const SuperMenuScreen: React.FC = () => {
               n += 1;
               return (
                 <View key={it.key} style={s.cell}>
-                  <Tile item={it} delay={60 * n} onPress={() => it.go(navigation)} />
+                  <Tile item={it} delay={Math.min(60 * n, 480)} onPress={() => it.go(navigation)} />
                 </View>
               );
             })}
@@ -129,7 +143,7 @@ const SuperMenuScreen: React.FC = () => {
       <ConsoleNote
         icon="language"
         style={s.note}
-        text="Event attendance (read-only) is in the app. Writing events, bookings, donors, membership plans, Platinum, updates and notifications are managed on the ACTIV website."
+        text="Everything the website Super Admin can do is here, except editing the CMS content pages — those stay on the ACTIV website."
       />
 
       <FadeInUp delay={420} style={s.signout}>

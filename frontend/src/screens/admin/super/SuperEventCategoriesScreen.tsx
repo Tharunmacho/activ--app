@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
-  Screen, AppHeader, IconButton, Card, Field, Loading, ErrorState, EmptyState, Badge, PrimaryButton, Notice, StatGrid, StatTile,
-  PALETTE, SPACE, RADIUS, SHADOW,
+  PALETTE, SPACE, TYPE,
+  ConsoleScroll, ConsoleHeader, ConsoleGrid, ConsoleStatTile, ConsoleCard, ConsoleChip, ConsoleButton, ConsoleNote, ConsoleSearch,
+  ConsoleSkeleton, ConsoleState, ConsoleSectionTitle, GlassIconButton, PremiumInput,
 } from '../../../ui';
 import {
   listEventCategories, addEventCategory, renameEventCategory, deleteEventCategory, moveEventCategory, addStandardEventCategories,
@@ -49,10 +50,10 @@ function CategoryCard({ c, index, first, last, busy, editing, onEdit, onUp, onDo
 }) {
   const count = Number(c?.eventCount || 0);
   return (
-    <View style={[s.card, SHADOW.card]}>
+    <ConsoleCard style={s.card}>
       <View style={s.row}>
         <Text style={s.sno}>{index + 1}</Text>
-        <View style={s.icon}><Icon name="event" size={20} color={PALETTE.blueDark} /></View>
+        <View style={s.icon}><Icon name="sell" size={20} color={PALETTE.indigo} /></View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={s.name} numberOfLines={2}>{c?.label}</Text>
           <Text style={s.sub}>
@@ -60,24 +61,24 @@ function CategoryCard({ c, index, first, last, busy, editing, onEdit, onUp, onDo
             {' · '}{count ? `${count} event${count === 1 ? '' : 's'}` : 'no events'}
           </Text>
         </View>
-        {!c?.managed ? <Badge label="Not listed" color="#B45309" bg={PALETTE.amberSoft} /> : null}
+        {!c?.managed ? <ConsoleChip label="Not listed" kind="warning" /> : null}
       </View>
       {c?.managed ? (
         <View style={s.actions}>
           <TouchableOpacity onPress={onUp} disabled={first || busy} style={[s.arrow, (first || busy) && { opacity: 0.3 }]} accessibilityLabel="Move up"><Icon name="arrow-upward" size={18} color={PALETTE.textSoft} /></TouchableOpacity>
           <TouchableOpacity onPress={onDown} disabled={last || busy} style={[s.arrow, (last || busy) && { opacity: 0.3 }]} accessibilityLabel="Move down"><Icon name="arrow-downward" size={18} color={PALETTE.textSoft} /></TouchableOpacity>
-          <View style={{ flex: 1 }} />
+          <View style={s.flex} />
           <MiniAction icon={editing ? 'close' : 'edit'} label={editing ? 'Close' : 'Edit'} onPress={onEdit} disabled={busy} />
           <MiniAction icon="delete-outline" label="Remove" color={PALETTE.red} onPress={onDelete} disabled={busy} />
         </View>
       ) : (
         <View style={s.actions}>
-          <Text style={[s.sub, { flex: 1, marginTop: 0 }]}>Events carry this label but no chip offers it on the public events page.</Text>
+          <Text style={[s.sub, s.flexFlush]}>Events carry this label but no chip offers it on the public events page.</Text>
           <MiniAction icon="add" label="Add to list" onPress={onList} disabled={busy} />
         </View>
       )}
       {editing ? children : null}
-    </View>
+    </ConsoleCard>
   );
 }
 
@@ -187,56 +188,64 @@ const SuperEventCategoriesScreen: React.FC = () => {
   const countFor = (m: 'all' | CategoryMode) => (m === 'all' ? cats.length : cats.filter((c) => c?.managed && c?.mode === m).length);
 
   return (
-    <Screen tone="admin" refreshing={refreshing} onRefresh={() => load(true)}>
-      <AppHeader tone="admin" title="Event categories" subtitle="The event form's list and the public filter chips" onBack={() => navigation.goBack()}
-        right={<IconButton icon={adding ? 'close' : 'add'} accessibilityLabel={adding ? 'Close' : 'Add category'} color={PALETTE.indigo}
-          onPress={() => { setAdding((v) => !v); setEditId(''); }} />} />
+    <ConsoleScroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={PALETTE.indigo} />}>
+      <ConsoleHeader
+        compact
+        eyebrow="Super Admin · events"
+        title="Event categories"
+        subtitle="The event form's list and the public filter chips"
+        left={<GlassIconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => navigation.goBack()} />}
+        right={<GlassIconButton icon={adding ? 'close' : 'add'} accessibilityLabel={adding ? 'Close' : 'Add category'}
+          onPress={() => { setAdding((v) => !v); setEditId(''); }} />}
+      />
 
-      <StatGrid>
-        <StatTile label="Categories" hint="on the public filter bar" value={stats.listed} icon="sell" color={PALETTE.blueDark} soft={PALETTE.blueSoft} />
-        <StatTile label="Events filed" hint={`${stats.used} categor${stats.used === 1 ? 'y' : 'ies'} in use`} value={stats.events} icon="event" color={PALETTE.indigo} soft={PALETTE.indigoSoft} />
-        <StatTile label="Not listed" hint="labels events carry, with no chip" value={stats.unlisted} icon="warning-amber"
-          color={stats.unlisted ? PALETTE.amber : PALETTE.textMuted} soft={stats.unlisted ? PALETTE.amberSoft : '#E2E8F0'} />
-        <StatTile label="Standard missing" hint="of the association's 13" value={missing.length} icon="auto-awesome" color={PALETTE.green} soft={PALETTE.greenSoft} />
-      </StatGrid>
+      {loading && !data ? <ConsoleSkeleton variant="tiles" style={s.tilesSkeleton} /> : (
+        <ConsoleGrid overlap>
+          <ConsoleStatTile label="Categories" hint="on the public filter bar" value={stats.listed} icon="sell" accent="indigo" />
+          <ConsoleStatTile label="Events filed" hint={`${stats.used} categor${stats.used === 1 ? 'y' : 'ies'} in use`} value={stats.events} icon="event" accent="sky" delay={60} />
+          <ConsoleStatTile label="Not listed" hint="labels events carry, with no chip" value={stats.unlisted} icon="warning-amber"
+            accent={stats.unlisted ? 'amber' : 'slate'} delay={120} />
+          <ConsoleStatTile label="Standard missing" hint="of the association's 13" value={missing.length} icon="auto-awesome" accent="green" delay={180} />
+        </ConsoleGrid>
+      )}
 
-      {writeError ? <Notice kind="danger" text={writeError} /> : null}
-      {notice ? <Notice kind="success" text={notice} /> : null}
+      {writeError ? <ConsoleNote kind="red" icon="error-outline" text={writeError} style={s.note} /> : null}
+      {notice ? <ConsoleNote kind="green" icon="check-circle-outline" text={notice} style={s.note} /> : null}
 
       {adding ? (
-        <Card style={s.addCard}>
+        <ConsoleCard style={s.addCard}>
           <Text style={s.title}>Add a category</Text>
-          <Text style={[s.sub, { marginTop: 0, marginBottom: SPACE.md }]}>It appears in the event form straight away, and as a filter chip on the public events page.</Text>
-          <Field value={label} onChangeText={setLabel} placeholder="Medical, Awareness, Coffee Meet…" icon="add" returnKeyType="done" onSubmitEditing={submitNew} autoFocus />
-          <View style={{ marginHorizontal: -SPACE.lg }}><ChipRow<CategoryMode> options={MODES} value={mode} onChange={setMode} /></View>
-          <PrimaryButton tone="admin" label="Add" icon="check" onPress={submitNew} loading={busy === 'new'} disabled={!(label || '').trim()} style={{ marginTop: SPACE.md }} />
-        </Card>
+          <Text style={[s.sub, s.flush, s.gapBottom]}>It appears in the event form straight away, and as a filter chip on the public events page.</Text>
+          <PremiumInput tone="admin" value={label} onChangeText={setLabel} placeholder="Medical, Awareness, Coffee Meet…" icon="add" returnKeyType="done" onSubmitEditing={submitNew} autoFocus />
+          <View style={s.bleed}><ChipRow<CategoryMode> options={MODES} value={mode} onChange={setMode} /></View>
+          <ConsoleButton label="Add" icon="check" onPress={submitNew} loading={busy === 'new'} disabled={!(label || '').trim()} style={s.gapTop} />
+        </ConsoleCard>
       ) : null}
 
       {missing.length ? (
-        <Card style={[s.addCard, { backgroundColor: PALETTE.amberSoft, borderColor: '#FDE68A' }]}>
-          <Text style={[s.title, { color: '#92400E', marginBottom: 4 }]}>{missing.length} of the standard categories are not listed</Text>
-          <Text style={[s.sub, { color: '#92400E', marginTop: 0 }]}>{missing.join(' · ')}. Adding them changes nothing that is already here — it only fills the gaps.</Text>
-          <PrimaryButton tone="admin" icon="add" label="Add the missing ones" loading={busy === 'standard'} disabled={!!busy && busy !== 'standard'}
+        <ConsoleCard style={s.addCard} accent={PALETTE.amber}>
+          <Text style={[s.title, s.amberTitle]}>{missing.length} of the standard categories are not listed</Text>
+          <Text style={[s.sub, s.flush]}>{missing.join(' · ')}. Adding them changes nothing that is already here — it only fills the gaps.</Text>
+          <ConsoleButton kind="soft" icon="add" label="Add the missing ones" loading={busy === 'standard'} disabled={!!busy && busy !== 'standard'}
             onPress={() => run('standard', addStandardEventCategories, (d) => `${(Array.isArray(d?.added) ? d.added : []).length} categories added`)}
-            style={{ marginTop: SPACE.md }} />
-        </Card>
+            style={s.gapTop} />
+        </ConsoleCard>
       ) : null}
 
-      <Text style={s.eyebrow}>SHOW</Text>
-      <View style={{ marginTop: -SPACE.sm }}>
+      <ConsoleSectionTitle title="Categories" subtitle="In the order the public filter chips show them" icon="sell" style={s.section} />
+      <View>
         <ChipRow<'all' | CategoryMode> value={modeFilter} onChange={setModeFilter}
           options={(['all', ...MODE_ORDER] as ('all' | CategoryMode)[]).map((m) => ({ value: m, label: `${m === 'all' ? 'All' : MODE_META[m].short} · ${countFor(m)}` }))} />
       </View>
-      <View style={{ paddingHorizontal: SPACE.lg, marginTop: SPACE.md }}>
-        <Field icon="search" placeholder="Search a category" value={query} onChangeText={setQuery} autoCorrect={false} />
-      </View>
+      <ConsoleSearch placeholder="Search a category" value={query} onChangeText={setQuery} style={s.search} />
 
       <View>
-        {loading && !data ? <Loading tone="admin" /> : error && !data ? <ErrorState tone="admin" message={error} onRetry={() => load()} /> : cats.length === 0 ? (
-          <EmptyState tone="admin" icon="sell" title="No categories yet" message="Add one above, or take the association's standard list." />
+        {loading && !data ? <ConsoleSkeleton rows={3} /> : error && !data ? (
+          <ConsoleState kind="error" title="Could not load the categories" message={error} action="Try again" onAction={() => load()} />
+        ) : cats.length === 0 ? (
+          <ConsoleState title="No categories yet" message="Add one above, or take the association's standard list." />
         ) : visible.length === 0 ? (
-          <EmptyState tone="admin" icon="filter-alt-off" title="Nothing matches" message="No category answers the filter and search above." />
+          <ConsoleState title="Nothing matches" message="No category answers the filter and search above." />
         ) : visible.map((c, i) => {
           const idx = managed.findIndex((m) => m.id === c.id);
           return (
@@ -245,41 +254,49 @@ const SuperEventCategoriesScreen: React.FC = () => {
               onEdit={() => startEdit(c)} onUp={() => run(c.id, () => moveEventCategory(c.id, 'up'))} onDown={() => run(c.id, () => moveEventCategory(c.id, 'down'))}
               onDelete={() => remove(c)} onList={() => addToList(c)}>
               <View style={s.edit}>
-                <Field label="Name" value={editLabel} onChangeText={setEditLabel} />
+                <PremiumInput tone="admin" label="Name" value={editLabel} onChangeText={setEditLabel} />
                 <Text style={s.fieldLabel}>Which kind of event it is for</Text>
-                <View style={{ marginHorizontal: -SPACE.lg }}><ChipRow<CategoryMode> options={MODES} value={editMode} onChange={setEditMode} /></View>
-                <PrimaryButton tone="admin" label="Save" icon="check" onPress={() => saveEdit(c)} loading={busy === c.id} style={{ marginTop: SPACE.md }} />
+                <View style={s.bleed}><ChipRow<CategoryMode> options={MODES} value={editMode} onChange={setEditMode} /></View>
+                <ConsoleButton label="Save" icon="check" onPress={() => saveEdit(c)} loading={busy === c.id} style={s.gapTop} />
               </View>
             </CategoryCard>
           );
         })}
       </View>
 
-      <Text style={s.foot}>
-        <Text style={{ fontWeight: '800', color: PALETTE.textSoft }}>Renaming is not cosmetic. </Text>
-        A category is stored on an event as its name, so renaming one here also re-files every event carrying the old name — the screen
-        says how many moved. Removing one leaves those events alone; they keep the label and reappear as “not listed”, and the public
-        events page stops offering it as a filter.
-      </Text>
-    </Screen>
+      <ConsoleNote
+        style={s.note}
+        icon="info-outline"
+        text="Renaming is not cosmetic. A category is stored on an event as its name, so renaming one here also re-files every event carrying the old name — the screen says how many moved. Removing one leaves those events alone; they keep the label and reappear as “not listed”, and the public events page stops offering it as a filter."
+      />
+    </ConsoleScroll>
   );
 };
 
 const s = StyleSheet.create({
+  flex: { flex: 1 },
+  tilesSkeleton: { marginTop: -30 },
+  note: { marginHorizontal: SPACE.lg, marginTop: SPACE.md },
   addCard: { marginHorizontal: SPACE.lg, marginTop: SPACE.md },
-  title: { fontSize: 15, fontWeight: '800', color: PALETTE.text, marginBottom: SPACE.sm },
-  eyebrow: { fontSize: 11, fontWeight: '800', letterSpacing: 1.2, color: PALETTE.textFaint, paddingHorizontal: SPACE.lg, marginTop: SPACE.lg, marginBottom: SPACE.sm },
-  card: { backgroundColor: PALETTE.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: PALETTE.border, padding: SPACE.lg, marginHorizontal: SPACE.lg, marginBottom: SPACE.md },
+  bleed: { marginHorizontal: -SPACE.lg },
+  gapTop: { marginTop: SPACE.md },
+  gapBottom: { marginBottom: SPACE.md },
+  title: { ...TYPE.subheading, fontWeight: '800', marginBottom: SPACE.sm },
+  amberTitle: { color: PALETTE.amberDark, marginBottom: 4 },
+  flush: { marginTop: 0 },
+  flexFlush: { flex: 1, minWidth: 0, marginTop: 0 },
+  section: { marginTop: SPACE.xl },
+  search: { marginTop: SPACE.md, marginBottom: SPACE.sm },
+  card: { marginHorizontal: SPACE.lg, marginBottom: SPACE.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
   sno: { width: 20, fontSize: 13, fontWeight: '800', color: PALETTE.textFaint, textAlign: 'center' },
-  icon: { width: 40, height: 40, borderRadius: 12, backgroundColor: PALETTE.blueSoft, alignItems: 'center', justifyContent: 'center' },
-  name: { fontSize: 15, fontWeight: '800', color: PALETTE.text },
-  sub: { fontSize: 12, color: PALETTE.textMuted, marginTop: 2, lineHeight: 17 },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: SPACE.md },
-  arrow: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: PALETTE.border, alignItems: 'center', justifyContent: 'center' },
-  edit: { marginTop: SPACE.md, paddingTop: SPACE.md, borderTopWidth: 1, borderTopColor: PALETTE.border },
-  fieldLabel: { fontSize: 13, fontWeight: '700', color: PALETTE.textSoft },
-  foot: { fontSize: 12, lineHeight: 18, color: PALETTE.textMuted, paddingHorizontal: SPACE.lg, marginTop: SPACE.sm, marginBottom: SPACE.xxl },
+  icon: { width: 40, height: 40, borderRadius: 14, backgroundColor: PALETTE.indigoSoft, alignItems: 'center', justifyContent: 'center' },
+  name: { ...TYPE.subheading, fontWeight: '800' },
+  sub: { ...TYPE.caption, marginTop: 2, lineHeight: 17 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: SPACE.md },
+  arrow: { width: 40, height: 40, borderRadius: 20, backgroundColor: PALETTE.indigoSoft, alignItems: 'center', justifyContent: 'center' },
+  edit: { marginTop: SPACE.md, paddingTop: SPACE.md, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: PALETTE.divider },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: PALETTE.textSoft },
 });
 
 export default SuperEventCategoriesScreen;

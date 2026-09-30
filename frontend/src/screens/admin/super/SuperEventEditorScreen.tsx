@@ -4,7 +4,10 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { resolveMediaUrl } from '../../../config/api.config';
-import { Screen, AppHeader, Card, Field, PrimaryButton, PALETTE, SPACE, RADIUS } from '../../../ui';
+import {
+  PALETTE, SPACE, RADIUS, BRAND,
+  ConsoleScroll, ConsoleHeader, ConsoleCard, ConsoleButton, GlassIconButton, PremiumInput, BottomActionBar,
+} from '../../../ui';
 import {
   createCmsEvent, updateCmsEvent, getEventsSettingsCategories, uploadCmsMedia, uploadEventAttachment,
   errorText, EMPTY_EVENT_MEDIA,
@@ -203,9 +206,9 @@ function SessionRows({ rows, onChange, withWhere }: { rows: EventAgendaItem[]; o
             <TimeField label="Starts" value={row?.startTime || ''} onChange={(startTime) => patch(i, { startTime })} />
             <TimeField label="Ends" value={row?.endTime || ''} onChange={(endTime) => patch(i, { endTime })} />
           </View>
-          <Field label="Session" value={row?.title || ''} placeholder="Inaugural address" onChangeText={(title) => patch(i, { title })} />
-          <Field label="Speaker" value={row?.speaker || ''} placeholder="Name as it should be printed" onChangeText={(speaker) => patch(i, { speaker })} />
-          {withWhere ? <Field label="Where" value={row?.location || ''} placeholder="Optional — hall or room" onChangeText={(location) => patch(i, { location })} style={{ marginBottom: 0 }} /> : null}
+          <PremiumInput tone="admin" label="Session" value={row?.title || ''} placeholder="Inaugural address" onChangeText={(title) => patch(i, { title })} />
+          <PremiumInput tone="admin" label="Speaker" value={row?.speaker || ''} placeholder="Name as it should be printed" onChangeText={(speaker) => patch(i, { speaker })} />
+          {withWhere ? <PremiumInput tone="admin" label="Where" value={row?.location || ''} placeholder="Optional — hall or room" onChangeText={(location) => patch(i, { location })} style={{ marginBottom: 0 }} /> : null}
         </View>
       ))}
     </View>
@@ -245,10 +248,10 @@ function SpeakerRow({ row, index, onPatch, onRemove }: {
           {photo ? <TouchableOpacity onPress={() => onPatch({ photoUrl: '' })}><Text style={[s.link, { color: PALETTE.textMuted }]}>Remove</Text></TouchableOpacity> : null}
         </View>
       </View>
-      <Field label="Name" value={row?.name || ''} placeholder="As it should be printed" onChangeText={(name) => onPatch({ name })} />
-      <Field label="Designation" value={row?.role || ''} placeholder="Managing Director" onChangeText={(role) => onPatch({ role })} />
-      <Field label="Organisation" value={row?.organization || ''} placeholder="Company or department" onChangeText={(organization) => onPatch({ organization })} />
-      <Field label="Short bio" value={row?.bio || ''} placeholder="One line, optional" onChangeText={(bio) => onPatch({ bio })} style={{ marginBottom: 0 }} />
+      <PremiumInput tone="admin" label="Name" value={row?.name || ''} placeholder="As it should be printed" onChangeText={(name) => onPatch({ name })} />
+      <PremiumInput tone="admin" label="Designation" value={row?.role || ''} placeholder="Managing Director" onChangeText={(role) => onPatch({ role })} />
+      <PremiumInput tone="admin" label="Organisation" value={row?.organization || ''} placeholder="Company or department" onChangeText={(organization) => onPatch({ organization })} />
+      <PremiumInput tone="admin" label="Short bio" value={row?.bio || ''} placeholder="One line, optional" onChangeText={(bio) => onPatch({ bio })} style={{ marginBottom: 0 }} />
     </View>
   );
 }
@@ -306,7 +309,7 @@ function RegionTargets({ targets, onChange, reachEveryone, onReachEveryone }: {
             placeholder={!di ? 'Choose a district first' : names.blocks.length ? 'All blocks' : 'No blocks in this district'}
             note={di ? 'Leave as All blocks to take the whole district.' : undefined}
             onChange={setBl} />
-          <PrimaryButton tone="admin" variant="outline" icon="add" label={st ? `Add ${targetText({ state: st, district: di, block: bl })}` : 'Start by choosing a state'}
+          <ConsoleButton kind="soft" icon="add" label={st ? `Add ${targetText({ state: st, district: di, block: bl })}` : 'Start by choosing a state'}
             onPress={add} disabled={!st} />
           {list.length ? (
             <View style={{ marginTop: SPACE.lg }}>
@@ -496,18 +499,31 @@ const SuperEventEditorScreen: React.FC = () => {
   const hint = memberPriceHint(d.registrationFee, d.memberFee);
 
   return (
-    <Screen tone="admin">
-      <AppHeader tone="admin" title={editingId ? 'Edit event' : 'New event'} subtitle="Published events reach members in their region"
-        onBack={() => navigation.goBack()} />
+    <ConsoleScroll
+      avoidKeyboard
+      footer={(
+        <BottomActionBar>
+          <ConsoleButton kind="soft" label="Cancel" onPress={() => navigation.goBack()} disabled={saving} style={s.footCancel} />
+          <ConsoleButton icon="save" label={editingId ? 'Save event' : 'Create event'} onPress={save} loading={saving} style={s.footSave} />
+        </BottomActionBar>
+      )}
+    >
+      <ConsoleHeader
+        compact
+        eyebrow="Super Admin · events"
+        title={editingId ? 'Edit event' : 'New event'}
+        subtitle="Nothing here is required — save it now and finish it later. Published events reach members in their region."
+        left={<GlassIconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => navigation.goBack()} />}
+      />
 
       {/* ------------------------------------------------ what and when */}
-      <Card style={s.card}>
-        <Field label="Title" value={form.title} onChangeText={(title) => set({ title })} placeholder="Untitled event" />
-        <Field label="Description" value={form.description} onChangeText={(description) => set({ description })} multiline
+      <ConsoleCard style={[s.card, s.firstCard]}>
+        <PremiumInput tone="admin" label="Title" value={form.title} onChangeText={(title) => set({ title })} placeholder="Untitled event" />
+        <PremiumInput tone="admin" label="Description" value={form.description} onChangeText={(description) => set({ description })} multiline
           placeholder="What is happening, and who should attend" inputStyle={{ minHeight: 110 }} style={{ marginBottom: 0 }} />
-      </Card>
+      </ConsoleCard>
 
-      <Card style={s.card}>
+      <ConsoleCard style={s.card}>
         <SubHead title="When" hint="Leave the date blank if it is not fixed yet — the event shows “Date to be confirmed”." />
         <DateField label="Date" value={form.date} onChange={setStartDate} />
         <View style={s.row2}>
@@ -542,19 +558,19 @@ const SuperEventEditorScreen: React.FC = () => {
             })}
           </View>
         ) : null}
-      </Card>
+      </ConsoleCard>
 
       {/* ----------------------------------------------- kind and place */}
-      <Card style={s.card}>
+      <ConsoleCard style={s.card}>
         <InlineSelect label="Category" value={form.category} options={categoryOptions} placeholder="No category"
           onChange={(category) => set({ category })} />
-        <Field label="Topic" value={d.topic} onChangeText={(topic) => setDetail({ topic })} maxLength={120}
+        <PremiumInput tone="admin" label="Topic" value={d.topic} onChangeText={(topic) => setDetail({ topic })} maxLength={120}
           placeholder="What the event is about" hint="The subject in a few words — printed in the booking email and WhatsApp." />
-        <Field label="Language" value={d.language} onChangeText={(language) => setDetail({ language })} maxLength={60}
+        <PremiumInput tone="admin" label="Language" value={d.language} onChangeText={(language) => setDetail({ language })} maxLength={60}
           placeholder="Tamil & English" style={{ marginBottom: 0 }} />
-      </Card>
+      </ConsoleCard>
 
-      <Card style={s.card}>
+      <ConsoleCard style={s.card}>
         <SubHead title="How this event is attended" />
         <Choice<'offline' | 'online'>
           value={d.mode}
@@ -567,25 +583,25 @@ const SuperEventEditorScreen: React.FC = () => {
         <View style={{ marginTop: SPACE.lg }}>
           {d.mode === 'online' ? (
             <>
-              <Field label="Platform" value={d.onlinePlatform} onChangeText={(onlinePlatform) => setDetail({ onlinePlatform })} placeholder="Zoom"
+              <PremiumInput tone="admin" label="Platform" value={d.onlinePlatform} onChangeText={(onlinePlatform) => setDetail({ onlinePlatform })} placeholder="Zoom"
                 hint="Zoom, Google Meet, Microsoft Teams — whatever people will need open." />
-              <Field label="Registration link" value={d.onlineUrl} onChangeText={(onlineUrl) => setDetail({ onlineUrl })} autoCapitalize="none"
+              <PremiumInput tone="admin" label="Registration link" value={d.onlineUrl} onChangeText={(onlineUrl) => setDetail({ onlineUrl })} autoCapitalize="none"
                 keyboardType="url" placeholder="https://zoom.us/meeting/register/…" style={{ marginBottom: 0 }}
                 hint="Not shown publicly — it is sent to the people who book." />
             </>
           ) : (
             <>
-              <Field label="Location / venue" value={form.location} onChangeText={(location) => set({ location })} placeholder="Chennai Trade Centre" />
-              <Field label="Venue address" value={d.venueAddress} onChangeText={(venueAddress) => setDetail({ venueAddress })} multiline />
-              <Field label="Map link" value={d.venueMapUrl} onChangeText={(venueMapUrl) => setDetail({ venueMapUrl })} autoCapitalize="none"
+              <PremiumInput tone="admin" label="Location / venue" value={form.location} onChangeText={(location) => set({ location })} placeholder="Chennai Trade Centre" />
+              <PremiumInput tone="admin" label="Venue address" value={d.venueAddress} onChangeText={(venueAddress) => setDetail({ venueAddress })} multiline />
+              <PremiumInput tone="admin" label="Map link" value={d.venueMapUrl} onChangeText={(venueMapUrl) => setDetail({ venueMapUrl })} autoCapitalize="none"
                 keyboardType="url" placeholder="https://maps.app.goo.gl/…" style={{ marginBottom: 0 }} />
             </>
           )}
         </View>
-      </Card>
+      </ConsoleCard>
 
       {/* ------------------------------------------------------- banner */}
-      <Card style={s.card}>
+      <ConsoleCard style={s.card}>
         <SubHead title="Banner" hint="Best at 1600 × 900 (16:9, landscape) — the shape the event page and cards draw." />
         <TouchableOpacity onPress={uploadBanner} activeOpacity={0.85} style={s.banner} accessibilityLabel="Choose a banner">
           {bannerBusy ? <ActivityIndicator color={PALETTE.indigo} />
@@ -612,14 +628,14 @@ const SuperEventEditorScreen: React.FC = () => {
                 { value: 'contain', icon: 'fit-screen', title: 'Show whole', detail: 'The whole picture, padded either side.' },
               ]}
             />
-            <Field label="Description of the picture" value={form.media.alt} onChangeText={(alt) => set({ media: { ...form.media, alt } })}
+            <PremiumInput tone="admin" label="Description of the picture" value={form.media.alt} onChangeText={(alt) => set({ media: { ...form.media, alt } })}
               placeholder="For screen readers" style={{ marginTop: SPACE.md, marginBottom: 0 }} />
           </>
         ) : null}
-      </Card>
+      </ConsoleCard>
 
       {/* ------------------------------------------------ who it reaches */}
-      <Card style={s.card}>
+      <ConsoleCard style={s.card}>
         <SubHead title="Who sees this event"
           hint="Members, block admins, district admins and state admins only see events aimed at where they are. Choose one of the two below." />
         <RegionTargets targets={form.targets} onChange={(targets) => set({ targets })}
@@ -636,13 +652,13 @@ const SuperEventEditorScreen: React.FC = () => {
           <CheckCard checked={form.showQrOnPage} onChange={(showQrOnPage) => set({ showQrOnPage })} icon="qr-code-2"
             title="Show the event's QR code on its page" detail="Scanning it opens this event on a phone." />
         </View>
-      </Card>
+      </ConsoleCard>
 
       {/* ---------------------------------------- documents and video */}
-      <Card style={s.card}>
+      <ConsoleCard style={s.card}>
         <SubHead title="Agenda, documents & video"
           hint="They go to the people who register — linked in the booking email and sent on WhatsApp. Not shown on the public event page." />
-        <Field label="YouTube or video link" icon="smart-display" value={form.videoUrl} onChangeText={(videoUrl) => set({ videoUrl })}
+        <PremiumInput tone="admin" label="YouTube or video link" icon="smart-display" value={form.videoUrl} onChangeText={(videoUrl) => set({ videoUrl })}
           autoCapitalize="none" keyboardType="url" placeholder="https://www.youtube.com/watch?v=…" />
         {(form.attachments || []).map((a, i) => (
           <View key={`${a?.url}-${i}`} style={s.fileRow}>
@@ -657,13 +673,13 @@ const SuperEventEditorScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         ))}
-        <PrimaryButton tone="admin" variant="outline" icon="upload-file" label={filesBusy ? 'Uploading…' : 'Upload an image document'}
+        <ConsoleButton kind="soft" icon="upload-file" label={filesBusy ? 'Uploading…' : 'Upload an image document'}
           onPress={uploadFile} loading={filesBusy} disabled={(form.attachments || []).length >= 10} style={{ marginTop: SPACE.sm }} />
         <Text style={k.hint}>PDF, Word and Excel files can be added from the website; they appear here once saved.</Text>
-      </Card>
+      </ConsoleCard>
 
       {/* ------------------------- programme, speakers and registration */}
-      <Card style={s.card}>
+      <ConsoleCard style={s.card}>
         <TouchableOpacity onPress={() => setDetailOpen((v) => !v)} style={{ flexDirection: 'row', alignItems: 'center' }} activeOpacity={0.8}>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={s.cardTitle}>Programme, speakers and registration</Text>
@@ -711,13 +727,13 @@ const SuperEventEditorScreen: React.FC = () => {
 
             <View style={s.divider} />
             <SubHead title="Contact" />
-            <Field label="Contact name" value={d.contactName} onChangeText={(contactName) => setDetail({ contactName })} />
-            <Field label="Contact phone" value={d.contactPhone} onChangeText={(contactPhone) => setDetail({ contactPhone })} keyboardType="phone-pad" />
-            <Field label="Contact email" value={d.contactEmail} onChangeText={(contactEmail) => setDetail({ contactEmail })} keyboardType="email-address" autoCapitalize="none" />
+            <PremiumInput tone="admin" label="Contact name" value={d.contactName} onChangeText={(contactName) => setDetail({ contactName })} />
+            <PremiumInput tone="admin" label="Contact phone" value={d.contactPhone} onChangeText={(contactPhone) => setDetail({ contactPhone })} keyboardType="phone-pad" />
+            <PremiumInput tone="admin" label="Contact email" value={d.contactEmail} onChangeText={(contactEmail) => setDetail({ contactEmail })} keyboardType="email-address" autoCapitalize="none" />
 
             <View style={s.divider} />
             <SubHead title="Note for everyone attending" />
-            <Field label="Please note" value={d.registrationNote} onChangeText={(registrationNote) => setDetail({ registrationNote })} multiline maxLength={1000}
+            <PremiumInput tone="admin" label="Please note" value={d.registrationNote} onChangeText={(registrationNote) => setDetail({ registrationNote })} multiline maxLength={1000}
               placeholder={'Carry a government photo ID.\nBring your business card.'}
               hint="One point per line. Shown on the event and booking pages, and sent in the confirmation and reminder emails." />
 
@@ -727,11 +743,11 @@ const SuperEventEditorScreen: React.FC = () => {
               title="Members can register for this event" />
             {d.registrationEnabled ? (
               <View style={{ marginTop: SPACE.md }}>
-                <Field label="Capacity" value={d.capacity} onChangeText={(capacity) => setDetail({ capacity: capacity.replace(/[^\d]/g, '') })}
+                <PremiumInput tone="admin" label="Capacity" value={d.capacity} onChangeText={(capacity) => setDetail({ capacity: capacity.replace(/[^\d]/g, '') })}
                   keyboardType="number-pad" placeholder="No limit" />
-                <Field label="Price (₹)" value={d.registrationFee} onChangeText={(registrationFee) => setDetail({ registrationFee: registrationFee.replace(/[^\d]/g, '') })}
+                <PremiumInput tone="admin" label="Price (₹)" value={d.registrationFee} onChangeText={(registrationFee) => setDetail({ registrationFee: registrationFee.replace(/[^\d]/g, '') })}
                   keyboardType="number-pad" placeholder="0" />
-                <Field label="Member price (₹)" value={d.memberFee} onChangeText={(memberFee) => setDetail({ memberFee: memberFee.replace(/[^\d]/g, '') })}
+                <PremiumInput tone="admin" label="Member price (₹)" value={d.memberFee} onChangeText={(memberFee) => setDetail({ memberFee: memberFee.replace(/[^\d]/g, '') })}
                   keyboardType="number-pad" placeholder="Same as the price above" style={{ marginBottom: 4 }} />
                 <Text style={[s.priceHint, { color: hint.color }]}>{hint.text}</Text>
                 <DateField label="Registration closes" value={(d.registrationDeadline || '').slice(0, 10)}
@@ -745,10 +761,10 @@ const SuperEventEditorScreen: React.FC = () => {
             )}
           </View>
         ) : null}
-      </Card>
+      </ConsoleCard>
 
       {/* ---------------------------------------------------- visibility */}
-      <Card style={s.card}>
+      <ConsoleCard style={s.card}>
         <SubHead title="Visibility" />
         <Choice<'published' | 'draft'>
           value={form.status}
@@ -758,21 +774,18 @@ const SuperEventEditorScreen: React.FC = () => {
             { value: 'draft', icon: 'edit-note', title: 'Draft', detail: 'Saved, and seen by nobody until you publish it.' },
           ]}
         />
-      </Card>
+      </ConsoleCard>
 
-      <View style={s.footer}>
-        <PrimaryButton tone="admin" icon="save" label={editingId ? 'Save event' : 'Create event'} onPress={save} loading={saving} />
-        <PrimaryButton tone="admin" variant="outline" label="Cancel" onPress={() => navigation.goBack()} disabled={saving} />
-      </View>
-    </Screen>
+    </ConsoleScroll>
   );
 };
 
 const s = StyleSheet.create({
   card: { marginHorizontal: SPACE.lg, marginTop: SPACE.lg },
+  firstCard: { marginTop: -SPACE.lg },
   cardTitle: { fontSize: 15, fontWeight: '800', color: PALETTE.text },
   row2: { flexDirection: 'row', gap: SPACE.md },
-  subCard: { borderWidth: 1, borderColor: PALETTE.border, borderRadius: RADIUS.md, padding: SPACE.md, backgroundColor: '#FBFCFE' },
+  subCard: { borderWidth: 1, borderColor: 'rgba(84,64,212,0.14)', borderRadius: 16, padding: SPACE.md, backgroundColor: BRAND.inputFillAdmin },
   subCardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.sm },
   subCardTitle: { fontSize: 12, fontWeight: '800', color: PALETTE.textMuted, letterSpacing: 0.4, textTransform: 'uppercase' },
   dayTag: { backgroundColor: PALETTE.indigoSoft, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
@@ -785,16 +798,17 @@ const s = StyleSheet.create({
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '100%', backgroundColor: PALETTE.indigoSoft, borderRadius: RADIUS.pill, paddingLeft: 12, paddingRight: 8, paddingVertical: 6 },
   pillText: { fontSize: 13, fontWeight: '700', color: PALETTE.indigo, flexShrink: 1 },
-  infoLine: { fontSize: 12, lineHeight: 17, color: PALETTE.blueDark, backgroundColor: PALETTE.blueSoft, borderRadius: RADIUS.sm, padding: SPACE.md },
-  fileRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: PALETTE.border, borderRadius: RADIUS.md, paddingHorizontal: SPACE.md, paddingVertical: 6, marginBottom: SPACE.sm, backgroundColor: '#FBFCFE' },
+  infoLine: { fontSize: 12, lineHeight: 17, color: PALETTE.indigoDark, backgroundColor: PALETTE.indigoSoft, borderRadius: 14, padding: SPACE.md, overflow: 'hidden' },
+  fileRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 14, paddingHorizontal: SPACE.md, paddingVertical: 6, marginBottom: SPACE.sm, backgroundColor: BRAND.inputFillAdmin },
   fileName: { flex: 1, minWidth: 0, fontSize: 14, fontWeight: '700', color: PALETTE.text, paddingVertical: 6 },
   fileSize: { fontSize: 11, color: PALETTE.textMuted },
-  infoBox: { backgroundColor: PALETTE.blueSoft, borderRadius: RADIUS.md, padding: SPACE.md },
-  infoTitle: { fontSize: 13, fontWeight: '800', color: PALETTE.blueDark },
-  infoText: { fontSize: 12, color: PALETTE.blueDark, marginTop: 4, lineHeight: 17 },
+  infoBox: { backgroundColor: PALETTE.indigoSoft, borderRadius: 14, padding: SPACE.md },
+  infoTitle: { fontSize: 13, fontWeight: '800', color: PALETTE.indigoDark },
+  infoText: { fontSize: 12, color: PALETTE.indigoDark, marginTop: 4, lineHeight: 17 },
   divider: { height: 1, backgroundColor: PALETTE.border, marginVertical: SPACE.lg },
   priceHint: { fontSize: 12, lineHeight: 17, fontWeight: '700', marginBottom: SPACE.md },
-  footer: { paddingHorizontal: SPACE.lg, marginTop: SPACE.xl, gap: SPACE.md },
+  footCancel: { flex: 1 },
+  footSave: { flex: 2 },
 });
 
 export default SuperEventEditorScreen;

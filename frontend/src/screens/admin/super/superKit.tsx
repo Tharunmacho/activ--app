@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Switch, Alert, Linking, Platform } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import { Chip, PALETTE, RADIUS, SPACE, SIZE, TYPE } from '../../../ui';
+import { View, Text, StyleSheet, Switch, Alert, Linking, Platform } from 'react-native';
+import { PALETTE, SPACE, SIZE, TYPE, ConsolePill, ConsoleTabs } from '../../../ui';
 import api from '../../../services/api';
 
 /**
@@ -37,17 +36,16 @@ export const whatsappNumber = (phone?: string, text = '') => {
   if (d) openUrl(`https://wa.me/${d}${text ? `?text=${encodeURIComponent(text)}` : ''}`);
 };
 
-/** A horizontal chip row, pick-one (financial years, filters). */
+/**
+ * A pick-one row (financial years, filters) — the console's gradient pills,
+ * scrolling sideways when the options outgrow a 360dp phone. Carries the
+ * screen gutter itself; inside a padded card pull it out with a negative
+ * horizontal margin.
+ */
 export function ChipRow<T extends string>({ options, value, onChange }: {
   options: { value: T; label: string }[]; value: T; onChange: (v: T) => void;
 }) {
-  return (
-    <View style={s.chips} accessibilityRole="radiogroup">
-      {(options || []).map((o) => (
-        <Chip key={o.value || 'all'} tone="admin" label={o.label} selected={o.value === value} onPress={() => onChange(o.value)} />
-      ))}
-    </View>
-  );
+  return <ConsoleTabs<T> scrollable options={options || []} value={value} onChange={onChange} style={s.chips} />;
 }
 
 /** A labelled on/off switch row inside a card. */
@@ -68,17 +66,11 @@ export function ToggleRow({ label, hint, value, onChange, disabled, last }: {
   );
 }
 
-/** Small icon + text action (inside cards / rows). */
+/** Small icon + text action (inside cards / rows) — the console's outlined pill. */
 export function MiniAction({ icon, label, onPress, color = PALETTE.indigo, disabled }: {
   icon: string; label: string; onPress?: () => void; color?: string; disabled?: boolean;
 }) {
-  return (
-    <TouchableOpacity onPress={onPress} disabled={disabled} style={[s.mini, { borderColor: color }, disabled && s.disabled]} activeOpacity={0.75}
-      accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled }}>
-      <Icon name={icon} size={16} color={color} />
-      <Text style={[s.miniText, { color }]}>{label}</Text>
-    </TouchableOpacity>
-  );
+  return <ConsolePill icon={icon} label={label} onPress={onPress} color={color} disabled={disabled} />;
 }
 
 export const initials = (name?: string | null) => {
@@ -90,15 +82,12 @@ export const initials = (name?: string | null) => {
 export const place = (...parts: (string | undefined | null)[]) => parts.filter((x) => !!(x || '').trim()).join(', ');
 
 const s = StyleSheet.create({
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, paddingHorizontal: SPACE.lg, marginTop: SPACE.sm },
+  chips: { marginTop: SPACE.sm },
   toggle: { flexDirection: 'row', alignItems: 'center', paddingVertical: SPACE.md, minHeight: SIZE.row },
   toggleText: { flex: 1, minWidth: 0, paddingRight: SPACE.md },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: PALETTE.divider },
   toggleLabel: { ...TYPE.subheading },
   toggleHint: { ...TYPE.caption, lineHeight: 17, marginTop: SPACE.xxs },
-  mini: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs + 2, borderWidth: 1.5, borderRadius: RADIUS.pill, paddingHorizontal: SPACE.md, minHeight: SIZE.controlSm, backgroundColor: PALETTE.card },
-  miniText: { fontSize: 13, lineHeight: 18, fontWeight: '700' },
-  disabled: { opacity: 0.45 },
 });
 
 /* ------------------------------------------------------------ regions */

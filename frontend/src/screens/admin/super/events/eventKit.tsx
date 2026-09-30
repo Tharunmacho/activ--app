@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { PALETTE, RADIUS, SPACE } from '../../../../ui';
+import { PALETTE, RADIUS, SPACE, BRAND, PREMIUM_RADIUS } from '../../../../ui';
 import type { CmsEventRow, EventDay, EventTarget } from '../../../../services/superApi';
 
 /**
@@ -212,7 +212,7 @@ export function InlineSelect({ label, value, options, placeholder, onChange, dis
     <View style={{ marginBottom: SPACE.md }}>
       {label ? <Text style={k.label}>{label}</Text> : null}
       <TouchableOpacity disabled={disabled} onPress={() => setOpen((v) => !v)} activeOpacity={0.8}
-        style={[k.select, disabled && { opacity: 0.5 }, open && { borderColor: PALETTE.indigo }]}>
+        style={[k.select, disabled && { opacity: 0.5 }, open && { borderColor: PALETTE.indigo, backgroundColor: PALETTE.card }]}>
         <Text style={[k.selectText, !value && { color: PALETTE.textFaint }]} numberOfLines={1}>{value || placeholder}</Text>
         <Icon name={open ? 'expand-less' : 'expand-more'} size={22} color={PALETTE.textMuted} />
       </TouchableOpacity>
@@ -281,7 +281,7 @@ export function DateField({ label, value, onChange, hint, min }: {
           setCursor({ y: at.getFullYear(), m: at.getMonth() });
         }
         setOpen((v) => !v);
-      }} activeOpacity={0.8} style={[k.select, open && { borderColor: PALETTE.indigo }]}>
+      }} activeOpacity={0.8} style={[k.select, open && { borderColor: PALETTE.indigo, backgroundColor: PALETTE.card }]}>
         <Icon name="event" size={19} color={PALETTE.textFaint} style={{ marginRight: 8 }} />
         <Text style={[k.selectText, !shown && { color: PALETTE.textFaint }]} numberOfLines={1}>{shown || 'No date yet'}</Text>
         {value ? (
@@ -341,7 +341,7 @@ export function TimeField({ label, value, onChange }: { label: string; value: st
   return (
     <View style={{ marginBottom: SPACE.md, flex: 1, minWidth: 0 }}>
       <Text style={k.label}>{label}</Text>
-      <TouchableOpacity onPress={() => setOpen((v) => !v)} activeOpacity={0.8} style={[k.select, open && { borderColor: PALETTE.indigo }]}>
+      <TouchableOpacity onPress={() => setOpen((v) => !v)} activeOpacity={0.8} style={[k.select, open && { borderColor: PALETTE.indigo, backgroundColor: PALETTE.card }]}>
         <Icon name="schedule" size={19} color={PALETTE.textFaint} style={{ marginRight: 8 }} />
         <Text style={[k.selectText, !has && { color: PALETTE.textFaint }]} numberOfLines={1}>{has ? timeLabel(value) : 'Not set'}</Text>
         {has ? (
@@ -403,13 +403,13 @@ export function SubHead({ title, hint, action, onAction }: { title: string; hint
 }
 
 export const k = StyleSheet.create({
-  label: { fontSize: 13, fontWeight: '700', color: PALETTE.textSoft },
+  label: { fontSize: 13, lineHeight: 18, fontWeight: '600', color: PALETTE.textSoft, marginLeft: 2 },
   hint: { fontSize: 12, color: PALETTE.textMuted, marginTop: 4, lineHeight: 17 },
   miniLabel: { fontSize: 11, fontWeight: '800', color: PALETTE.textFaint, letterSpacing: 0.6, marginTop: SPACE.sm, marginBottom: 6, textTransform: 'uppercase' },
 
-  choice: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, padding: SPACE.md, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: PALETTE.border, backgroundColor: PALETTE.card },
+  choice: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, padding: SPACE.md, borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(226,232,240,0.9)', backgroundColor: PALETTE.card, shadowColor: BRAND.indigoDeep, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 2 },
   choiceOn: { borderColor: PALETTE.indigo, backgroundColor: PALETTE.indigoSoft },
-  choiceIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: PALETTE.indigoSoft },
+  choiceIcon: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: PALETTE.indigoSoft },
   choiceTitle: { fontSize: 14, fontWeight: '800', color: PALETTE.text },
   choiceDetail: { fontSize: 12, color: PALETTE.textMuted, marginTop: 2, lineHeight: 17 },
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: PALETTE.borderStrong, alignItems: 'center', justifyContent: 'center' },
@@ -418,9 +418,9 @@ export const k = StyleSheet.create({
   box: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: PALETTE.borderStrong, alignItems: 'center', justifyContent: 'center' },
   boxOn: { borderColor: PALETTE.indigo, backgroundColor: PALETTE.indigo },
 
-  select: { flexDirection: 'row', alignItems: 'center', minHeight: 50, borderRadius: RADIUS.md, borderWidth: 1, borderColor: PALETTE.borderStrong, backgroundColor: PALETTE.card, paddingHorizontal: 14, marginTop: 6 },
+  select: { flexDirection: 'row', alignItems: 'center', minHeight: 52, borderRadius: PREMIUM_RADIUS.input, borderWidth: 1.5, borderColor: 'transparent', backgroundColor: BRAND.inputFillAdmin, paddingHorizontal: SPACE.lg - 2, marginTop: SPACE.sm },
   selectText: { flex: 1, fontSize: 15, color: PALETTE.text },
-  panel: { marginTop: 6, borderRadius: RADIUS.md, borderWidth: 1, borderColor: PALETTE.border, backgroundColor: PALETTE.card, overflow: 'hidden' },
+  panel: { marginTop: 6, borderRadius: PREMIUM_RADIUS.input, borderWidth: 1, borderColor: 'rgba(84,64,212,0.16)', backgroundColor: PALETTE.card, overflow: 'hidden' },
   search: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: SPACE.md, borderBottomWidth: 1, borderBottomColor: PALETTE.border },
   searchInput: { flex: 1, fontSize: 14, color: PALETTE.text, paddingVertical: 10 },
   option: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACE.md, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: PALETTE.border },
@@ -446,6 +446,6 @@ export const k = StyleSheet.create({
 
   subHead: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.sm, marginBottom: SPACE.md },
   subTitle: { fontSize: 15, fontWeight: '800', color: PALETTE.text },
-  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#C7D2FE', borderRadius: RADIUS.pill, paddingHorizontal: 12, minHeight: 34 },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderColor: PALETTE.indigo, backgroundColor: PALETTE.card, borderRadius: RADIUS.pill, paddingHorizontal: 12, minHeight: 36 },
   addText: { fontSize: 12, fontWeight: '800', color: PALETTE.indigo },
 });

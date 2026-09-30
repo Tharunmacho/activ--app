@@ -15,8 +15,8 @@ import { eventWhen } from '../../eventsAdmin/checkinKit';
  * SUPER ADMIN — Event attendance (read-only)
  * ============================================================================
  *
- * The one events screen in the Super Admin's app. Everything else about
- * events (writing them, bookings, payments) stays on the website; this answers
+ * Read-only by design (the website's Attendance page). Writing events is the
+ * Events tab, bookings and payments are Bookings & revenue; this answers
  * "who actually came": every event with registered vs checked in, and each
  * event's door list — who, when, admitted by whom, by QR or by hand — with
  * search and the CSV.
@@ -165,7 +165,7 @@ export default function SuperEventAttendanceScreen({ navigation }: Props) {
           <ConsoleNote
             style={s.note}
             icon="language"
-            text="Registered counts paid and free confirmed seats. Events, bookings and payments are managed on the ACTIV website."
+            text="Registered counts paid and free confirmed seats. Bookings and payments are under More → Bookings & revenue."
           />
         ) : null}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('refresh')} tintColor={PALETTE.indigo} />}

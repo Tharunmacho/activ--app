@@ -1,9 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
-  Screen, AppHeader, Field, Loading, ErrorState, EmptyState, Badge, Avatar, Notice, PALETTE, SPACE, RADIUS, SHADOW, money, shortDate,
+  PALETTE, SPACE, TYPE, money, shortDate,
+  ConsoleFrame, ConsoleHeader, ConsoleCard, ConsoleChip, ConsoleSearch, ConsoleSkeleton, ConsoleState, ConsoleNote,
+  GlassIconButton, GradientAvatar, CONSOLE_LIST, type ConsoleChipKind,
 } from '../../../ui';
 import { listBookingPeople, getBookingPerson, errorText } from '../../../services/superApi';
 import { MiniAction, callNumber, whatsappNumber } from './superKit';
@@ -22,25 +24,27 @@ import { MiniAction, callNumber, whatsappNumber } from './superKit';
  * shown inline under the card — the website's slide-over, without a native
  * Modal (CLAUDE.md Rule 2).
  *
- * `BookingPeoplePane` is also the People tab of the Bookings screen.
+ * `BookingPeoplePane` is also the People tab of the Bookings screen; it is a
+ * FlatList meant to sit directly inside a ConsoleFrame.
  */
 
-const payTone = (status: string) => (status === 'paid'
-  ? { label: 'Paid', fg: '#047857', bg: PALETTE.greenSoft }
-  : status === 'not_required' ? { label: 'Free', fg: PALETTE.blueDark, bg: PALETTE.blueSoft }
-    : status === 'failed' ? { label: 'Failed', fg: '#B91C1C', bg: PALETTE.redSoft }
-      : { label: 'Unpaid', fg: '#B45309', bg: PALETTE.amberSoft });
+const payTone = (status: string): { label: string; kind: ConsoleChipKind } => (status === 'paid'
+  ? { label: 'Paid', kind: 'approved' }
+  : status === 'not_required' ? { label: 'Free', kind: 'info' }
+    : status === 'failed' ? { label: 'Failed', kind: 'rejected' }
+      : { label: 'Unpaid', kind: 'pending' });
 
+const modeWord = (mode: string) => (mode === 'bank_transfer' ? 'Bank' : mode ? mode.charAt(0).toUpperCase() + mode.slice(1) : '');
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
 
 function Tile({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
     <View style={s.tile}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-        <Icon name={icon} size={14} color={PALETTE.textFaint} />
-        <Text style={s.tileLabel}>{label.toUpperCase()}</Text>
+      <View style={s.tileHead}>
+        <Icon name={icon} size={14} color={PALETTE.indigo} />
+        <Text style={s.tileLabel} numberOfLines={1} maxFontSizeMultiplier={1.2}>{label.toUpperCase()}</Text>
       </View>
-      <Text style={s.tileValue} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
+      <Text style={s.tileValue} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2}>{value}</Text>
     </View>
   );
 }
@@ -49,10 +53,10 @@ function Contact({ icon, label, value }: { icon: string; label: string; value?: 
   if (!String(value || '').trim()) return null;
   return (
     <View style={s.contact}>
-      <Icon name={icon} size={16} color={PALETTE.textFaint} style={{ marginTop: 2 }} />
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={s.contactLabel}>{label.toUpperCase()}</Text>
-        <Text style={s.contactValue} selectable>{value}</Text>
+      <Icon name={icon} size={16} color={PALETTE.textFaint} style={s.contactIcon} />
+      <View style={s.flexText}>
+        <Text style={s.contactLabel} maxFontSizeMultiplier={1.3}>{label.toUpperCase()}</Text>
+        <Text style={s.contactValue} selectable maxFontSizeMultiplier={1.3}>{value}</Text>
       </View>
     </View>
   );
@@ -74,39 +78,39 @@ function PersonDetail({ p, bookings, loading }: { p: any; bookings: any[] | null
         <Tile icon="currency-rupee" label="Paid" value={money(Number(p?.paid || 0))} />
       </View>
       {Number(p?.pending || 0) > 0 ? (
-        <View style={s.owed}><Text style={s.owedText}>{money(p.pending)} is owed on a booking that was never completed.</Text></View>
+        <ConsoleNote kind="amber" icon="schedule" style={s.owed} text={`${money(Number(p?.pending || 0))} is owed on a booking that was never completed.`} />
       ) : null}
 
-      <Text style={s.histTitle}>Every booking</Text>
-      <Text style={s.sub}>Newest first, across every event.</Text>
-      {loading ? <Text style={[s.sub, { marginTop: SPACE.sm }]}>Loading…</Text> : list.length === 0 ? (
-        <Text style={[s.sub, { marginTop: SPACE.sm }]}>No bookings found for this address.</Text>
-      ) : list.map((b) => {
+      <Text style={s.histTitle} maxFontSizeMultiplier={1.3}>Every booking</Text>
+      <Text style={s.sub} maxFontSizeMultiplier={1.3}>Newest first, across every event.</Text>
+      {loading ? <ActivityIndicator style={s.spinner} color={PALETTE.indigo} /> : list.length === 0 ? (
+        <Text style={[s.sub, s.gapTop]} maxFontSizeMultiplier={1.3}>No bookings found for this address.</Text>
+      ) : list.map((b, i) => {
         const pay = payTone(String(b?.payment?.status || 'pending'));
         const names = (Array.isArray(b?.participants) ? b.participants : []).map((x: any) => String(x?.name || '').trim()).filter(Boolean);
         const seats = Number(b?.noOfPersons || 0);
         return (
-          <View key={String(b?.bookingRef)} style={s.bRow}>
-            <View style={{ flexDirection: 'row', gap: SPACE.sm }}>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={s.bTitle} numberOfLines={2}>{b?.eventTitle || 'Untitled event'}</Text>
-                <Text style={s.mono}>{b?.bookingRef}{b?.eventStartAt ? ` · ${shortDate(b.eventStartAt)}` : ''}</Text>
+          <View key={String(b?.bookingRef || i)} style={[s.bRow, i === list.length - 1 && s.bRowLast]}>
+            <View style={s.bHead}>
+              <View style={s.flexText}>
+                <Text style={s.bTitle} numberOfLines={2} maxFontSizeMultiplier={1.3}>{b?.eventTitle || 'Untitled event'}</Text>
+                <Text style={s.mono} maxFontSizeMultiplier={1.2}>{b?.bookingRef || ''}{b?.eventStartAt ? ` · ${shortDate(b.eventStartAt)}` : ''}</Text>
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={s.bAmount}>{Number(b?.totalAmount || 0) > 0 ? money(b.totalAmount) : 'Free'}</Text>
-                <Text style={s.sub}>{plural(seats, 'seat')}</Text>
+              <View style={s.alignEnd}>
+                <Text style={s.bAmount} maxFontSizeMultiplier={1.2}>{Number(b?.totalAmount || 0) > 0 ? money(Number(b?.totalAmount || 0)) : 'Free'}</Text>
+                <Text style={s.sub} maxFontSizeMultiplier={1.2}>{plural(seats, 'seat')}</Text>
               </View>
             </View>
             <View style={s.chips}>
-              <Badge label={pay.label} color={pay.fg} bg={pay.bg} />
-              {b?.payment?.mode ? <Badge label={String(b.payment.mode)} color="#B45309" bg={PALETTE.amberSoft} /> : null}
-              {b?.status === 'cancelled' ? <Badge label="Cancelled" status="cancelled" /> : null}
-              {b?.status === 'waitlist' ? <Badge label="Waiting list" color="#B45309" bg={PALETTE.amberSoft} /> : null}
+              <ConsoleChip label={pay.label} kind={pay.kind} />
+              {b?.payment?.mode ? <ConsoleChip label={modeWord(String(b.payment.mode))} kind="info" dot={false} /> : null}
+              {b?.status === 'cancelled' ? <ConsoleChip label="Cancelled" kind="rejected" /> : null}
+              {b?.status === 'waitlist' ? <ConsoleChip label="Waiting list" kind="warning" /> : null}
               {b?.memberRateApplied ? (
-                <Text style={s.rate}>Member rate{Number(b?.memberSaving || 0) > 0 ? ` · saved ${money(b.memberSaving)}` : ''}</Text>
+                <ConsoleChip label={`Member rate${Number(b?.memberSaving || 0) > 0 ? ` · saved ${money(Number(b?.memberSaving || 0))}` : ''}`} kind="approved" icon="loyalty" />
               ) : null}
             </View>
-            {names.length ? <Text style={[s.sub, { marginTop: 6 }]}>{names.join(' · ')}</Text> : null}
+            {names.length ? <Text style={[s.sub, s.gapTop]} maxFontSizeMultiplier={1.3}>{names.join(' · ')}</Text> : null}
           </View>
         );
       })}
@@ -114,41 +118,46 @@ function PersonDetail({ p, bookings, loading }: { p: any; bookings: any[] | null
   );
 }
 
-function PersonCard({ p, index, open, bookings, loading, onToggle }: { p: any; index: number; open: boolean; bookings: any[] | null; loading: boolean; onToggle: () => void }) {
+function PersonCard({ p, index, open, bookings, loading, onToggle }: {
+  p: any; index: number; open: boolean; bookings: any[] | null; loading: boolean; onToggle: () => void;
+}) {
   const events = Number(p?.events || 0);
   const seats = Number(p?.seats || 0);
   return (
-    <View style={[s.card, SHADOW.card]}>
-      <TouchableOpacity activeOpacity={0.8} onPress={onToggle} style={s.row} accessibilityRole="button"
-        accessibilityLabel={`${p?.name || p?.email || 'Person'} — booking history`}>
-        <Avatar name={p?.name || p?.email} size={44} color="#FFFFFF" bg={PALETTE.blueDark} />
-        <View style={{ flex: 1, minWidth: 0, marginHorizontal: SPACE.md }}>
-          <Text style={s.eyebrowNo}>#{index + 1}</Text>
+    <ConsoleCard style={s.card} accent={Number(p?.pending || 0) > 0 ? PALETTE.amber : undefined}>
+      <View style={s.row}>
+        <GradientAvatar name={p?.name || p?.email || '?'} size={46} tone="admin" ring={false} />
+        <View style={s.flexText}>
+          <Text style={s.eyebrowNo} maxFontSizeMultiplier={1.2}>#{index + 1}</Text>
           {p?.name
-            ? <Text style={s.name} numberOfLines={1}>{p.name}</Text>
-            : <Text style={[s.name, s.noName]} numberOfLines={1}>No name given</Text>}
-          <Text style={s.sub} numberOfLines={1}>{p?.email}</Text>
-          <Text style={s.sub} numberOfLines={1}>{p?.phone || '—'}{p?.lastBookedAt ? ` · last booked ${shortDate(p.lastBookedAt)}` : ''}</Text>
+            ? <Text style={s.name} numberOfLines={1} maxFontSizeMultiplier={1.3}>{p.name}</Text>
+            : <Text style={[s.name, s.noName]} numberOfLines={1} maxFontSizeMultiplier={1.3}>No name given</Text>}
+          <Text style={s.sub} numberOfLines={1} maxFontSizeMultiplier={1.3}>{p?.email || ''}</Text>
+          <Text style={s.sub} numberOfLines={1} maxFontSizeMultiplier={1.3}>{p?.phone || '—'}{p?.lastBookedAt ? ` · last booked ${shortDate(p.lastBookedAt)}` : ''}</Text>
         </View>
-        <View style={{ alignItems: 'flex-end', maxWidth: 120 }}>
-          <Badge label={p?.isMember ? 'Member' : 'Guest'} color={p?.isMember ? '#6D28D9' : PALETTE.textSoft} bg={p?.isMember ? '#EDE9FE' : '#E2E8F0'} />
-          {p?.hasMemberRate ? <Text style={[s.rate, { marginTop: 4 }]}>Member rate</Text> : null}
+        <View style={[s.alignEnd, s.badgeCol]}>
+          <ConsoleChip label={p?.isMember ? 'Member' : 'Guest'} kind={p?.isMember ? 'info' : 'neutral'} />
+          {p?.hasMemberRate ? <ConsoleChip label="Member rate" kind="approved" dot={false} style={s.gapTopSm} /> : null}
         </View>
-      </TouchableOpacity>
+      </View>
       <View style={s.figures}>
-        <Text style={s.fig}><Text style={s.figStrong}>{Number(p?.bookings || 0)}</Text> booking{Number(p?.bookings) === 1 ? '' : 's'}</Text>
-        <Text style={s.fig}>{plural(events, 'event')} · {plural(seats, 'seat')}</Text>
-        <Text style={[s.fig, { color: PALETTE.text, fontWeight: '800' }]}>{money(Number(p?.paid || 0))}</Text>
-        {Number(p?.pending || 0) > 0 ? <Text style={[s.fig, { color: '#B45309', fontWeight: '800' }]}>{money(p.pending)} unpaid</Text> : null}
+        <Text style={s.fig} maxFontSizeMultiplier={1.3}><Text style={s.figStrong}>{Number(p?.bookings || 0)}</Text> booking{Number(p?.bookings || 0) === 1 ? '' : 's'}</Text>
+        <Text style={s.fig} maxFontSizeMultiplier={1.3}>{plural(events, 'event')} · {plural(seats, 'seat')}</Text>
+        <Text style={[s.fig, s.figStrong]} maxFontSizeMultiplier={1.3}>{money(Number(p?.paid || 0))}</Text>
+        {Number(p?.pending || 0) > 0 ? <Text style={[s.fig, s.unpaid]} maxFontSizeMultiplier={1.3}>{money(Number(p?.pending || 0))} unpaid</Text> : null}
       </View>
       <View style={s.actions}>
-        {p?.phone ? <MiniAction icon="call" label="Call" onPress={() => callNumber(p.phone)} /> : null}
-        {p?.phone ? <MiniAction icon="chat" label="WhatsApp" color={PALETTE.green} onPress={() => whatsappNumber(p.phone)} /> : null}
-        <View style={{ flex: 1 }} />
-        <MiniAction icon={open ? 'expand-less' : 'visibility'} label={open ? 'Close' : 'View'} color={PALETTE.green} onPress={onToggle} />
+        {p?.phone ? <MiniAction icon="call" label="Call" onPress={() => callNumber(p?.phone)} /> : null}
+        {p?.phone ? <MiniAction icon="chat" label="WhatsApp" color={PALETTE.greenDark} onPress={() => whatsappNumber(p?.phone)} /> : null}
+        <View style={s.flex} />
+        <MiniAction
+          icon={open ? 'expand-less' : 'visibility'}
+          label={open ? 'Close' : 'View'}
+          onPress={onToggle}
+        />
       </View>
       {open ? <PersonDetail p={p} bookings={bookings} loading={loading} /> : null}
-    </View>
+    </ConsoleCard>
   );
 }
 
@@ -162,18 +171,24 @@ export function BookingPeoplePane({ header, refreshKey = 0 }: { header?: React.R
   const [openEmail, setOpenEmail] = useState('');
   const [history, setHistory] = useState<any[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const seq = useRef(0);
 
   const load = useCallback(async (mode: 'load' | 'refresh' = 'load') => {
+    const mine = ++seq.current;
     if (mode === 'refresh') setRefreshing(true); else setLoading(true);
     setError('');
     try {
       const data = await listBookingPeople();
-      setPeople(Array.isArray(data?.people) ? data.people : []);
-    } catch (err) { setError(errorText(err, 'The list could not be loaded')); } finally { setLoading(false); setRefreshing(false); }
+      if (mine === seq.current) setPeople(Array.isArray(data?.people) ? data.people : []);
+    } catch (err) {
+      if (mine === seq.current) setError(errorText(err, 'The list could not be loaded'));
+    } finally {
+      if (mine === seq.current) { setLoading(false); setRefreshing(false); }
+    }
   }, []);
   useEffect(() => { load(refreshKey ? 'refresh' : 'load'); }, [load, refreshKey]);
 
-  const toggle = async (p: any) => {
+  const toggle = useCallback(async (p: any) => {
     const email = String(p?.email || '');
     if (openEmail === email) { setOpenEmail(''); setHistory(null); return; }
     setOpenEmail(email); setHistory(null); setHistoryLoading(true);
@@ -184,7 +199,7 @@ export function BookingPeoplePane({ header, refreshKey = 0 }: { header?: React.R
       setError(errorText(err, 'That history could not be loaded'));
       setHistory([]);
     } finally { setHistoryLoading(false); }
-  };
+  }, [openEmail]);
 
   const rows = useMemo(() => {
     const needle = (q || '').trim().toLowerCase();
@@ -193,42 +208,48 @@ export function BookingPeoplePane({ header, refreshKey = 0 }: { header?: React.R
     return list.filter((p) => [p?.name, p?.email, p?.phone].some((v) => String(v || '').toLowerCase().includes(needle)));
   }, [people, q]);
 
-  const listHeader = (
-    <View>
-      {header}
-      {error && people ? <Notice kind="danger" text={error} /> : null}
-      <View style={{ paddingHorizontal: SPACE.lg, marginTop: SPACE.sm }}>
-        <Field icon="search" placeholder="Search a name, email address or mobile number" value={q} onChangeText={setQ} autoCapitalize="none" autoCorrect={false} />
-      </View>
-      {Array.isArray(people) && people.length ? (
-        <Text style={s.count}>{rows.length === people.length ? plural(people.length, 'person').replace('persons', 'people') : `${rows.length} of ${people.length}`}</Text>
-      ) : null}
-    </View>
-  );
+  const total = Array.isArray(people) ? people.length : 0;
 
-  if (loading && !people) return <View style={{ flex: 1 }}>{header}<Loading tone="admin" /></View>;
-  if (error && !people) return <View style={{ flex: 1 }}>{header}<ErrorState tone="admin" message={error} onRetry={() => load()} /></View>;
+  const listHeader = (
+    <>
+      {header || null}
+      <ConsoleSearch value={q} onChangeText={setQ} placeholder="Search a name, email address or mobile number" />
+      {error && people ? <ConsoleNote kind="red" icon="error-outline" text={error} style={s.note} /> : null}
+      {total ? (
+        <Text style={s.count} maxFontSizeMultiplier={1.3}>{rows.length === total ? (total === 1 ? '1 person' : `${total} people`) : `${rows.length} of ${total}`}</Text>
+      ) : null}
+      {error && !people ? <ConsoleState kind="error" title="Could not load the people" message={error} action="Try again" onAction={() => load('load')} /> : null}
+      {loading && !people && !error ? <ConsoleSkeleton rows={3} style={s.skeleton} /> : null}
+    </>
+  );
 
   return (
     <FlatList
-      data={rows}
+      data={people ? rows : []}
       keyExtractor={(p, i) => String(p?.email || i)}
       initialNumToRender={10}
       maxToRenderPerBatch={10}
+      contentContainerStyle={CONSOLE_LIST}
       ListHeaderComponent={listHeader}
-      refreshing={refreshing}
-      onRefresh={() => load('refresh')}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('refresh')} tintColor={PALETTE.indigo} />}
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{ paddingBottom: SPACE.xxl * 2 }}
-      ListEmptyComponent={<EmptyState tone="admin" icon="contacts" title={q ? 'Nobody matches' : 'Nobody has booked an event yet.'} />}
-      ListFooterComponent={(people || []).length ? (
-        <Text style={s.foot}>
-          One row per person, matched on their email address — so somebody who booked once as a guest and once signed in appears
-          once, with their totals added together. <Text style={{ fontWeight: '800', color: PALETTE.textSoft }}>Bookings, events and seats are three different numbers</Text>: one booking can cover four seats at a single event.
-        </Text>
+      showsVerticalScrollIndicator={false}
+      ListEmptyComponent={people ? <ConsoleState title={q ? 'Nobody matches' : 'Nobody has booked an event yet.'} message={q ? 'Try another name, email or number.' : undefined} /> : null}
+      ListFooterComponent={total ? (
+        <ConsoleNote
+          style={s.note}
+          text="One row per person, matched on their email address — so somebody who booked once as a guest and once signed in appears once, with their totals added together. Bookings, events and seats are three different numbers: one booking can cover four seats at a single event."
+        />
       ) : null}
       renderItem={({ item, index }) => (
-        <PersonCard p={item} index={index} open={openEmail === String(item?.email || '')} bookings={history} loading={historyLoading} onToggle={() => toggle(item)} />
+        <PersonCard
+          p={item}
+          index={index}
+          open={openEmail === String(item?.email || '')}
+          bookings={history}
+          loading={historyLoading}
+          onToggle={() => toggle(item)}
+        />
       )}
     />
   );
@@ -237,42 +258,63 @@ export function BookingPeoplePane({ header, refreshKey = 0 }: { header?: React.R
 const SuperBookingPeopleScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   return (
-    <Screen tone="admin" scroll={false}>
-      <BookingPeoplePane header={<AppHeader tone="admin" title="Booking people" subtitle="Everyone who has booked an event" onBack={() => navigation.goBack()} />} />
-    </Screen>
+    <ConsoleFrame>
+      <BookingPeoplePane
+        header={(
+          <ConsoleHeader
+            compact
+            eyebrow="Super Admin · bookings"
+            title="Booking people"
+            subtitle="Everyone who has booked an event"
+            left={<GlassIconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => navigation?.goBack?.()} />}
+          />
+        )}
+      />
+    </ConsoleFrame>
   );
 };
 
 const s = StyleSheet.create({
-  card: { backgroundColor: PALETTE.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: PALETTE.border, padding: SPACE.lg, marginHorizontal: SPACE.lg, marginBottom: SPACE.md },
-  row: { flexDirection: 'row', alignItems: 'center' },
+  flex: { flex: 1 },
+  flexText: { flex: 1, minWidth: 0 },
+  alignEnd: { alignItems: 'flex-end' },
+  badgeCol: { maxWidth: 120 },
+  gapTop: { marginTop: SPACE.xs + 2 },
+  gapTopSm: { marginTop: SPACE.xs },
+  spinner: { marginTop: SPACE.md },
+  skeleton: { marginTop: SPACE.md },
+  note: { marginHorizontal: SPACE.lg, marginTop: SPACE.sm, marginBottom: SPACE.sm },
+  count: { ...TYPE.caption, fontWeight: '700', paddingHorizontal: SPACE.lg, marginTop: SPACE.md, marginBottom: SPACE.sm },
+  card: { marginHorizontal: SPACE.lg, marginBottom: SPACE.md },
+  row: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
   eyebrowNo: { fontSize: 10, fontWeight: '800', color: PALETTE.textFaint },
-  name: { fontSize: 15, fontWeight: '800', color: PALETTE.text },
+  name: { ...TYPE.subheading, fontWeight: '800' },
   noName: { fontStyle: 'italic', fontWeight: '600', color: PALETTE.textFaint },
-  sub: { fontSize: 12, color: PALETTE.textMuted, marginTop: 2 },
-  rate: { fontSize: 11, fontWeight: '800', color: '#047857' },
+  sub: { ...TYPE.caption, marginTop: 2 },
   figures: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.md, marginTop: SPACE.md },
   fig: { fontSize: 12, color: PALETTE.textMuted, fontWeight: '600' },
   figStrong: { color: PALETTE.text, fontWeight: '800' },
-  actions: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: SPACE.md },
-  detail: { marginTop: SPACE.md, borderTopWidth: 1, borderTopColor: PALETTE.border, paddingTop: SPACE.md },
+  unpaid: { color: PALETTE.amberDark, fontWeight: '800' },
+  actions: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.md },
+  detail: { marginTop: SPACE.md, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: PALETTE.divider, paddingTop: SPACE.md },
   contact: { flexDirection: 'row', gap: SPACE.sm, marginBottom: SPACE.sm },
+  contactIcon: { marginTop: 2 },
   contactLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.8, color: PALETTE.textFaint },
   contactValue: { fontSize: 14, fontWeight: '700', color: PALETTE.text, marginTop: 1 },
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.sm },
-  tile: { flexGrow: 1, flexBasis: '45%', borderWidth: 1, borderColor: PALETTE.border, borderRadius: RADIUS.md, padding: SPACE.md },
-  tileLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.8, color: PALETTE.textFaint },
+  tile: { flexGrow: 1, flexBasis: '45%', minWidth: 0, backgroundColor: PALETTE.canvasAdmin, borderRadius: 14, padding: SPACE.md },
+  tileHead: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  tileLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.8, color: PALETTE.textMuted },
   tileValue: { fontSize: 20, fontWeight: '800', color: PALETTE.text, marginTop: 4 },
-  owed: { marginTop: SPACE.md, backgroundColor: PALETTE.amberSoft, borderRadius: RADIUS.md, padding: SPACE.md, borderWidth: 1, borderColor: '#FDE68A' },
-  owedText: { fontSize: 13, fontWeight: '700', color: '#92400E' },
-  histTitle: { fontSize: 14, fontWeight: '800', color: PALETTE.text, marginTop: SPACE.lg },
-  bRow: { paddingVertical: SPACE.md, borderBottomWidth: 1, borderBottomColor: PALETTE.border },
+  owed: { marginTop: SPACE.md },
+  histTitle: { ...TYPE.subheading, fontWeight: '800', marginTop: SPACE.lg },
+  bRow: { paddingVertical: SPACE.md, borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: PALETTE.divider },
+  bRowLast: { borderBottomWidth: 0 },
+  bHead: { flexDirection: 'row', gap: SPACE.sm },
   bTitle: { fontSize: 14, fontWeight: '800', color: PALETTE.text },
   bAmount: { fontSize: 14, fontWeight: '800', color: PALETTE.text },
   mono: { fontSize: 11, color: PALETTE.textMuted, marginTop: 2, fontFamily: 'monospace' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: SPACE.sm },
-  count: { fontSize: 12, fontWeight: '700', color: PALETTE.textFaint, paddingHorizontal: SPACE.lg, marginBottom: SPACE.sm },
-  foot: { fontSize: 12, lineHeight: 18, color: PALETTE.textMuted, paddingHorizontal: SPACE.lg, marginTop: SPACE.sm },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: SPACE.xs, marginTop: SPACE.sm },
 });
 
 export default SuperBookingPeopleScreen;

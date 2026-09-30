@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Screen, AppHeader, Hero, Card, Field, PrimaryButton, InfoRow, Notice, PALETTE, SPACE, money } from '../../../ui';
+import {
+  PALETTE, SPACE, TYPE, money,
+  ConsoleScroll, ConsoleHeader, ConsoleCard, ConsoleButton, ConsoleNote, ConsoleSectionTitle, GlassIconButton, GradientAvatar,
+  PremiumInput, BottomActionBar,
+} from '../../../ui';
 import { grantPlatinum, getPlatinumOverview, PlatinumPaymentMode, PAYMENT_MODE_LABEL, errorText } from '../../../services/superApi';
 import { ChipRow, ToggleRow, place } from './superKit';
 
@@ -10,15 +14,29 @@ import { ChipRow, ToggleRow, place } from './superKit';
  * SUPER ADMIN — grant Platinum to one member (website PlatinumMembers → Grant)
  * ============================================================================
  *
- * POST /admin/super/membership/platinum/:memberId — the office receipt becomes
- * a paid `provider: 'offline'` payment order (so 80G and reports see it), and
- * the member becomes lifetime Platinum with no expiry. `platinumGrant.previous`
- * on the server is what lets "Undo grant" restore them exactly.
+ * POST /admin/super/membership/platinum/:memberId
+ *   { amount, paymentMode, receiptNumber?, receivedOn?, note? } — the website's
+ * body. The office receipt becomes a paid `provider: 'offline'` payment order
+ * (so 80G and reports see it), and the member becomes lifetime Platinum with
+ * no expiry. `platinumGrant.previous` on the server is what lets "Undo" restore
+ * them exactly. The amount is PRE-FILLED from the Platinum plan row (never a
+ * number in this client) and stays editable: the office records what it got.
  */
 
 const MODES = (Object.keys(PAYMENT_MODE_LABEL) as PlatinumPaymentMode[]).map((k) => ({ value: k, label: PAYMENT_MODE_LABEL[k] }));
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
+
+function Detail({ label, value, last }: { label: string; value?: string | null; last?: boolean }) {
+  const v = String(value || '').trim();
+  if (!v) return null;
+  return (
+    <View style={[s.detail, !last && s.divider]}>
+      <Text style={s.detailLabel} maxFontSizeMultiplier={1.3}>{label}</Text>
+      <Text style={s.detailValue} selectable maxFontSizeMultiplier={1.3}>{v}</Text>
+    </View>
+  );
+}
 
 const SuperPlatinumGrantScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -41,15 +59,19 @@ const SuperPlatinumGrantScreen: React.FC = () => {
   useEffect(() => {
     let alive = true;
     getPlatinumOverview().then((o) => {
-      if (alive && typeof o?.plan?.price === 'number' && o.plan.price > 0) {
-        setPrice(o.plan.price);
-        setAmount((a) => a || String(o.plan.price));
+      const p = Number(o?.plan?.price);
+      if (alive && Number.isFinite(p) && p > 0) {
+        setPrice(p);
+        setAmount((a) => a || String(p));
       }
     }).catch(() => null);
     return () => { alive = false; };
   }, []);
 
+  const memberId = String(m?.id || '');
+
   const save = async () => {
+    if (!memberId) { setError('This member record could not be identified. Go back and search again.'); return; }
     const rupees = Number(amount);
     if ((amount || '').trim() === '' || !Number.isFinite(rupees) || rupees < 0) { setError('Enter the amount received'); return; }
     const day = (receivedOn || '').trim();
@@ -59,15 +81,15 @@ const SuperPlatinumGrantScreen: React.FC = () => {
     setError('');
     setSaving(true);
     try {
-      await grantPlatinum(String(m?.id || ''), {
+      await grantPlatinum(memberId, {
         amount: rupees,
         paymentMode: mode,
         receiptNumber: (receipt || '').trim() || undefined,
-        receivedOn: (receivedOn || '').trim(),
+        receivedOn: day,
         note: (note || '').trim() || undefined,
       });
       Alert.alert('Platinum granted', `${m?.fullName || 'The member'} is now a Platinum lifetime member.`);
-      navigation.goBack();
+      navigation?.goBack?.();
     } catch (err) {
       Alert.alert('Could not grant Platinum', errorText(err));
     } finally {
@@ -75,32 +97,52 @@ const SuperPlatinumGrantScreen: React.FC = () => {
     }
   };
 
+  const where = [m?.membershipNumber, place(m?.block, m?.district, m?.state)].filter(Boolean).join(' · ');
+
   return (
-    <Screen tone="admin">
-      <AppHeader tone="admin" title="Grant Platinum" subtitle="Lifetime · paid at the office" onBack={() => navigation.goBack()} />
-      <Hero colors={['#111827', '#374151', '#6B7280']} eyebrow="PLATINUM LIFETIME" title={m?.fullName || 'Member'}
-        subtitle={[m?.membershipNumber, place(m?.block, m?.district, m?.state)].filter(Boolean).join(' · ')} icon="diamond" />
+    <ConsoleScroll
+      avoidKeyboard
+      footer={(
+        <BottomActionBar>
+          <ConsoleButton icon="diamond" label="Grant Platinum" onPress={save} loading={saving} disabled={!confirmed} style={s.flex} />
+        </BottomActionBar>
+      )}
+    >
+      <ConsoleHeader
+        compact
+        eyebrow="Super Admin · Platinum"
+        title="Grant Platinum"
+        subtitle="Lifetime · paid at the office"
+        left={<GlassIconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => navigation?.goBack?.()} />}
+      />
 
-      <Card style={s.card}>
-        <InfoRow label="Email" value={m?.email} />
-        <InfoRow label="Phone" value={m?.phoneNumber} />
-        <InfoRow label="Current membership" value={[m?.membershipStatus, m?.membershipType].filter(Boolean).join(' · ') || m?.applicationOutcome} last />
-      </Card>
+      <ConsoleCard style={[s.card, s.overlap]} accent={PALETTE.gold}>
+        <View style={s.row}>
+          <GradientAvatar name={m?.fullName || '?'} size={52} tone="admin" />
+          <View style={s.flexText}>
+            <Text style={s.name} numberOfLines={2} maxFontSizeMultiplier={1.3}>{m?.fullName || 'Member'}</Text>
+            {where ? <Text style={s.sub} numberOfLines={2} maxFontSizeMultiplier={1.3}>{where}</Text> : null}
+          </View>
+        </View>
+        <Detail label="Email" value={m?.email} />
+        <Detail label="Phone" value={m?.phoneNumber} />
+        <Detail label="Current membership" value={[m?.membershipStatus, m?.membershipType].filter(Boolean).join(' · ') || m?.applicationOutcome} last />
+      </ConsoleCard>
 
-      <Card style={s.card}>
-        <Text style={s.title}>The office receipt</Text>
-        <Field label="Amount received (₹)" value={amount} onChangeText={(t) => setAmount((t || '').replace(/[^\d.]/g, ''))} keyboardType="numeric" icon="currency-rupee" />
-        <Text style={s.label}>Paid by</Text>
-        <View style={{ marginHorizontal: -SPACE.lg, marginBottom: SPACE.md }}>
+      <ConsoleSectionTitle title="The office receipt" icon="receipt-long" style={s.section} />
+      <ConsoleCard style={s.card}>
+        <PremiumInput tone="admin" label="Amount received (₹)" value={amount} onChangeText={(t) => setAmount((t || '').replace(/[^\d.]/g, ''))} keyboardType="numeric" icon="currency-rupee" />
+        <Text style={s.label} maxFontSizeMultiplier={1.3}>Paid by</Text>
+        <View style={s.bleed}>
           <ChipRow<PlatinumPaymentMode> options={MODES} value={mode} onChange={setMode} />
         </View>
-        <Field label="Receipt / cheque / UTR no." value={receipt} onChangeText={setReceipt} placeholder="Optional" autoCapitalize="characters" />
-        <Field label="Received on" value={receivedOn} onChangeText={setReceivedOn} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" />
-        <Field label="Note" value={note} onChangeText={setNote} multiline placeholder="Optional — e.g. received at the Chennai office" />
+        <PremiumInput tone="admin" label="Receipt / cheque / UTR no." value={receipt} onChangeText={setReceipt} placeholder="Optional" autoCapitalize="characters" />
+        <PremiumInput tone="admin" label="Received on" value={receivedOn} onChangeText={setReceivedOn} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" icon="event" />
+        <PremiumInput tone="admin" label="Note" value={note} onChangeText={setNote} multiline placeholder="Optional — e.g. received at the Chennai office" />
         {price !== null && amount !== '' && Number(amount) !== Number(price) ? (
-          <Text style={s.warn}>This differs from the Platinum price of {money(price)}. That is allowed — the amount received is what is recorded.</Text>
+          <Text style={s.warn} maxFontSizeMultiplier={1.3}>This differs from the Platinum price of {money(price)}. That is allowed — the amount received is what is recorded.</Text>
         ) : null}
-        <View style={{ marginHorizontal: -SPACE.lg, marginTop: SPACE.md }}>
+        <View style={s.bleedToggle}>
           <ToggleRow
             label={`I confirm ${money(Number(amount) || 0)} has been received from ${m?.fullName || 'this member'}`}
             hint="Their membership becomes lifetime and never needs renewing."
@@ -109,21 +151,31 @@ const SuperPlatinumGrantScreen: React.FC = () => {
             last
           />
         </View>
-      </Card>
+      </ConsoleCard>
 
-      {error ? <Notice kind="danger" text={error} /> : null}
-      <View style={{ paddingHorizontal: SPACE.lg, marginTop: SPACE.xl }}>
-        <PrimaryButton tone="admin" variant="gold" icon="diamond" label="Grant Platinum" onPress={save} loading={saving} disabled={!confirmed} />
-      </View>
-    </Screen>
+      {error ? <ConsoleNote kind="red" icon="error-outline" text={error} style={s.note} /> : null}
+    </ConsoleScroll>
   );
 };
 
 const s = StyleSheet.create({
-  card: { marginHorizontal: SPACE.lg, marginTop: SPACE.lg },
-  title: { fontSize: 15, fontWeight: '800', color: PALETTE.text, marginBottom: SPACE.md },
-  warn: { fontSize: 12, color: '#B45309', lineHeight: 17, marginTop: SPACE.sm },
+  flex: { flex: 1 },
+  overlap: { marginTop: -SPACE.lg },
+  card: { marginHorizontal: SPACE.lg },
+  section: { marginHorizontal: SPACE.lg, marginTop: SPACE.xl, marginBottom: SPACE.md },
+  row: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, marginBottom: SPACE.sm },
+  flexText: { flex: 1, minWidth: 0 },
+  name: { ...TYPE.heading, fontSize: 18 },
+  sub: { ...TYPE.caption, marginTop: 2 },
+  detail: { paddingVertical: SPACE.sm },
+  divider: { borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: PALETTE.divider },
+  detailLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 0.8, color: PALETTE.textFaint, textTransform: 'uppercase' },
+  detailValue: { fontSize: 14, lineHeight: 20, color: PALETTE.text, marginTop: 2 },
   label: { fontSize: 13, fontWeight: '700', color: PALETTE.textSoft, marginBottom: 2 },
+  bleed: { marginHorizontal: -SPACE.lg, marginTop: -SPACE.xs, marginBottom: SPACE.md },
+  bleedToggle: { marginTop: SPACE.sm },
+  warn: { fontSize: 12, color: PALETTE.amberDark, lineHeight: 17, marginTop: SPACE.sm },
+  note: { marginHorizontal: SPACE.lg, marginTop: SPACE.md },
 });
 
 export default SuperPlatinumGrantScreen;

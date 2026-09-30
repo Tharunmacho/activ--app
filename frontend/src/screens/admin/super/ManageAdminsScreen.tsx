@@ -19,6 +19,7 @@ import {
   GradientAvatar, GlassIconButton, PremiumInput, FadeInUp, TeamKeys3D, CONSOLE_LIST, CONSOLE_ACCENTS, ConsoleChipKind,
 } from '../../../ui';
 import api from '../../../services/api';
+import { listStaffAccounts, updateStaffAccount, errorText, type StaffAccount } from '../../../services/superApi';
 import { getGeography, invalidateRegionCache } from '../../../services/regions';
 import { SkeletonList } from './components/Skeleton';
 import EmptyState from './components/EmptyState';
@@ -130,6 +131,350 @@ const isTierRole = (role?: string) => TIERS.some(t => t.key === role);
 
 type FormState = typeof EMPTY_FORM;
 
+/* ================================================== site staff accounts */
+
+/** Roles maintained in the "Site staff accounts" section, not the tier list. */
+const STAFF_ROLES = ['cms_admin', 'events_admin'];
+const isStaffRole = (role?: string) => STAFF_ROLES.includes(String(role || ''));
+
+const MIN_PASSWORD = 8;
+
+/** A rough strength read, for the hint under the field. Never a gate beyond MIN_PASSWORD. */
+const passwordStrength = (pw: string): { label: string; color: string; bars: number } => {
+  const value = String(pw || '');
+  if (!value) return { label: '', color: PALETTE.textFaint, bars: 0 };
+  let points = 0;
+  if (value.length >= 12) points += 1;
+  if (value.length >= 16) points += 1;
+  if (/[a-z]/.test(value) && /[A-Z]/.test(value)) points += 1;
+  if (/\d/.test(value)) points += 1;
+  if (/[^A-Za-z0-9]/.test(value)) points += 1;
+  if (value.length < MIN_PASSWORD || points <= 1) return { label: 'Weak', color: PALETTE.red, bars: 1 };
+  if (points <= 3) return { label: 'Fair', color: PALETTE.warningText, bars: 2 };
+  return { label: 'Strong', color: PALETTE.successText, bars: 3 };
+};
+
+/**
+ * 16 characters, one of each class, from an alphabet without look-alikes (the
+ * Super Admin reads it out to somebody). Uses `crypto.getRandomValues` where
+ * the runtime has it; Hermes without a polyfill falls back to Math.random —
+ * acceptable for a password handed over and replaced, but not a CSPRNG.
+ */
+const generatePassword = (): string => {
+  const lower = 'abcdefghijkmnpqrstuvwxyz';
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const digits = '23456789';
+  const symbols = '!@#$%*?-_+';
+  const all = lower + upper + digits + symbols;
+  const rand = (n: number) => {
+    try {
+      const c = (globalThis as any)?.crypto;
+      if (c && typeof c.getRandomValues === 'function') {
+        const buf = new Uint32Array(1);
+        c.getRandomValues(buf);
+        return buf[0] % n;
+      }
+    } catch {
+      // fall through to Math.random
+    }
+    return Math.floor(Math.random() * n);
+  };
+  const chars = [lower, upper, digits, symbols].map(set => set.charAt(rand(set.length)));
+  while (chars.length < 16) chars.push(all.charAt(rand(all.length)));
+  for (let i = chars.length - 1; i > 0; i -= 1) {
+    const j = rand(i + 1);
+    const t = chars[i];
+    chars[i] = chars[j];
+    chars[j] = t;
+  }
+  return chars.join('');
+};
+
+interface StaffDraft {
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  active: boolean;
+  setPassword: boolean;
+  password: string;
+  confirmPassword: string;
+}
+
+/**
+ * One CMS / events staff account, with its own inline editor.
+ *
+ * The Super Admin keeps these credentials: name, email, phone, active, and a
+ * new password (PUT /admin/super/staff-accounts/:id). Inline card, never a
+ * native Modal (Rule 2). A password change is confirmed first, and the success
+ * message says to hand the new one over securely — it is stored as a bcrypt
+ * hash and cannot be shown again.
+ */
+const StaffAccountCard = ({ item, index, onSaved }: { item: StaffAccount; index: number; onSaved: () => void }) => {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<StaffDraft | null>(null);
+  const [reveal, setReveal] = useState<{ [k: string]: boolean }>({});
+  const [saving, setSaving] = useState(false);
+
+  const inactive = item?.active === false;
+  const lastLogin = item?.lastLoginAt ? shortDate(item.lastLoginAt) : '';
+
+  const open = () => {
+    setDraft({
+      fullName: item?.fullName || '',
+      email: item?.email || '',
+      phoneNumber: item?.phoneNumber || '',
+      active: item?.active !== false,
+      setPassword: false,
+      password: '',
+      confirmPassword: '',
+    });
+    setReveal({});
+    setEditing(true);
+  };
+  const close = () => {
+    setEditing(false);
+    setDraft(null);
+    setReveal({});
+  };
+  const patch = (next: Partial<StaffDraft>) => setDraft(prev => (prev ? { ...prev, ...next } : prev));
+
+  const submit = async (d: StaffDraft) => {
+    setSaving(true);
+    try {
+      const payload: Record<string, any> = {
+        fullName: (d.fullName || '').trim(),
+        email: (d.email || '').trim().toLowerCase(),
+        phoneNumber: (d.phoneNumber || '').trim(),
+        active: !!d.active,
+      };
+      if (d.setPassword) payload.password = d.password || '';
+      const res = await updateStaffAccount(item?.id || '', payload);
+      const changed: string[] = Array.isArray(res?.changed) ? res.changed : [];
+      const who = payload.fullName || payload.email;
+
+      if (changed.includes('password')) {
+        Alert.alert(
+          'Password changed',
+          `${who} must now sign in with the new password.\n\n` +
+          'Share it with them securely — in person or by phone, never in a group chat. It cannot be shown again.',
+        );
+      } else if (changed.length > 0) {
+        Alert.alert('Account updated', `${who}'s account has been saved.`);
+      } else {
+        Alert.alert('Nothing changed', 'The account already had these details.');
+      }
+      close();
+      onSaved();
+    } catch (err: any) {
+      Alert.alert('Could not save', errorText(err, 'Please try again.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const save = () => {
+    const d = draft;
+    if (!d) return;
+    if (!(d.fullName || '').trim()) { Alert.alert('Missing field', 'Full name is required.'); return; }
+    if (!(d.email || '').trim()) { Alert.alert('Missing field', 'Email is required.'); return; }
+    if (d.setPassword) {
+      if ((d.password || '').length < MIN_PASSWORD) {
+        Alert.alert('Weak password', `Use at least ${MIN_PASSWORD} characters.`);
+        return;
+      }
+      if (d.password !== d.confirmPassword) {
+        Alert.alert('Password mismatch', 'The passwords you entered do not match.');
+        return;
+      }
+    }
+
+    const emailChanged = (d.email || '').trim().toLowerCase() !== String(item?.email || '').toLowerCase();
+    if (!d.setPassword && !emailChanged) {
+      submit(d);
+      return;
+    }
+
+    // Replacing a working credential is confirmed first.
+    const lines = [
+      d.setPassword
+        ? `The password ${item?.email || 'this account'} signs in with today will stop working. Note the new one first — it cannot be shown after saving.`
+        : '',
+      emailChanged ? `The sign-in email changes to ${(d.email || '').trim().toLowerCase()}.` : '',
+    ].filter(Boolean);
+    Alert.alert(
+      d.setPassword ? 'Change this password?' : 'Change the sign-in email?',
+      lines.join('\n\n'),
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: d.setPassword ? 'Change password' : 'Change email', style: 'destructive', onPress: () => submit(d) },
+      ],
+    );
+  };
+
+  const secureField = (key: 'password' | 'confirmPassword', label: string) => {
+    if (!draft) return null;
+    const shown = !!reveal[key];
+    return (
+      <PremiumInput
+        tone="admin"
+        label={label}
+        icon="lock-outline"
+        placeholder={key === 'password' ? 'At least 8 characters' : 'Type it again'}
+        value={draft[key]}
+        onChangeText={(v: string) => patch({ [key]: v } as Partial<StaffDraft>)}
+        secureTextEntry={!shown}
+        autoCapitalize="none"
+        autoCorrect={false}
+        right={(
+          <TouchableOpacity
+            style={styles.revealBtn}
+            onPress={() => setReveal(prev => ({ ...prev, [key]: !prev[key] }))}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={shown ? 'Hide password' : 'Show password'}
+          >
+            <Icon name={shown ? 'visibility-off' : 'visibility'} size={SIZE.icon} color={PALETTE.textFaint} />
+          </TouchableOpacity>
+        )}
+      />
+    );
+  };
+
+  const strength = passwordStrength(draft?.password || '');
+  const mismatch = !!draft?.setPassword
+    && (draft?.confirmPassword || '').length > 0
+    && draft?.password !== draft?.confirmPassword;
+  const emailEdited = !!draft
+    && (draft.email || '').trim().toLowerCase() !== String(item?.email || '').toLowerCase();
+
+  return (
+    <FadeInUp delay={Math.min(index, 6) * 40} style={styles.gutter}>
+      <ConsoleCard style={[styles.adminCard, inactive && styles.adminInactive]} accent={inactive ? PALETTE.amber : undefined}>
+        <View style={styles.adminHeader}>
+          <GradientAvatar name={item?.fullName || item?.email} size={48} tone="admin" status={inactive ? 'pending' : 'online'} />
+          <View style={styles.flexText}>
+            <Text style={styles.adminName} numberOfLines={1}>{item?.fullName || 'Unnamed account'}</Text>
+            <Text style={styles.adminEmail} numberOfLines={1}>{item?.email || 'No email'}</Text>
+            <View style={styles.chipRow}>
+              <ConsoleChip label={item?.roleLabel || item?.role || 'Staff'} kind="info" icon={item?.role === 'events_admin' ? 'event' : 'web'} />
+              {inactive ? <ConsoleChip label="Deactivated" kind="warning" icon="pause-circle-outline" /> : null}
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.adminMetaRow}>
+          {item?.phoneNumber ? (
+            <View style={styles.metaItem}>
+              <View style={styles.metaIcon}><Icon name="phone" size={14} color={PALETTE.indigo} /></View>
+              <Text style={styles.metaText} numberOfLines={1}>{item.phoneNumber}</Text>
+            </View>
+          ) : null}
+          <View style={styles.metaItem}>
+            <View style={styles.metaIcon}><Icon name="login" size={14} color={PALETTE.indigo} /></View>
+            <Text style={styles.metaText} numberOfLines={1}>{lastLogin ? `Last signed in ${lastLogin}` : 'No sign-in recorded'}</Text>
+          </View>
+        </View>
+
+        {!editing ? (
+          <View style={styles.actions}>
+            <ConsoleButton kind="soft" size="sm" icon="manage-accounts" label="Edit credentials" onPress={open} style={styles.flex} />
+          </View>
+        ) : null}
+
+        {editing && draft ? (
+          <View style={styles.staffEditor}>
+            <Text style={styles.groupLabel}>Account</Text>
+            <PremiumInput
+              tone="admin" label="Full Name" icon="person-outline" placeholder="Full name"
+              value={draft.fullName} onChangeText={(v: string) => patch({ fullName: v })} autoCorrect={false}
+            />
+            <PremiumInput
+              tone="admin" label="Sign-in Email" icon="mail-outline" placeholder="name@activ.org.in"
+              value={draft.email} onChangeText={(v: string) => patch({ email: v })}
+              keyboardType="email-address" autoCapitalize="none" autoCorrect={false}
+              hint={emailEdited ? 'They will sign in with this address. It must not belong to any other admin or member.' : undefined}
+            />
+            <PremiumInput
+              tone="admin" label="Phone (optional)" icon="phone" placeholder="9876543210"
+              value={draft.phoneNumber} onChangeText={(v: string) => patch({ phoneNumber: v })} keyboardType="phone-pad"
+            />
+
+            <View style={[styles.activeRow, !draft.active && styles.activeRowOff]}>
+              <Icon name={draft.active ? 'toggle-on' : 'pause-circle-outline'} size={22} color={draft.active ? PALETTE.successText : PALETTE.warningText} />
+              <View style={styles.flexText}>
+                <Text style={styles.activeTitle}>{draft.active ? 'Account active' : 'Account deactivated'}</Text>
+                <Text style={styles.activeHint}>{draft.active ? 'They can sign in to their portal.' : 'They cannot sign in. Nothing is deleted.'}</Text>
+              </View>
+              <Switch
+                value={!!draft.active}
+                onValueChange={(v) => patch({ active: v })}
+                disabled={saving}
+                trackColor={{ false: PALETTE.borderStrong, true: PALETTE.indigo }}
+                thumbColor={Platform.OS === 'android' ? PALETTE.white : undefined}
+                ios_backgroundColor={PALETTE.borderStrong}
+                accessibilityLabel="Account active"
+              />
+            </View>
+
+            <View style={styles.pwBox}>
+              <View style={styles.pwHead}>
+                <Icon name="vpn-key" size={18} color={PALETTE.indigo} />
+                <View style={styles.flexText}>
+                  <Text style={styles.activeTitle}>Set a new password</Text>
+                  <Text style={styles.activeHint}>Replaces the current one. Leave off to keep it.</Text>
+                </View>
+                <Switch
+                  value={!!draft.setPassword}
+                  onValueChange={(v) => patch({ setPassword: v, password: '', confirmPassword: '' })}
+                  disabled={saving}
+                  trackColor={{ false: PALETTE.borderStrong, true: PALETTE.indigo }}
+                  thumbColor={Platform.OS === 'android' ? PALETTE.white : undefined}
+                  ios_backgroundColor={PALETTE.borderStrong}
+                  accessibilityLabel="Set a new password"
+                />
+              </View>
+
+              {draft.setPassword ? (
+                <View style={styles.pwFields}>
+                  {secureField('password', 'New Password')}
+                  {secureField('confirmPassword', 'Confirm New Password')}
+                  <View style={styles.strengthRow}>
+                    {[1, 2, 3].map(i => (
+                      <View key={i} style={[styles.strengthBar, { backgroundColor: strength.bars >= i ? strength.color : PALETTE.divider }]} />
+                    ))}
+                  </View>
+                  <Text style={[styles.strengthText, { color: mismatch ? PALETTE.red : strength.color }]}>
+                    {mismatch
+                      ? 'The two passwords do not match.'
+                      : `${strength.label ? `${strength.label} — ` : ''}at least ${MIN_PASSWORD} characters; 12+ with mixed case, a number and a symbol is strong.`}
+                  </Text>
+                  <ConsoleButton
+                    kind="ghost"
+                    size="sm"
+                    icon="auto-fix-high"
+                    label="Generate a strong password"
+                    onPress={() => {
+                      const pw = generatePassword();
+                      patch({ password: pw, confirmPassword: pw });
+                      setReveal({ password: true });
+                    }}
+                  />
+                </View>
+              ) : null}
+            </View>
+
+            <View style={styles.actions}>
+              <ConsoleButton kind="soft" size="sm" label="Cancel" onPress={close} style={styles.flex} disabled={saving} />
+              <ConsoleButton size="sm" icon="check" label="Save" loading={saving} onPress={save} style={styles.flex} />
+            </View>
+          </View>
+        ) : null}
+      </ConsoleCard>
+    </FadeInUp>
+  );
+};
+
 const SEARCH_DEBOUNCE_MS = 350;
 
 /**
@@ -138,6 +483,8 @@ const SEARCH_DEBOUNCE_MS = 350;
  */
 const ManageAdminsScreen = ({ route }: any) => {
   const [admins, setAdmins] = useState<AdminRow[]>([]);
+  /** CMS / events staff, from their own endpoint (credentials maintained here). */
+  const [staff, setStaff] = useState<StaffAccount[]>([]);
   const [counts, setCounts] = useState<{ [key: string]: number }>({});
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
   const [query, setQuery] = useState('');
@@ -222,13 +569,29 @@ const ManageAdminsScreen = ({ route }: any) => {
     fetchAdmins();
   }, [fetchAdmins]);
 
+  const fetchStaff = useCallback(async () => {
+    try {
+      const rows = await listStaffAccounts();
+      setStaff(Array.isArray(rows) ? rows : []);
+    } catch {
+      // The tier list is this screen's main job; a failed staff read leaves
+      // the section out rather than blocking the rest.
+      setStaff([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStaff();
+  }, [fetchStaff]);
+
   // Same reason as the Hub: bottom tabs stay mounted, so without this the list
   // and its per-tier counts are whatever they were when the tab was first
   // opened. Deleting an admin from another screen would leave a ghost row here.
   useFocusEffect(
     useCallback(() => {
       fetchAdmins(true);
-    }, [fetchAdmins]),
+      fetchStaff();
+    }, [fetchAdmins, fetchStaff]),
   );
 
   /**
@@ -269,8 +632,18 @@ const ManageAdminsScreen = ({ route }: any) => {
 
   // Categorised by tier. Empty tiers are dropped so the list never shows a
   // heading with nothing beneath it.
-  // Accounts outside the three tiers (events admin, super admin) are on the
-  // website's roster too; they get their own section rather than vanishing.
+  // The CMS and events accounts get their own "Site staff accounts" section,
+  // read from /admin/super/staff-accounts, with the credential editor the tier
+  // form cannot offer (the tier edit refuses any non-tier role). Shown on
+  // "All" only, narrowed by the search box. Super admin rows are not listed:
+  // their password is changed in Settings.
+  const staffShown = useMemo(() => {
+    if (roleFilter !== 'all') return [];
+    const q = (debouncedQuery || '').trim().toLowerCase();
+    return (staff || []).filter(a => q.length < 2 ||
+      `${a?.fullName || ''} ${a?.email || ''} ${a?.roleLabel || ''}`.toLowerCase().includes(q));
+  }, [staff, roleFilter, debouncedQuery]);
+
   const sections = useMemo(() => [
     ...TIERS.map(tier => ({
       key: tier.key as string,
@@ -281,15 +654,15 @@ const ManageAdminsScreen = ({ route }: any) => {
       data: (admins || []).filter(a => a?.role === tier.key),
     })),
     {
-      key: 'other',
-      title: 'Other accounts',
+      key: 'staff',
+      title: 'Site staff accounts',
       icon: 'manage-accounts',
-      color: PALETTE.textMuted,
-      light: PALETTE.field,
-      data: (admins || []).filter(a => !isTierRole(a?.role)),
+      color: PALETTE.indigo,
+      light: PALETTE.indigoSoft,
+      data: staffShown as any[],
     },
   ].filter(section => section.data.length > 0),
-  [admins]);
+  [admins, staffShown]);
 
   const setField = (key: keyof FormState, value: string) =>
     setForm(prev => ({ ...prev, [key]: value }));
@@ -602,7 +975,10 @@ const ManageAdminsScreen = ({ route }: any) => {
     [],
   );
 
-  const renderItem = useCallback(({ item, index }: { item: AdminRow; index: number }) => {
+  const renderItem = useCallback(({ item, index, section }: { item: AdminRow; index: number; section?: any }) => {
+    if (section?.key === 'staff' || isStaffRole(item?.role)) {
+      return <StaffAccountCard item={item as any} index={index} onSaved={fetchStaff} />;
+    }
     const busy = busyId === item?.id;
     const place = [item?.block, item?.district, item?.state].filter(Boolean).join(', ');
     const meta = TIERS.find(t => t.key === item?.role);
@@ -675,17 +1051,30 @@ const ManageAdminsScreen = ({ route }: any) => {
         </ConsoleCard>
       </FadeInUp>
     );
-  }, [busyId]);
+  }, [busyId, fetchStaff]);
 
   const renderSectionHeader = useCallback(({ section }: any) => {
     const meta = TIERS.find(t => t.key === section?.key);
+    const isStaff = section?.key === 'staff';
     return (
-      <View style={styles.sectionHeader}>
-        <LinearGradient colors={meta?.grad || CONSOLE_ACCENTS.slate.grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.sectionIcon}>
-          <Icon name={section?.icon} size={15} color={PALETTE.white} />
-        </LinearGradient>
-        <Text style={styles.sectionTitle} numberOfLines={1}>{section?.title}</Text>
-        <ConsoleChip label={String((section?.data || []).length)} kind="info" dot={false} />
+      <View>
+        <View style={styles.sectionHeader}>
+          <LinearGradient
+            colors={meta?.grad || (isStaff ? CONSOLE_ACCENTS.indigo.grad : CONSOLE_ACCENTS.slate.grad)}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.sectionIcon}
+          >
+            <Icon name={section?.icon} size={15} color={PALETTE.white} />
+          </LinearGradient>
+          <Text style={styles.sectionTitle} numberOfLines={1}>{section?.title}</Text>
+          <ConsoleChip label={String((section?.data || []).length)} kind="info" dot={false} />
+        </View>
+        {isStaff ? (
+          <ConsoleNote
+            icon="vpn-key"
+            style={styles.staffNote}
+            text="The CMS and events sign-ins. You keep their credentials — reset a password here and nobody else is needed. Your own password is changed in Settings."
+          />
+        ) : null}
       </View>
     );
   }, []);
@@ -1043,6 +1432,18 @@ const styles = StyleSheet.create({
   metaTextInactive: { color: PALETTE.warningText, fontWeight: '600' },
 
   actions: { flexDirection: 'row', gap: SPACE.sm, marginTop: SPACE.lg },
+
+  staffNote: { marginHorizontal: SPACE.lg, marginTop: -SPACE.xs, marginBottom: SPACE.md },
+  staffEditor: {
+    marginTop: SPACE.lg, paddingTop: SPACE.lg,
+    borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: PALETTE.divider,
+  },
+  pwBox: { borderRadius: 16, borderWidth: 1, borderColor: PALETTE.divider, padding: SPACE.md, marginBottom: SPACE.xs },
+  pwHead: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
+  pwFields: { marginTop: SPACE.md },
+  strengthRow: { flexDirection: 'row', gap: 4, marginTop: SPACE.xs },
+  strengthBar: { flex: 1, height: 5, borderRadius: 3 },
+  strengthText: { ...TYPE.caption, marginTop: SPACE.xs, marginBottom: SPACE.sm },
 });
 
 export default ManageAdminsScreen;

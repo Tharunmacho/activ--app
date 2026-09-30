@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Share, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Screen, AppHeader, Card, PrimaryButton, PALETTE, SPACE, RADIUS } from '../../../ui';
+import {
+  PALETTE, SPACE, TYPE,
+  ConsoleScroll, ConsoleHeader, ConsoleCard, ConsoleButton, ConsoleChip, GlassIconButton,
+} from '../../../ui';
 import { updateCmsEvent, eventPublicUrl, errorText } from '../../../services/superApi';
 import { ToggleRow, openUrl } from './superKit';
 import { QrCode } from './events/qr';
@@ -72,11 +75,18 @@ const SuperEventQrScreen: React.FC = () => {
   };
 
   return (
-    <Screen tone="admin">
-      <AppHeader tone="admin" title={justCreated ? 'Event created — QR ready' : 'Event QR code'} subtitle={title}
-        onBack={() => navigation.goBack()} />
+    <ConsoleScroll>
+      <ConsoleHeader
+        compact
+        eyebrow="Super Admin · events"
+        title={justCreated ? 'Event created — QR ready' : 'Event QR code'}
+        subtitle={title}
+        left={<GlassIconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => navigation.goBack()} />}
+        right={<GlassIconButton icon="share" accessibilityLabel="Share" onPress={share} />}
+      />
 
-      <Card style={s.card}>
+      <ConsoleCard style={[s.card, s.first]}>
+        {justCreated ? <ConsoleChip label="Saved" kind="approved" icon="check-circle" style={s.saved} /> : null}
         <Text style={s.title} numberOfLines={3}>{title}</Text>
         {when ? <Text style={s.when}>{when}</Text> : null}
         <View style={s.qrFrame}>
@@ -84,27 +94,29 @@ const SuperEventQrScreen: React.FC = () => {
         </View>
         <Text style={s.caption}>Scanning opens this event&apos;s page on the phone.</Text>
         <Text style={s.url} selectable numberOfLines={3}>{url}</Text>
-      </Card>
+      </ConsoleCard>
 
       <View style={s.actions}>
-        <PrimaryButton tone="admin" icon="share" label="Share" onPress={share} />
-        <PrimaryButton tone="admin" variant="outline" icon="open-in-new" label="Open the event page" onPress={() => openUrl(url)} />
+        <ConsoleButton icon="share" label="Share" onPress={share} />
+        <ConsoleButton kind="soft" icon="open-in-new" label="Open the event page" onPress={() => openUrl(url)} />
       </View>
 
-      <Card style={s.card}>
+      <ConsoleCard style={s.card}>
         <ToggleRow label="Show this QR on the event page" value={showOnPage} onChange={toggle} disabled={busy || !event?.id}
           hint="Visitors can scan it from a screen or projector, or download it." last />
-      </Card>
-    </Screen>
+      </ConsoleCard>
+    </ConsoleScroll>
   );
 };
 
 const s = StyleSheet.create({
-  card: { marginHorizontal: SPACE.lg, marginTop: SPACE.md, alignItems: 'stretch' },
-  title: { fontSize: 18, fontWeight: '800', color: PALETTE.text, textAlign: 'center' },
+  card: { marginHorizontal: SPACE.lg, marginTop: SPACE.md },
+  first: { marginTop: -SPACE.lg },
+  saved: { alignSelf: 'center', marginBottom: SPACE.sm },
+  title: { ...TYPE.heading, fontSize: 18, textAlign: 'center' },
   when: { fontSize: 13, color: PALETTE.textMuted, textAlign: 'center', marginTop: 4 },
-  qrFrame: { alignSelf: 'center', marginTop: SPACE.lg, padding: SPACE.sm, borderRadius: RADIUS.md, borderWidth: 2, borderColor: '#DBE4FB', backgroundColor: '#FFFFFF' },
-  caption: { fontSize: 13, fontWeight: '700', color: '#1E3A8A', textAlign: 'center', marginTop: SPACE.md },
+  qrFrame: { alignSelf: 'center', marginTop: SPACE.lg, padding: SPACE.sm, borderRadius: 18, borderWidth: 2, borderColor: PALETTE.indigoSoft, backgroundColor: '#FFFFFF' },
+  caption: { fontSize: 13, fontWeight: '700', color: PALETTE.indigoDark, textAlign: 'center', marginTop: SPACE.md },
   url: { fontSize: 12, color: PALETTE.textMuted, textAlign: 'center', marginTop: 4 },
   actions: { marginHorizontal: SPACE.lg, marginTop: SPACE.lg, gap: SPACE.sm },
 });
