@@ -5,7 +5,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
   PALETTE, SPACE, TYPE,
   ConsoleFrame, ConsoleHeader, ConsoleGrid, ConsoleStatTile, ConsoleCard, ConsoleChip, ConsoleTabs,
-  ConsoleButton, ConsoleSkeleton, ConsoleState, ConsoleNote, CoverageRing, GlassIconButton,
+  ConsoleButton, ConsoleSkeleton, ConsoleState, ConsoleNote, CoverageRing,
   EventTicket3D, CONSOLE_LIST, consoleGreeting,
 } from '../../ui';
 import { useAuthStore } from '../../stores/exampleStore';
@@ -30,6 +30,9 @@ import { eventWhen } from './checkinKit';
 type Props = { navigation: any };
 type Scope = 'upcoming' | 'past';
 
+/** Live counts while the screen is open — check-ins at the door appear within ~10 s. */
+const LIVE_MS = 10000;
+
 export default function EventsCheckinHomeScreen({ navigation }: Props) {
   const [scope, setScope] = useState<Scope>('upcoming');
   const [events, setEvents] = useState<CheckinEvent[]>([]);
@@ -38,22 +41,27 @@ export default function EventsCheckinHomeScreen({ navigation }: Props) {
   const [error, setError] = useState('');
   const { user } = useAuthStore();
 
-  const load = useCallback(async (mode: 'first' | 'refresh' = 'first') => {
-    if (mode === 'refresh') setRefreshing(true); else setLoading(true);
+  const load = useCallback(async (mode: 'first' | 'refresh' | 'quiet' = 'first') => {
+    if (mode === 'refresh') setRefreshing(true); else if (mode === 'first') setLoading(true);
     setError('');
     try {
       const list = await listCheckinEvents(scope);
       setEvents(Array.isArray(list) ? list : []);
     } catch (err: any) {
-      setError(checkinErrorMessage(err, 'The events could not be loaded.'));
+      // A failed background refresh keeps the list on screen.
+      if (mode !== 'quiet') setError(checkinErrorMessage(err, 'The events could not be loaded.'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, [scope]);
 
-  // Back from the scanner: the counts have moved.
-  useFocusEffect(useCallback(() => { load('first'); }, [load]));
+  // Back from the scanner: the counts have moved — and stay live while open.
+  useFocusEffect(useCallback(() => {
+    load('first');
+    const timer = setInterval(() => { load('quiet'); }, LIVE_MS);
+    return () => clearInterval(timer);
+  }, [load]));
 
   const totals = useMemo(() => (events || []).reduce(
     (t, e) => ({
@@ -64,8 +72,10 @@ export default function EventsCheckinHomeScreen({ navigation }: Props) {
     { today: 0, registered: 0, checkedIn: 0 },
   ), [events]);
 
-  const scan = useCallback((e?: CheckinEvent) => {
-    navigation?.navigate?.('EventCheckinScanner', e ? { eventId: e.id, eventTitle: e.title } : {});
+  // Always for one event: the server refuses a scan with no event.
+  const scan = useCallback((e: CheckinEvent) => {
+    if (!e?.id) return;
+    navigation?.navigate?.('EventCheckinScanner', { eventId: e.id, eventTitle: e.title });
   }, [navigation]);
 
   const renderItem = useCallback(({ item }: { item: CheckinEvent }) => {
@@ -131,15 +141,16 @@ export default function EventsCheckinHomeScreen({ navigation }: Props) {
         title="Events"
         subtitle={user?.fullName ? `Signed in as ${user.fullName}` : 'Scan attendees’ entry passes at the door'}
         art={<EventTicket3D size={104} />}
-        right={<GlassIconButton icon="qr-code-scanner" accessibilityLabel="Scan a pass" onPress={() => scan()} />}
-        badges={[{ icon: 'badge', label: 'Events Admin' }]}
+        badges={[{ icon: 'badge', label: 'Event Attendance Admin' }]}
       />
       <ConsoleGrid overlap>
         <ConsoleStatTile label="Checked in" value={totals.checkedIn} icon="how-to-reg" accent="green" hint={`of ${totals.registered} registered`} />
         <ConsoleStatTile label="Events today" value={totals.today} icon="today" accent="indigo" delay={60} />
       </ConsoleGrid>
+      {/* No "scan for any event": a pass only works at its own event's door,
+          so the scanner is always opened from an event below. */}
       <View style={s.gutter}>
-        <ConsoleButton icon="qr-code-scanner" label="Scan a pass for any event" onPress={() => scan()} />
+        <ConsoleNote icon="qr-code-scanner" text="Tap Scan on the event you are checking in. A pass only works at its own event, and online events have no door." />
       </View>
       <ConsoleTabs
         options={[{ value: 'upcoming', label: 'Today & upcoming' }, { value: 'past', label: 'Past' }]}

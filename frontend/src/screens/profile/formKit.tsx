@@ -289,7 +289,7 @@ export function EyeToggle({ shown, onToggle }: { shown: boolean; onToggle: () =>
  * default ('expand-more', the chevron) is ignored — the chevron is built in.
  */
 export function SelectField({
-  label, value, options, onChange, placeholder = 'Select', required, disabled, hint, error, icon, emptyText, tone = 'member',
+  label, value, options, onChange, placeholder = 'Select', required, disabled, hint, error, icon, emptyText, tone = 'member', iconBadge,
 }: {
   label: string;
   value: string;
@@ -303,6 +303,7 @@ export function SelectField({
   icon?: string;
   emptyText?: string;
   tone?: Tone;
+  iconBadge?: boolean;
 }) {
   return (
     <PremiumSelect
@@ -318,6 +319,7 @@ export function SelectField({
       icon={icon && icon !== 'expand-more' ? icon : undefined}
       emptyText={emptyText}
       tone={tone}
+      iconBadge={iconBadge}
     />
   );
 }

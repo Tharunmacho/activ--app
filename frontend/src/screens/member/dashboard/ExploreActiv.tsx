@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Image, Linking, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
   PALETTE, SPACE, TYPE, Skeleton, shortDate,
-  BRAND, FadeInUp, PressableScale, FloatingIllustration, PremiumSectionHeader, SiteArt, SiteArtKind, WebsiteGlobe3D,
-} from '../../../ui';
+  BRAND, FadeInUp, PressableScale, FloatingIllustration, PremiumSectionHeader, SiteArt, SiteArtKind, WebsiteGlobe3D, FitImage } from '../../../ui';
 import {
   getSiteNav, getLegalLinks, getZones, getLatestNews, getGalleryStrip, getPublicEvents,
   FALLBACK_NAV, FALLBACK_LEGAL, SiteLink, Zone, NewsTeaser, GalleryThumb, EventTeaser,
@@ -221,7 +220,7 @@ export default function ExploreActiv({ navigation, refreshKey = 0 }: { navigatio
                   >
                     <View style={x.newsImgWrap}>
                       {n.image ? (
-                        <Image source={{ uri: n.image }} style={x.newsImg} resizeMode="cover" accessibilityIgnoresInvertColors />
+                        <FitImage uri={n.image} style={x.newsImg} />
                       ) : (
                         <LinearGradient colors={TILE_BY_PATH['/news'].colors} style={[x.newsImg, x.center]}>
                           <SiteArt kind="news" size={56} />
@@ -313,7 +312,7 @@ export default function ExploreActiv({ navigation, refreshKey = 0 }: { navigatio
                     accessibilityRole="button"
                     accessibilityLabel={`${g.title || 'Photo'}. Opens in the gallery.`}
                   >
-                    <Image source={{ uri: g.image }} style={x.photoImg} resizeMode="cover" accessibilityIgnoresInvertColors />
+                    <FitImage uri={g.image} style={x.photoImg} />
                     {g.title ? (
                       <LinearGradient colors={['rgba(11,26,69,0)', 'rgba(11,26,69,0.8)']} style={x.photoCap}>
                         <Text style={x.photoCapText} numberOfLines={2} maxFontSizeMultiplier={1.1}>{g.title}</Text>

@@ -106,6 +106,9 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
   const [districts, setDistricts] = useState<string[]>([]);
   const [blocks, setBlocks] = useState<string[]>([]);
   const [regionError, setRegionError] = useState('');
+  /** Bumped by "Try again"; also bumped when the tree lands so districts/blocks re-read it. */
+  const [regionAttempt, setRegionAttempt] = useState(0);
+  const [regionVersion, setRegionVersion] = useState(0);
   /** False when no region on the platform is staffed at all (website `coverageAvailable`). */
   const [coverageAvailable, setCoverageAvailable] = useState(true);
 
@@ -149,14 +152,35 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
 
   useEffect(() => {
     let cancelled = false;
-    getStates()
-      .then((nodes) => { if (!cancelled) setStates(names(nodes)); })
-      .catch(() => { if (!cancelled) setRegionError('Could not load regions. Check your connection and reopen this step.'); });
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    setRegionError('');
+    // A dropped connection (or a dev-machine hiccup) should not strand the
+    // form: try three times, backing off, before asking the member to retry.
+    const attempt = (tries: number) => {
+      getStates(regionAttempt > 0 || tries > 0)
+        .then((nodes) => {
+          if (cancelled) return;
+          setStates(names(nodes));
+          setRegionVersion((v) => v + 1);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          if (tries < 2) {
+            timer = setTimeout(() => attempt(tries + 1), 1500 * (tries + 1));
+          } else {
+            setRegionError('Could not load regions. Check your connection and try again.');
+          }
+        });
+    };
+    attempt(0);
     fetchRegionTree(false, 'all')
       .then((tree) => { if (!cancelled) setCoverageAvailable(tree?.coverageAvailable !== false); })
       .catch(() => { /* a failed read is not "no coverage" */ });
-    return () => { cancelled = true; };
-  }, []);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [regionAttempt]);
 
   useEffect(() => {
     let cancelled = false;
@@ -168,7 +192,7 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
       .then((nodes) => { if (!cancelled) setDistricts(withCurrent(names(nodes), form.district)); })
       .catch(() => { if (!cancelled) setDistricts(withCurrent([], form.district)); });
     return () => { cancelled = true; };
-  }, [form.state, form.district]);
+  }, [form.state, form.district, regionVersion]);
 
   useEffect(() => {
     let cancelled = false;
@@ -180,7 +204,7 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
       .then((nodes) => { if (!cancelled) setBlocks(withCurrent(names(nodes), form.block)); })
       .catch(() => { if (!cancelled) setBlocks(withCurrent([], form.block)); });
     return () => { cancelled = true; };
-  }, [form.state, form.district, form.block]);
+  }, [form.state, form.district, form.block, regionVersion]);
 
   /* ---------------------------------------------------------------- edits */
 
@@ -348,6 +372,15 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
           />
         ) : (
           <>
+            {regionError ? (
+              <Notice
+                kind="danger"
+                text={regionError}
+                action="Try again"
+                onAction={() => setRegionAttempt((n) => n + 1)}
+                style={NOTICE}
+              />
+            ) : null}
             <SelectField
               label="State"
               required
@@ -356,7 +389,8 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
               onChange={(v) => setField('state', v)}
               placeholder="Select state"
               icon="map"
-              error={errors.state || regionError}
+              iconBadge
+              error={errors.state}
               disabled={isLocked}
               emptyText="No regions are open yet"
             />
@@ -367,7 +401,8 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
               options={districts}
               onChange={(v) => setField('district', v)}
               placeholder={form.state ? 'Select district' : 'Choose a state first'}
-              icon="location-city"
+              icon="apartment"
+              iconBadge
               error={errors.district}
               disabled={isLocked || !form.state}
             />
@@ -378,7 +413,8 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
               options={blocks}
               onChange={(v) => setField('block', v)}
               placeholder={form.district ? 'Select block' : 'Choose a district first'}
-              icon="place"
+              icon="holiday-village"
+              iconBadge
               error={errors.block}
               disabled={isLocked || !form.district}
             />

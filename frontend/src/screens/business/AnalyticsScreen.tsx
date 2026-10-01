@@ -50,6 +50,34 @@ const AnalyticsScreen: React.FC<Props> = ({ navigation }) => {
   // fetched the first time this company was selected.
   const [focusTick, setFocusTick] = useState(0);
 
+  /*
+   * PROFILE VIEWS — the member's directory card, not the company's catalogue.
+   * Counted by the server on each directory open (one per viewer per day, never
+   * the member themselves) and served by GET /analytics/me (website Analytics
+   * "Profile Views"). A count only: the endpoint does not name the viewers.
+   */
+  const [reach, setReach] = useState<{ profileViews: number; windowDays: number } | null>(null);
+
+  useEffect(() => {
+    if (paid !== true) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.get('/analytics/me', { params: { days: 30 } });
+        const payload = res?.data?.data || res?.data || {};
+        if (!cancelled) {
+          setReach({
+            profileViews: Number(payload?.engagement?.profileViews || 0),
+            windowDays: Number(payload?.windowDays || 30),
+          });
+        }
+      } catch (err) {
+        if (!cancelled) setReach(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [paid, focusTick]);
+
   useFocusEffect(
     useCallback(() => {
       setFocusTick((tick) => tick + 1);
@@ -171,6 +199,12 @@ const AnalyticsScreen: React.FC<Props> = ({ navigation }) => {
               <MetricTile tone="business" icon="inventory-2" label="Catalog products" value={total} hint="Total listed" colors={CHIP.green} delay={140} />
             </MetricGrid>
           </View>
+
+          {/* Who is finding the MEMBER — their directory card, all companies. */}
+          <BizSectionTitle title="Your profile" caption={`Last ${reach?.windowDays || 30} days`} />
+          <LiftCard tone="business" style={styles.gutter}>
+            <MetricRow icon="person" label="Directory profile views" value={Number(reach?.profileViews || 0)} colors={CHIP.violet} last />
+          </LiftCard>
 
           {/* Catalogue health — how much of the catalogue is live, and who keeps you. */}
           <BizSectionTitle title="Catalog breakdown" />

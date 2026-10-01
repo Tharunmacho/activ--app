@@ -10,7 +10,7 @@ import {
   EventTicket3D, EventCalendar3D, PREMIUM_OVERLAP,
 } from '../../../ui';
 import { getBookableEvent, createEventBooking, getEventBooking, getMyProfile, checkEventBooking } from '../../../services/memberApi';
-import { API_ORIGIN } from '../../../config/api.config';
+import { WEBSITE_PATHS, websiteUrl } from '../../../config/website.config';
 import { QrCode } from '../../admin/super/events/qr';
 import { dateParts, whereOf, googleCalendarUrl, directionsUrl, shareLine, formatWhen } from './eventFormat';
 
@@ -120,7 +120,8 @@ function Ticket({ b, event, fallbackEmail, onPay, onRebook }: { b: any; event: a
     mode,
     onlinePlatform: b?.onlinePlatform ?? event?.onlinePlatform,
   };
-  const pageUrl = `${API_ORIGIN}/events/${encodeURIComponent(String(merged.slug || merged.id || ''))}`;
+  // The public WEBSITE page — never the API host, which has no such page (404).
+  const pageUrl = websiteUrl(WEBSITE_PATHS.event(String(merged.slug || merged.id || '')));
   // Website EventActions sit under every confirmation; a cancelled booking has nothing to diary.
   const actionable = status !== 'cancelled';
   const calendar = actionable ? googleCalendarUrl(merged, pageUrl) : '';

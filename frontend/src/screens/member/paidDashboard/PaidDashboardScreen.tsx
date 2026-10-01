@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -7,8 +7,7 @@ import {
   PALETTE, SPACE, RADIUS, SIZE, TYPE, GRADIENTS, asArray, shortDate,
   PremiumScrollScreen, PREMIUM_OVERLAP, FadeInUp, PressableScale, GradientButton,
   PremiumCard, PremiumSectionHeader, GradientIconChip, ActionTile, ActionGrid, StatPill, StatRow, PremiumEmptyState,
-  MemberBadge3D, ChipTone,
-} from '../../../ui';
+  MemberBadge3D, ChipTone, FitImage } from '../../../ui';
 import { GradientPanel } from '../dashboard/DashboardKit';
 import {
   DashboardHeader, MembershipCard3D, PremiumDashboardSkeleton, greetingFor, greetingEmoji, todayLabel,
@@ -354,7 +353,7 @@ const PaidDashboardScreen = ({ navigation }: any) => {
                   >
                     {banner ? (
                       <View style={styles.poster}>
-                        <Image source={{ uri: banner }} style={styles.posterImg} resizeMode="cover" accessibilityLabel={e?.bannerAlt || ''} />
+                        <FitImage uri={banner} style={styles.posterImg} fit={e?.media?.fit === 'cover' ? 'cover' : 'contain'} accessibilityLabel={e?.bannerAlt || ''} />
                         <LinearGradient colors={['rgba(11,26,69,0)', 'rgba(11,26,69,0.65)']} style={styles.posterShade} />
                         {e?.category ? <View style={styles.posterCat}><Text style={styles.posterCatText} numberOfLines={1}>{String(e.category).toUpperCase()}</Text></View> : null}
                       </View>
@@ -408,7 +407,7 @@ const PaidDashboardScreen = ({ navigation }: any) => {
                   onPress={() => navigation.navigate('UpdateDetail', { id: String(u?.id || '') })}
                   accessibilityLabel={u?.title || 'Update'}
                 >
-                  {banner ? <Image source={{ uri: banner }} style={styles.updThumb} /> : (
+                  {banner ? <FitImage uri={banner} style={styles.updThumb} /> : (
                     <GradientIconChip icon={u?.pinned ? 'push-pin' : 'campaign'} tone="amber" />
                   )}
                   <View style={styles.rowText}>

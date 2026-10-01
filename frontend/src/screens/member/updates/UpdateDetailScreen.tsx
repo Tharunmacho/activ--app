@@ -1,11 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Linking, Share } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Linking, Share } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
   Skeleton, Badge, BottomActionBar, PALETTE, SPACE, SIZE, TYPE, shortDate, timeAgo, BRAND,
   PremiumPage, PremiumPageHeader, PREMIUM_OVERLAP, GlassIconButton, Megaphone3D,
-  SurfaceCard, GradientGlyph, GradientButton, StateView, FadeInUp,
-} from '../../../ui';
+  SurfaceCard, GradientGlyph, GradientButton, StateView, FadeInUp, FitImage } from '../../../ui';
 import { getAnnouncement } from '../../../services/memberApi';
 import { resolveMediaUrl } from '../../../config/api.config';
 import { useLoad } from '../useLoad';
@@ -95,7 +94,7 @@ const UpdateDetailScreen = ({ navigation, route }: any) => {
       ) : (
         <FadeInUp delay={120} style={styles.overlap}>
           <SurfaceCard padded={false} style={styles.gutter} accent={update?.pinned ? '#BFD4FB' : undefined}>
-            {banner ? <Image source={{ uri: banner }} style={styles.banner} resizeMode="contain" accessibilityLabel={update?.bannerAlt || ''} /> : null}
+            {banner ? <FitImage uri={banner} mode="auto" minRatio={1.2} maxRatio={2.6} accessibilityLabel={update?.bannerAlt || ''} /> : null}
             <View style={styles.body}>
               <View style={styles.metaRow}>
                 {!banner ? <GradientGlyph icon={glyph.icon} tone={glyph.tone} size={36} /> : null}

@@ -185,6 +185,14 @@ export default function CompanyForm({ companyId, title, subtitle, createLabel = 
   const [savedLogo, setSavedLogo] = useState('');
   const [savedBanner, setSavedBanner] = useState('');
   const [step, setStep] = useState(1);
+  /*
+   * NEW COMPANY: every section must be OPENED before it can be created.
+   * Fields without a star stay optional, but a company created from the
+   * identity section alone was the common case — people filled four boxes and
+   * left. `furthest` is the furthest section reached; Create appears only on
+   * the last one. Editing an existing company saves from any section.
+   */
+  const [furthest, setFurthest] = useState(1);
   const scrollRef = useRef<ScrollView>(null);
 
   const load = useCallback(async () => {
@@ -225,8 +233,11 @@ export default function CompanyForm({ companyId, title, subtitle, createLabel = 
   };
   // One section at a time; moving between them returns to the top of the page.
   const goStep = (n: number) => {
-    const next = Math.max(1, Math.min(4, Math.round(Number(n || 1))));
+    let next = Math.max(1, Math.min(4, Math.round(Number(n || 1))));
+    // A new company: back freely, forward one section at a time.
+    if (!isEdit && next > furthest + 1) next = furthest + 1;
     setStep(next);
+    setFurthest((f) => Math.max(f, next));
     try { scrollRef.current?.scrollTo({ y: 0, animated: true }); } catch (err) { console.warn('Scroll safely caught:', err); }
   };
 
@@ -297,7 +308,31 @@ export default function CompanyForm({ companyId, title, subtitle, createLabel = 
     return true;
   };
 
+  /** Leaving Identity on a new company: its four starred answers first. */
+  const identityProblem = (): string => {
+    if (!(form.businessName || '').trim()) return 'Business name is required';
+    if (!form.businessType) return 'Business type is required';
+    if (!(form.mobileNumber || '').trim()) return 'Mobile number is required';
+    if (!(form.location || '').trim()) return 'City / location is required';
+    return checkMobile(form.mobileNumber, 'Mobile number') || '';
+  };
+
+  const forward = () => {
+    if (!isEdit && step === 1) {
+      const problem = identityProblem();
+      if (problem) {
+        validate();
+        return;
+      }
+    }
+    goStep(step + 1);
+  };
+
+  const lastStep = step >= STEP_LABELS.length;
+  const canCreate = isEdit || (lastStep && furthest >= STEP_LABELS.length);
+
   const submit = async () => {
+    if (!canCreate) { forward(); return; }
     if (saving || !validate()) return;
     setSaving(true);
     try {
@@ -377,19 +412,21 @@ export default function CompanyForm({ companyId, title, subtitle, createLabel = 
   );
 
   const footer = (
-    <BottomActionBar note={step === 1
-      ? 'Only the four starred answers are required. Everything else can be added later.'
-      : `Section ${step} of ${STEP_LABELS.length} · save from any section`}
+    <BottomActionBar note={isEdit
+      ? `Section ${step} of ${STEP_LABELS.length} · save from any section`
+      : lastStep
+        ? 'All four sections done. Fields without a star could be left blank.'
+        : `Section ${step} of ${STEP_LABELS.length} · go through every section to create the company. Fields without a star can be left blank.`}
     >
       <StepNav icon="chevron-left" label="Previous section" disabled={step <= 1 || saving} onPress={() => goStep(step - 1)} />
       <GradientButton tone="business"
-        label={isEdit ? 'Update company' : createLabel}
-        icon="check"
-        onPress={submit}
+        label={isEdit ? 'Update company' : canCreate ? createLabel : `Next: ${STEP_TITLES[step] || ''}`}
+        icon={canCreate ? 'check' : 'arrow-forward'}
+        onPress={canCreate ? submit : forward}
         loading={saving}
         style={{ flex: 1 }}
       />
-      <StepNav icon="chevron-right" label="Next section" disabled={step >= STEP_LABELS.length || saving} onPress={() => goStep(step + 1)} />
+      <StepNav icon="chevron-right" label="Next section" disabled={lastStep || saving} onPress={forward} />
     </BottomActionBar>
   );
 
@@ -514,9 +551,9 @@ export default function CompanyForm({ companyId, title, subtitle, createLabel = 
 
       {/* The next section, one tap — so a long form never ends in a dead end. */}
       {step < STEP_LABELS.length ? (
-        <PressableScale onPress={() => goStep(step + 1)} style={styles.nextWrap} contentStyle={styles.nextCard} accessibilityRole="button" accessibilityLabel={`Next: ${STEP_TITLES[step]}`}>
+        <PressableScale onPress={forward} style={styles.nextWrap} contentStyle={styles.nextCard} accessibilityRole="button" accessibilityLabel={`Next: ${STEP_TITLES[step]}`}>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.nextEyebrow} maxFontSizeMultiplier={1.3}>Next · optional</Text>
+            <Text style={styles.nextEyebrow} maxFontSizeMultiplier={1.3}>{isEdit ? 'Next section' : `Next · section ${step + 1} of ${STEP_LABELS.length}`}</Text>
             <Text style={styles.nextTitle} maxFontSizeMultiplier={1.3}>{STEP_TITLES[step]}</Text>
           </View>
           <Icon name="arrow-forward" size={20} color={PALETTE.violet} />

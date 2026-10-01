@@ -14,7 +14,7 @@ import { ChipRow, MiniAction, useRegionTreeAll, useRegionNames } from './superKi
 import { InlineSelect } from './events/eventKit';
 import RegionInput from './components/RegionInput';
 import { AutomationPane } from './delivery/AutomationPane';
-import { channelColor, channelIcon } from './delivery/deliveryKit';
+import { canResend, channelColor, channelIcon } from './delivery/deliveryKit';
 
 /**
  * ============================================================================
@@ -52,6 +52,9 @@ const EVENTS = [
   'EVENT_BOOKING_CONFIRMED', 'EVENT_BOOKING_WAITLISTED', 'EVENT_BOOKING_REMINDER', 'EVENT_BOOKING_CANCELLED',
   'EVENT_PARTICIPANT_CONFIRMED', 'EVENT_PARTICIPANT_REMINDER', 'EVENT_PARTICIPANT_CANCELLED',
   'EVENT_REGISTERED', 'EVENT_REMINDER',
+  'EVENT_DOCUMENT_CONFIRMED', 'EVENT_DOCUMENT_REMINDER',
+  'PLATINUM_REQUESTED', 'ADMIN_PLATINUM_REQUEST',
+  'PASSWORD_RESET', 'ADMIN_WELCOME', 'DONATION_RECEIPT', 'DONATION_STATEMENT',
   // Retired events, still on older log rows.
   'STAGE_CHANGED', 'PAYMENT_SUCCESS',
   'BOT_REPLY', 'CUSTOM',
@@ -102,7 +105,7 @@ function LogRow({ l, busy, onRetry }: { l: any; busy: boolean; onRetry: () => vo
         <Text style={s.when} maxFontSizeMultiplier={1.3}>{when(l?.createdAt)}</Text>
         <ConsoleChip label={pill.label} kind={pill.kind} />
         <View style={s.flex} />
-        {state === 'failed' && ch !== 'in_app' ? (
+        {state === 'failed' && ch !== 'in_app' && canResend(l) ? (
           <MiniAction icon="replay" label={busy ? 'Sending…' : 'Send again'} onPress={onRetry} disabled={busy} />
         ) : null}
       </View>

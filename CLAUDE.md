@@ -168,20 +168,52 @@ snake_case (`pending_block_approval`), and bare lowercase (`approved`).
 both read and write paths. Skipping this puts legacy rows in the wrong queue or
 makes them permanently unactionable.
 
-## Collection names and key fields (both are counter-intuitive)
+## Where data lives — `src/config/dataLayout.js` is the only map
 
-The member models write to legacy, human-named collections, and the key field
-differs per model. Getting either wrong fails **silently** — Mongoose strict
-mode drops unknown paths without error.
+Eight databases, one SUBJECT each — open one and everything in it is about
+that subject (a member's business details and finances are business, not
+member; the admins' audit trail is admin). Plain collection names:
 
-| Model | Collection | Key field |
-|---|---|---|
-| MemberDetails | `web users` | `userId` |
-| BusinessInfo | `additional form for bussiness 2` (sic) | `userId` |
-| MemberFinancialInfo | `additional form for financial 3` | `memberId` |
-| MemberDeclaration | `additional form for declaration 4` | `userId` (unique index) + `memberId` |
+| Database | Holds |
+|---|---|
+| `activ_members` | `members`, `member_logins`, `member_personal_details`, `member_declarations`, `applications`, `platinum_requests`, `membership_plans`, `membership_settings`, `membership_counters`, `member_activities` |
+| `activ_business` | `business_details`, `business_financials` (PAN/GST/Udyam/ITR/turnover), `companies`, `products`, `trusted_companies`, `stock_movements`, `engagements`, `connections`, `conversations`, `messages` |
+| `activ_events` | `events`, `event_bookings`, `event_checkins`, `event_registrations` |
+| `activ_payments` | `payment_orders`, `donations`, `donors`, `donation_counters` |
+| `activ_notifications` | `notifications`, `notification_logs`, `announcements` |
+| `activ_admins` | `super_admins` (also cms / events / attendance staff), `state_admins`, `district_admins`, `block_admins`, `admin_audit_logs` |
+| `activ_website` | the CMS pages: `home`, `about`, `gallery`, `news`, `schemes`, `legal_documents`, … |
+| `activ_files` | GridFS `uploads.files` / `uploads.chunks` |
 
-`additional form for declaration 4` carries a UNIQUE index on `userId`. Any
+Every model registers with `dataLayout.model(name, schema)`; raw collections
+(counters, GridFS) come from `dataLayout.collection()` / `nativeDb()`. **Never
+name a collection or database anywhere else** — not in a schema's `collection:`
+option, not in `mongoose.connection.db.collection('…')`. A collection name fails
+SILENTLY: Mongoose writes wherever it is pointed. `server.js` calls
+`assertAllModelsMapped()` and refuses to boot with a model outside the map.
+
+What must share a database, and why: applications + members
+(`populate('userId')`), products / trusted companies + companies
+(`populate('companyId')`), donations + donors (`$lookup`). Final approval
+writes member documents in two databases; transactions span databases on a
+replica set, and the standalone Dokploy server uses the compensating fallback.
+
+The old Atlas layout (`activ-db` / `adminsdb`, names like
+`additional form for bussiness 2`) is recorded per model in `dataLayout.MODELS`
+for `scripts/migrate-to-dokploy.js` only. Scripts in `backend/scripts/` older
+than 2026-10-01 still use those old names — do not run them against the new
+database.
+
+The key field still differs per member model — getting it wrong fails silently:
+
+| Model | Key field |
+|---|---|
+| MemberDetails | `userId` |
+| BusinessInfo | `userId` |
+| MemberFinancialInfo | `memberId` |
+| MemberDeclaration | `userId` (unique index) + `memberId` |
+
+`member_declarations` carries a UNIQUE index on `userId`. Any
 document written without it lands as `userId: null`, and a unique index permits
 exactly one null — so the second such write ever attempted fails with E11000.
 Always populate `userId`.
@@ -223,18 +255,18 @@ applicant sees. Nothing else decides which regions exist.
 
 ## 1. Segregated storage — one collection per tier
 
-Writes go to `adminsdb`, split by tier:
+Writes go to `activ_admins`, split by tier:
 
 ```
-block admins    -> adminsdb.blockadmins
-district admins -> adminsdb.districtadmins
-state admins    -> adminsdb.stateadmins
+block admins    -> activ_admins.block_admins
+district admins -> activ_admins.district_admins
+state admins    -> activ_admins.state_admins
+super + staff   -> activ_admins.super_admins
 ```
 
-`admin.repository.js` is the **only** module allowed to read or write them.
-Nothing is written to the old unified `admins` collection any more; reads still
-include it, because it holds accounts that predate the split and an account that
-can authenticate must be visible to the code deciding whether it may.
+`admin.repository.js` is the **only** module allowed to read or write them. The
+old unified `admins` collection was empty at the move to the new layout and was
+not carried over; the repository no longer scans it.
 
 Two field-name traps live behind that repository, and both fail *silently*:
 
@@ -406,7 +438,7 @@ itself, making it a **catch-all auth gate for every route registered after it**
 in `routes.js`. The public `/regions` mount must stay above it, or the
 registration dropdowns get 401 and come back empty.
 
-## The adminsdb connection
+## The admins connection (`adminsDb.js`, database `activ_admins`)
 
 `adminsDb.ensureReady()` — not `isReady()` — is what the repository awaits.
 `isReady()` is false both when the connection has failed *and* when it has never
@@ -823,6 +855,23 @@ different threshold.
 fallback for a failed call only**. A member on that screen is trying to pay;
 showing them nothing is worse than showing the released prices.
 
+
+# TWO THINGS THAT BROKE PRODUCTION-LIKE BUILDS — DON'T REPEAT THEM
+
+- **The public read-cache warm-up (`core/middleware/publicCache.warm`) must stay
+  gentle**: ONE request at a time, carrying the per-process `WARM_TOKEN`. Fired
+  all at once past the cache it filled the Mongo pool (page loads waited 2–11 s)
+  and, counted by the per-IP limiter as 127.0.0.1, got the server 429'd. Only
+  `isWarmRequest()` may bypass the cache or the rate limiter.
+- **Never hand-copy a React Native / Hermes `.so` into
+  `frontend/android/app/src/main/jniLibs`.** A debug `libhermestooling.so` there
+  overrode react-android's and every RELEASE build crashed on launch
+  ("couldn't find DSO to load: libhermestooling.so"). A Gradle guard
+  (`checkNoStrayReactNativeLibs`) now fails the build if one appears. Always
+  test a RELEASE build on a device before shipping — the debug build hides it.
+- The mobile app's production API is `https://api.activ.org.in/api/v1`
+  (`frontend/src/config/api.config.ts`). `react-native-screens` is pinned at
+  4.18.0: newer versions' codegen does not build on RN 0.82.
 
 ## Checklist for every edit
 

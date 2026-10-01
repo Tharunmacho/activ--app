@@ -24,10 +24,12 @@ import { ENDPOINTS } from '../config/api.config';
  *   district_admin → DistrictDashboard
  *   state_admin    → StateDashboard
  *   super_admin    → SuperAdminDashboard
- *   events_admin   → EventsAdminHome — event check-in at the door (scan the
- *                  attendees' QR entry passes). The programme itself is
- *                  still written on the website.
- *   anything else  (the CMS account) → not served by the app; the caller
+ *   attendance_admin → EventsAdminHome — Event Attendance Administration:
+ *                  check-in at the door (scan the attendees' QR entry
+ *                  passes) and attendance. A MOBILE-ONLY account; the
+ *                  website refuses it.
+ *   anything else  (the CMS and events admin accounts, which run the
+ *                  website) → not served by the app; the caller
  *                  signs them out and says to use the website.
  *
  * Login, the admin login and the startup restore all route through here, so
@@ -50,7 +52,7 @@ export const ADMIN_HOME: Record<string, HomeRoute> = {
   district_admin: 'DistrictDashboard',
   state_admin: 'StateDashboard',
   super_admin: 'SuperAdminDashboard',
-  events_admin: 'EventsAdminHome',
+  attendance_admin: 'EventsAdminHome',
 };
 
 export const isAdminRole = (role?: string | null) => !!ADMIN_HOME[String(role || '')];

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -8,8 +8,7 @@ import { RootStackParamList } from '../../types';
 import {
   BottomActionBar, Notice, PALETTE, SPACE, TYPE, money,
   BrandScrollPage, BrandTopBar, BrandHero, PREMIUM_OVERLAP, FadeInUp, PremiumSection, PremiumInput,
-  GradientButton, ProductCrate3D, premiumTone,
-} from '../../ui';
+  GradientButton, ProductCrate3D, premiumTone, FitImage } from '../../ui';
 import api from '../../services/api';
 import { errorMessage } from '../../services/businessApi';
 import { useActiveCompany } from '../../stores/activeCompanyStore';
@@ -177,7 +176,7 @@ const AddProductScreen: React.FC<Props> = ({ navigation, route }) => {
       <FadeInUp delay={340}>
         <PremiumSection tone="business" icon="visibility" title="Preview" subtitle="How it appears to other members">
           <View style={[styles.preview, { shadowColor: p.shadow }]}>
-            {image?.uri ? <Image source={{ uri: image.uri }} style={styles.previewImg} resizeMode="cover" /> : (
+            {image?.uri ? <FitImage uri={image.uri} style={styles.previewImg} /> : (
               <LinearGradient colors={[PALETTE.violetSoft, PALETTE.violetTint]} style={[styles.previewImg, styles.previewEmpty]}>
                 <Icon name="inventory-2" size={26} color={p.accent} />
               </LinearGradient>

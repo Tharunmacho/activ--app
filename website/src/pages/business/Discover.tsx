@@ -29,6 +29,7 @@ import { useActiveCompanyStore } from "@/contexts/ActiveCompanyContext";
 import { dashboardPathFor } from '@/features/member/memberAccess';
 
 import { CARD_TITLE } from './BusinessUI';
+import { recordProductView } from '@/services/memberHubApi';
 /**
  * Discover — the website's copy of `DiscoverScreen.tsx`.
  *
@@ -163,6 +164,20 @@ const FILTERS: { key: DiscoverFilter; label: string }[] = [
 const Discover = () => {
     const { activeCompany, loadCompanies } = useActiveCompanyStore();
     const navigate = useNavigate();
+
+    /*
+     * A product a member clicks in a result card counts toward the seller's
+     * catalogue analytics — the same record-view call the directory profile
+     * makes, once per product per visit. The server also ignores the owner and
+     * de-duplicates per viewer per day.
+     */
+    const seenProducts = useRef<Set<string>>(new Set());
+    const viewProduct = useCallback((pid: string) => {
+        const key = String(pid || '');
+        if (!key || seenProducts.current.has(key)) return;
+        seenProducts.current.add(key);
+        void recordProductView(key);
+    }, []);
 
     /**
      * Which companies this member already trusts.
@@ -814,6 +829,7 @@ const Discover = () => {
                                 return (
                                     <div
                                         key={String(prod?._id || index)}
+                                        onClick={() => viewProduct(String(prod?._id || ''))}
                                         className={`flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-lg border ${isMatch
                                             ? 'bg-blue-50 border-blue-200'
                                             : 'bg-slate-50 border-slate-200'

@@ -6,8 +6,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { resolveMediaUrl } from '../../../config/api.config';
 import {
   PALETTE, SPACE, RADIUS, BRAND,
-  ConsoleScroll, ConsoleHeader, ConsoleCard, ConsoleButton, GlassIconButton, PremiumInput, BottomActionBar,
-} from '../../../ui';
+  ConsoleScroll, ConsoleHeader, ConsoleCard, ConsoleButton, GlassIconButton, PremiumInput, BottomActionBar, FitImage } from '../../../ui';
 import {
   createCmsEvent, updateCmsEvent, getEventsSettingsCategories, uploadCmsMedia, uploadEventAttachment,
   errorText, EMPTY_EVENT_MEDIA,
@@ -605,7 +604,7 @@ const SuperEventEditorScreen: React.FC = () => {
         <SubHead title="Banner" hint="Best at 1600 × 900 (16:9, landscape) — the shape the event page and cards draw." />
         <TouchableOpacity onPress={uploadBanner} activeOpacity={0.85} style={s.banner} accessibilityLabel="Choose a banner">
           {bannerBusy ? <ActivityIndicator color={PALETTE.indigo} />
-            : banner ? <Image source={{ uri: banner }} style={{ width: '100%', height: '100%' }} resizeMode={form.media.fit === 'contain' ? 'contain' : 'cover'} />
+            : banner ? <FitImage uri={banner} style={{ width: '100%', height: '100%' }} fit={form.media.fit === 'cover' ? 'cover' : 'contain'} />
               : (
                 <View style={{ alignItems: 'center', gap: 6 }}>
                   <Icon name="add-photo-alternate" size={30} color={PALETTE.indigo} />

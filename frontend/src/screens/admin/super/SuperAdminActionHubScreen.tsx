@@ -15,7 +15,7 @@ import {
   PALETTE, SPACE, TYPE, SIZE, BRAND,
   ConsoleFrame, ConsoleHeader, ConsoleGrid, ConsoleStatTile, ConsoleCard, ConsoleSectionTitle, ConsoleNote,
   ConsoleChip, ConsoleTabs, ConsoleSearch, ConsoleButton, ConsoleSkeleton, CoverageRing, GradientAvatar,
-  GlassIconButton, BrandLogo, PressableScale, FadeInUp, GlobeCommand3D, CONSOLE_LIST, CONSOLE_ACCENTS, consoleGreeting,
+  GlassIconButton, PressableScale, FadeInUp, GlobeCommand3D, CONSOLE_LIST, CONSOLE_ACCENTS, consoleGreeting,
 } from '../../../ui';
 import { resolveMediaUrl } from '../../../config/api.config';
 import api from '../../../services/api';
@@ -26,6 +26,7 @@ import { useSuperAdminBack } from './useSuperAdminBack';
 import ApplicantRow from './components/ApplicantRow';
 import { SkeletonList } from './components/Skeleton';
 import EmptyState from './components/EmptyState';
+import { MenuButton } from '../shared/TierMenu';
 
 type Tier = 'block' | 'district' | 'state';
 type Level = 'tiers' | 'regions' | 'applications';
@@ -653,7 +654,7 @@ const SuperAdminActionHubScreen = ({ navigation }: any) => {
   const header = level === 'tiers' ? (
     <View>
       <ConsoleHeader
-        left={<BrandLogo size="sm" />}
+        left={<MenuButton />}
         right={(
           <PressableScale
             onPress={() => navigation.navigate('Settings')}

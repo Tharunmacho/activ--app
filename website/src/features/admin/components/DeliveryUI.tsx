@@ -39,7 +39,7 @@ export const STATE_META: Record<string, { label: string; className: string; hint
         hint: 'WhatsApp sent it towards the handset; delivery not yet confirmed.',
     },
     accepted: {
-        label: 'Accepted',
+        label: 'Sent',
         className: 'bg-blue-50 text-blue-700 border-blue-200',
         hint: 'The provider (Meta or the mail server) accepted it. Not yet confirmed delivered.',
     },
@@ -105,11 +105,22 @@ const MESSAGE_LABELS: Record<string, string> = {
     ADMIN_NEW_APPLICATION: 'Admin · new application',
     ADMIN_PLATINUM_REQUEST: 'Admin · platinum request',
     ADMIN_QUEUE_ALERT: 'Admin · queue alert',
+    PASSWORD_RESET: 'Account · password reset link',
+    ADMIN_WELCOME: 'Admin · welcome & credentials',
+    DONATION_RECEIPT: 'Donation · 80G receipt',
+    DONATION_STATEMENT: 'Donation · year-end statement',
     STAGE_CHANGED: 'Membership · stage changed',
 };
 
 /** The message-type filter, in the order a booker and then a member meet them. */
 export const MESSAGE_TYPES: [string, string][] = Object.entries(MESSAGE_LABELS);
+
+/**
+ * A reset link is single-use and a welcome email carried a one-time password;
+ * neither is stored, so neither can be replayed (the server refuses too).
+ */
+const NO_RESEND = new Set(['PASSWORD_RESET', 'ADMIN_WELCOME']);
+export const canResend = (row: { event?: string } | null | undefined) => !NO_RESEND.has(String(row?.event || ''));
 
 export const messageLabel = (event: string) =>
     MESSAGE_LABELS[event]
@@ -124,6 +135,32 @@ export const whenLabel = (value?: string) => {
 
 export const reasonOf = (row: Partial<DeliveryLogRow> | null | undefined) =>
     String(row?.failureReason || row?.lastError || '');
+
+/**
+ * The reason in plain words, for the Automation view. Provider errors arrive
+ * as codes ("(#132005) Translated text too long"); a Super Admin needs to know
+ * what happened, not the code. A message that WENT OUT on a backup template
+ * also carries a note in `lastError` — that is not a failure, and is said so.
+ */
+export const plainReason = (row: Partial<DeliveryLogRow> | null | undefined): { text: string; failed: boolean } => {
+    const raw = reasonOf(row);
+    if (!raw) return { text: '', failed: false };
+    const failed = stateOf(row) === 'failed';
+    if (!failed && /^Sent on /i.test(raw)) return { text: 'Sent using the backup WhatsApp message', failed: false };
+    const rules: [RegExp, string][] = [
+        [/132005|too long/i, 'Message was too long for WhatsApp'],
+        [/132001|does not exist/i, 'WhatsApp template not found'],
+        [/131026|not.*whatsapp|undeliverable/i, 'This number is not on WhatsApp'],
+        [/131049|marketing|ecosystem/i, 'WhatsApp blocked it (too many promotional messages to this number)'],
+        [/131047|24 hours|re-engagement/i, 'WhatsApp needs an approved template outside the 24-hour window'],
+        [/535|Invalid login|authentication/i, 'Email server login failed'],
+        [/invalid.*(phone|number)|phone.*invalid/i, 'Phone number is not valid'],
+        [/no (email|address)|missing email/i, 'No email address'],
+        [/ETIMEDOUT|ECONNREFUSED|timeout/i, 'Could not reach the provider'],
+    ];
+    const hit = rules.find(([rx]) => rx.test(raw));
+    return { text: hit ? hit[1] : raw, failed };
+};
 
 export const ChannelIcon = ({ channel, className = 'w-4 h-4' }: { channel: string; className?: string }) =>
     channel === 'whatsapp'
@@ -143,7 +180,7 @@ export function ResendButton({ row, onDone, size = 'sm' }: {
 }) {
     const [asking, setAsking] = useState(false);
     const [busy, setBusy] = useState(false);
-    if (!row?._id || row.channel === 'in_app') return null;
+    if (!row?._id || row.channel === 'in_app' || !canResend(row)) return null;
 
     const h = size === 'md' ? 'h-10 px-4' : 'h-9 px-3';
 

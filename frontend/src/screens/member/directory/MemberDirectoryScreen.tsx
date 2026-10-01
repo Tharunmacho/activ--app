@@ -5,8 +5,7 @@ import {
   PALETTE, SPACE, TYPE, SIZE, errorText, asArray,
   PremiumListPage, PremiumPage, PremiumPageHeader, GlassCountButton, HeaderStat, HeaderStatRow, PREMIUM_OVERLAP,
   SurfaceCard, SearchPill, StateView, CardSkeletons, PremiumSelect, GradientAvatar, GradientGlyph, FadeInUp,
-  DirectorySearch3D, BRAND,
-} from '../../../ui';
+  DirectorySearch3D, BRAND, FitImage } from '../../../ui';
 import { searchDirectory, getDirectorySectors } from '../../../services/memberApi';
 import { getStates, getDistricts, getBlocks } from '../../../services/regions';
 import { resolveMediaUrl } from '../../../config/api.config';
@@ -103,7 +102,7 @@ function MemberCard({ m, onPress, index }: { m: any; onPress: () => void; index:
               const src = resolveMediaUrl(p?.imageUrl || '');
               return (
                 <View key={String(p?.id || p?.name || i)} style={styles.product}>
-                  {src ? <Image source={{ uri: src }} style={styles.productImg} /> : (
+                  {src ? <FitImage uri={src} style={styles.productImg} /> : (
                     <View style={[styles.productImg, styles.productFallback]}><Icon name="inventory-2" size={SIZE.iconSm} color={PALETTE.borderStrong} /></View>
                   )}
                   <Text style={styles.productName} numberOfLines={2}>{p?.name || ''}</Text>

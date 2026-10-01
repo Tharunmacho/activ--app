@@ -255,6 +255,29 @@ export default function EventScannerScreen({ navigation, route }: Props) {
     setAdmitError('');
   }, []);
 
+  /*
+   * NO EVENT, NO SCANNER. A pass is only valid at its own event's door and the
+   * server refuses a scan without one, so the camera never opens here.
+   */
+  if (!eventId) {
+    return (
+      <ConsoleFrame>
+        <ScrollView contentContainerStyle={CONSOLE_LIST}>
+          <ConsoleHeader
+            compact
+            eyebrow="Event check-in"
+            title="Choose an event"
+            left={<GlassIconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => navigation?.goBack?.()} />}
+          />
+          <View style={{ paddingHorizontal: SPACE.lg }}>
+            <ConsoleNote icon="event" text="Open the scanner from the event you are checking in. A pass only works at its own event." />
+            <ConsoleButton icon="event" label="Go to events" onPress={() => navigation?.navigate?.('EventsAdminHome', { screen: 'Events' })} />
+          </View>
+        </ScrollView>
+      </ConsoleFrame>
+    );
+  }
+
   return (
     <ConsoleFrame avoidKeyboard>
       <ScrollView
@@ -268,7 +291,7 @@ export default function EventScannerScreen({ navigation, route }: Props) {
           compact
           eyebrow="Event check-in"
           title="Scan passes"
-          subtitle={eventTitle || 'Any event'}
+          subtitle={eventTitle || 'Event'}
           left={<GlassIconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => navigation?.goBack?.()} />}
           badges={admittedCount ? [{ icon: 'how-to-reg', label: `${admittedCount} let in on this phone` }] : []}
         />

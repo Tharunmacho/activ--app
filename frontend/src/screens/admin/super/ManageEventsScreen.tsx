@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, Alert, Share, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Alert, Share, RefreshControl, TouchableOpacity } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { resolveMediaUrl } from '../../../config/api.config';
@@ -7,12 +7,12 @@ import {
   PALETTE, SPACE, TYPE, BRAND,
   ConsoleFrame, ConsoleHeader, ConsoleGrid, ConsoleStatTile, ConsoleCard, ConsoleChip, ConsoleTabs, ConsoleSearch,
   ConsoleSkeleton, ConsoleState, ConsoleNote, ConsoleButton, ConsolePill, GlassIconButton, EventCalendar3D, CONSOLE_LIST,
-  PressableScale,
-} from '../../../ui';
+  PressableScale, FitImage } from '../../../ui';
 import { listCmsEventsForEditor, deleteCmsEvent, eventPublicUrl, errorText, type CmsEventRow } from '../../../services/superApi';
 import { useSuperAdminBack } from './useSuperAdminBack';
 import { ChipRow, confirm } from './superKit';
 import { hasBeenHeld, isOnPublicSite, listWhen } from './events/eventKit';
+import { MenuButton } from '../shared/TierMenu';
 
 /**
  * ============================================================================
@@ -51,7 +51,7 @@ function EventCard({ e, onEdit, onDelete, onShare, onQr }: { e: CmsEventRow; onE
     <ConsoleCard style={s.card} padded={false} onPress={onEdit} accent={published ? undefined : PALETTE.amber}
       accessibilityLabel={`Edit ${title || 'Untitled event'}`}>
       {banner ? (
-        <Image source={{ uri: banner }} style={s.banner} resizeMode={e?.media?.fit === 'contain' ? 'contain' : 'cover'} />
+        <FitImage uri={banner} style={s.banner} fit={e?.media?.fit === 'cover' ? 'cover' : 'contain'} />
       ) : (
         <View style={[s.banner, s.bannerEmpty]}><Icon name="event" size={30} color="#A5B4FC" /></View>
       )}
@@ -126,7 +126,7 @@ const ManageEventsScreen: React.FC = () => {
   const [target, setTarget] = useState('all');
   const [query, setQuery] = useState('');
 
-  const goBack = useSuperAdminBack();
+  useSuperAdminBack(); // hardware back returns to the Hub
 
   const load = useCallback(async (mode: 'load' | 'refresh' | 'quiet' = 'load') => {
     if (mode === 'refresh') setRefreshing(true);
@@ -199,7 +199,7 @@ const ManageEventsScreen: React.FC = () => {
         eyebrow="Super Admin · events"
         title="Events"
         subtitle="Aim an event at a state, district or block and every member there sees it — paid or unpaid."
-        left={<GlassIconButton icon="arrow-back" accessibilityLabel="Back" onPress={goBack} />}
+        left={<MenuButton />}
         right={<GlassIconButton icon="add" accessibilityLabel="Add event" onPress={openNew} />}
         art={<EventCalendar3D size={104} />}
         badges={[{ icon: 'event-available', label: `${publishedCount} published` }, { icon: 'event', label: `${all.length} in all` }]}

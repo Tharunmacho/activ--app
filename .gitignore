@@ -64,3 +64,6 @@ core.*
 
 # Migration dumps and generated pilot credentials (plaintext passwords)
 backend/backups/
+
+# .env backups carry live credentials
+backend/.env.bak*

@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Image, Alert, Linking, ScrollView,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert, Linking, ScrollView } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -11,12 +9,11 @@ import {
   SegmentedTabs, Badge, PALETTE, SPACE, SIZE, TYPE, money, BRAND,
   BrandFrame, BrandHeaderBlock, BrandTopBar, BrandHero, GlassIconButton, PREMIUM_OVERLAP, FadeInUp, LiftCard,
   LiftSearchBar, CompanyLogoTile, TrustStar, ArtEmptyState, MarketGlobe3D, SearchLens3D, VaultLock3D,
-  PressableScale, premiumTone,
-} from '../../ui';
+  PressableScale, premiumTone, FitImage } from '../../ui';
 import api from '../../services/api';
 import { resolveMediaUrl } from '../../config/api.config';
 import { getGeography } from '../../services/regions';
-import { getMyProfile } from '../../services/memberApi';
+import { getMyProfile, recordProductView } from '../../services/memberApi';
 import {
   getTrustListIds, addToTrustList, removeFromTrustList, getMyCompanies, errorMessage,
 } from '../../services/businessApi';
@@ -163,9 +160,10 @@ function RegionPanel({ level, options, value, onPick }: {
 
 /* ------------------------------------------------------------------ company card */
 
-function CompanyCard({ item, ordered, highlightIds, matchedOnly, own, trusted, busy, onOpen, onTrust }: {
+function CompanyCard({ item, ordered, highlightIds, matchedOnly, own, trusted, busy, onOpen, onTrust, onViewProduct }: {
   item: CompanyItem; ordered: ProductItem[]; highlightIds: Set<string>; matchedOnly: boolean;
   own: boolean; trusted: boolean; busy: boolean; onOpen: () => void; onTrust: () => void;
+  onViewProduct?: (id: string) => void;
 }) {
   const p = premiumTone('business');
   const logo = item?.logo ? resolveMediaUrl(item.logo) : '';
@@ -237,8 +235,15 @@ function CompanyCard({ item, ordered, highlightIds, matchedOnly, own, trusted, b
               const hit = highlightIds.has(String(pr?._id));
               const img = pr?.imageUrl ? resolveMediaUrl(pr.imageUrl) : '';
               return (
-                <View key={String(pr?._id || i)} style={[s.product, hit && s.productHit]}>
-                  {img ? <Image source={{ uri: img }} style={s.productImg} resizeMode="cover" /> : (
+                <TouchableOpacity
+                  key={String(pr?._id || i)}
+                  style={[s.product, hit && s.productHit]}
+                  activeOpacity={0.85}
+                  onPress={() => onViewProduct?.(String(pr?._id || ''))}
+                  accessibilityRole="button"
+                  accessibilityLabel={pr?.name || 'Product'}
+                >
+                  {img ? <FitImage uri={img} style={s.productImg} /> : (
                     <LinearGradient colors={[PALETTE.violetSoft, PALETTE.violetTint]} style={[s.productImg, s.productImgEmpty]}><Icon name="inventory-2" size={18} color={p.accent} /></LinearGradient>
                   )}
                   <View style={{ flex: 1, minWidth: 0 }}>
@@ -249,7 +254,7 @@ function CompanyCard({ item, ordered, highlightIds, matchedOnly, own, trusted, b
                     <Text style={s.productPrice} numberOfLines={1} maxFontSizeMultiplier={1.2}>{money(pr?.price)}</Text>
                     {Number(pr?.stock || 0) > 0 ? <Text style={s.stock} numberOfLines={1} maxFontSizeMultiplier={1.2}>Stock {Number(pr?.stock || 0)}</Text> : null}
                   </View>
-                </View>
+                </TouchableOpacity>
               );
             })}
             {(ordered || []).length > shownProducts.length ? (
@@ -343,6 +348,17 @@ function CountOnly({ companies, products, term, regionLabel, onJoin }: {
 
 const DiscoverScreen: React.FC<Props> = ({ navigation }) => {
   const paid = useMembershipPaid();
+
+  // A product tapped in a result card feeds the seller's catalogue analytics —
+  // the same record-view call as the directory profile, once per product per
+  // visit. The server ignores the owner and de-duplicates per viewer per day.
+  const seenProducts = useRef<Set<string>>(new Set());
+  const viewProduct = useCallback((pid: string) => {
+    const key = String(pid || '');
+    if (!key || seenProducts.current.has(key)) return;
+    seenProducts.current.add(key);
+    recordProductView(key);
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeQuery, setActiveQuery] = useState('');
@@ -552,6 +568,7 @@ const DiscoverScreen: React.FC<Props> = ({ navigation }) => {
         busy={trustPending === id}
         onOpen={() => navigation.navigate('CompanyPublic', { companyId: id })}
         onTrust={() => toggleTrust(id, item?.businessName || 'Company')}
+        onViewProduct={viewProduct}
       />
     );
   };

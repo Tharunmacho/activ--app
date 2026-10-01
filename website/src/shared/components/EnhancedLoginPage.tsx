@@ -173,6 +173,13 @@ export default function EnhancedLoginPage({ audience = 'member' }: { audience?: 
         navigate('/login', { replace: true });
         return;
       }
+      /* The event-attendance account is the mobile app's door scanner and
+         has no portal on the website. */
+      if (String(result.role) === 'attendance_admin') {
+        clearSession();
+        toast.error('This Event Attendance account works only in the ACTIV mobile app.');
+        return;
+      }
       if (!forAdmins && isAdminRole) {
         clearSession();
         toast.error('Admins sign in on the admin login page.');

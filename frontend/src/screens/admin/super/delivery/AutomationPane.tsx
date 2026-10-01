@@ -3,17 +3,18 @@ import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } fr
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
   PALETTE, SPACE, TYPE,
-  ConsoleCard, ConsoleSkeleton, ConsoleState, ConsoleNote, ConsoleSearch, ConsoleButton, ConsoleSectionTitle, CONSOLE_LIST,
+  ConsoleCard, ConsoleSkeleton, ConsoleState, ConsoleNote, ConsoleSearch, ConsoleButton, CONSOLE_LIST,
 } from '../../../../ui';
 import {
-  getAutomationLogs, EMPTY_AUTOMATION, type AutomationPage, type DeliveryCounts, type DeliveryLogRow,
+  getAutomationLogs, EMPTY_AUTOMATION, getDeliveryGuardHealth, retryAllFailed,
+  type AutomationPage, type DeliveryCounts, type DeliveryLogRow, type DeliveryGuardHealth, type RetryAllSummary,
 } from '../../../../services/notificationDeliveryApi';
 import { errorText } from '../../../../services/superApi';
 import { ChipRow } from '../superKit';
 import { InlineSelect, DateField } from '../events/eventKit';
 import {
   DeliveryBadge, DeliveryDetail, ResendButton, MESSAGE_TYPES, STATE_META,
-  channelColor, channelIcon, channelWord, messageLabel, reasonOf, stateOf, whenLabel,
+  channelColor, channelIcon, channelWord, messageLabel, plainReason, stateOf, whenLabel,
 } from './deliveryKit';
 
 /**
@@ -40,40 +41,46 @@ const PAGE_SIZE = 25;
 const TYPE_LABELS = MESSAGE_TYPES.map(([, l]) => l);
 const typeFromLabel = (label: string) => (MESSAGE_TYPES.find(([, l]) => l === label) || [''])[0];
 
-function ChannelCounts({ channel, counts }: { channel: 'email' | 'whatsapp'; counts: DeliveryCounts }) {
-  const email = channel === 'email';
-  const cells: [string, string, string, string][] = [
-    ['Accepted', String(Number(counts?.accepted || 0) + Number(counts?.sent || 0)), email ? 'the mail server took it' : 'Meta took it, no report yet', PALETTE.blueDark],
-    ['Delivered', email ? 'n/a' : String(Number(counts?.delivered || 0)), email ? 'email has no receipts' : 'reached the phone', PALETTE.greenDark],
-    ['Read', email ? 'n/a' : String(Number(counts?.read || 0)), email ? 'email has no receipts' : 'opened', PALETTE.greenDark],
-    ['Failed', String(Number(counts?.failed || 0)), 'refused or undeliverable', PALETTE.redDark],
-    ['Not sent', String(Number(counts?.mock || 0)), 'no provider configured', PALETTE.textSoft],
+/**
+ * THREE NUMBERS — Sent, Failed, Not sent — each one tap to filter the list
+ * (the website's tiles; they replace two grids of five figures each).
+ */
+function Tiles({ email, whatsapp, delivery, onPick }: {
+  email: DeliveryCounts; whatsapp: DeliveryCounts; delivery: string; onPick: (value: string) => void;
+}) {
+  const num = (v: unknown) => Number(v || 0);
+  const reached = (c: DeliveryCounts) => num(c?.accepted) + num(c?.sent) + num(c?.delivered) + num(c?.read);
+  const tiles: [string, string, number, string, string][] = [
+    ['reached', 'Sent', reached(email) + reached(whatsapp), `WhatsApp ${reached(whatsapp)} · Email ${reached(email)}`, PALETTE.greenDark],
+    ['failed', 'Failed', num(email?.failed) + num(whatsapp?.failed), `WhatsApp ${num(whatsapp?.failed)} · Email ${num(email?.failed)}`, PALETTE.redDark],
+    ['mock', 'Not sent', num(email?.mock) + num(whatsapp?.mock), 'Email/WhatsApp off', PALETTE.textSoft],
   ];
   return (
-    <ConsoleCard style={s.card}>
-      <View style={s.countHead}>
-        <View style={[s.chan, { backgroundColor: email ? PALETTE.blueSoft : PALETTE.greenSoft }]}>
-          <Icon name={channelIcon(channel)} size={18} color={channelColor(channel)} />
-        </View>
-        <Text style={s.countTitle} maxFontSizeMultiplier={1.3}>{email ? 'Email' : 'WhatsApp'}</Text>
-        <Text style={s.countTotal} maxFontSizeMultiplier={1.3}>{Number(counts?.total || 0)} messages</Text>
-      </View>
-      <View style={s.cells}>
-        {cells.map(([label, value, hint, color]) => (
-          <View key={label} style={s.cell} accessible accessibilityLabel={`${email ? 'Email' : 'WhatsApp'} ${label}: ${value}, ${hint}`}>
+    <View style={s.tiles}>
+      {tiles.map(([value, label, count, hint, color]) => {
+        const on = delivery === value;
+        return (
+          <TouchableOpacity
+            key={value}
+            style={[s.tile, on ? { borderColor: color } : null]}
+            onPress={() => onPick(on ? '' : value)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: on }}
+            accessibilityLabel={`${label}: ${count}. ${hint}`}
+          >
             <Text style={s.cellLabel} numberOfLines={1} maxFontSizeMultiplier={1.2}>{label.toUpperCase()}</Text>
-            <Text style={[s.cellValue, { color }]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2}>{value}</Text>
+            <Text style={[s.cellValue, { color }]} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.2}>{count}</Text>
             <Text style={s.cellHint} numberOfLines={2} maxFontSizeMultiplier={1.2}>{hint}</Text>
-          </View>
-        ))}
-      </View>
-    </ConsoleCard>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
   );
 }
 
 function MessageCard({ row, open, onToggle, onChanged }: { row: DeliveryLogRow; open: boolean; onToggle: () => void; onChanged: () => void }) {
   const state = stateOf(row);
-  const reason = reasonOf(row);
+  const reason = plainReason(row);
   return (
     <ConsoleCard
       style={s.card}
@@ -107,13 +114,11 @@ function MessageCard({ row, open, onToggle, onChanged }: { row: DeliveryLogRow; 
         ) : null}
         <View style={s.meta}>
           <Icon name="schedule" size={14} color={PALETTE.textMuted} />
-          <Text style={s.metaText} numberOfLines={1} maxFontSizeMultiplier={1.3}>
-            {whenLabel(row?.createdAt) || '—'} · {Number(row?.attempts || 1)} {Number(row?.attempts || 1) === 1 ? 'try' : 'tries'}
-          </Text>
+          <Text style={s.metaText} numberOfLines={1} maxFontSizeMultiplier={1.3}>{whenLabel(row?.createdAt) || '—'}</Text>
         </View>
       </View>
-      {reason && !open ? (
-        <Text style={s.reason} numberOfLines={2} maxFontSizeMultiplier={1.3}>{reason.length > 120 ? `${reason.slice(0, 119)}…` : reason}</Text>
+      {reason.text && !open ? (
+        <Text style={[s.reason, reason.failed ? null : s.reasonOk]} numberOfLines={2} maxFontSizeMultiplier={1.3}>{reason.text}</Text>
       ) : null}
       {open ? (
         <View style={s.detail}>
@@ -152,6 +157,20 @@ export function AutomationPane({ header, refreshKey = 0 }: { header?: React.Reac
   const [showDates, setShowDates] = useState(false);
   const seq = useRef(0);
 
+  /* Is email going out? (deliveryGuard) — and "Retry all failed", confirmed inline. */
+  const [health, setHealth] = useState<DeliveryGuardHealth | null>(null);
+  const [retryAsk, setRetryAsk] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [retryResult, setRetryResult] = useState<RetryAllSummary | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    getDeliveryGuardHealth(refreshKey > 0)
+      .then((h) => { if (alive) setHealth(h); })
+      .catch(() => { if (alive) setHealth(null); });
+    return () => { alive = false; };
+  }, [refreshKey]);
+
   const load = useCallback(async (mode: 'load' | 'refresh' | 'quiet' = 'load') => {
     const mine = ++seq.current;
     if (mode === 'refresh') setRefreshing(true); else if (mode === 'load') setLoading(true);
@@ -183,12 +202,30 @@ export function AutomationPane({ header, refreshKey = 0 }: { header?: React.Reac
   const pg = data?.pagination || EMPTY_AUTOMATION.pagination;
   const filtered = !!(eventId || channel || delivery || type || from || to || (search || '').trim());
 
-  const events = Array.isArray(data?.events) ? data.events : [];
+  const events = useMemo(() => (Array.isArray(data?.events) ? data.events : []), [data]);
   const eventLabels = useMemo(() => events.map((ev) => `${ev?.title || 'Untitled event'} (${Number(ev?.count || 0)})`), [events]);
   const eventLabel = useMemo(() => {
     const i = events.findIndex((ev) => String(ev?.eventId || '') === eventId);
     return i >= 0 ? eventLabels[i] : '';
   }, [events, eventLabels, eventId]);
+
+  const runRetryAll = async () => {
+    setRetrying(true);
+    setRetryResult(null);
+    try {
+      const summary = await retryAllFailed(168);
+      setRetryResult(summary);
+      getDeliveryGuardHealth().then(setHealth).catch(() => null);
+      load('quiet');
+    } catch (err) {
+      setError(errorText(err, 'The failed messages could not be retried'));
+    } finally {
+      setRetrying(false);
+      setRetryAsk(false);
+    }
+  };
+
+  const failedCount = Number(data?.counts?.byChannel?.email?.failed || 0) + Number(data?.counts?.byChannel?.whatsapp?.failed || 0);
 
   const clearAll = () => {
     setEventId(''); setChannel(''); setDelivery(''); setType(''); setFrom(''); setTo(''); setSearch('');
@@ -210,72 +247,92 @@ export function AutomationPane({ header, refreshKey = 0 }: { header?: React.Reac
   const listHeader = (
     <>
       {header || null}
-      <ConsoleNote
-        style={s.note}
-        text={'Accepted means the provider (Meta or the mail server) took the message — not yet that it arrived. WhatsApp then reports sent, delivered and read, or failed with its reason. Email has no delivery receipts, so an email can only show accepted or failed.'}
-      />
-      {loaded ? (
-        <>
-          <ChannelCounts channel="email" counts={data.counts.byChannel.email} />
-          <ChannelCounts channel="whatsapp" counts={data.counts.byChannel.whatsapp} />
-        </>
+      {health?.email?.ok === false ? (
+        <ConsoleNote
+          style={s.note}
+          kind="red"
+          icon="error-outline"
+          text={`Email is not being sent right now — ${health.email.configured === false ? 'no email server is set up' : `the mail server refused the login${health.email.error ? ` (${health.email.error})` : ''}`}. Correct EMAIL_HOST / EMAIL_USER / EMAIL_PASS on the server; failed emails go out automatically once it works.`}
+        />
+      ) : health?.email?.ok ? (
+        <Text style={s.healthOk} maxFontSizeMultiplier={1.3}>
+          ✓ Email server connected{health.autoRetry?.enabled ? ` · failures retried automatically every ${health.autoRetry.everyMinutes} min` : ''}
+        </Text>
       ) : null}
 
-      <ConsoleSectionTitle title="Filters" icon="tune" action={filtered ? 'Clear filters' : undefined} onAction={filtered ? clearAll : undefined} style={s.section} />
-      <ConsoleSearch value={search} onChangeText={setSearch} placeholder="Search name, phone, email or booking ref" />
-      <View style={s.selects}>
-        <InlineSelect
-          label="Event"
-          value={eventLabel}
-          options={eventLabels}
-          placeholder="Every event"
-          emptyLabel="Every event"
-          onChange={(label) => {
-            const i = eventLabels.indexOf(label);
-            setEventId(i >= 0 ? String(events[i]?.eventId || '') : '');
-          }}
-        />
-        <InlineSelect
-          label="Message type"
-          value={type ? messageLabel(type) : ''}
-          options={TYPE_LABELS}
-          placeholder="Every message type"
-          emptyLabel="Every message type"
-          onChange={(label) => setType(label ? typeFromLabel(label) : '')}
-        />
-      </View>
+      {loaded ? (
+        <Tiles email={data.counts.byChannel.email} whatsapp={data.counts.byChannel.whatsapp} delivery={delivery} onPick={setDelivery} />
+      ) : null}
+
+      {failedCount > 0 || retryResult ? (
+        <ConsoleCard style={s.card}>
+          <Text style={s.retryText} maxFontSizeMultiplier={1.3}>
+            {retryResult
+              ? `Retried ${retryResult.retried}: ${retryResult.sent} sent${retryResult.stillFailed ? `, ${retryResult.stillFailed} still failing` : ''}${retryResult.permanent ? `, ${retryResult.permanent} cannot be fixed by retrying (wrong number or address)` : ''}${retryResult.waitingForEmail ? `, ${retryResult.waitingForEmail} waiting for the email server` : ''}.`
+              : 'Send every failed message from the last 7 days again — those a retry can fix.'}
+          </Text>
+          {retryAsk ? (
+            <View style={s.retryRow}>
+              <Text style={s.retryAsk} maxFontSizeMultiplier={1.3}>Message these people again?</Text>
+              <ConsoleButton size="sm" icon="send" label={retrying ? 'Sending…' : 'Yes, send'} disabled={retrying} onPress={runRetryAll} />
+              <ConsoleButton size="sm" kind="soft" label="Cancel" disabled={retrying} onPress={() => setRetryAsk(false)} />
+            </View>
+          ) : (
+            <View style={s.retryRow}>
+              <ConsoleButton size="sm" kind="soft" icon="refresh" label="Retry all failed" onPress={() => setRetryAsk(true)} />
+            </View>
+          )}
+        </ConsoleCard>
+      ) : null}
+
+      <ConsoleSearch value={search} onChangeText={setSearch} placeholder="Search name, phone, email or booking ID" />
       <ChipRow<string>
         value={channel}
         onChange={setChannel}
-        options={[{ value: '', label: 'Email + WhatsApp' }, { value: 'email', label: 'Email' }, { value: 'whatsapp', label: 'WhatsApp' }]}
-      />
-      <ChipRow<string>
-        value={delivery}
-        onChange={setDelivery}
-        options={[
-          { value: '', label: 'Every status' }, { value: 'accepted', label: 'Accepted' }, { value: 'sent', label: 'Sent' },
-          { value: 'delivered', label: 'Delivered' }, { value: 'read', label: 'Read' }, { value: 'failed', label: 'Failed' },
-          { value: 'mock', label: 'Not sent' },
-        ]}
+        options={[{ value: '', label: 'Both' }, { value: 'whatsapp', label: 'WhatsApp' }, { value: 'email', label: 'Email' }]}
       />
       <TouchableOpacity
         onPress={() => setShowDates((v) => !v)}
         style={s.datesToggle}
         accessibilityRole="button"
         accessibilityState={{ expanded: showDates }}
-        accessibilityLabel="Date range"
+        accessibilityLabel="More filters"
       >
-        <Icon name="date-range" size={18} color={PALETTE.indigo} />
+        <Icon name="tune" size={18} color={PALETTE.indigo} />
         <Text style={s.datesText} numberOfLines={1} maxFontSizeMultiplier={1.3}>
-          {from || to ? `${from || 'Any day'} → ${to || 'today'}` : 'Any date'}
+          {showDates ? 'Fewer filters' : 'More filters (event, message, dates)'}
         </Text>
         <Icon name={showDates ? 'expand-less' : 'expand-more'} size={20} color={PALETTE.indigo} />
       </TouchableOpacity>
       {showDates ? (
-        <View style={s.dates}>
-          <DateField label="From" value={from} onChange={setFrom} />
-          <DateField label="To" value={to} onChange={setTo} min={from || undefined} />
-          {from || to ? <ConsoleButton size="sm" kind="soft" icon="close" label="Any date" onPress={() => { setFrom(''); setTo(''); }} /> : null}
+        <View style={s.selects}>
+          <InlineSelect
+            label="Event"
+            value={eventLabel}
+            options={eventLabels}
+            placeholder="All events"
+            emptyLabel="All events"
+            onChange={(label) => {
+              const i = eventLabels.indexOf(label);
+              setEventId(i >= 0 ? String(events[i]?.eventId || '') : '');
+            }}
+          />
+          <InlineSelect
+            label="Message"
+            value={type ? messageLabel(type) : ''}
+            options={TYPE_LABELS}
+            placeholder="All messages"
+            emptyLabel="All messages"
+            onChange={(label) => setType(label ? typeFromLabel(label) : '')}
+          />
+          <DateField label="From date" value={from} onChange={setFrom} />
+          <DateField label="To date" value={to} onChange={setTo} min={from || undefined} />
+        </View>
+      ) : null}
+      {filtered ? (
+        <View style={s.clearRow}>
+          <Text style={s.showing} maxFontSizeMultiplier={1.3}>{loading ? 'Filtering…' : `${Number(pg.total || 0)} messages`}</Text>
+          <ConsoleButton size="sm" kind="soft" icon="close" label="Clear" onPress={clearAll} />
         </View>
       ) : null}
 
@@ -331,11 +388,17 @@ const s = StyleSheet.create({
   section: { marginTop: SPACE.sm },
   skeleton: { marginTop: SPACE.md },
   card: { marginHorizontal: SPACE.lg, marginBottom: SPACE.md },
-  countHead: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
-  countTitle: { ...TYPE.subheading, fontWeight: '800', flex: 1, minWidth: 0 },
-  countTotal: { ...TYPE.caption, fontWeight: '700' },
-  cells: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm, marginTop: SPACE.md },
-  cell: { flexBasis: '30%', flexGrow: 1, minWidth: 0, backgroundColor: PALETTE.canvasAdmin, borderRadius: 12, paddingHorizontal: SPACE.sm, paddingVertical: SPACE.sm },
+  tiles: { flexDirection: 'row', gap: SPACE.sm, marginHorizontal: SPACE.lg, marginTop: SPACE.md, marginBottom: SPACE.md },
+  tile: {
+    flex: 1, minWidth: 0, backgroundColor: PALETTE.canvasAdmin, borderRadius: 14, borderWidth: 1.5,
+    borderColor: 'transparent', paddingHorizontal: SPACE.sm, paddingVertical: SPACE.sm,
+  },
+  clearRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: SPACE.lg, marginTop: SPACE.md },
+  reasonOk: { color: PALETTE.textMuted },
+  healthOk: { marginHorizontal: SPACE.lg, marginTop: SPACE.md, fontSize: 13, fontWeight: '700', color: PALETTE.greenDark },
+  retryText: { fontSize: 13, lineHeight: 19, color: PALETTE.textSoft },
+  retryRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: SPACE.sm, marginTop: SPACE.sm },
+  retryAsk: { fontSize: 13, fontWeight: '800', color: PALETTE.textSoft },
   cellLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.6, color: PALETTE.textMuted },
   cellValue: { fontSize: 22, fontWeight: '800', marginTop: 2 },
   cellHint: { fontSize: 10, lineHeight: 13, color: PALETTE.textFaint, marginTop: 2 },

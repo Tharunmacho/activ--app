@@ -20,11 +20,12 @@ import LinearGradient from 'react-native-linear-gradient';
 import {
   BottomActionBar, PALETTE, SPACE, TYPE, SIZE,
   ConsoleFrame, ConsoleHeader, ConsoleCard, ConsoleChip, ConsoleTabs, ConsoleSearch, ConsoleButton, ConsolePill,
-  ConsoleSectionTitle, ConsoleCountUp, GradientAvatar, GlassIconButton, PremiumSection, PremiumInput, PressableScale,
+  ConsoleSectionTitle, ConsoleCountUp, GradientAvatar, PremiumSection, PremiumInput, PressableScale,
   FadeInUp, AuditLog3D, ProfileGear3D, CONSOLE_LIST, CONSOLE_ACCENTS,
 } from '../../../ui';
 import { SkeletonList } from './components/Skeleton';
 import EmptyState from './components/EmptyState';
+import { MenuButton } from '../shared/TierMenu';
 
 type Category = 'all' | 'application' | 'admin' | 'event';
 
@@ -558,7 +559,7 @@ const SystemScreen = ({ navigation }: any) => {
   const header = (
     <View>
       <ConsoleHeader
-        left={<GlassIconButton icon="arrow-back" onPress={goBack} accessibilityLabel="Back" />}
+        left={<MenuButton />}
         topCenter="Super Admin"
         eyebrow={tab === 'audit' ? `${total} recorded actions` : 'Your account'}
         title={tab === 'audit' ? 'Audit log' : 'Settings'}

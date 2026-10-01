@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, StyleProp, ViewStyle, Image } from 'react-native';
+import { View, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
   PALETTE, SPACE, SIZE, TYPE, BRAND, Skeleton, PressableScale, CompanyLogoTile, premiumTone,
-  BrandScrollPage, BrandTopBar, BrandHero, PREMIUM_OVERLAP, LiftCard, ArtEmptyState, Unplugged3D,
+  BrandScrollPage, BrandTopBar, BrandHero, PREMIUM_OVERLAP, LiftCard, ArtEmptyState, Unplugged3D, FitImage,
 } from '../../ui';
 import { BusinessTabKey } from './BusinessTabBar';
 
@@ -120,24 +120,37 @@ export function CoverHero({ banner, logo, name, subtitle, badges, onPickBanner, 
   const [failed, setFailed] = React.useState(false);
   const src = typeof banner === 'string' ? banner.trim() : '';
   React.useEffect(() => { setFailed(false); }, [src]);
+  /*
+   * The cover takes the UPLOADED IMAGE'S OWN SHAPE (FitImage mode="auto") and
+   * shows all of it — a wide web banner stays wide, a square poster gets a
+   * taller frame, nothing is zoomed or cropped. It was a fixed 144 px box that
+   * cropped every upload not already that shape.
+   */
   const cover = (
-    <View style={s.cover}>
-      {src && !failed ? (
-        <Image source={{ uri: src }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setFailed(true)} accessibilityIgnoresInvertColors />
-      ) : (
+    <FitImage
+      uri={src && !failed ? src : ''}
+      mode="auto"
+      minRatio={1.6}
+      maxRatio={3.4}
+      style={s.cover}
+      borderRadius={22}
+      onError={() => setFailed(true)}
+      accessibilityLabel={src ? `${name || 'Company'} cover image` : undefined}
+      fallback={(
         <LinearGradient colors={['#A78BFA', '#7C3AED', '#4C1D95']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill}>
           <View style={s.coverOrbA} />
           <View style={s.coverOrbB} />
         </LinearGradient>
       )}
-      <LinearGradient colors={['rgba(46,16,101,0)', 'rgba(46,16,101,0.45)']} style={s.coverFade} />
+    >
+      <LinearGradient colors={['rgba(46,16,101,0)', 'rgba(46,16,101,0.45)']} style={s.coverFade} pointerEvents="none" />
       {onPickBanner ? (
         <View style={s.coverChip}>
           <Icon name="panorama" size={15} color={PALETTE.white} />
           <Text style={s.coverChipText} maxFontSizeMultiplier={1.2}>{src ? 'Change cover' : 'Add cover'}</Text>
         </View>
       ) : null}
-    </View>
+    </FitImage>
   );
   const logoTile = (
     <View>
@@ -178,7 +191,7 @@ export function PhotoWell({ uri, onPress, hint = 'JPG or PNG, up to 5 MB' }: { u
     <PressableScale onPress={onPress} scaleTo={0.985} accessibilityRole="button" accessibilityLabel={has ? 'Change product photo' : 'Choose product photo'}>
       <View style={[s.well, !has && s.wellEmpty]}>
         {has ? (
-          <Image source={{ uri: src }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={() => setFailed(true)} />
+          <FitImage uri={src} style={StyleSheet.absoluteFill} onError={() => setFailed(true)} />
         ) : (
           <View style={s.wellInner}>
             <LinearGradient colors={p.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.wellIcon}>
@@ -370,7 +383,8 @@ const s = StyleSheet.create({
   glassFact: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.sm },
   glassFactText: { flex: 1, minWidth: 0, color: PALETTE.white, fontSize: 13, lineHeight: 18 },
 
-  cover: { height: 144, borderRadius: 22, overflow: 'hidden', backgroundColor: '#4C1D95', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
+  // No fixed height: FitImage gives the cover the uploaded image's own shape.
+  cover: { borderRadius: 22, overflow: 'hidden', backgroundColor: '#4C1D95', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
   coverOrbA: { position: 'absolute', width: 180, height: 180, borderRadius: 90, right: -50, top: -70, backgroundColor: 'rgba(255,255,255,0.12)' },
   coverOrbB: { position: 'absolute', width: 120, height: 120, borderRadius: 60, left: -30, bottom: -60, backgroundColor: 'rgba(255,255,255,0.08)' },
   coverFade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '55%' },

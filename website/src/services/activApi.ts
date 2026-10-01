@@ -1705,7 +1705,7 @@ export interface StaffAccount {
     fullName: string;
     email: string;
     phoneNumber: string;
-    role: 'cms_admin' | 'events_admin' | string;
+    role: 'cms_admin' | 'events_admin' | 'attendance_admin' | string;
     roleLabel: string;
     active: boolean;
     lastLoginAt: string | null;

@@ -119,3 +119,4 @@ export * from './tokens';
 export * from './components';
 export * from './data';
 export * from './premium';
+export * from './FitImage';

@@ -141,8 +141,13 @@ export interface PaymentConfig {
 
 export const getPaymentConfig = async (): Promise<PaymentConfig> => {
   const d = unwrap<any>(await api.get('/payment/config'), {});
+  /* No mode is NOT mock: guessing mock on a production server offers a
+     checkout the server refuses. Fail loudly so the screen can retry. */
+  if (d?.mode !== 'gateway' && d?.mode !== 'mock') {
+    throw new Error('The payment service could not be reached. Please try again.');
+  }
   return {
-    mode: d?.mode === 'gateway' ? 'gateway' : 'mock',
+    mode: d.mode === 'gateway' ? 'gateway' : 'mock',
     provider: String(d?.provider || ''),
     hosted: d?.hosted === true,
     configured: d?.configured === true,

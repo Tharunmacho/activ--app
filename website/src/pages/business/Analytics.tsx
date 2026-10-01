@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BarChart3, Eye, Package, Star, CheckCircle2, Store } from "lucide-react";
+import { BarChart3, Eye, Package, Star, CheckCircle2, Store, Users } from "lucide-react";
 import {
     Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { ShieldCheck, Lock } from "lucide-react";
 import { resolveMediaUrl } from "@/config/api.config";
 import { useActiveCompanyStore } from "@/contexts/ActiveCompanyContext";
+import { getMyAnalytics } from "@/services/memberHubApi";
 
 /**
  * Business Analytics — the website's copy of `AnalyticsScreen.tsx`.
@@ -69,6 +70,30 @@ const Analytics = () => {
             .catch(() => { if (!cancelled) setPaid(false); });
         return () => { cancelled = true; };
     }, []);
+
+    /*
+     * PROFILE VIEWS — the member's directory card, not a company's catalogue.
+     *
+     * Counted by the server on every directory open (one per viewer per day,
+     * never the member themselves) and served by `GET /analytics/me`, which
+     * nothing called. A count only: the endpoint does not name the viewers.
+     */
+    const [reach, setReach] = useState<{ profileViews: number; windowDays: number } | null>(null);
+
+    useEffect(() => {
+        if (paid !== true) return;
+        let cancelled = false;
+        getMyAnalytics(30)
+            .then((data) => {
+                if (cancelled) return;
+                setReach({
+                    profileViews: Number(data?.engagement?.profileViews || 0),
+                    windowDays: Number(data?.windowDays || 30),
+                });
+            })
+            .catch(() => { if (!cancelled) setReach(null); });
+        return () => { cancelled = true; };
+    }, [paid]);
 
     const { activeCompany, hasLoaded, loadCompanies } = useActiveCompanyStore();
 
@@ -256,7 +281,16 @@ const Analytics = () => {
                             columns the figures stacked into two tall rows on
                             every laptop and pushed the chart below the fold —
                             and the chart is what the figures are a summary of. */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-5">
+                        {/* Five figures: the first spans the row on a phone so
+                            the other four still pair up two-by-two. */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-5
+                                        [&>*:first-child]:col-span-2 md:[&>*:first-child]:col-span-1">
+                            <StatTile
+                                label="Profile Views"
+                                value={reach ? reach.profileViews : '—'}
+                                unit={`Directory card · last ${reach?.windowDays || 30} days`}
+                                icon={Users}
+                            />
                             <StatTile
                                 label="Product Views"
                                 value={stats.profileViews}

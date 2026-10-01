@@ -63,7 +63,7 @@ const MEMBERSHIP_BENEFITS: { icon: string; title: string; detail: string; tone: 
   { icon: 'campaign', title: 'Schemes and tenders', detail: 'Notices the association publishes to active members first.', tone: 'amber' },
   { icon: 'verified', title: 'Your certificates', detail: 'Membership and tax exemption certificates in your name.', tone: 'green' },
   { icon: 'storefront', title: 'Publish your catalogue', detail: 'Put your products in front of every member of the network.', tone: 'navy' },
-  { icon: 'insights', title: 'Reach and analytics', detail: 'See who is viewing your profile and your catalogue.', tone: 'sky' },
+  { icon: 'insights', title: 'Reach and analytics', detail: 'See how many members view your profile and your catalogue.', tone: 'sky' },
 ];
 
 /** Website STAGE_CHIP — the stage nodes above the timeline. */

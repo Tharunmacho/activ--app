@@ -436,22 +436,24 @@ export function AdminStat({
 
     const body = (
         <>
-            <div className="flex flex-col items-start gap-2.5 sm:flex-row sm:gap-3">
+            {/* On a phone the icon sits BESIDE the label (a stacked icon made
+                every tile twice the height it needed); desktop is unchanged. */}
+            <div className="flex items-start gap-2.5 sm:gap-3">
                 {icon && (
-                    <span className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 ${
+                    <span className={`w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 [&>svg]:w-4 [&>svg]:h-4 sm:[&>svg]:w-5 sm:[&>svg]:h-5 ${
                         primary ? 'bg-white/20 text-white' : (TILE[tone] || TILE.blue)
                     }`}>
                         {icon}
                     </span>
                 )}
                 <div className="min-w-0">
-                    <p className={`text-[1.05rem] sm:text-[1.25rem] font-extrabold tracking-tight leading-snug ${
+                    <p className={`text-[1rem] sm:text-[1.25rem] font-extrabold tracking-tight leading-snug ${
                         primary ? 'text-white' : 'text-slate-900'
                     }`}>
                         {label}
                     </p>
                     {hint && (
-                        <p className={`text-[0.95rem] sm:text-[1.1875rem] mt-1 leading-snug ${
+                        <p className={`text-[0.875rem] sm:text-[1.1875rem] mt-0.5 sm:mt-1 leading-snug line-clamp-2 sm:line-clamp-none ${
                             primary ? 'text-blue-100' : 'text-slate-500'
                         }`}>
                             {hint}
@@ -484,7 +486,7 @@ export function AdminStat({
               * grid settled on, so the row aligns whether or not each card was
               * given a second line.
               */}
-            <p className={`mt-auto pt-3 sm:pt-5 text-[1.875rem] sm:text-[3.375rem] leading-tight sm:leading-[inherit] font-extrabold tracking-tight tabular-nums [overflow-wrap:anywhere] ${
+            <p className={`mt-auto pt-2 sm:pt-5 text-[1.625rem] sm:text-[3.375rem] leading-tight sm:leading-[inherit] font-extrabold tracking-tight tabular-nums [overflow-wrap:anywhere] ${
                 primary ? 'text-white' : 'text-slate-900'
             }`}>
                 {value}
@@ -503,7 +505,7 @@ export function AdminStat({
         </>
     );
 
-    const shell = `group flex flex-col p-4 sm:p-6 text-left w-full min-w-0 ${
+    const shell = `group flex flex-col p-3.5 sm:p-6 text-left w-full min-w-0 ${
         primary
             ? 'rounded-2xl bg-blue-600 shadow-[0_10px_28px_-6px_rgba(37,99,235,0.55)]'
             : (interactive ? ADMIN_CARD_HOVER : ADMIN_CARD)

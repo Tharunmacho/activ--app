@@ -22,7 +22,7 @@ import MemberPageShell from '@/pages/member/MemberPageShell';
 import {
     resolvePlanEligibility, type MembershipPlan, type PlanEligibility,
 } from '@/features/member/membershipPlans';
-import { payForMembership } from '@/services/paymentApi';
+import { payForMembership, getPaymentConfig, startHostedMembershipPayment } from '@/services/paymentApi';
 import { errorMessage } from '@/services/activApi';
 import { dashboardPathFor } from '@/features/member/memberAccess';
 import useMembershipGate from '@/features/member/useMembershipGate';
@@ -117,7 +117,25 @@ export default function Payment() {
         if (!activePlan || paying) return;
         setPaying(true);
         try {
-            // The plan key, not an amount — the server prices it.
+            /*
+             * THE SERVER SAYS WHICH CHECKOUT IS LIVE. This button used to call
+             * the mock flow unconditionally, so in production — where the
+             * server refuses mock authorisation — no member could ever reach
+             * Instamojo from here. Gateway: hand off to Instamojo's page; the
+             * webhook activates the membership, never this client. A config
+             * read that fails throws, rather than guessing mock.
+             */
+            const config = await getPaymentConfig();
+            if (config?.mode === 'gateway') {
+                const start = await startHostedMembershipPayment(activePlan.id, eligibility?.applicationId || undefined);
+                if (!start?.payment_url) throw new Error('The payment could not be started');
+                try { sessionStorage.setItem('activ:lastOrderId', start.orderId || ''); } catch { /* private mode */ }
+                // `paying` stays true: the browser is leaving for Instamojo.
+                window.location.replace(start.payment_url);
+                return;
+            }
+
+            // Mock (development servers only). The plan key, not an amount.
             await payForMembership(activePlan.id, {
                 ...(eligibility?.applicationId ? { applicationId: eligibility.applicationId } : {}),
                 paymentMethod: 'card',

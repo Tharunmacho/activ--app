@@ -39,7 +39,7 @@ const ROLES: { value: AdminRole; label: string; needs: ('state' | 'district' | '
 ];
 
 /** Site-staff roles, managed in <SiteStaffAccounts> rather than the tier table. */
-const STAFF_ROLES = ['cms_admin', 'events_admin'];
+const STAFF_ROLES = ['cms_admin', 'events_admin', 'attendance_admin'];
 
 const BLANK = {
     fullName: '', email: '', phoneNumber: '', password: '', confirmPassword: '',

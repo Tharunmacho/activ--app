@@ -18,9 +18,12 @@ import { useAuthStore } from '../../stores/exampleStore';
  * and sign out.
  *
  * The split follows the server's role gating (event.routes.js):
- *   EVENT_MANAGERS  (events_admin ✓)  events, categories — written on the website
- *   CHECKIN_STAFF   (events_admin ✓)  scan, look up, admit — this app
- *   ATTENDANCE_VIEWERS (events_admin ✓)  attendance + CSV — this app
+ *   EVENT_MANAGERS  (events_admin only)  events, categories — written on the website
+ *   CHECKIN_STAFF   (attendance_admin ✓)  scan, look up, admit — this app
+ *   ATTENDANCE_VIEWERS (attendance_admin ✓)  attendance + CSV — this app
+ *
+ * The app signs in as `attendance_admin` (Event Attendance Administration),
+ * a mobile-only account the Super Admin maintains under Manage Admins.
  *   BOOKING_VIEWERS (super_admin only)  bookings, amounts, record payment, cancel
  */
 
@@ -50,7 +53,7 @@ function Line({ icon, text, muted }: { icon: string; text: string; muted?: boole
 
 export default function EventsAdminAccountScreen({ navigation }: Props) {
   const { user } = useAuthStore();
-  const name = String((user as any)?.fullName || (user as any)?.name || 'Events Admin');
+  const name = String((user as any)?.fullName || (user as any)?.name || 'Attendance Admin');
   const email = String((user as any)?.email || '');
 
   const logout = useCallback(() => {
@@ -77,9 +80,9 @@ export default function EventsAdminAccountScreen({ navigation }: Props) {
       <ConsoleHeader
         eyebrow="Account"
         title={name}
-        subtitle={email || 'Events Administrator'}
+        subtitle={email || 'Event Attendance Administration'}
         right={<GradientAvatar name={name} size={44} tone="admin" status="online" />}
-        badges={[{ icon: 'badge', label: 'Events Admin' }]}
+        badges={[{ icon: 'badge', label: 'Event Attendance Admin' }]}
       />
 
       <ConsoleSectionTitle title="In this app" icon="smartphone" style={s.section} />

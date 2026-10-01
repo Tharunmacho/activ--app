@@ -88,6 +88,9 @@ function EventRow({ e, big, go }: { e: CheckinEvent; big?: boolean; go: (name: s
   );
 }
 
+/** Live counts while the screen is open — check-ins at the door appear within ~10 s. */
+const LIVE_MS = 10000;
+
 export default function EventsAdminDashboardScreen({ navigation }: Props) {
   const { user } = useAuthStore();
   const [upcoming, setUpcoming] = useState<CheckinEvent[]>([]);
@@ -117,9 +120,12 @@ export default function EventsAdminDashboardScreen({ navigation }: Props) {
   }, []);
 
   const firstLoad = useRef(true);
+  // Load on focus, then keep today's counts live while the screen is in front.
   useFocusEffect(useCallback(() => {
     load(firstLoad.current ? 'first' : 'quiet');
     firstLoad.current = false;
+    const timer = setInterval(() => { load('quiet'); }, LIVE_MS);
+    return () => clearInterval(timer);
   }, [load]));
 
   const today = useMemo(() => (upcoming || []).filter((e) => !!e?.isToday), [upcoming]);
@@ -148,8 +154,8 @@ export default function EventsAdminDashboardScreen({ navigation }: Props) {
         title="Events console"
         subtitle={user?.fullName ? `Signed in as ${user.fullName}` : 'Today at the door, and the programme ahead'}
         art={<EventTicket3D size={104} />}
-        right={<GlassIconButton icon="qr-code-scanner" accessibilityLabel="Scan a pass" onPress={() => go('EventCheckinScanner', {})} />}
-        badges={[{ icon: 'badge', label: 'Events Admin' }, { icon: 'today', label: `${today.length} today` }]}
+        right={<GlassIconButton icon="qr-code-scanner" accessibilityLabel="Choose an event to scan" onPress={() => go('Events')} />}
+        badges={[{ icon: 'badge', label: 'Event Attendance Admin' }, { icon: 'today', label: `${today.length} today` }]}
       />
 
       <ConsoleGrid overlap>
@@ -189,7 +195,8 @@ export default function EventsAdminDashboardScreen({ navigation }: Props) {
       </ConsoleGrid>
 
       <View style={s.gutter}>
-        <ConsoleButton icon="qr-code-scanner" label="Scan a pass for any event" onPress={() => go('EventCheckinScanner', {})} />
+        {/* A pass only works at its own event's door — pick the event first. */}
+        <ConsoleButton icon="qr-code-scanner" label="Choose an event to scan" onPress={() => go('Events')} />
       </View>
 
       {error ? (

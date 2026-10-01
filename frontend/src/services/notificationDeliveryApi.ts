@@ -148,3 +148,39 @@ export const resendNotification = async (id: string): Promise<{ row: DeliveryLog
   const b = res?.data || {};
   return { row: (b?.data as DeliveryLogRow) || null, message: String(b?.message || '') };
 };
+
+/* ==========================================================================
+ * DELIVERY GUARD — is email going out, and "Retry all failed"
+ * (backend notifications/deliveryGuard.js; website notificationDeliveryApi.ts)
+ * ========================================================================== */
+
+export interface DeliveryGuardHealth {
+  email: { ok: boolean | null; configured: boolean | null; checkedAt: string | null; error: string };
+  autoRetry: { enabled: boolean; everyMinutes: number; maxTries: number; windowHours: number };
+}
+
+export interface RetryAllSummary {
+  checked: number;
+  retried: number;
+  sent: number;
+  stillFailed: number;
+  skipped: number;
+  permanent: number;
+  waitingForEmail: number;
+}
+
+export const getDeliveryGuardHealth = async (refresh = false): Promise<DeliveryGuardHealth | null> => {
+  const res = await api.get('/notifications/health', { params: refresh ? { refresh: 1 } : {} });
+  const data = res?.data?.data || res?.data || null;
+  return data && data.email ? (data as DeliveryGuardHealth) : null;
+};
+
+export const retryAllFailed = async (sinceHours = 168): Promise<RetryAllSummary> => {
+  const res = await api.post('/notifications/retry-failed', { sinceHours }, { timeout: 180000 });
+  const d = res?.data?.data || res?.data || {};
+  const num = (v: unknown) => Number(v || 0);
+  return {
+    checked: num(d?.checked), retried: num(d?.retried), sent: num(d?.sent), stillFailed: num(d?.stillFailed),
+    skipped: num(d?.skipped), permanent: num(d?.permanent), waitingForEmail: num(d?.waitingForEmail),
+  };
+};

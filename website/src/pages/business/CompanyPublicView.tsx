@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Building2, MapPin, Phone, Mail, Package, ShieldCheck, ShieldPlus, Users, ArrowLeft, Pencil, Tag, CalendarDays, Eye, Loader2, Landmark, Briefcase, Link2, Check, BadgeCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import {
     getPublicCompany, addToTrustList, removeFromTrustList, errorMessage,
     type PublicCompany,
 } from '@/services/activApi';
+import { recordProductView } from '@/services/memberHubApi';
 
 /**
  * VIEW AS MEMBER — a company exactly as the rest of the network sees it.
@@ -82,8 +83,14 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => (
 );
 
 /** One product tile, used by both the Home preview and the Products grid. */
-const ProductTile = ({ product }: { product: NonNullable<PublicCompany['products']>[number] }) => (
-    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden flex flex-col">
+const ProductTile = ({ product, onView }: {
+    product: NonNullable<PublicCompany['products']>[number];
+    onView?: (id: string) => void;
+}) => (
+    <div
+        onClick={() => onView?.(String(product?._id || ''))}
+        className="rounded-xl border border-slate-200 bg-white overflow-hidden flex flex-col"
+    >
         <div className="h-28 sm:h-36 bg-slate-50 flex items-center justify-center overflow-hidden">
             {product.imageUrl ? (
                 <img
@@ -130,6 +137,21 @@ export default function CompanyPublicView() {
     const [trusting, setTrusting] = useState(false);
     const [copied, setCopied] = useState(false);
     const [tab, setTab] = useState<Tab>('home');
+
+    /*
+     * Catalogue views for the seller's analytics — the same record-view call
+     * the directory profile makes, once per product per visit. A tile clicked
+     * counts; so does opening the Products tab, which is a deliberate request
+     * to see the catalogue. The server ignores the owner viewing their own.
+     */
+    const seenProducts = useRef<Set<string>>(new Set());
+    useEffect(() => { seenProducts.current = new Set(); }, [id]);
+    const viewProduct = useCallback((pid: string) => {
+        const key = String(pid || '');
+        if (!key || seenProducts.current.has(key)) return;
+        seenProducts.current.add(key);
+        void recordProductView(key);
+    }, []);
     /** Set when the logo cannot be fetched — see the note at the image. */
     const [logoFailed, setLogoFailed] = useState(false);
     const [bannerFailed, setBannerFailed] = useState(false);
@@ -229,6 +251,11 @@ export default function CompanyPublicView() {
     };
 
     const products = useMemo(() => company?.products || [], [company]);
+
+    useEffect(() => {
+        if (tab !== 'products' || company?.isOwner === true) return;
+        (products || []).forEach((p) => viewProduct(String(p?._id || '')));
+    }, [tab, products, company?.isOwner, viewProduct]);
     const categories = useMemo(() => company?.productCategories || [], [company]);
 
     if (loading) {
@@ -549,7 +576,7 @@ export default function CompanyPublicView() {
                                     ) : (
                                         <div className="grid grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                                             {products.slice(0, 3).map((product) => (
-                                                <ProductTile key={product._id} product={product} />
+                                                <ProductTile key={product._id} product={product} onView={viewProduct} />
                                             ))}
                                         </div>
                                     )}
@@ -690,7 +717,7 @@ export default function CompanyPublicView() {
                                 ) : (
                                     <div className="grid grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                                         {products.map((product) => (
-                                            <ProductTile key={product._id} product={product} />
+                                            <ProductTile key={product._id} product={product} onView={viewProduct} />
                                         ))}
                                     </div>
                                 )}

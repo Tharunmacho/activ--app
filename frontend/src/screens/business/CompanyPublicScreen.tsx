@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Image, Linking, Alert, FlatList, Share } from 'react-native';
+import { View, Text, StyleSheet, Linking, Alert, FlatList, Share } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -8,12 +8,12 @@ import { RootStackParamList } from '../../types';
 import {
   Badge, InfoRow, PALETTE, SPACE, TYPE, money,
   BrandFrame, BrandHeaderBlock, BrandTopBar, GlassIconButton, PREMIUM_OVERLAP, FadeInUp, LiftCard,
-  GradientButton, TrustStar, ContactAction, ArtEmptyState, ProductCrate3D, CountUpText, premiumTone,
-} from '../../ui';
+  GradientButton, TrustStar, ContactAction, ArtEmptyState, ProductCrate3D, CountUpText, premiumTone, FitImage } from '../../ui';
 import { resolveMediaUrl } from '../../config/api.config';
 import {
   getPublicCompany, addToTrustList, removeFromTrustList, errorMessage, Company, PublicProduct,
 } from '../../services/businessApi';
+import { recordProductView } from '../../services/memberApi';
 import { BizSectionTitle, BizStatePage, CoverHero, GlassTag } from './businessKit';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CompanyPublic'>;
@@ -61,7 +61,7 @@ function ProductCard({ item }: { item: PublicProduct }) {
     <View style={[styles.product, { shadowColor: p.shadow }]}>
       {/* Fixed 4:3 frame so every card's text starts on the same line. */}
       <View style={styles.productImgWrap}>
-        {img ? <Image source={{ uri: img }} style={styles.productImg} resizeMode="cover" /> : (
+        {img ? <FitImage uri={img} style={styles.productImg} /> : (
           <LinearGradient colors={[PALETTE.violetSoft, PALETTE.violetTint]} style={[styles.productImg, styles.productImgEmpty]}>
             <Icon name="inventory-2" size={28} color={p.accent} />
           </LinearGradient>
@@ -107,6 +107,30 @@ const CompanyPublicScreen: React.FC<Props> = ({ navigation, route }) => {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const hasData = useRef(false);
+
+  /*
+   * Catalogue views for the seller's analytics — the same record-view call the
+   * directory profile makes, once per product per visit, recorded when a card
+   * actually scrolls into view. Refs, because FlatList refuses a changing
+   * `onViewableItemsChanged`. The owner's own look is skipped (the server
+   * ignores it too).
+   */
+  const seenProducts = useRef<Set<string>>(new Set());
+  const isOwnerRef = useRef(false);
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
+  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: Array<{ item?: any }> }) => {
+    try {
+      if (isOwnerRef.current) return;
+      (viewableItems || []).forEach((v) => {
+        const key = String(v?.item?._id || '');
+        if (!key || seenProducts.current.has(key)) return;
+        seenProducts.current.add(key);
+        recordProductView(key);
+      });
+    } catch (err) {
+      console.warn('Product view not recorded:', err);
+    }
+  }).current;
 
   const load = useCallback(async () => {
     if (!companyId) { setError('No company selected.'); setLoading(false); return; }
@@ -171,6 +195,7 @@ ${url}`, url });
   const place = [company?.area, company?.location].filter(Boolean).join(', ');
   const categories = (company?.productCategories || []).filter((c) => c && c.description);
   const isOwner = company?.isOwner === true;
+  isOwnerRef.current = isOwner;
   const trustedBy = Number(company?.trustedBy || 0);
   const trusted = company?.isTrusted === true;
   // The website's one-line "who are you" — type, constitution, headline category.
@@ -323,6 +348,8 @@ ${url}`, url });
         columnWrapperStyle={{ paddingHorizontal: SPACE.lg, justifyContent: 'space-between' }}
         initialNumToRender={10}
         maxToRenderPerBatch={10}
+        viewabilityConfig={viewabilityConfig}
+        onViewableItemsChanged={onViewableItemsChanged}
         ListHeaderComponent={header}
         contentContainerStyle={{ paddingBottom: SPACE.huge }}
         showsVerticalScrollIndicator={false}

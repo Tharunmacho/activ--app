@@ -1,13 +1,12 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
   Badge, PALETTE, SPACE, SIZE, TYPE, asArray, BRAND,
   PremiumListPage, PremiumPageHeader, HeaderStat, HeaderStatRow, PillTabs, SurfaceCard, DateTile, SeatMeter,
-  StateView, CardSkeletons, FadeInUp, EventTicket3D, EventCalendar3D, PREMIUM_OVERLAP, untilLabel,
-} from '../../../ui';
+  StateView, CardSkeletons, FadeInUp, EventTicket3D, EventCalendar3D, PREMIUM_OVERLAP, untilLabel, FitImage } from '../../../ui';
 import { listMemberEvents } from '../../../services/memberApi';
 import { useEventSeats, seatsLeftOf, wantsSeats, SeatInfo } from './eventSeats';
 import { resolveMediaUrl } from '../../../config/api.config';
@@ -64,7 +63,7 @@ function EventCard({ e, seat, onPress }: { e: any; seat?: SeatInfo | null; onPre
     >
       {banner ? (
         <View style={styles.bannerWrap}>
-          <Image source={{ uri: banner }} style={styles.banner} resizeMode="cover" accessibilityLabel={e?.bannerAlt || ''} />
+          <FitImage uri={banner} style={styles.banner} fit={e?.media?.fit === 'cover' ? 'cover' : 'contain'} accessibilityLabel={e?.bannerAlt || ''} />
           <LinearGradient colors={['rgba(11,26,69,0)', 'rgba(11,26,69,0.55)']} style={styles.bannerShade} pointerEvents="none" />
           {when ? (
             <View style={[styles.whenPill, live && { backgroundColor: 'rgba(5,150,105,0.92)' }]}>

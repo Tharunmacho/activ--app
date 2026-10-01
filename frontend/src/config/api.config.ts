@@ -68,7 +68,6 @@ export const ENDPOINTS = {
     LOGIN: '/auth/login',
     LOGOUT: '/auth/logout',
     PROFILE: '/auth/me',
-    VALIDATE_TOKEN: '/auth/validate-token',
     // The reset flow. The server answers /forgot-password identically whether
     // or not the address exists, so neither this app nor the website can be
     // used to find out which emails have accounts.
@@ -87,10 +86,6 @@ export const ENDPOINTS = {
     MY_PROFILE: '/members/my-profile',
     UPDATE_PROFILE: '/members/profile',
     PROFILE_PHOTO: '/members/profile-photo',
-    GET_BY_ID: (id: string) => `/members/${id}`,
-    UPDATE: (id: string) => `/members/${id}`,
-    GET_STATUS: (id: string) => `/members/${id}/status`,
-    GET_BY_EMAIL: (email: string) => `/members/${email}/details`,
     UPLOAD_PHOTO: (id: string) => `/members/${id}/photo`,
   },
 
@@ -101,7 +96,6 @@ export const ENDPOINTS = {
     MY_APPLICATIONS: '/applications/my-applications',
     GET_BY_ID: (id: string) => `/applications/${id}`,
     GET_BY_USER: (userId: string) => `/applications/${userId}`,
-    GET_TIMELINE: (id: string) => `/applications/${id}/timeline`,
     GET_LIST: '/applications',
     // Three-tier approval endpoints
     BLOCK_REVIEW: (id: string) => `/applications/${id}/block-review`,
@@ -110,8 +104,6 @@ export const ENDPOINTS = {
     // Legacy endpoints (deprecated)
     APPROVE: (id: string) => `/applications/${id}/approve`,
     REJECT: (id: string) => `/applications/${id}/reject`,
-    DISTRICT_APPROVE: (id: string) => `/applications/${id}/district-approve`,
-    STATE_APPROVE: (id: string) => `/applications/${id}/state-approve`,
   },
 
   // Business Profiles
@@ -174,24 +166,20 @@ export const ENDPOINTS = {
   ADMIN: {
     BLOCK: {
       DASHBOARD: '/admin/block/dashboard',
-      PENDING: '/admin/block/pending-applications',
-      MEMBERS: '/admin/block/members',
     },
     DISTRICT: {
       DASHBOARD: '/admin/district/dashboard',
-      PENDING: '/admin/district/pending',
     },
     STATE: {
       DASHBOARD: '/admin/state/dashboard',
-      PENDING: '/admin/state/pending',
     },
     SUPER: {
       DASHBOARD: '/admin/super/dashboard',
-      USERS: '/admin/super/users',
-      ANALYTICS: '/admin/super/analytics',
     },
-    GET_PROFILE: (id: string) => `/admin/${id}`,
-    UPDATE_PROFILE: (id: string) => `/admin/${id}`,
-    CHANGE_PASSWORD: (id: string) => `/admin/${id}/password`,
+    // Removed (2026-10-01): BLOCK.PENDING/MEMBERS, DISTRICT/STATE.PENDING,
+    // SUPER.USERS/ANALYTICS and /admin/:id(/password). None is a mounted route
+    // and nothing called them; the same applies to AUTH.VALIDATE_TOKEN,
+    // MEMBERS.GET_BY_ID/UPDATE/GET_STATUS/GET_BY_EMAIL, APPLICATIONS.GET_TIMELINE
+    // and the old DISTRICT_/STATE_APPROVE paths (use *_REVIEW or APPROVE/REJECT).
   },
 };

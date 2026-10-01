@@ -5,8 +5,7 @@ import {
   Notice, TYPE, SIZE, PALETTE, SPACE, asArray, money, errorText,
   PremiumPage, PremiumPageHeader, HeaderStat, HeaderStatRow, PREMIUM_OVERLAP, GlassIconButton, GlassBadge,
   SurfaceCard, GradientGlyph, GroupTitle, StateView, CardSkeletons, GradientAvatar, GradientButton, FadeInUp,
-  PressableScale, EmptyBox3D,
-} from '../../../ui';
+  PressableScale, EmptyBox3D, FitImage } from '../../../ui';
 import { getDirectoryEntry, openConversationWith, recordProductView } from '../../../services/memberApi';
 import { resolveMediaUrl } from '../../../config/api.config';
 import { useLoad } from '../useLoad';
@@ -228,7 +227,7 @@ const DirectoryProfileScreen = ({ navigation, route }: any) => {
                   accessibilityLabel={p?.name || 'Product'}
                 >
                   <View style={styles.product}>
-                    {image ? <Image source={{ uri: image }} style={styles.productImg} resizeMode="cover" /> : (
+                    {image ? <FitImage uri={image} style={styles.productImg} /> : (
                       <View style={[styles.productImg, styles.productFallback]}><Icon name="inventory-2" size={SIZE.iconLg} color={PALETTE.borderStrong} /></View>
                     )}
                     <View style={styles.productBody}>

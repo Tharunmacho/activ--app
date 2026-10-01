@@ -141,7 +141,7 @@ const MEMBERSHIP_BENEFITS = [
         icon: BarChart3,
         tone: 'text-purple-600 bg-purple-50',
         title: 'Reach and analytics',
-        detail: 'See who is viewing your profile and your catalogue.',
+        detail: 'See how many members view your profile and your catalogue.',
     },
 ];
 

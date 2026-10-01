@@ -1,12 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
   Badge, PALETTE, SPACE, SIZE, TYPE, asArray, timeAgo, BRAND,
   PremiumListPage, PremiumPageHeader, HeaderStat, HeaderStatRow, Megaphone3D,
-  SurfaceCard, GradientGlyph, GroupTitle, SearchPill, StateView, CardSkeletons, FadeInUp,
-} from '../../../ui';
+  SurfaceCard, GradientGlyph, GroupTitle, SearchPill, StateView, CardSkeletons, FadeInUp, FitImage } from '../../../ui';
 import { listAnnouncements } from '../../../services/memberApi';
 import { resolveMediaUrl } from '../../../config/api.config';
 import { useLoad } from '../useLoad';
@@ -49,7 +48,7 @@ function UpdateCard({ u, index, onPress }: { u: any; index: number; onPress: () 
       >
         {banner ? (
           <View>
-            <Image source={{ uri: banner }} style={styles.banner} resizeMode="cover" accessibilityLabel={u?.bannerAlt || ''} />
+            <FitImage uri={banner} style={styles.banner} accessibilityLabel={u?.bannerAlt || ''} />
             <LinearGradient colors={['rgba(11,26,69,0)', 'rgba(11,26,69,0.55)']} style={styles.bannerShade} pointerEvents="none" />
             <View style={styles.bannerBadges}>
               <Badge label={style.label} color={style.fg} bg={style.bg} size="sm" />

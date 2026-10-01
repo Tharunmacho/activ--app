@@ -3,6 +3,7 @@ import {
     Mail, MessageSquare, Bell, RefreshCw, Loader2, Send, AlertTriangle,
     CheckCircle2, XCircle, Search, RotateCcw, Webhook, Info,
 } from 'lucide-react';
+import { canResend, MESSAGE_TYPES, messageLabel } from '@/features/admin/components/DeliveryUI';
 import { toast } from 'sonner';
 import AdminSidebar from './AdminSidebar';
 import { AdminPageHeader, AdminStat, ADMIN_PAGE, ADMIN_BG, ADMIN_SECONDARY_BTN } from '@/features/admin/components/AdminUI';
@@ -39,21 +40,17 @@ const CHANNEL_META: Record<string, { label: string; icon: typeof Mail; tone: str
     in_app: { label: 'In-app', icon: Bell, tone: 'text-slate-600 bg-slate-100' },
 };
 
-/** The events a filter can name, in the order they happen to a member. */
-const EVENTS = [
-    'ACCOUNT_REGISTERED', 'APPLICATION_SUBMITTED', 'ADMIN_NEW_APPLICATION', 'APPLICATION_ENDORSED',
-    'CORRECTION_REQUESTED', 'APPLICATION_APPROVED', 'PAYMENT_REQUIRED', 'MEMBERSHIP_ACTIVATED',
-    'MEMBERSHIP_RENEWAL_DUE',
-    'EVENT_BOOKING_CONFIRMED', 'EVENT_BOOKING_WAITLISTED', 'EVENT_BOOKING_REMINDER', 'EVENT_BOOKING_CANCELLED',
-    'EVENT_PARTICIPANT_CONFIRMED', 'EVENT_PARTICIPANT_REMINDER', 'EVENT_PARTICIPANT_CANCELLED',
-    'EVENT_REGISTERED', 'EVENT_REMINDER',
-    // Retired events, still on older log rows.
-    'STAGE_CHANGED', 'PAYMENT_SUCCESS',
-    'BOT_REPLY', 'CUSTOM',
+/**
+ * The message filter: friendly names only, the ones still being sent, in the
+ * order a member meets them. Retired event names (still on a few old rows) are
+ * left out — they made the list long and meant nothing to the reader.
+ */
+const RETIRED = new Set(['EVENT_REGISTERED', 'EVENT_REMINDER', 'STAGE_CHANGED', 'PAYMENT_SUCCESS', 'ADMIN_QUEUE_ALERT']);
+const EVENT_OPTIONS: [string, string][] = [
+    ...MESSAGE_TYPES.filter(([value]) => !RETIRED.has(value)),
+    ['CUSTOM', 'Test message'],
+    ['BOT_REPLY', 'WhatsApp bot reply'],
 ];
-
-const humanEvent = (value: string) =>
-    String(value || '').toLowerCase().replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
 
 const when = (value: string) => {
     if (!value) return '';
@@ -271,9 +268,9 @@ export default function Notifications() {
                     <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
                         <AdminStat
                             icon={<CheckCircle2 className="w-5 h-5" />}
-                            label="Delivered"
+                            label="Accepted"
                             value={String(health.sent || 0)}
-                            hint="reached the recipient"
+                            hint="taken by the mail server or WhatsApp"
                             tone="emerald"
                             primary
                         />
@@ -391,10 +388,10 @@ export default function Notifications() {
                             ['email', 'Email'], ['whatsapp', 'WhatsApp'], ['in_app', 'In-app'],
                         ]} />
                         <Select value={rowStatus} onChange={setRowStatus} label="Every status" options={[
-                            ['sent', 'Delivered'], ['failed', 'Failed'], ['queued', 'Queued'],
+                            ['sent', 'Accepted'], ['failed', 'Failed'], ['queued', 'Queued'],
                         ]} />
-                        <Select value={event} onChange={setEvent} label="Every event"
-                            options={EVENTS.map((e) => [e, humanEvent(e)] as [string, string])} />
+                        <Select value={event} onChange={setEvent} label="All messages"
+                            options={EVENT_OPTIONS} />
                     </div>
 
                     {/* ==================================================== log */}
@@ -424,10 +421,10 @@ export default function Notifications() {
 
                                         <div className="min-w-0 flex-1">
                                             <p className="text-[1.25rem] font-semibold text-slate-900 break-words">
-                                                {row.subject || humanEvent(row.event)}
+                                                {row.subject || messageLabel(row.event)}
                                             </p>
                                             <p className="text-[1.1875rem] text-slate-500 mt-0.5 break-words">
-                                                {humanEvent(row.event)} · to <span className="font-medium">{row.recipient}</span>
+                                                {messageLabel(row.event)} · to <span className="font-medium">{row.recipient}</span>
                                                 {row.replyTo ? <> · reply-to {row.replyTo}</> : null}
                                             </p>
                                             {/* The provider's own words. This is the
@@ -443,7 +440,7 @@ export default function Notifications() {
                                                 {when(row.createdAt)}
                                             </span>
                                             <StatePill state={state} />
-                                            {state === 'failed' && row.channel !== 'in_app' ? (
+                                            {state === 'failed' && row.channel !== 'in_app' && canResend(row) ? (
                                                 <button
                                                     type="button"
                                                     onClick={() => retry(row._id)}
@@ -527,7 +524,7 @@ function ChannelCard({ icon, title, configured, rows, note, noteIcon }: {
 
 function StatePill({ state }: { state: string }) {
     const MAP: Record<string, { label: string; className: string }> = {
-        sent: { label: 'Delivered', className: 'bg-emerald-50 text-emerald-700' },
+        sent: { label: 'Accepted', className: 'bg-emerald-50 text-emerald-700' },
         failed: { label: 'Failed', className: 'bg-rose-50 text-rose-700' },
         queued: { label: 'Queued', className: 'bg-slate-100 text-slate-600' },
         mock: { label: 'Not sent', className: 'bg-amber-50 text-amber-700' },

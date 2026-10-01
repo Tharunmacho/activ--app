@@ -199,7 +199,8 @@ const RegistrationStep2Screen: React.FC<Props> = ({ navigation, route }) => {
             ) : null}
             <PremiumSelect
               label="State"
-              icon="flag"
+              icon="map"
+              iconBadge
               value={region.state}
               options={(region.states || []).map((n) => n?.name || '').filter(Boolean)}
               onChange={(v) => { region.setState(v); setError(''); }}
@@ -209,6 +210,7 @@ const RegistrationStep2Screen: React.FC<Props> = ({ navigation, route }) => {
             <PremiumSelect
               label="District"
               icon="apartment"
+              iconBadge
               value={region.district}
               options={(region.districts || []).map((n) => n?.name || '').filter(Boolean)}
               onChange={region.setDistrict}
@@ -218,7 +220,8 @@ const RegistrationStep2Screen: React.FC<Props> = ({ navigation, route }) => {
             />
             <PremiumSelect
               label="Block"
-              icon="grid-view"
+              icon="holiday-village"
+              iconBadge
               value={region.block}
               options={(region.blocks || []).map((n) => n?.name || '').filter(Boolean)}
               onChange={region.setBlock}

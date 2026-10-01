@@ -84,7 +84,7 @@ export interface AutomationFilters {
     channel?: string;
     delivery?: string;
     event?: string;
-    group?: 'automation' | 'booking' | 'membership';
+    group?: 'automation' | 'booking' | 'membership' | 'account';
     eventId?: string;
     bookingRef?: string;
     from?: string;
@@ -189,3 +189,36 @@ export const resendNotification = async (id: string): Promise<{ row: DeliveryLog
         message: String(body?.message || ''),
     };
 };
+
+/* ==========================================================================
+ * DELIVERY GUARD — is email going out, and the "Retry all failed" button
+ * (backend notifications/deliveryGuard.js)
+ * ========================================================================== */
+
+export interface DeliveryGuardHealth {
+    email: { ok: boolean | null; configured: boolean | null; checkedAt: string | null; error: string };
+    autoRetry: { enabled: boolean; everyMinutes: number; maxTries: number; windowHours: number };
+}
+
+export interface RetryAllSummary {
+    checked: number;
+    retried: number;
+    sent: number;
+    stillFailed: number;
+    skipped: number;
+    permanent: number;
+    waitingForEmail: number;
+}
+
+export const getDeliveryGuardHealth = async (refresh = false): Promise<DeliveryGuardHealth | null> =>
+    unwrap<DeliveryGuardHealth | null>(
+        await api.get('/notifications/health', { params: refresh ? { refresh: 1 } : {} }),
+        null,
+    );
+
+/** Every failed message from the last `sinceHours` whose cause can heal, sent again. */
+export const retryAllFailed = async (sinceHours = 168): Promise<RetryAllSummary> =>
+    unwrap<RetryAllSummary>(
+        await api.post('/notifications/retry-failed', { sinceHours }, { timeout: 180000 }),
+        { checked: 0, retried: 0, sent: 0, stillFailed: 0, skipped: 0, permanent: 0, waitingForEmail: 0 },
+    );

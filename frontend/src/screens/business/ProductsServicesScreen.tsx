@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { View, Text, FlatList, StyleSheet, Alert, Image } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,8 +12,7 @@ import { BusinessTabBar } from './BusinessTabBar';
 import {
   Notice, Badge, PALETTE, SPACE, TYPE, money,
   BrandFrame, BrandHeaderBlock, BrandTopBar, BrandHero, GlassIconButton, GlassFigure, PREMIUM_OVERLAP, FadeInUp,
-  LiftCard, LiftSearchBar, ArtEmptyState, ProductCrate3D, SearchLens3D, PressableScale, premiumTone,
-} from '../../ui';
+  LiftCard, LiftSearchBar, ArtEmptyState, ProductCrate3D, SearchLens3D, PressableScale, premiumTone, FitImage } from '../../ui';
 import { BUSINESS_TAB_ROUTES, CardSkeletons, CHIP } from './businessKit';
 
 type ProductsServicesScreenNavigationProp = NativeStackNavigationProp<
@@ -293,7 +292,7 @@ function ProductCard({ product, onOpen, onDelete }: { product: Product; onOpen: 
     <LiftCard tone="business" onPress={onOpen} accessibilityLabel={`Edit ${product?.name || 'product'}`} style={styles.productCard}>
       <View style={styles.productTop}>
         {img ? (
-          <Image source={{ uri: img }} style={styles.thumb} resizeMode="cover" />
+          <FitImage uri={img} style={styles.thumb} />
         ) : (
           <LinearGradient colors={[PALETTE.violetSoft, PALETTE.violetTint]} style={[styles.thumb, styles.thumbEmpty]}>
             <Icon name="inventory-2" size={26} color={p.accent} />

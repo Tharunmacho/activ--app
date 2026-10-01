@@ -568,7 +568,7 @@ export function PremiumInput({
  */
 export function PremiumSelect({
   label, value, options, onChange, placeholder = 'Select', required, disabled, hint, error, icon, emptyText, tone = 'member',
-  optionEmoji,
+  optionEmoji, iconBadge,
 }: {
   label: string;
   value: string;
@@ -588,6 +588,8 @@ export function PremiumSelect({
    * and, for the chosen value, in place of `icon`. Return '' for none.
    */
   optionEmoji?: (option: string) => string;
+  /** Draw `icon` white inside a small brand-gradient tile instead of as a bare glyph. */
+  iconBadge?: boolean;
 }) {
   const p = premiumTone(tone);
   const [open, setOpen] = useState(false);
@@ -626,6 +628,15 @@ export function PremiumSelect({
       >
         {valueEmoji ? (
           <Text style={s.emoji} maxFontSizeMultiplier={1.2}>{valueEmoji}</Text>
+        ) : icon && iconBadge ? (
+          <LinearGradient
+            colors={disabled ? [PALETTE.textFaint, PALETTE.textMuted] : [p.glow, p.accent, p.accentDark]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[s.iconBadge, !disabled && { shadowColor: p.shadow }]}
+          >
+            <Icon name={icon} size={17} color={PALETTE.white} />
+          </LinearGradient>
         ) : icon ? (
           <Icon name={icon} size={SIZE.icon} color={open ? p.accent : PALETTE.textMuted} style={{ marginRight: SPACE.sm + 2 }} />
         ) : null}
@@ -943,6 +954,19 @@ const s = StyleSheet.create({
   hint: { color: PALETTE.textMuted, fontSize: 12, lineHeight: 16, marginTop: 6, marginLeft: 2 },
 
   emoji: { fontSize: 20, lineHeight: 26, marginRight: SPACE.sm + 2 },
+  iconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACE.sm + 4,
+    marginLeft: -4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
   emojiRow: { fontSize: 20, lineHeight: 26 },
   selectText: { flex: 1, minWidth: 0, fontSize: 15, lineHeight: 20, color: PALETTE.text },
   chevron: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginRight: -4 },

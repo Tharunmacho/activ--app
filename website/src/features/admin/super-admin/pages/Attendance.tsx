@@ -170,7 +170,7 @@ function AttendanceEvents() {
                         type="button"
                         onClick={() => setScope(value)}
                         aria-pressed={scope === value}
-                        className={`flex-1 sm:flex-none h-12 px-6 rounded-xl text-[1.25rem] font-semibold transition-colors
+                        className={`flex-1 sm:flex-none h-11 sm:h-12 px-3 sm:px-6 rounded-xl text-[1.0625rem] sm:text-[1.25rem] font-semibold whitespace-nowrap transition-colors
                                     ${scope === value ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
                     >
                         {label}

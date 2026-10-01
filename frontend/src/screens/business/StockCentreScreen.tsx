@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Alert } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -9,8 +9,7 @@ import {
   Badge, SegmentedTabs, ToggleRow, PALETTE, SPACE, TYPE, timeAgo, money,
   BrandFrame, BrandHeaderBlock, BrandTopBar, BrandHero, GlassFigure, PREMIUM_OVERLAP, FadeInUp, LiftCard,
   LiftSearchBar, PremiumInput, GradientButton, GrowBar, RingGauge, CountUpText, ArtEmptyState, StockColumns3D,
-  SearchLens3D, PressableScale, premiumTone,
-} from '../../ui';
+  SearchLens3D, PressableScale, premiumTone, FitImage } from '../../ui';
 import { resolveMediaUrl } from '../../config/api.config';
 import { useActiveCompany, useActiveCompanyStore } from '../../stores/activeCompanyStore';
 import {
@@ -248,7 +247,7 @@ function ProductStockRow({ item, open, onToggle, onChanged, scale, history }: {
         accessibilityLabel={`${item?.name || 'Product'}, ${stock} in stock, ${st.label}`}
       >
         <View style={styles.rowTop}>
-          {img ? <Image source={{ uri: img }} style={styles.thumb} resizeMode="cover" /> : (
+          {img ? <FitImage uri={img} style={styles.thumb} /> : (
             <LinearGradient colors={[PALETTE.violetSoft, PALETTE.violetTint]} style={[styles.thumb, styles.thumbEmpty]}><Icon name="inventory-2" size={22} color={p.accent} /></LinearGradient>
           )}
           <View style={styles.rowText}>

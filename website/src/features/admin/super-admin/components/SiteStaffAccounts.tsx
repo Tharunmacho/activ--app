@@ -210,7 +210,7 @@ export default function SiteStaffAccounts() {
                 <div className="min-w-0">
                     <h2 id="staff-accounts-title" className={`${CARD_TITLE} text-slate-900`}>Site staff accounts</h2>
                     <p className="text-[1.25rem] text-slate-500 mt-0.5">
-                        The CMS and events sign-ins. Change their name, email or password here.
+                        The CMS, events and mobile event-attendance sign-ins. Change their name, email or password here.
                     </p>
                 </div>
                 <button
@@ -233,7 +233,7 @@ export default function SiteStaffAccounts() {
                     <button type="button" onClick={load} className="font-semibold underline">Try again</button>
                 </div>
             ) : accounts.length === 0 ? (
-                <p className="py-4 text-[1.25rem] text-slate-500">No CMS or events staff account exists yet.</p>
+                <p className="py-4 text-[1.25rem] text-slate-500">No CMS, events or attendance staff account exists yet.</p>
             ) : (
                 <div className="grid grid-cols-1 gap-4">
                     {accounts.map((a) => {

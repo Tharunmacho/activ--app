@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Linking, Alert, Share } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Linking, Alert, Share } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
   BottomActionBar, Skeleton, PALETTE, SPACE, SIZE, TYPE, BRAND, asArray, money, errorText,
   PremiumPage, PremiumPageHeader, GlassIconButton, GlassBadge, GradientButton, GradientAvatar, FadeInUp, PressableScale,
   SurfaceCard, GradientGlyph, GroupTitle, SeatMeter, StateView, CardSkeletons, ReceiptLine, DateTile,
-  EventCalendar3D, EventTicket3D, PREMIUM_OVERLAP,
-} from '../../../ui';
+  EventCalendar3D, EventTicket3D, PREMIUM_OVERLAP, FitImage } from '../../../ui';
 import {
   getMemberEvent, cancelEventRegistration, payForEvent, registrationGate,
 } from '../../../services/memberApi';
-import { resolveMediaUrl, API_ORIGIN } from '../../../config/api.config';
+import { resolveMediaUrl } from '../../../config/api.config';
+import { WEBSITE_PATHS, websiteUrl } from '../../../config/website.config';
 import { QrCode } from '../../admin/super/events/qr';
 import { useLoad } from '../useLoad';
 import { useEventSeat, seatsLeftOf, isFillingFast } from './eventSeats';
@@ -178,7 +178,8 @@ const MemberEventDetailScreen = ({ navigation, route }: any) => {
   const agenda = asArray<any>(e?.agenda).filter((r) => r && (r.title || r.startTime));
   const speakers = asArray<any>(e?.speakers).filter((s) => s && s.name);
   const reminders = formatReminders(e?.reminderOffsetsHours);
-  const pageUrl = `${API_ORIGIN}/events/${encodeURIComponent(String(e?.slug || e?.id || ''))}`;
+  // The public WEBSITE page — never the API host, which has no such page (404).
+  const pageUrl = websiteUrl(WEBSITE_PATHS.event(String(e?.slug || e?.id || '')));
   const calendar = googleCalendarUrl(e, pageUrl);
   const directions = directionsUrl(e);
   const due = Number(registration?.payment?.amount || 0);
@@ -290,7 +291,7 @@ const MemberEventDetailScreen = ({ navigation, route }: any) => {
         <SurfaceCard padded={false}>
           {banner ? (
             <View>
-              <Image source={{ uri: banner }} style={styles.banner} resizeMode="cover" accessibilityLabel={e?.bannerAlt || e?.title || ''} />
+              <FitImage uri={banner} mode="auto" minRatio={1.25} maxRatio={2.6} fit={e?.media?.fit === 'cover' ? 'cover' : 'contain'} accessibilityLabel={e?.bannerAlt || e?.title || ''} />
               <LinearGradient colors={['rgba(11,26,69,0)', 'rgba(11,26,69,0.5)']} style={styles.bannerShade} pointerEvents="none" />
               <DateTile date={e?.startAt} muted={past} style={styles.bannerDate} />
             </View>

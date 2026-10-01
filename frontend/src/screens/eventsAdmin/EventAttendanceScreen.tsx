@@ -28,7 +28,7 @@ import {
  *
  * Search and the tab filter are answered by the server (the same query the
  * website's Attendance screen sends), so the counts and the list never
- * disagree. While the screen is open the list refreshes itself every 30 s —
+ * disagree. While the screen is open the list refreshes itself every 10 s —
  * other gates are admitting people too.
  *
  * GET /events/:id/attendance · GET /events/:id/attendance/export
@@ -38,7 +38,7 @@ import {
 type Props = { navigation: any; route: any };
 type Status = 'all' | 'in' | 'out';
 
-const LIVE_MS = 30000;
+const LIVE_MS = 10000; // live at the door: a seat let in shows within ~10 s
 
 const EMPTY: Attendance = {
   event: { id: '', title: '', startAt: null, venue: '' },

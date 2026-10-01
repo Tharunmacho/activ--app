@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRenewal } from '@/features/member/useRenewal';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, Building2, Package, Users, CalendarDays, MessageSquare, Lock, Loader2 } from 'lucide-react';
@@ -44,6 +44,16 @@ export default function DirectoryProfile() {
     >(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+
+    // Products already recorded on this visit; reset when the profile changes.
+    const seenProducts = useRef<Set<string>>(new Set());
+    useEffect(() => { seenProducts.current = new Set(); }, [id]);
+    const viewProduct = useCallback((pid: string) => {
+        const key = String(pid || '');
+        if (!key || seenProducts.current.has(key)) return;
+        seenProducts.current.add(key);
+        void recordProductView(key);
+    }, []);
 
     /*
      * Whether this reader may contact the member they are looking at.
@@ -437,9 +447,12 @@ export default function DirectoryProfile() {
                                     <div
                                         key={product.id}
                                         // Fire-and-forget: this is what the seller's
-                                        // catalogue analytics count, and it has
-                                        // nothing to say back to the viewer.
-                                        onMouseEnter={() => recordProductView(product.id)}
+                                        // catalogue analytics count. Recorded on a
+                                        // deliberate click, once per product per
+                                        // visit (like the app) — it was every
+                                        // mouse-over, so a cursor crossing the grid
+                                        // read as a view of everything under it.
+                                        onClick={() => viewProduct(product.id)}
                                         className="rounded-xl border border-slate-200 overflow-hidden"
                                     >
                                         <div className="aspect-[4/3] bg-slate-100">

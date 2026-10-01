@@ -1,8 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Image, ActivityIndicator,
-  Linking, ScrollView,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Linking, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -11,8 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Notice, PALETTE, SPACE, SIZE, TYPE, asArray,
   PremiumTopBar, GradientAvatar, GradientGlyph, CardSkeletons, StateView, ArtBadge, ChatBubbles3D, PressableScale,
-  PREMIUM_GRADIENTS, BRAND,
-} from '../../../ui';
+  PREMIUM_GRADIENTS, BRAND, FitImage } from '../../../ui';
 import { getThread, sendMessage, markConversationRead, uploadMessageImage } from '../../../services/memberApi';
 import { resolveMediaUrl } from '../../../config/api.config';
 import { memberFacing, OPENERS, EMOJI, timeOf } from './messageCopy';
@@ -82,7 +78,7 @@ function Bubble({ m, tail }: { m: any; tail: boolean }) {
     <>
       {img ? (
         <TouchableOpacity activeOpacity={0.9} onPress={openImage} accessibilityRole="imagebutton" accessibilityLabel="Open picture">
-          <Image source={{ uri: img }} style={[styles.img, !m?.body && { marginBottom: SPACE.xs }]} resizeMode="cover" />
+          <FitImage uri={img} style={[styles.img, !m?.body && { marginBottom: SPACE.xs }]} />
         </TouchableOpacity>
       ) : null}
       {m?.body ? <Text style={[styles.body, mine && { color: PALETTE.white }]} selectable>{m.body}</Text> : null}
@@ -366,7 +362,7 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
       {/* The chosen picture, before it goes. */}
       {picture ? (
         <View style={styles.preview}>
-          <Image source={{ uri: picture.uri }} style={styles.previewImg} />
+          <FitImage uri={picture.uri} style={styles.previewImg} />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={styles.previewName} numberOfLines={1}>{picture.name}</Text>
             <Text style={styles.previewHint}>Ready to send — a caption is optional.</Text>

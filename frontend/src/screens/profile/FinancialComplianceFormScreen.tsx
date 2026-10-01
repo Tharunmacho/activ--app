@@ -5,20 +5,18 @@ import { RootStackParamList } from '../../types';
 import api from '../../services/api';
 import { Chip, PremiumInput as Field, Loading, SPACE, FinanceChart3D } from '../../ui';
 import { FormScreen, FormFooter, FormSection, FieldLabel, ChoicePills, k } from './formKit';
+import { TURNOVER_RANGES } from '../business/companyForm/companyOptions';
 
 type FinancialComplianceFormScreenProps = NativeStackScreenProps<RootStackParamList, 'FinancialComplianceForm'>;
 
 /** This step's place in the older four-step flow (it sits before the declaration). */
 const STEPS = ['Personal', 'Business', 'Financial', 'Declaration'];
 
-const TURNOVER_RANGES = [
-  'Below 1 Lakh',
-  '1-5 Lakhs',
-  '5-10 Lakhs',
-  '10-50 Lakhs',
-  '50 Lakhs - 1 Crore',
-  'Above 1 Crore',
-];
+/*
+ * TURNOVER_RANGES is the shared list (companyOptions, = the website's). This
+ * screen had its own copy ending at "Above 1 Crore", a band the website no
+ * longer offers, so a value saved here would not show in the website's form.
+ */
 
 const GOVT_SCHEMES = [
   'Startup India',

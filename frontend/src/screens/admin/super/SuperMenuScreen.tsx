@@ -29,12 +29,13 @@ import { confirm } from './superKit';
  * gradient tiles that spring when pressed.
  */
 
-type Item = { key: string; icon: string; label: string; hint: string; accent: ConsoleAccent; go: (nav: any) => void };
+export type Item = { key: string; icon: string; label: string; hint: string; accent: ConsoleAccent; go: (nav: any) => void };
 
 const tab = (name: string) => (nav: any) => nav.navigate(name);
 const stack = (name: string, params?: any) => (nav: any) => nav.navigate(name, params);
 
-const SECTIONS: { title: string; items: Item[] }[] = [
+/** Also the ☰ side menu on every Super Admin tab (SuperMenuDrawer) — one list, two views. */
+export const SUPER_MENU_SECTIONS: { title: string; items: Item[] }[] = [
   {
     title: 'Applications & members',
     items: [
@@ -124,7 +125,7 @@ const SuperMenuScreen: React.FC = () => {
         waveHeight={62}
       />
 
-      {SECTIONS.map((sec, si) => (
+      {SUPER_MENU_SECTIONS.map((sec, si) => (
         <View key={sec.title} style={si === 0 ? s.firstSection : undefined}>
           <Text style={s.section}>{sec.title}</Text>
           <View style={s.grid}>

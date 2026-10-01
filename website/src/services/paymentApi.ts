@@ -134,11 +134,20 @@ export interface PaymentConfig {
     configured: boolean;
 }
 
-export const getPaymentConfig = async () =>
-    unwrap<PaymentConfig>(
-        await api.get(ENDPOINTS.PAYMENT.CONFIG),
-        { mode: 'mock', provider: 'mock', hosted: false, configured: false },
-    );
+export const getPaymentConfig = async (): Promise<PaymentConfig> => {
+    const cfg = unwrap<Partial<PaymentConfig>>(await api.get(ENDPOINTS.PAYMENT.CONFIG), {});
+    /* An answer without a mode is NOT "mock". Guessing mock in production
+       sends a member down a path the server refuses; say so instead. */
+    if (cfg?.mode !== 'gateway' && cfg?.mode !== 'mock') {
+        throw new Error('The payment service could not be reached. Please try again.');
+    }
+    return {
+        mode: cfg.mode,
+        provider: String(cfg.provider || ''),
+        hosted: cfg.hosted === true,
+        configured: cfg.configured === true,
+    };
+};
 
 /**
  * ==========================================================================

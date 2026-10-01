@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Alert, Linking, StyleSheet } from 'react-native';
+import { View, Text, Alert, Linking, StyleSheet, Pressable } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
 import api from '../../services/api';
@@ -9,7 +9,7 @@ import { useAuthStore } from '../../stores/exampleStore';
 import {
   PALETTE, SPACE, TYPE,
   PremiumScreen, PREMIUM_OVERLAP, PremiumSheet, PremiumHeading, PremiumInput, PremiumDivider,
-  GradientButton, SocialButton, SocialMark, PortalSwitchCard, BrandLogo, FloatingIllustration, SecureLogin3D, FadeInUp,
+  GradientButton, SocialMark, PortalSwitchCard, BrandLogo, FloatingIllustration, SecureLogin3D, FadeInUp,
 } from '../../ui';
 import { EyeToggle } from '../profile/formKit';
 import { TextLink } from './authKit';
@@ -273,20 +273,23 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       <FadeInUp delay={300} style={styles.below}>
         <PremiumDivider label="Or continue with" />
 
-        {/* Google, LinkedIn, Facebook — the same order as before. Full-width
-            stacked "Continue with …" buttons (Google's light-theme spec, same
-            neutral treatment for all three): 52px, mark fixed left, label
-            centred, vector brand marks. */}
-        <View style={styles.socialStack}>
+        {/* Google, LinkedIn, Facebook — one row of round brand marks. Three
+            full-width "Continue with …" buttons pushed the admin link below
+            the fold; the marks alone are recognised, and each is still a 64px
+            target with a spoken label. */}
+        <View style={styles.socialRow}>
           {SOCIAL.map((name) => (
-            <SocialButton
+            <Pressable
               key={name}
-              label={`Continue with ${name}`}
-              mark={<SocialMark provider={name} size={20} />}
-              disabled={isLoading}
               onPress={() => handleSocialLogin(name)}
+              disabled={isLoading}
+              accessibilityRole="button"
               accessibilityLabel={`Sign in with ${name}`}
-            />
+              android_ripple={{ color: 'rgba(15,23,42,0.08)', borderless: true, radius: 34 }}
+              style={({ pressed }) => [styles.socialCircle, pressed && styles.socialPressed, isLoading && styles.socialDim]}
+            >
+              <SocialMark provider={name} size={28} />
+            </Pressable>
           ))}
         </View>
 
@@ -321,7 +324,14 @@ const styles = StyleSheet.create({
   },
   promptText: { ...TYPE.body, color: PALETTE.textMuted },
   below: { paddingHorizontal: SPACE.lg, paddingTop: SPACE.sm },
-  socialStack: { gap: SPACE.md - 2 },
+  socialRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: SPACE.xl, marginBottom: SPACE.lg },
+  socialCircle: {
+    width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: PALETTE.white, borderWidth: 1, borderColor: 'rgba(15,23,42,0.08)',
+    shadowColor: '#0B1A45', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 4,
+  },
+  socialPressed: { transform: [{ scale: 0.94 }], opacity: 0.9 },
+  socialDim: { opacity: 0.5 },
   portal: { marginTop: SPACE.xl },
 });
 

@@ -23,7 +23,7 @@ export const STATE_META: Record<string, { label: string; kind: ConsoleChipKind; 
   read: { label: 'Read', kind: 'approved', hint: 'WhatsApp reports the recipient opened it.' },
   delivered: { label: 'Delivered', kind: 'approved', hint: 'WhatsApp reports it reached the phone.' },
   sent: { label: 'Sent', kind: 'info', hint: 'WhatsApp sent it towards the handset; delivery not yet confirmed.' },
-  accepted: { label: 'Accepted', kind: 'info', hint: 'The provider (Meta or the mail server) accepted it. Not yet confirmed delivered.' },
+  accepted: { label: 'Sent', kind: 'info', hint: 'The provider (Meta or the mail server) accepted it. Not yet confirmed delivered.' },
   mock: { label: 'Not sent', kind: 'neutral', hint: 'No provider is configured, so nothing left the server.' },
   queued: { label: 'Queued', kind: 'neutral', hint: 'Not attempted yet.' },
 };
@@ -63,11 +63,22 @@ const MESSAGE_LABELS: Record<string, string> = {
   ADMIN_NEW_APPLICATION: 'Admin · new application',
   ADMIN_PLATINUM_REQUEST: 'Admin · platinum request',
   ADMIN_QUEUE_ALERT: 'Admin · queue alert',
+  PASSWORD_RESET: 'Account · password reset link',
+  ADMIN_WELCOME: 'Admin · welcome & credentials',
+  DONATION_RECEIPT: 'Donation · 80G receipt',
+  DONATION_STATEMENT: 'Donation · year-end statement',
   STAGE_CHANGED: 'Membership · stage changed',
 };
 
 /** The message-type filter, in the order a booker and then a member meet them. */
 export const MESSAGE_TYPES: [string, string][] = Object.entries(MESSAGE_LABELS);
+
+/**
+ * A reset link is single-use and a welcome email carried a one-time password;
+ * neither is stored, so neither can be replayed (the server refuses too).
+ */
+const NO_RESEND = new Set(['PASSWORD_RESET', 'ADMIN_WELCOME']);
+export const canResend = (row: { event?: string } | null | undefined) => !NO_RESEND.has(String(row?.event || ''));
 
 export const messageLabel = (event?: string) =>
   MESSAGE_LABELS[String(event || '')]
@@ -82,6 +93,30 @@ export const whenLabel = (value?: string) => {
 
 export const reasonOf = (row: Partial<DeliveryLogRow> | null | undefined) =>
   String(row?.failureReason || row?.lastError || '');
+
+/**
+ * The reason in plain words (website DeliveryUI.plainReason). A message that
+ * went out on a backup template also carries a note — not a failure.
+ */
+export const plainReason = (row: Partial<DeliveryLogRow> | null | undefined): { text: string; failed: boolean } => {
+  const raw = reasonOf(row);
+  if (!raw) return { text: '', failed: false };
+  const failed = stateOf(row) === 'failed';
+  if (!failed && /^Sent on /i.test(raw)) return { text: 'Sent using the backup WhatsApp message', failed: false };
+  const rules: [RegExp, string][] = [
+    [/132005|too long/i, 'Message was too long for WhatsApp'],
+    [/132001|does not exist/i, 'WhatsApp template not found'],
+    [/131026|not.*whatsapp|undeliverable/i, 'This number is not on WhatsApp'],
+    [/131049|marketing|ecosystem/i, 'WhatsApp blocked it (too many promotional messages to this number)'],
+    [/131047|24 hours|re-engagement/i, 'WhatsApp needs an approved template outside the 24-hour window'],
+    [/535|Invalid login|authentication/i, 'Email server login failed'],
+    [/invalid.*(phone|number)|phone.*invalid/i, 'Phone number is not valid'],
+    [/no (email|address)|missing email/i, 'No email address'],
+    [/ETIMEDOUT|ECONNREFUSED|timeout/i, 'Could not reach the provider'],
+  ];
+  const hit = rules.find(([rx]) => rx.test(raw));
+  return { text: hit ? hit[1] : raw, failed };
+};
 
 export const channelWord = (channel?: string) => (channel === 'whatsapp' ? 'WhatsApp' : channel === 'in_app' ? 'In-app' : 'Email');
 export const channelIcon = (channel?: string) => (channel === 'whatsapp' ? 'chat' : channel === 'in_app' ? 'notifications' : 'email');
@@ -101,7 +136,7 @@ export function DeliveryBadge({ state }: { state: string }) {
 export function ResendButton({ row, onDone, compact }: { row: DeliveryLogRow; onDone?: () => void; compact?: boolean }) {
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
-  if (!row?._id || row?.channel === 'in_app') return null;
+  if (!row?._id || row?.channel === 'in_app' || !canResend(row)) return null;
 
   const send = async () => {
     setBusy(true);
