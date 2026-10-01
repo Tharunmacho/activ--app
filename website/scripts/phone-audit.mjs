@@ -162,7 +162,14 @@ for (const p of ROUTES) {
   })()`);
   const v = result.result.value || {};
   report.push({ route: p, landed: v.url, scrollW: v.scrollW, over: v.over, errors: [...new Set(errors)].slice(0, 3) });
-  const shot = await send('Page.captureScreenshot', { format: 'png' });
+  // FULL=1: the whole page, not just the first phone screen (capped at 7000 px).
+  let shotParams = { format: 'png' };
+  if (process.env.FULL) {
+    const h = await send('Runtime.evaluate', { expression: 'document.documentElement.scrollHeight', returnByValue: true });
+    const height = Math.min(Number(h.result.result.value) || H, 7000);
+    shotParams = { format: 'png', captureBeyondViewport: true, clip: { x: 0, y: 0, width: W, height, scale: 1 } };
+  }
+  const shot = await send('Page.captureScreenshot', shotParams);
   writeFileSync(`${OUT}/${p.replace(/\W+/g, '_') || 'home'}.png`, Buffer.from(shot.result.data, 'base64'));
 }
 writeFileSync(`${OUT}/report.json`, JSON.stringify(report, null, 1));

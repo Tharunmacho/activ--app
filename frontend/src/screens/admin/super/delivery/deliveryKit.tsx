@@ -23,6 +23,7 @@ export const STATE_META: Record<string, { label: string; kind: ConsoleChipKind; 
   read: { label: 'Read', kind: 'approved', hint: 'WhatsApp reports the recipient opened it.' },
   delivered: { label: 'Delivered', kind: 'approved', hint: 'WhatsApp reports it reached the phone.' },
   sent: { label: 'Sent', kind: 'info', hint: 'WhatsApp sent it towards the handset; delivery not yet confirmed.' },
+  resent: { label: 'Re-sent', kind: 'neutral', hint: 'This message was sent again. The newer entry shows how that went.' },
   accepted: { label: 'Sent', kind: 'info', hint: 'The provider (Meta or the mail server) accepted it. Not yet confirmed delivered.' },
   mock: { label: 'Not sent', kind: 'neutral', hint: 'No provider is configured, so nothing left the server.' },
   queued: { label: 'Queued', kind: 'neutral', hint: 'Not attempted yet.' },
@@ -33,6 +34,7 @@ export const stateOf = (row: Partial<DeliveryLogRow> | null | undefined): string
   if (!row) return 'queued';
   if (row.effectiveStatus) return String(row.effectiveStatus);
   if (row.mock) return 'mock';
+  if ((row as { resentAs?: string }).resentAs) return 'resent';
   if (row.status === 'failed') return 'failed';
   if (row.status === 'sent') return 'accepted';
   return 'queued';
@@ -99,6 +101,7 @@ export const reasonOf = (row: Partial<DeliveryLogRow> | null | undefined) =>
  * went out on a backup template also carries a note — not a failure.
  */
 export const plainReason = (row: Partial<DeliveryLogRow> | null | undefined): { text: string; failed: boolean } => {
+  if (stateOf(row) === 'resent') return { text: 'Sent again — the newer entry shows the result', failed: false };
   const raw = reasonOf(row);
   if (!raw) return { text: '', failed: false };
   const failed = stateOf(row) === 'failed';
@@ -136,7 +139,8 @@ export function DeliveryBadge({ state }: { state: string }) {
 export function ResendButton({ row, onDone, compact }: { row: DeliveryLogRow; onDone?: () => void; compact?: boolean }) {
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
-  if (!row?._id || row?.channel === 'in_app' || !canResend(row)) return null;
+  // A re-sent row's newer entry carries its own Resend; one button per message.
+  if (!row?._id || row?.channel === 'in_app' || !canResend(row) || stateOf(row) === 'resent') return null;
 
   const send = async () => {
     setBusy(true);

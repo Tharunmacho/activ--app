@@ -732,7 +732,11 @@ All colors MUST be HSL.
  */
 @media (max-width: 639px) {
   .card-table { overflow-x: visible !important; }
-  .card-table table { min-width: 0 !important; width: 100% !important; border-collapse: separate; }
+  /* `display: block` on the table too: a block tbody inside a display:table
+     is wrapped in an anonymous cell that shrinks to its content, so a short
+     row (the empty state, a spinner) became a 160 px box in a 360 px card. */
+  .card-table table { display: block; min-width: 0 !important; width: 100% !important; border-collapse: separate; }
+  .card-table colgroup { display: none; }
   .card-table thead { display: none; }
   .card-table tbody { display: block; }
   .card-table tr {
@@ -773,6 +777,11 @@ All colors MUST be HSL.
   /* The CMS's dark theme — the card was white under light-grey text. */
   .dark .card-table tr { background: #0f0f0f; border-color: #1f1f1f; box-shadow: none; }
   .card-table td[data-label=""] { grid-template-columns: minmax(0, 1fr); }
+  /* A full-width row (empty state, loading spinner) is one cell spanning the
+     table: on a phone it was squeezed into the 6.5rem LABEL column and showed
+     as a small box. It spans the card instead, with no label. */
+  .card-table td[colspan] { display: block; width: 100%; }
+  .card-table td[colspan]::before { content: none; }
   .card-table td[data-label=""]::before { display: none; }
   /* A row that is one cell spanning the table (loading / empty) is not a card. */
   .card-table td[colspan] { grid-template-columns: minmax(0, 1fr); text-align: center !important; }

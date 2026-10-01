@@ -83,18 +83,20 @@ function Tile({ icon: Icon, label, value, note, tone, active, onClick }: {
             type="button"
             onClick={onClick}
             aria-pressed={active}
-            className={`${ADMIN_CARD} p-3.5 sm:p-5 min-w-0 text-left transition-colors hover:border-blue-300 ${active ? tones.ring : ''}`}
+            className={`${ADMIN_CARD} p-3 sm:p-5 min-w-0 text-left transition-colors hover:border-blue-300 ${active ? tones.ring : ''}`}
         >
+            {/* Phone: three tiles share 390 px, so no icon chip and nothing
+                truncated — the label and the note wrap instead. */}
             <span className="flex items-center gap-2.5 min-w-0">
-                <span className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-lg sm:rounded-xl grid place-items-center ${tones.chip}`}>
+                <span className={`hidden sm:grid w-9 h-9 shrink-0 rounded-xl place-items-center ${tones.chip}`}>
                     <Icon className="w-[1.125rem] h-[1.125rem]" />
                 </span>
-                <span className="text-[1rem] sm:text-[1.125rem] font-semibold text-slate-700 truncate">{label}</span>
+                <span className="text-[0.9375rem] sm:text-[1.125rem] font-semibold text-slate-700 leading-tight">{label}</span>
             </span>
-            <span className={`block mt-2 sm:mt-3 text-[1.625rem] sm:text-[2.125rem] font-extrabold tabular-nums leading-none ${valueTone}`}>
+            <span className={`block mt-1.5 sm:mt-3 text-[1.5rem] sm:text-[2.125rem] font-extrabold tabular-nums leading-none ${valueTone}`}>
                 {fmt(value)}
             </span>
-            <span className="block mt-1.5 text-[0.875rem] sm:text-[1rem] text-slate-500 leading-snug truncate">{note}</span>
+            <span className="block mt-1.5 text-[0.8125rem] sm:text-[1rem] text-slate-500 leading-snug break-words">{note}</span>
         </button>
     );
 }
@@ -216,7 +218,8 @@ export default function NotificationsAutomation({ refreshKey = 0 }: { refreshKey
     const email = data.counts.byChannel.email;
     const whatsapp = data.counts.byChannel.whatsapp;
     const reached = (c: DeliveryCounts) => n(c.accepted) + n(c.sent) + n(c.delivered) + n(c.read);
-    const split = (e: number, w: number) => `WhatsApp ${fmt(w)} · Email ${fmt(e)}`;
+    // "WA 3 · Email 1" fits a phone-width tile; the long form wraps on larger screens anyway.
+    const split = (e: number, w: number) => `WA ${fmt(w)} · Email ${fmt(e)}`;
 
     return (
         <>
@@ -358,7 +361,7 @@ export default function NotificationsAutomation({ refreshKey = 0 }: { refreshKey
                             ))}
                         </select>
                     ) : null}
-                    <div role="radiogroup" aria-label="Channel" className="inline-flex shrink-0 self-start rounded-xl border border-slate-200 bg-slate-50 p-1">
+                    <div role="radiogroup" aria-label="Channel" className="flex w-full lg:w-auto lg:inline-flex shrink-0 self-start rounded-xl border border-slate-200 bg-slate-50 p-1">
                         {[
                             { value: '', label: 'Both', icon: null },
                             { value: 'whatsapp', label: 'WhatsApp', icon: MessageSquare },
@@ -372,7 +375,7 @@ export default function NotificationsAutomation({ refreshKey = 0 }: { refreshKey
                                     role="radio"
                                     aria-checked={on}
                                     onClick={() => setChannel(value)}
-                                    className={`inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[1.0625rem] font-semibold whitespace-nowrap transition-colors ${on
+                                    className={`flex-1 lg:flex-none inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-lg text-[1.0625rem] font-semibold whitespace-nowrap transition-colors ${on
                                         ? 'bg-white text-slate-900 shadow-sm'
                                         : 'text-slate-500 hover:text-slate-800'}`}
                                 >
@@ -466,7 +469,7 @@ export default function NotificationsAutomation({ refreshKey = 0 }: { refreshKey
                             {!loading && !rows.length ? (
                                 <tr><td colSpan={4} className="px-4 py-14 text-center">
                                     <p className="text-[1.1875rem] font-semibold text-slate-600">
-                                        {filtered ? 'No messages match.' : `No ${current.label.toLowerCase()} messages yet.`}
+                                        {filtered ? 'No messages match these filters.' : 'No messages here yet.'}
                                     </p>
                                 </td></tr>
                             ) : null}

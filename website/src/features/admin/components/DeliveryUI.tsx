@@ -18,6 +18,11 @@ import {
 /* ----------------------------------------------------------------- states */
 
 export const STATE_META: Record<string, { label: string; className: string; hint: string }> = {
+    resent: {
+        label: 'Re-sent',
+        className: 'bg-slate-100 text-slate-700 border-slate-300',
+        hint: 'This message was sent again. The newer entry in the list shows how that went.',
+    },
     failed: {
         label: 'Failed',
         className: 'bg-rose-50 text-rose-700 border-rose-200',
@@ -60,6 +65,7 @@ export const stateOf = (row: Partial<DeliveryLogRow> | null | undefined): Delive
     if (!row) return 'queued';
     if (row.effectiveStatus) return row.effectiveStatus;
     if (row.mock) return 'mock';
+    if ((row as { resentAs?: string }).resentAs) return 'resent';
     if (row.status === 'failed') return 'failed';
     if (row.status === 'sent') return 'accepted';
     return 'queued';
@@ -143,6 +149,7 @@ export const reasonOf = (row: Partial<DeliveryLogRow> | null | undefined) =>
  * also carries a note in `lastError` — that is not a failure, and is said so.
  */
 export const plainReason = (row: Partial<DeliveryLogRow> | null | undefined): { text: string; failed: boolean } => {
+    if (stateOf(row) === 'resent') return { text: 'Sent again — the newer entry shows the result', failed: false };
     const raw = reasonOf(row);
     if (!raw) return { text: '', failed: false };
     const failed = stateOf(row) === 'failed';
@@ -180,7 +187,8 @@ export function ResendButton({ row, onDone, size = 'sm' }: {
 }) {
     const [asking, setAsking] = useState(false);
     const [busy, setBusy] = useState(false);
-    if (!row?._id || row.channel === 'in_app' || !canResend(row)) return null;
+    // A re-sent row's newer entry carries its own Resend; one button per message.
+    if (!row?._id || row.channel === 'in_app' || !canResend(row) || stateOf(row) === 'resent') return null;
 
     const h = size === 'md' ? 'h-10 px-4' : 'h-9 px-3';
 

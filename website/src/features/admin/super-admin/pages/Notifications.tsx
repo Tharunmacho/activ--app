@@ -235,20 +235,22 @@ export default function Notifications() {
                     {/* ============================================ view switch */}
                     <div className="flex gap-1 p-1 rounded-xl bg-slate-100 w-full sm:w-auto sm:inline-flex">
                         {([
-                            ['automation', 'Automation'],
-                            ['log', 'Delivery log & setup'],
-                        ] as const).map(([value, label]) => (
+                            ['automation', 'Automation', 'Automation'],
+                            ['log', 'Delivery log', 'Delivery log & setup'],
+                        ] as const).map(([value, short, label]) => (
                             <button
                                 key={value}
                                 type="button"
                                 onClick={() => setView(value)}
                                 aria-pressed={view === value}
-                                className={`flex-1 sm:flex-none min-w-0 h-11 px-3 sm:px-5 rounded-xl text-[1.1875rem] font-semibold
-                                            whitespace-nowrap transition-colors ${view === value
+                                className={`flex-1 sm:flex-none min-w-0 h-11 px-2 sm:px-5 rounded-xl text-[1.0625rem] sm:text-[1.1875rem] font-semibold
+                                            whitespace-nowrap truncate transition-colors ${view === value
                                     ? 'bg-white text-blue-600 shadow-sm'
                                     : 'text-slate-500 hover:text-slate-800'}`}
                             >
-                                {label}
+                                {/* The long label does not fit beside the other on a phone. */}
+                                <span className="sm:hidden">{short}</span>
+                                <span className="hidden sm:inline">{label}</span>
                             </button>
                         ))}
                     </div>
