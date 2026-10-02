@@ -131,6 +131,35 @@ export const DASHBOARD_FOR_ROLE: Partial<Record<UserRole, string>> = {
  * value carrying an `/uploads/` segment is therefore re-anchored to the API
  * origin we are actually talking to, which repairs those rows on read.
  */
+/**
+ * Hostnames the public SITE answers on — never a place uploads live. The
+ * production domain, whatever VITE_PUBLIC_SITE_URL names, and (at call time)
+ * the host this page was loaded from, so a new deployment needs no edit here.
+ */
+const SITE_HOSTS: string[] = (() => {
+    const hosts = ['activ.org.in', 'www.activ.org.in'];
+    try {
+        const pinned = String(import.meta.env.VITE_PUBLIC_SITE_URL || '').trim();
+        if (pinned) hosts.push(new URL(pinned).hostname);
+    } catch { /* an unparseable pin adds nothing */ }
+    return hosts.map((h) => h.toLowerCase());
+})();
+
+const isSiteHost = (host: string): boolean => {
+    const h = String(host || '').toLowerCase();
+    if (!h) return false;
+    if (SITE_HOSTS.includes(h)) return true;
+    try {
+        const page = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+        const api = new URL(API_ORIGIN, 'http://localhost').hostname.toLowerCase();
+        // The page's own host — unless the API is served from that very host
+        // (a dev proxy, a same-origin deployment), where the URL works as is.
+        return !!page && h === page && page !== api;
+    } catch {
+        return false;
+    }
+};
+
 export const resolveMediaUrl = (value?: string | null): string => {
     const raw = (value || '').trim();
     if (!raw) return '';
@@ -184,7 +213,19 @@ export const resolveMediaUrl = (value?: string | null): string => {
             || /\.sslip\.io$/i.test(host)
             || /(^|\.)welocalhost\.com$/i.test(host)
             || String(import.meta.env.VITE_RETIRED_MEDIA_HOSTS || '').split(',')
-                .map((h) => h.trim().toLowerCase()).filter(Boolean).includes(host.toLowerCase());
+                .map((h) => h.trim().toLowerCase()).filter(Boolean).includes(host.toLowerCase())
+            /*
+             * THE SITE'S OWN HOST. The public site is static files on Apache
+             * and holds no uploads. Its `/uploads` used to be proxied to the
+             * backend that ran beside it, and a handful of rows were saved
+             * with that address (`https://activ.org.in/uploads/…`). Since the
+             * API moved to its own host, that proxy reaches a server that has
+             * none of the newer files — a banner uploaded yesterday 404s while
+             * an older one still answers. The home carousel was three such
+             * rows. Anything on the site host is re-pointed at the API this
+             * build talks to, which is where every upload actually lives.
+             */
+            || isSiteHost(host);
 
         return unreachableElsewhere ? `${API_ORIGIN}${raw.slice(uploadIndex)}` : raw;
     }
