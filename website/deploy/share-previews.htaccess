@@ -7,6 +7,11 @@
 # reaches the share page (it sends them on with it), so it can never loop.
 # Maintained in website/deploy/share-previews.htaccess; merged into
 # public_html/.htaccess by website/deploy/merge-htaccess.mjs on every deploy.
+# The same URL serves different HTML to people and crawlers. Caches must
+# include the user agent when choosing which response to reuse.
+<IfModule mod_headers.c>
+Header always merge Vary "User-Agent"
+</IfModule>
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteCond %{QUERY_STRING} !(^|&)ref=share(&|$)
