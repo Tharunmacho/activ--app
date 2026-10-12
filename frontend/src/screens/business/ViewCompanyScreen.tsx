@@ -120,7 +120,7 @@ const ViewCompanyScreen: React.FC<Props> = ({ navigation, route }) => {
         />
       </FadeInUp>
       <FadeInUp delay={160} distance={8} style={styles.headTags}>
-        <GlassTag icon={live ? 'travel-explore' : 'visibility-off'} label={live ? 'Listed in Discover' : 'Hidden from Discover'} />
+        <GlassTag icon={live ? 'travel-explore' : 'visibility-off'} label={live ? 'Listed in ACTIV Network' : 'Hidden from ACTIV Network'} />
       </FadeInUp>
     </View>
   );
@@ -151,7 +151,7 @@ const ViewCompanyScreen: React.FC<Props> = ({ navigation, route }) => {
       <BizSectionTitle title="Catalogue" caption="From your products" />
       <MetricGrid>
         <MetricTile tone="business" label="Catalogue products" value={stats.total} icon="inventory-2" hint="Total listed" colors={CHIP.violet} delay={100} />
-        <MetricTile tone="business" label="Live products" value={stats.active} icon="check-circle" colors={CHIP.green} hint="Visible in Discover" delay={160} />
+        <MetricTile tone="business" label="Live products" value={stats.active} icon="check-circle" colors={CHIP.green} hint="Visible in ACTIV Network" delay={160} />
         <MetricTile tone="business" label="Featured" value={stats.featured} icon="star" colors={CHIP.amber} hint="Promoted items" delay={220} />
         <MetricTile tone="business" label="Product views" value={stats.views} icon="visibility" colors={CHIP.sky} delay={280} />
       </MetricGrid>

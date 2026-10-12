@@ -245,7 +245,7 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
     } else {
       if (!form.state) next.state = req;
       if (!form.district) next.district = req;
-      if (!form.block) next.block = req;
+      if (blocks.length > 0 && !form.block) next.block = req;
       if (!(form.city || '').trim()) next.city = req;
     }
     if (!form.socialCategory) next.socialCategory = req;
@@ -348,7 +348,7 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
         <Notice
           kind="warning"
           style={NOTICE}
-          text="No region on the platform currently has an active block admin, so there is nothing to select yet. An administrator has to open a region before an application can be routed."
+          text="Location data is unavailable. Retry loading regions."
         />
       ) : null}
 
@@ -408,15 +408,15 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
             />
             <SelectField
               label="Block"
-              required
+              required={blocks.length > 0}
               value={form.block}
               options={blocks}
               onChange={(v) => setField('block', v)}
-              placeholder={form.district ? 'Select block' : 'Choose a district first'}
+              placeholder={form.district ? (blocks.length ? 'Select block' : 'No development blocks ? district only') : 'Choose a district first'}
               icon="holiday-village"
               iconBadge
               error={errors.block}
-              disabled={isLocked || !form.district}
+              disabled={isLocked || !form.district || !blocks.length}
             />
             <Field
               label="City"

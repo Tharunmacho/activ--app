@@ -64,6 +64,7 @@ interface CompanyItem {
   email?: string;
   description?: string;
   logo?: string;
+  banner?: string;
   trustedBy?: number;
   ownerIsMember?: boolean;
   products?: ProductItem[];
@@ -175,6 +176,7 @@ function CompanyCard({ item, ordered, highlightIds, matchedOnly, own, trusted, b
   return (
     <FadeInUp distance={12} style={s.cardWrap}>
       <LiftCard tone="business">
+        {item.banner ? <PressableScale onPress={onOpen} accessibilityLabel={`View ${item.businessName || 'company'} banner`}><FitImage uri={resolveMediaUrl(item.banner)} style={{ width: '100%', height: 132, backgroundColor: '#fff', borderRadius: 14 }} /></PressableScale> : null}
         <View style={s.cardHead}>
           <PressableScale onPress={onOpen} scaleTo={0.98} style={{ flex: 1, minWidth: 0 }} contentStyle={s.cardHeadMain} accessibilityRole="button" accessibilityLabel={`Open ${item?.businessName || 'company'}`}>
             <CompanyLogoTile tone="business" uri={logo} name={item?.businessName} size={56} ring={trusted} />
@@ -581,12 +583,12 @@ const DiscoverScreen: React.FC<Props> = ({ navigation }) => {
       <BrandHeaderBlock tone="business">
         <BrandTopBar
           onBack={() => navigation.goBack()}
-          title="Discover"
+          title="ACTIV Network"
           right={<GlassIconButton icon="verified-user" onPress={() => navigation.navigate('TrustList')} accessibilityLabel="My trust list" />}
         />
         <BrandHero
           eyebrow="The ACTIV business network"
-          title="Discover businesses"
+          title="ACTIV Network"
           subtitle={`Browsing ${regionLabel}`}
           art={<MarketGlobe3D tone="business" size={92} />}
           artSize={92}
@@ -667,7 +669,7 @@ const DiscoverScreen: React.FC<Props> = ({ navigation }) => {
   );
 
   const empty = loading || paid === null ? (
-    <View accessibilityLabel={hasQuery ? 'Searching the business network…' : 'Loading the directory…'}>
+    <View accessibilityLabel={hasQuery ? 'Searching the business network…' : 'Loading ACTIV Network…'}>
       <CardSkeletons rows={3} tall />
     </View>
   ) : paid === false ? (

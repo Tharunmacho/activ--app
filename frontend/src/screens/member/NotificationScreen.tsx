@@ -1,3 +1,4 @@
+import { isUpcomingEvent } from '../../utils/eventLifecycle';
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -171,7 +172,7 @@ async function buildFeed(acct: string): Promise<FeedItem[]> {
   }
 
   if (events.status === 'fulfilled') {
-    asArray<any>(events.value?.events).forEach((event) => {
+    asArray<any>(events.value?.events).filter(event => isUpcomingEvent(event)).forEach((event) => {
       const id = String(event?.id || event?._id || '');
       if (!id) return;
       const at = event?.publishedAt || event?.createdAt || event?.startAt || '';

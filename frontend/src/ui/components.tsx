@@ -329,8 +329,8 @@ export function ListRow({ icon, iconColor = PALETTE.blue, iconBg = PALETTE.blueS
       {leading ? <View style={s.rowLead}>{leading}</View>
         : icon ? <View style={[s.rowIcon, { backgroundColor: danger ? PALETTE.redSoft : iconBg }]}><Icon name={icon} size={SIZE.icon} color={danger ? PALETTE.red : iconColor} /></View> : null}
       <View style={s.rowText}>
-        <Text style={[s.rowTitle, danger && { color: PALETTE.red }]} numberOfLines={1}>{String(title ?? '')}</Text>
-        {subtitle ? <Text style={s.rowSub} numberOfLines={2}>{subtitle}</Text> : null}
+        <Text style={[s.rowTitle, danger && { color: PALETTE.red }]} numberOfLines={2}>{String(title ?? '')}</Text>
+        {subtitle ? <Text style={s.rowSub}>{subtitle}</Text> : null}
       </View>
       {meta ? <Text style={s.rowMeta} numberOfLines={1} maxFontSizeMultiplier={CAP}>{meta}</Text> : null}
       {right !== undefined ? right : onPress ? <Icon name="chevron-right" size={22} color={PALETTE.textFaint} /> : null}

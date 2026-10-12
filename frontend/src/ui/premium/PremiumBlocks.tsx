@@ -197,7 +197,7 @@ export function ActionTile({ icon, label, detail, tone = 'blue', onPress, badge,
         ) : <Icon name="arrow-outward" size={16} color={PALETTE.textFaint} />}
       </View>
       <Text style={s.tileLabel} numberOfLines={2} maxFontSizeMultiplier={CAP}>{label}</Text>
-      {detail ? <Text style={s.tileDetail} numberOfLines={1} maxFontSizeMultiplier={CAP}>{detail}</Text> : null}
+      {detail ? <Text style={s.tileDetail} maxFontSizeMultiplier={CAP}>{detail}</Text> : null}
     </PressableScale>
   );
 }
@@ -292,7 +292,7 @@ const s = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingHorizontal: SPACE.lg },
   tileCell: { width: '48.5%', marginBottom: SPACE.md },
   tile: {
-    minHeight: 124, padding: SPACE.lg, backgroundColor: PALETTE.white, borderRadius: 20, borderWidth: 1,
+    flex: 1, minHeight: 124, padding: SPACE.lg, backgroundColor: PALETTE.white, borderRadius: 20, borderWidth: 1,
     borderColor: 'rgba(226,232,240,0.9)', shadowColor: BRAND.shadowNavy, shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.08, shadowRadius: 16, elevation: 3,
   },

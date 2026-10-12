@@ -1,14 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { membershipValidityLabel } from '../../utils/membershipDates';
+import React, { useCallback, useMemo, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
   BottomActionBar, Notice, PALETTE, SPACE, TYPE, BRAND, money, shortDate,
   PremiumPage, PremiumPageHeader, PremiumPlan3D, GlassBadge, GradientButton, PressableScale, FadeInUp,
-  SurfaceCard, GradientGlyph, GroupTitle, StateView, CardSkeletons, ReceiptLine, PREMIUM_TYPE,
+  SurfaceCard, GradientGlyph, GroupTitle, StateView, CardSkeletons, ReceiptLine, PREMIUM_TYPE, PremiumSelect,
 } from '../../ui';
 import {
-  getMyPlans, getMyProfile, readRenewal, bandLabel, Plan, MyPlans, RenewalInfo,
+  getMyPlans, getUpgradePlans, getMyProfile, readRenewal, bandLabel, Plan, MyPlans, RenewalInfo,
 } from '../../services/paymentFlow';
 import { getMyApplications } from '../../services/memberApi';
 import { pickMostAdvancedApplication } from '../member/dashboard/memberRules';
@@ -50,7 +52,7 @@ const KIND_BENEFITS: Record<'student' | 'aspirant' | 'business', { icon: string;
   student: [
     { icon: 'handshake', title: 'Mentorship', text: 'Guidance from established ACTIV entrepreneurs while you study.' },
     { icon: 'event', title: 'Events & workshops', text: 'Invitations to conclaves, seminars and skill workshops.' },
-    { icon: 'groups', title: 'Member network', text: 'The member directory — reach business owners across the association.' },
+    { icon: 'groups', title: 'Member network', text: 'The ACTIV Network — reach business owners across the association.' },
     { icon: 'account-balance', title: 'Schemes & funding', text: 'Updates on government schemes for first-generation entrepreneurs.' },
     { icon: 'workspace-premium', title: 'Membership certificate', text: 'An official ACTIV certificate for your résumé and portfolio.' },
     { icon: 'trending-up', title: 'Grow into business', text: 'Move to a Business membership the day you start trading.' },
@@ -58,7 +60,7 @@ const KIND_BENEFITS: Record<'student' | 'aspirant' | 'business', { icon: string;
   aspirant: [
     { icon: 'handshake', title: 'Start-up guidance', text: 'Mentors who have built businesses, for the one you are planning.' },
     { icon: 'account-balance', title: 'Schemes & funding', text: 'Stand-Up India, MSME and state schemes explained and announced.' },
-    { icon: 'groups', title: 'Member network', text: 'Suppliers, partners and customers in the member directory.' },
+    { icon: 'groups', title: 'Member network', text: 'Suppliers, partners and customers in the ACTIV Network.' },
     { icon: 'event', title: 'Events & workshops', text: 'Invitations to conclaves, seminars and business programmes.' },
     { icon: 'storefront', title: 'Business account', text: 'Draft your company page and catalogue before you launch.' },
     { icon: 'workspace-premium', title: 'Membership certificate', text: 'An official ACTIV certificate with your Member ID.' },
@@ -166,6 +168,9 @@ function PlanCard({ plan, selected, ribbon, onSelect, delay }: {
 
 const MembershipPlansScreen: React.FC<any> = ({ navigation, route }) => {
   const renewParam = route?.params?.renew === true;
+  const upgrading = route?.params?.upgrade === true;
+  const [upgradeReason, setUpgradeReason] = useState('');
+  const [commencementYear, setCommencementYear] = useState('');
   const [data, setData] = useState<MyPlans | null>(null);
   const [renewal, setRenewal] = useState<RenewalInfo | null>(null);
   const [status, setStatus] = useState('');
@@ -180,7 +185,7 @@ const MembershipPlansScreen: React.FC<any> = ({ navigation, route }) => {
     if (quiet) setRefreshing(true); else setLoading(true);
     try {
       const [plans, profile, apps] = await Promise.all([
-        getMyPlans(),
+        upgrading ? getUpgradePlans() : getMyPlans(),
         getMyProfile().catch(() => null),
         getMyApplications().catch(() => [] as any[]),
       ]);
@@ -189,6 +194,8 @@ const MembershipPlansScreen: React.FC<any> = ({ navigation, route }) => {
       setApplicationId(String(app?.applicationId || app?._id || app?.id || ''));
       setAppStatus(app ? String(app?.status || '').toLowerCase() : '');
       setData(plans);
+      if (upgrading && !quiet) setCommencementYear(plans.commencementYear || '');
+      if (upgrading) setUpgradeReason(plans.reason || 'The full plan fee is charged. The new annual membership starts after successful payment and is valid for one year.');
       setRenewal(readRenewal(profile));
       setStatus(String(profile?.membershipStatus || '').toLowerCase());
       // Pre-select the server's match, else the only plan — never a guess.
@@ -197,42 +204,52 @@ const MembershipPlansScreen: React.FC<any> = ({ navigation, route }) => {
         ? plans.matched.key
         : list.length === 1 ? list[0].key : null;
       setSelectedKey((prev) => (quiet && prev && list.some((p) => p.key === prev) ? prev : pick));
-    } catch (err) {
-      console.warn('Plans load safely caught:', err);
+    } catch {
+      setData({ plans: [], matched: null, years: null, reason: '', showAllPlans: false, failed: true });
+      setSelectedKey(null);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [upgrading]);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const plans = useMemo(() => data?.plans || [], [data]);
   const selected = useMemo(() => plans.find((p) => p.key === selectedKey) || null, [plans, selectedKey]);
 
   const isPaid = PAID.includes(status) && renewal?.state !== 'expired';
-  const renewing = renewParam || renewal?.state === 'expired' || (isPaid && renewal?.canRenew === true);
+  const renewing = !upgrading && (renewParam || renewal?.state === 'expired' || (isPaid && renewal?.canRenew === true));
   /* A paid member may only pay again when the SERVER says they can renew —
      never offer a button the order would refuse. */
-  const blocked = isPaid && renewal?.canRenew !== true;
+  const blocked = upgrading ? data?.canPurchase === false : isPaid && renewal?.canRenew !== true;
   /* The website's PaymentRegistration gate: a first payment needs an
      application, and that application must be approved. */
-  const notApproved = !isPaid && !renewing && appStatus !== null
+  const notApproved = !upgrading && !isPaid && !renewing && appStatus !== null
     && (appStatus === '' || !/approved/.test(appStatus) || /reject/.test(appStatus));
 
   /* Whose plan this is — the server's audience on the offered rows. */
   const audience = plans[0]?.audience || 'business';
   const kindKey: 'student' | 'aspirant' | 'business' = audience === 'student' ? 'student' : audience === 'aspirant' ? 'aspirant' : 'business';
   const kindLabel = kindKey === 'business' ? 'Business' : kindKey === 'student' ? 'Student' : 'Aspirant';
-  const journey = renewing
+  const journey = upgrading
+    ? [{ label: 'Profile', state: 'done' }, { label: 'Plan', state: 'now' }, { label: 'Payment', state: 'next' }, { label: 'Active', state: 'next' }]
+    : renewing
     ? [{ label: renewal?.state === 'expired' ? 'Expired' : 'Member', state: 'done' }, { label: 'Renew', state: 'now' }, { label: 'Active', state: 'next' }]
     : [{ label: 'Application', state: 'done' }, { label: 'Approved', state: 'done' }, { label: 'Payment', state: 'now' }, { label: 'Active', state: 'next' }];
   const selectedLifetime = String(selected?.membershipType || '').toLowerCase() === 'lifetime';
 
   const onContinue = () => {
-    if (!selected) return;
+    if (!selected || blocked) return;
+    if (upgrading && selected.audience === 'business') {
+      const year = Number(commencementYear), age = new Date().getFullYear() - year;
+      if (!/^\d{4}$/.test(commencementYear) || year < 1800 || age < 0) { Alert.alert('Commencement year', 'Enter a valid business commencement year.'); return; }
+      if (age < Number(selected.minYears || 0) || (selected.maxYears != null && age >= selected.maxYears)) { Alert.alert('Choose a matching plan', 'Select the business plan matching your commencement year.'); return; }
+    }
     navigation.navigate('PaymentCheckout', {
       orderType: 'membership', planId: selected.key, renew: renewing,
+      upgrade: upgrading,
+      commencementYear: upgrading && selected.audience === 'business' ? commencementYear : undefined,
       ...(applicationId ? { applicationId } : {}),
     });
   };
@@ -243,9 +260,11 @@ const MembershipPlansScreen: React.FC<any> = ({ navigation, route }) => {
     <PremiumPageHeader
       onBack={onBack}
       right={<GlassBadge label="Secure" icon="lock" />}
-      eyebrow={renewing ? 'Renewal' : notApproved ? 'ACTIV membership' : 'Application approved'}
-      title={renewing ? 'Keep your benefits going' : plans.length === 1 && !loading ? 'One step away' : 'Choose your membership'}
-      subtitle={loading ? 'Prices are set by ACTIV.' : renewing
+      eyebrow={upgrading ? 'Membership upgrade' : renewing ? 'Renewal' : notApproved ? 'ACTIV membership' : 'Application approved'}
+      title={upgrading ? 'Upgrade membership' : renewing ? 'Keep your benefits going' : plans.length === 1 && !loading ? 'One step away' : 'Choose your membership'}
+      subtitle={loading ? 'Prices are set by ACTIV.' : upgrading
+        ? 'Choose your new plan using the same email, password and mobile. Your profile updates after verified payment.'
+        : renewing
         ? 'Your new year starts when the current one ends — renewing early loses nothing.'
         : plans.length > 1
           ? 'Pick the plan that fits you. The price is confirmed by ACTIV at payment.'
@@ -317,6 +336,7 @@ const MembershipPlansScreen: React.FC<any> = ({ navigation, route }) => {
       ) : undefined}
     >
       <Overlap>
+        {upgrading && <View style={s.notice}><Notice kind="info" text={upgradeReason} />{selected?.audience === 'business' && data?.canPurchase !== false && <PremiumSelect label="Business commencement year" value={commencementYear} options={selected.commencementYears || []} onChange={setCommencementYear} placeholder="Choose commencement year" hint={`Started ${selected.commencementYearLabel || 'within the configured year range'}. Your profile changes after verified payment.`} />}</View>}
         {notApproved ? (
           <Notice
             kind="warning"
@@ -329,19 +349,19 @@ const MembershipPlansScreen: React.FC<any> = ({ navigation, route }) => {
           />
         ) : null}
 
-        {blocked ? (
+        {blocked && !upgrading ? (
           <Notice
             kind="success"
             icon="verified"
             style={s.notice}
             text={renewal?.lifetime
               ? 'Your membership is lifetime — there is nothing to renew.'
-              : `Your membership is active${renewal?.expiresAt ? ` until ${shortDate(renewal.expiresAt)}` : ''}.${renewal?.opensAt ? ` Renewal opens on ${shortDate(renewal.opensAt)}.` : ''}`}
+              : `Your membership is active${renewal?.expiresAt ? ` until ${membershipValidityLabel(renewal.expiresAt)}` : ''}.${renewal?.opensAt ? ` Renewal opens on ${shortDate(renewal.opensAt)}.` : ''}`}
           />
-        ) : renewal?.state === 'expired' ? (
-          <Notice kind="warning" style={s.notice} text={`Your membership ended${renewal?.expiresAt ? ` on ${shortDate(renewal.expiresAt)}` : ''}. Renew now to restore every member benefit.`} />
-        ) : renewal?.canRenew && renewal?.daysLeft !== null ? (
-          <Notice kind="info" icon="event" style={s.notice} text={`Your membership ends in ${Math.max(0, Number(renewal?.daysLeft || 0))} days${renewal?.expiresAt ? ` (${shortDate(renewal.expiresAt)})` : ''}.`} />
+        ) : !upgrading && renewal?.state === 'expired' ? (
+          <Notice kind="warning" style={s.notice} text={`Your membership ended${renewal?.expiresAt ? ` on ${membershipValidityLabel(renewal.expiresAt)}` : ''}. Renew now to restore every member benefit.`} />
+        ) : !upgrading && renewal?.canRenew && renewal?.daysLeft !== null ? (
+          <Notice kind="info" icon="event" style={s.notice} text={`Your membership ends in ${Math.max(0, Number(renewal?.daysLeft || 0))} days${renewal?.expiresAt ? ` (${membershipValidityLabel(renewal.expiresAt)})` : ''}.`} />
         ) : null}
 
         {plans.length === 0 ? (
@@ -349,8 +369,8 @@ const MembershipPlansScreen: React.FC<any> = ({ navigation, route }) => {
             <StateView
               compact
               art={<PremiumPlan3D size={64} />}
-              title="No plans are available right now"
-              message="ACTIV has not published a membership plan for you yet. Please check again later or contact your regional office."
+              title={upgrading ? 'No different plan is available yet' : 'No plans are available right now'}
+              message={upgrading ? upgradeReason : 'ACTIV has not published a membership plan for you yet. Please check again later or contact your regional office.'}
               action="Refresh"
               actionIcon="refresh"
               onAction={() => load()}

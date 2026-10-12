@@ -8,6 +8,13 @@ jest.mock('react-native-image-picker', () => ({
   launchImageLibrary: jest.fn(),
   launchCamera: jest.fn(),
 }));
+jest.mock('@react-native-documents/picker', () => ({
+  pick: jest.fn(async () => []),
+  keepLocalCopy: jest.fn(),
+  types: { pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', ppt: 'application/vnd.ms-powerpoint', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', images: 'image/*', zip: 'application/zip', plainText: 'text/plain', csv: 'text/csv' },
+  errorCodes: { OPERATION_CANCELED: 'OPERATION_CANCELED' },
+  isErrorWithCode: error => !!error && typeof error.code === 'string',
+}));
 jest.mock('react-native-linear-gradient', () => {
   const { View } = require('react-native');
   return View;

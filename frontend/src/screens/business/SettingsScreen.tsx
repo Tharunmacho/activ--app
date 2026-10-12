@@ -15,6 +15,7 @@ import {
   useActiveCompanyStore,
 } from '../../stores/activeCompanyStore';
 import api from '../../services/api';
+import { websiteUrl } from '../../config/website.config';
 import { ENDPOINTS, resolveMediaUrl } from '../../config/api.config';
 import {
   ListRow, ToggleRow, PALETTE, SPACE, TYPE,
@@ -39,9 +40,9 @@ type StatusTone = {
 
 // The company record carries `status` (pending until an admin activates it).
 const STATUS_TONES: Record<string, StatusTone> = {
-  active: { label: 'Active', background: PALETTE.successSoft, color: PALETTE.successText, icon: 'verified' },
-  pending: { label: 'Pending approval', background: PALETTE.warningSoft, color: PALETTE.warningText, icon: 'schedule' },
-  inactive: { label: 'Inactive', background: PALETTE.dangerSoft, color: PALETTE.dangerText, icon: 'block' },
+  active: { label: 'Published', background: PALETTE.successSoft, color: PALETTE.successText, icon: 'verified' },
+  pending: { label: 'Not published', background: PALETTE.warningSoft, color: PALETTE.warningText, icon: 'schedule' },
+  inactive: { label: 'Not published', background: PALETTE.dangerSoft, color: PALETTE.dangerText, icon: 'block' },
 };
 
 const SettingsScreen: React.FC<Props> = ({ navigation }) => {
@@ -131,6 +132,19 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
+    if (next && activeCompany?.publication?.paymentRequired) {
+      try {
+        const res = await api.get(`/business-profiles/${companyId}/publishing`);
+        const quote = res.data?.data || res.data;
+        if (quote.paymentRequired) {
+          Alert.alert('Publish another company', `₹${Number(quote.amount).toLocaleString('en-IN')} · ${quote.term}\n\n${quote.message}`, [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Continue to payment', onPress: () => navigation.navigate('PaymentCheckout', { orderType: 'company_listing', companyId }) },
+          ]);
+          return;
+        }
+      } catch (error: any) { Alert.alert('Company publishing', error?.response?.data?.message || 'The current fee could not be loaded. Please retry.'); return; }
+    }
     setIsListed(next);
     setIsSavingListing(true);
 
@@ -154,6 +168,11 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
+    if (activeCompany.isActive === false) {
+      Alert.alert('Publish your company first', 'Turn on listing in ACTIV Network to share a public company preview.');
+      return;
+    }
+    const url = websiteUrl(`/network/company/${encodeURIComponent(companyId)}`);
     const lines = [
       activeCompany.businessName || '',
       activeCompany.businessType || '',
@@ -161,6 +180,7 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       activeCompany.email ? `Email: ${activeCompany.email}` : '',
       [activeCompany.area, activeCompany.location].filter(Boolean).join(', '),
       activeCompany.description || '',
+      url,
     ].filter(Boolean);
 
     try {
@@ -278,10 +298,10 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
     >
       {/* Directory presence — the one switch with consequences for others. */}
       <FadeInUp delay={240} style={styles.overlap}>
-        <PremiumSection tone="business" icon="travel-explore" title="Directory & reach" subtitle="Whether other members can find you">
+        <PremiumSection tone="business" icon="travel-explore" title="ACTIV Network" subtitle={activeCompany?.publication?.unlimited ? 'Lifetime Membership · publish multiple companies' : 'One company included · membership payment for each additional company'}>
           <ToggleRow tone="business"
             icon="travel-explore"
-            title="List in Discover"
+            title="List in ACTIV Network"
             subtitle={isSavingListing
               ? 'Saving…'
               : isListed
@@ -291,7 +311,7 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             onValueChange={handleToggleListing}
             disabled={isSavingListing}
           />
-          <ListRow iconColor={PALETTE.violet} iconBg={PALETTE.violetSoft} icon="search" title="Browse the network" subtitle="Search companies and products across members"
+          <ListRow iconColor={PALETTE.violet} iconBg={PALETTE.violetSoft} icon="search" title="ACTIV Network" subtitle="Search companies and products across members"
             onPress={() => navigation.navigate('Discover')} />
           <ListRow iconColor={PALETTE.violet} iconBg={PALETTE.violetSoft} icon="verified-user" title="My trust list" subtitle="Companies you have kept, with your notes"
             onPress={() => navigation.navigate('TrustList')} />
@@ -311,7 +331,7 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             onPress={() => navigation.navigate('ManageCompanies')} />
           <ListRow iconColor={PALETTE.violet} iconBg={PALETTE.violetSoft} icon="add-business" title="Add new company" subtitle="Register another business under your membership"
             onPress={() => navigation.navigate('AddCompany')} />
-          <ListRow iconColor={PALETTE.violet} iconBg={PALETTE.violetSoft} icon="ios-share" title="Share business details" subtitle="Send name, contact and location to a buyer"
+          <ListRow iconColor={PALETTE.violet} iconBg={PALETTE.violetSoft} icon="ios-share" title="Share business details" subtitle="Share your banner, company profile and contact details"
             onPress={handleShareCompany} last />
         </PremiumSection>
       </FadeInUp>

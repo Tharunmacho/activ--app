@@ -48,8 +48,10 @@ export const SUPER_MENU_SECTIONS: { title: string; items: Item[] }[] = [
   {
     title: 'Membership & money',
     items: [
+      { key: 'registrations', icon: 'how-to-reg', label: 'Registrations & payments', hint: 'Members, receipts, manual confirmation', accent: 'indigo', go: stack('SuperMembershipRegistrations') },
+      { key: 'membership-ids', icon: 'badge', label: 'Membership IDs', hint: 'Member records and corrections', accent: 'indigo', go: stack('SuperMembershipIds') },
       { key: 'plans', icon: 'card-membership', label: 'Membership plans', hint: 'Prices, bands, show-all', accent: 'indigo', go: stack('SuperMembership', { tab: 'plans' }) },
-      { key: 'platinum', icon: 'workspace-premium', label: 'Platinum', hint: 'Grant, requests', accent: 'gold', go: stack('SuperMembership', { tab: 'platinum' }) },
+      { key: 'platinum', icon: 'workspace-premium', label: 'Lifetime', hint: 'Grant, requests', accent: 'gold', go: stack('SuperMembership', { tab: 'platinum' }) },
       { key: 'bookings', icon: 'confirmation-number', label: 'Bookings & revenue', hint: 'Seats sold, paid, unpaid', accent: 'green', go: stack('SuperBookings') },
       { key: 'donations', icon: 'volunteer-activism', label: 'Donations', hint: 'Donors, receipts, totals', accent: 'red', go: stack('SuperDonors') },
     ],
@@ -89,8 +91,8 @@ function Tile({ item, onPress, delay }: { item: Item; onPress: () => void; delay
             </LinearGradient>
             <Icon name="arrow-outward" size={16} color={PALETTE.textFaint} />
           </View>
-          <Text style={s.tileLabel} numberOfLines={1}>{item.label}</Text>
-          <Text style={s.tileHint} numberOfLines={2}>{item.hint}</Text>
+          <Text style={s.tileLabel}>{item.label}</Text>
+          <Text style={s.tileHint}>{item.hint}</Text>
         </View>
         </View>
       </PressableScale>

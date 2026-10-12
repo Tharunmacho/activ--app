@@ -5,6 +5,7 @@ import { RootStackParamList } from '../../types';
 import api from '../../services/api';
 import { ENDPOINTS } from '../../config/api.config';
 import { clearSession, sanitizeUser } from '../../services/session';
+import { takePublicAction } from '../../services/publicNavigation';
 import { useAuthStore } from '../../stores/exampleStore';
 import useRegionCascade from '../../hooks/useRegionCascade';
 import {
@@ -102,7 +103,10 @@ const RegistrationStep2Screen: React.FC<Props> = ({ navigation, route }) => {
       });
       await login(stored, token, role as any);
 
-      navigation.reset({ index: 0, routes: [{ name: 'MemberMain' }] });
+      const resume = takePublicAction();
+      navigation.reset(resume
+        ? { index: 1, routes: [{ name: 'MemberMain' }, resume] }
+        : { index: 0, routes: [{ name: 'MemberMain' }] });
     } catch (err: any) {
       const message = errorText(err, 'Registration failed. Please try again.');
       if (err?.response?.status === 409 || /already registered/i.test(message)) {
@@ -194,7 +198,7 @@ const RegistrationStep2Screen: React.FC<Props> = ({ navigation, route }) => {
               <Notice
                 kind="warning"
                 style={s.notice}
-                text="No regions are open for registration yet. Please check back once your area has an administrator."
+                text="Location data is unavailable. Please retry loading regions."
               />
             ) : null}
             <PremiumSelect
@@ -225,9 +229,9 @@ const RegistrationStep2Screen: React.FC<Props> = ({ navigation, route }) => {
               value={region.block}
               options={(region.blocks || []).map((n) => n?.name || '').filter(Boolean)}
               onChange={region.setBlock}
-              placeholder={region.district ? (region.refreshing ? 'Loading blocks...' : 'Select block') : 'Please select district first'}
-              disabled={submitting || !region.district}
-              emptyText="No blocks listed for this district yet"
+              placeholder={region.district ? (region.refreshing ? 'Loading blocks...' : !region.blocks.length ? 'No development blocks ? district only' : 'Select block') : 'Please select district first'}
+              disabled={submitting || !region.district || region.refreshing || !region.blocks.length}
+              emptyText="No development blocks listed; your district is sufficient"
             />
             <PremiumInput
               label="City"

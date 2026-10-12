@@ -172,7 +172,7 @@ const ManageEventsScreen: React.FC = () => {
   const openEdit = useCallback((e: CmsEventRow) => navigation.navigate('SuperEventEditor', { event: e }), [navigation]);
 
   const remove = useCallback(async (e: CmsEventRow) => {
-    const ok = await confirm('Delete event', `Delete “${e?.title || 'Untitled event'}”? This removes it from the public site and from the member app.`, 'Delete', true);
+    const ok = await confirm('Delete event', `Delete “${e?.title || 'Untitled event'}”? This removes it from public view. Bookings, payments and attendance remain available in Event Bookings.`, 'Delete', true);
     if (!ok) return;
     try {
       await deleteCmsEvent(String(e?.id || ''));

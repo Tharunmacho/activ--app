@@ -162,7 +162,7 @@ const ProductsServicesScreen: React.FC<Props> = ({ navigation }) => {
         <BrandHero
           eyebrow="Active catalogue"
           title={selectedCompany?.businessName || 'No company selected'}
-          subtitle="What buyers see in Discover and on your company page."
+          subtitle="What buyers see in ACTIV Network and on your company page."
           art={<ProductCrate3D tone="business" size={92} />}
           artSize={92}
         >

@@ -151,6 +151,7 @@ const SuperBookingDetailScreen: React.FC = () => {
           {canCancel ? <ConsoleButton kind="danger" icon="block" label="Cancel booking" onPress={() => { setCancelOpen(true); setNotice(''); }} disabled={acting} /> : null}
         </>
       )}
+      <Text style={{ ...TYPE.caption, color: PALETTE.textMuted }}>Cancelling releases seats and keeps all booking details.</Text>
       <ConsoleButton kind="soft" label="Close" onPress={() => navigation?.goBack?.()} disabled={acting} />
     </View>
   );

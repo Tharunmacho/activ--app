@@ -114,7 +114,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
         await AsyncStorage.removeItem('@activ_user_password').catch(() => null);
 
         if (!token || !role) {
-          setIsCheckingAuth(false);
+          if (typeof navigation.isFocused !== 'function' || navigation.isFocused()) navigation.replace('PublicExplore');
           return;
         }
 
@@ -172,7 +172,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
   });
 
   const handleSkip = () => {
-    navigation.replace('Login');
+    navigation.replace('PublicExplore');
   };
 
   const handleNext = () => {
@@ -181,7 +181,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
       flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
       setCurrentIndex(nextIndex);
     } else {
-      navigation.replace('Login');
+      navigation.replace('PublicExplore');
     }
   };
 

@@ -330,7 +330,7 @@ export function MembershipCard3D({
         </View>
         <Text style={p.refLabel} maxFontSizeMultiplier={1.2}>MEMBER ID</Text>
         <Text
-          style={p.memberId}
+          style={[p.memberId, idText.length > 20 && { fontSize: 20, letterSpacing: 0.5 }]}
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.7}

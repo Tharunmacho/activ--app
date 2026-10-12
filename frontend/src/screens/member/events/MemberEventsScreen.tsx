@@ -1,12 +1,13 @@
+import { useEventClock } from '../../../utils/useEventClock';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, StyleSheet } from 'react-native';
+import { FlatList, View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
   Badge, PALETTE, SPACE, SIZE, TYPE, asArray, BRAND,
   PremiumListPage, PremiumPageHeader, HeaderStat, HeaderStatRow, PillTabs, SurfaceCard, DateTile, SeatMeter,
-  StateView, CardSkeletons, FadeInUp, EventTicket3D, EventCalendar3D, PREMIUM_OVERLAP, untilLabel, FitImage } from '../../../ui';
+  StateView, CardSkeletons, EventTicket3D, EventCalendar3D, PREMIUM_OVERLAP, untilLabel, FitImage } from '../../../ui';
 import { listMemberEvents } from '../../../services/memberApi';
 import { useEventSeats, seatsLeftOf, wantsSeats, SeatInfo } from './eventSeats';
 import { resolveMediaUrl } from '../../../config/api.config';
@@ -139,6 +140,9 @@ function EventCard({ e, seat, onPress }: { e: any; seat?: SeatInfo | null; onPre
 }
 
 const MemberEventsScreen = ({ navigation }: any) => {
+  const { width } = useWindowDimensions();
+  const cardWidth = Math.min(340, width - 64);
+  const now = useEventClock();
   const [tab, setTab] = useState<Tab>('upcoming');
   const { data, loading, error, reload, refreshing, refresh } = useLoad<any>(() => listMemberEvents(), [], { events: [] });
   const events = asArray<any>(data?.events);
@@ -151,8 +155,8 @@ const MemberEventsScreen = ({ navigation }: any) => {
     seen.current = true;
   }, [])); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const upcoming = useMemo(() => events.filter((e) => !isPastEvent(e)).sort((a, b) => eventTime(a) - eventTime(b)), [events]);
-  const past = useMemo(() => events.filter(isPastEvent).sort((a, b) => eventTime(b) - eventTime(a)), [events]);
+  const upcoming = useMemo(() => events.filter((e) => !isPastEvent(e, now)).sort((a, b) => eventTime(a) - eventTime(b)), [events, now]);
+  const past = useMemo(() => events.filter(e => isPastEvent(e, now)).sort((a, b) => eventTime(b) - eventTime(a)), [events, now]);
   const mine = useMemo(() => events.filter((e) => !!myActiveRegistration(e)).sort((a, b) => eventTime(a) - eventTime(b)), [events]);
   const thisMonth = useMemo(() => {
     const now = new Date();
@@ -184,6 +188,7 @@ const MemberEventsScreen = ({ navigation }: any) => {
         </PremiumPageHeader>
       )}
       listHeader={(
+        <>
         <PillTabs<Tab>
           value={tab}
           onChange={setTab}
@@ -194,18 +199,21 @@ const MemberEventsScreen = ({ navigation }: any) => {
             { value: 'past', label: 'Past', count: past.length },
           ]}
         />
+        {!loading && !error && !!rows.length && <FlatList key={tab} horizontal data={rows}
+          keyExtractor={(e, i) => String(e?.id || e?._id || i)} extraData={seats}
+          showsHorizontalScrollIndicator={false} snapToInterval={cardWidth + SPACE.md} decelerationRate="fast"
+          contentContainerStyle={styles.cardRow} initialNumToRender={4}
+          renderItem={({ item }) => <View style={{ width: cardWidth }}><EventCard e={item}
+            seat={seats[String(item?.id || item?._id || '')]} onPress={() => openEventOrTicket(navigation, item)} /></View>} />}
+        </>
       )}
-      data={loading || error ? [] : rows}
+      data={[]}
       extraData={[tab, seats]}
       keyExtractor={(e, i) => String(e?.id || e?._id || i)}
-      renderItem={({ item, index }) => (
-        <FadeInUp delay={Math.min(index, 6) * 60}>
-          <EventCard e={item} seat={seats[String(item?.id || item?._id || '')]} onPress={() => openEventOrTicket(navigation, item)} />
-        </FadeInUp>
-      )}
+      renderItem={() => null}
       ListEmptyComponent={loading ? <CardSkeletons rows={3} variant="media" /> : error ? (
         <StateView kind="error" title="Events could not be loaded" message={error} onAction={reload} />
-      ) : (
+      ) : rows.length ? null : (
         <StateView
           art={tab === 'mine' ? <EventTicket3D size={84} /> : <EventCalendar3D size={84} />}
           title={EMPTY[tab].title}
@@ -223,6 +231,7 @@ const MemberEventsScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
+  cardRow: { gap: SPACE.md, paddingBottom: SPACE.md, alignItems: 'flex-start' },
   tabs: { marginTop: -PREMIUM_OVERLAP, marginBottom: SPACE.lg },
   bannerWrap: { width: '100%', height: 148, backgroundColor: PALETTE.field },
   banner: { width: '100%', height: '100%' },

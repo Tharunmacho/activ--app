@@ -9,6 +9,7 @@ import { PALETTE, SPACE, TYPE, GradientButton, SocialConnect3D, SocialMark } fro
 import { errorText } from '../../ui/data';
 import { authStyles as a } from './authStyles';
 import { PremiumAuthScreen, StatusPanel } from './authKit';
+import { takePublicAction } from '../../services/publicNavigation';
 
 /**
  * ============================================================================
@@ -35,6 +36,9 @@ import { PremiumAuthScreen, StatusPanel } from './authKit';
 type Props = NativeStackScreenProps<RootStackParamList, 'SocialSignIn'>;
 
 const REASONS: Record<string, string> = {
+  configuration: '{provider} rejected the sign-in configuration. Contact ACTIV support to check the client credentials.',
+  callback: 'The {provider} callback address does not match this environment. Contact ACTIV support.',
+  permissions: '{provider} has not enabled the email and profile permissions needed for sign-in. Use your email and password or contact ACTIV support.',
   cancelled: 'Sign-in was cancelled.',
   expired: 'That sign-in took too long or was started in another window. Please try again.',
   failed: 'We could not complete the sign-in with that provider. Please try again.',
@@ -61,7 +65,7 @@ const SocialSignInScreen: React.FC<Props> = ({ navigation, route }) => {
   useEffect(() => {
     if (reason === 'no_account') return;
     if (!code) {
-      setError(REASONS[reason] || REASONS.failed);
+      setError((REASONS[reason] || REASONS.failed).replace('{provider}', PROVIDER_NAME[provider] || 'Sign-in provider'));
       return;
     }
     if (exchanged.current === code) return;
@@ -92,7 +96,10 @@ const SocialSignInScreen: React.FC<Props> = ({ navigation, route }) => {
         const who = String(payload?.user?.fullName || payload?.user?.name || '').trim();
         setWelcome(who || 'back');
         setTimeout(() => {
-          try { navigation.reset({ index: 0, routes: [{ name: home }] }); } catch (e) { console.warn('Navigation safely caught:', e); }
+          try {
+            const resume = takePublicAction();
+            navigation.reset(resume ? { index: 1, routes: [{ name: home }, resume] } : { index: 0, routes: [{ name: home }] });
+          } catch (e) { console.warn('Navigation safely caught:', e); }
         }, 900);
       } catch (err: any) {
         setError(err?.response ? errorText(err, REASONS.failed) : String(err?.message || REASONS.failed));

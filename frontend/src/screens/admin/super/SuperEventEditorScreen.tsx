@@ -4,6 +4,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { resolveMediaUrl } from '../../../config/api.config';
+import { pickEventDocument } from '../../../services/eventDocuments';
 import {
   PALETTE, SPACE, RADIUS, BRAND,
   ConsoleScroll, ConsoleHeader, ConsoleCard, ConsoleButton, GlassIconButton, PremiumInput, BottomActionBar, FitImage } from '../../../ui';
@@ -63,7 +64,7 @@ interface Detail {
 interface Form {
   title: string; description: string; date: string; time: string; endDate: string; endTime: string;
   days: EventDay[]; location: string; category: string; targets: EventTarget[];
-  showOnOnboarding: boolean; showQrOnPage: boolean; attachments: EventAttachment[]; videoUrl: string;
+  showOnOnboarding: boolean; showQrOnPage: boolean; attachments: EventAttachment[]; videoUrl: string; whatsappChannelUrl: string;
   reachEveryone: boolean; media: CmsEventMedia; status: 'published' | 'draft'; detail: Detail;
 }
 
@@ -78,7 +79,7 @@ const BLANK_DETAIL: Detail = {
 /** A new event: everyone, published, and on the onboarding site (website `openNew`). */
 const blankForm = (): Form => ({
   title: '', description: '', date: '', time: '', endDate: '', endTime: '', days: [], location: '', category: '',
-  targets: [], showOnOnboarding: true, showQrOnPage: true, attachments: [], videoUrl: '', reachEveryone: true,
+  targets: [], showOnOnboarding: true, showQrOnPage: true, attachments: [], videoUrl: '', whatsappChannelUrl: '', reachEveryone: true,
   media: { ...EMPTY_EVENT_MEDIA }, status: 'published', detail: { ...BLANK_DETAIL, audience: 'all' },
 });
 
@@ -119,6 +120,7 @@ const formFromEvent = (e: CmsEventRow): Form => ({
   showQrOnPage: e?.showQrOnPage !== false,
   attachments: Array.isArray(e?.attachments) ? e.attachments : [],
   videoUrl: e?.videoUrl || '',
+  whatsappChannelUrl: e?.whatsappChannelUrl || '',
   reachEveryone: e?.reachEveryone === true || !hasTargets(e),
   media: { ...EMPTY_EVENT_MEDIA, ...(e?.media || {}) } as CmsEventMedia,
   status: (e?.status === 'draft' ? 'draft' : 'published'),
@@ -392,28 +394,30 @@ const SuperEventEditorScreen: React.FC = () => {
     } finally { setBannerBusy(false); }
   });
 
-  /* Documents: the phone picker offers images (PDFs and Office files are added on the website). */
-  const uploadFile = () => {
+  const uploadFile = async () => {
+    if (filesBusy || saving) return;
     if ((form.attachments || []).length >= 10) { Alert.alert('Ten at most', 'An event carries up to ten documents.'); return; }
-    pickImage(async (asset) => {
-      if (Number(asset?.fileSize || 0) > 20 * 1024 * 1024) { Alert.alert('Too large', 'Files must be 20 MB or smaller.'); return; }
-      setFilesBusy(true);
-      try {
-        const up = await uploadEventAttachment(asset);
-        if (up?.url) setForm((f) => ({ ...f, attachments: [...(f.attachments || []), up] }));
-      } catch (err) {
-        Alert.alert('Could not upload the file', errorText(err));
-      } finally { setFilesBusy(false); }
-    });
+    setFilesBusy(true);
+    try {
+      const asset = await pickEventDocument();
+      if (!asset) return;
+      const up = await uploadEventAttachment(asset);
+      if (!up?.url) throw new Error('The server did not return the uploaded document. Please try again.');
+      setForm((f) => ({ ...f, attachments: [...(f.attachments || []), up] }));
+    } catch (err: any) {
+      Alert.alert('Could not upload the file', err?.response || err?.request ? errorText(err) : err?.message || 'Please choose the document again.');
+    } finally { setFilesBusy(false); }
   };
 
   const save = async () => {
+    if (saving || filesBusy || bannerBusy) return;
     // Nothing is required — but a date that cannot be read is an error, not "no date".
     const bad: string[] = [];
     if (form.date && !isDay(form.date)) bad.push('the date');
     if (form.endDate && !isDay(form.endDate)) bad.push('the last day');
     if (form.time && !isTime(form.time)) bad.push('the start time');
     if (form.endTime && !isTime(form.endTime)) bad.push('the end time');
+    if (d.registrationDeadline && Number.isNaN(new Date(d.registrationDeadline).getTime())) bad.push('the registration closing date');
     if (form.endDate && form.date && form.endDate < form.date) bad.push('the last day (it is before the first)');
     if (bad.length) { Alert.alert('Check the dates', `This cannot be read: ${bad.join(', ')}.`); return; }
 
@@ -438,6 +442,7 @@ const SuperEventEditorScreen: React.FC = () => {
       showQrOnPage: form.showQrOnPage,
       attachments: JSON.stringify(form.attachments || []),
       videoUrl: form.videoUrl || '',
+      whatsappChannelUrl: form.whatsappChannelUrl || '',
       reachEveryone: form.reachEveryone,
       agenda: JSON.stringify(d.agenda || []),
       speakers: JSON.stringify(d.speakers || []),
@@ -502,8 +507,8 @@ const SuperEventEditorScreen: React.FC = () => {
       avoidKeyboard
       footer={(
         <BottomActionBar>
-          <ConsoleButton kind="soft" label="Cancel" onPress={() => navigation.goBack()} disabled={saving} style={s.footCancel} />
-          <ConsoleButton icon="save" label={editingId ? 'Save event' : 'Create event'} onPress={save} loading={saving} style={s.footSave} />
+          <ConsoleButton kind="soft" label="Cancel" onPress={() => navigation.goBack()} disabled={saving || filesBusy || bannerBusy} style={s.footCancel} />
+          <ConsoleButton icon="save" label={editingId ? 'Save event' : 'Create event'} onPress={save} loading={saving} disabled={filesBusy || bannerBusy} style={s.footSave} />
         </BottomActionBar>
       )}
     >
@@ -659,6 +664,9 @@ const SuperEventEditorScreen: React.FC = () => {
           hint="They go to the people who register — linked in the booking email and sent on WhatsApp. Not shown on the public event page." />
         <PremiumInput tone="admin" label="YouTube or video link" icon="smart-display" value={form.videoUrl} onChangeText={(videoUrl) => set({ videoUrl })}
           autoCapitalize="none" keyboardType="url" placeholder="https://www.youtube.com/watch?v=…" />
+        <PremiumInput tone="admin" label="WhatsApp group link" icon="link" value={form.whatsappChannelUrl}
+          onChangeText={(whatsappChannelUrl) => set({ whatsappChannelUrl })} autoCapitalize="none" keyboardType="url"
+          placeholder="https://chat.whatsapp.com/..." />
         {(form.attachments || []).map((a, i) => (
           <View key={`${a?.url}-${i}`} style={s.fileRow}>
             <Icon name="description" size={20} color={PALETTE.indigo} />
@@ -672,9 +680,9 @@ const SuperEventEditorScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         ))}
-        <ConsoleButton kind="soft" icon="upload-file" label={filesBusy ? 'Uploading…' : 'Upload an image document'}
-          onPress={uploadFile} loading={filesBusy} disabled={(form.attachments || []).length >= 10} style={{ marginTop: SPACE.sm }} />
-        <Text style={k.hint}>PDF, Word and Excel files can be added from the website; they appear here once saved.</Text>
+        <ConsoleButton kind="soft" icon="upload-file" label={filesBusy ? 'Uploading…' : 'Upload document'}
+          onPress={uploadFile} loading={filesBusy} disabled={saving || filesBusy || (form.attachments || []).length >= 10} style={{ marginTop: SPACE.sm }} />
+        <Text style={k.hint}>PDF, Word, Excel, PowerPoint, text, images or ZIP. Up to 10 files, 20 MB each. Save the event to include them with booking confirmations.</Text>
       </ConsoleCard>
 
       {/* ------------------------- programme, speakers and registration */}

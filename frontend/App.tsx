@@ -28,6 +28,8 @@ import { eventsAdminScreens } from './src/navigation/routes/eventsAdminRoutes';
 import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
 import ResetPasswordScreen from './src/screens/auth/ResetPasswordScreen';
 import WelcomeScreen from './src/screens/auth/WelcomeScreen';
+import PublicExploreScreen from './src/screens/public/PublicExploreScreen';
+import PublicEventDetailScreen from './src/screens/public/PublicEventDetailScreen';
 import SocialSignInScreen from './src/screens/auth/SocialSignInScreen';
 import { useDeepLinks, flushPendingDeepLink } from './src/navigation/deepLinks';
 
@@ -114,6 +116,8 @@ function App() {
         <NavigationContainer ref={navigationRef} onReady={flushPendingDeepLink}>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
         <Stack.Navigator initialRouteName="Onboarding">
+          <Stack.Screen name="PublicExplore" component={PublicExploreScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="PublicEventDetail" component={PublicEventDetailScreen} options={{ headerShown: false }} />
           {/* Auth Stack */}
           <Stack.Screen 
             name="Onboarding" 

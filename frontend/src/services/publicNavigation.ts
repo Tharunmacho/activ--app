@@ -1,0 +1,39 @@
+import { getAuthToken, getUserRole } from './api';
+import { homeForRole } from './session';
+import { getPublicEvent } from './publicContent';
+import type { PublicAction } from '../utils/publicBrowse';
+
+type Destination = { name: 'EventBooking'; params: { eventId: string } } | { name: 'MembershipPlans' | 'MemberDonations' };
+let pending: { destination: Destination; at: number } | null = null;
+export const clearPublicAction = () => { pending = null; };
+export const takePublicAction = (): Destination | null => {
+  const value = pending;
+  pending = null;
+  return value && Date.now() - value.at < 30 * 60 * 1000 ? value.destination : null;
+};
+export async function openPublicAction(navigation: any, action: PublicAction) {
+  if (action.kind === 'register' || action.kind === 'event') clearPublicAction();
+  let destination: Destination | null = null;
+  if (action.kind === 'event') {
+    const event = await getPublicEvent(action.id);
+    const id = String(event?.id || event?._id || '');
+    if (!id) throw new Error('This event is no longer available.');
+    destination = { name: 'EventBooking', params: { eventId: id } };
+  } else if (action.kind === 'membership') destination = { name: 'MembershipPlans' };
+  else if (action.kind === 'donate') destination = { name: 'MemberDonations' };
+  const [token, role] = await Promise.all([getAuthToken(), getUserRole()]);
+  if (token && role === 'member') {
+    if (destination) navigation.navigate(destination.name, 'params' in destination ? destination.params : undefined);
+    else {
+      const home = await homeForRole(role);
+      navigation.navigate(home || 'MemberMain');
+    }
+    return;
+  }
+  if (action.kind === 'register') {
+    navigation.navigate('RegistrationStep1');
+    return;
+  }
+  pending = destination ? { destination, at: Date.now() } : null;
+  navigation.navigate('Login');
+}

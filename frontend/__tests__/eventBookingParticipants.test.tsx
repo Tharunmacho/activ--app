@@ -1,0 +1,161 @@
+import React from 'react';
+import Renderer, { act } from 'react-test-renderer';
+import { TextInput } from 'react-native';
+import EventBookingScreen from '../src/screens/member/events/EventBookingScreen';
+import { createEventBooking, checkEventBooking, getBookableEvent, getMyProfile, getEventBooking } from '../src/services/memberApi';
+
+jest.mock('@react-navigation/native', () => ({ useFocusEffect: jest.fn() }));
+jest.mock('../src/services/memberApi', () => ({
+  getBookableEvent: jest.fn(), getMyProfile: jest.fn(), createEventBooking: jest.fn(),
+  checkEventBooking: jest.fn(), getEventBooking: jest.fn().mockResolvedValue(null),
+}));
+jest.mock('../src/ui', () => {
+  const React = require('react');
+  const { View, Text, TextInput, Pressable } = require('react-native');
+  const actual = jest.requireActual('../src/ui');
+  return {
+    ...actual,
+    PremiumPage: ({ header, footer, children }: any) => <View>{header}{children}{footer}</View>,
+    PremiumPageHeader: () => null,
+    PremiumSection: ({ children }: any) => <View>{children}</View>,
+    FadeInUp: ({ children }: any) => <View>{children}</View>,
+    PremiumInput: (props: any) => <TextInput {...props} accessibilityLabel={props.label} />,
+    GradientButton: ({ label, onPress }: any) => <Pressable accessibilityLabel={label} onPress={onPress}><Text>{label}</Text></Pressable>,
+    PressableScale: ({ children, onPress, accessibilityLabel, disabled }: any) => <Pressable accessibilityLabel={accessibilityLabel} onPress={onPress} disabled={disabled}>{children}</Pressable>,
+  };
+});
+
+const navigation = { navigate: jest.fn(), goBack: jest.fn(), setParams: jest.fn() };
+let tree: Renderer.ReactTestRenderer;
+const inputs = () => tree.root.findAllByType(TextInput);
+const edit = async (i: number, value: string) => { await act(async () => inputs()[i].props.onChangeText(value)); };
+const press = async (label: string) => {
+  const button = tree.root.findAll(b => b.props.accessibilityLabel === label && typeof b.props.onPress === 'function')[0];
+  if (!button) throw new Error(`Button missing: ${label}. Available: ${tree.root.findAll(b => typeof b.props.onPress === 'function').map(b => b.props.accessibilityLabel || b.props.label).join(', ')}`);
+  await act(async () => button.props.onPress());
+};
+const render = async () => { await act(async () => { tree = Renderer.create(<EventBookingScreen navigation={navigation} route={{ params: { eventId: 'conference' } }} />); }); };
+const confirm = async () => { await press('Review booking'); expect(createEventBooking).not.toHaveBeenCalled(); await press('Confirm booking'); };
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  (getBookableEvent as jest.Mock).mockResolvedValue({ title: 'Conference', amount: 0, maxPerBooking: 10, capacity: 100, seatsLeft: 100 });
+  (getMyProfile as jest.Mock).mockResolvedValue({ fullName: 'Booker', email: 'booker@example.test', phoneNumber: '9000000001' });
+  (checkEventBooking as jest.Mock).mockResolvedValue({});
+  (createEventBooking as jest.Mock).mockResolvedValue({ bookingRef: 'REF', status: 'active', payment: { status: 'not_required' } });
+});
+afterEach(async () => { if (tree) await act(async () => tree.unmount()); });
+
+test('one seat displays an editable Participant 1 and defaults its blank row to the booker', async () => {
+  await render();
+  expect(JSON.stringify(tree.toJSON())).toContain('Participant 1');
+  expect(inputs()).toHaveLength(7);
+  await confirm();
+  expect(createEventBooking).toHaveBeenCalledWith('conference', expect.objectContaining({
+    noOfPersons: 1, participants: [{ name: 'Booker', email: 'booker@example.test', phone: '9000000001' }],
+  }));
+});
+
+test('a single guest can differ from the booking contact, and the same data reaches check and create', async () => {
+  await render();
+  await edit(3, 'Guest'); await edit(4, 'Guest@Example.test'); await edit(5, '+91 9000000002');
+  await confirm();
+  const [, payload] = (createEventBooking as jest.Mock).mock.calls[0];
+  expect(payload.name).toBe('Booker');
+  expect(payload.participants).toEqual([{ name: 'Guest', email: 'guest@example.test', phone: '9000000002' }]);
+  expect((checkEventBooking as jest.Mock).mock.calls[0][1].participants).toEqual(payload.participants);
+  expect(payload.amount).toBeUndefined();
+});
+
+test('Participant 1 may explicitly use the same contacts as the booker', async () => {
+  await render();
+  await edit(3, 'Booker'); await edit(4, 'booker@example.test'); await edit(5, '9000000001');
+  await confirm();
+  expect(createEventBooking).toHaveBeenCalledTimes(1);
+});
+
+test('one attendee row per seat, retaining entered details when count changes', async () => {
+  await render(); await edit(3, 'Guest');
+  await press('One more seat');
+  expect(inputs()).toHaveLength(10);
+  expect(JSON.stringify(tree.toJSON())).toContain('Participant 2');
+  expect(inputs()[3].props.value).toBe('Guest');
+  await press('One fewer seat');
+  expect(inputs()).toHaveLength(7);
+  expect(inputs()[3].props.value).toBe('Guest');
+});
+
+test('duplicate attendee contacts are rejected, including the blank first row fallback', async () => {
+  await render(); await press('One more seat');
+  await edit(6, 'Another attendee'); await edit(7, 'booker@example.test');
+  await press('Review booking');
+  expect(inputs()[7].props.error).toBe('Use another email');
+  expect(createEventBooking).not.toHaveBeenCalled();
+});
+
+test('server error for Participant 1 appears on its own field', async () => {
+  (checkEventBooking as jest.Mock).mockRejectedValue({ response: { data: { fields: { 'participants.0.email': 'Guest already booked' } } } });
+  await render(); await edit(3, 'Guest'); await edit(4, 'guest@example.test');
+  await press('Review booking');
+  expect(inputs()[4].props.error).toBe('Guest already booked');
+  expect(inputs()[1].props.error).toBeFalsy();
+  expect(createEventBooking).not.toHaveBeenCalled();
+});
+
+test('paid guest booking keeps all attendee rows and opens the shared checkout', async () => {
+  (getBookableEvent as jest.Mock).mockResolvedValue({ title: 'Conference', amount: 1000, maxPerBooking: 10 });
+  (createEventBooking as jest.Mock).mockResolvedValue({ bookingRef: 'PAID-REF', payment: { status: 'pending' } });
+  await render(); await press('One more seat'); await edit(6, 'Guest');
+  await press('Review booking');
+  expect(createEventBooking).not.toHaveBeenCalled();
+  await press('Pay ₹2,000 and confirm');
+  expect((createEventBooking as jest.Mock).mock.calls[0][1].participants).toHaveLength(2);
+  expect(navigation.navigate).toHaveBeenCalledWith('PaymentCheckout', { orderType: 'event_booking', bookingRef: 'PAID-REF', eventId: 'conference' });
+});
+
+test('required event questions validate before review and persist through edit', async () => {
+  (getBookableEvent as jest.Mock).mockResolvedValue({ title: 'Conference', amount: 0, maxPerBooking: 10, registrationFields: [{ key: 'organisation', label: 'Organisation', type: 'text', required: true }] });
+  await render();
+  await press('Review booking');
+  expect(createEventBooking).not.toHaveBeenCalled();
+  expect(inputs()[7].props.error).toBe('Organisation is required');
+  await edit(7, 'ACTIV');
+  await press('Review booking'); await press('Edit details');
+  expect(inputs()[7].props.value).toBe('ACTIV');
+  await confirm();
+  expect(createEventBooking).toHaveBeenCalledWith('conference', expect.objectContaining({ responses: { organisation: 'ACTIV' } }));
+});
+
+test('changed price must be reviewed before booking is created', async () => {
+  const event = { title: 'Conference', amount: 1000, maxPerBooking: 10 };
+  (getBookableEvent as jest.Mock).mockResolvedValue(event);
+  await render(); await press('Review booking');
+  (getBookableEvent as jest.Mock).mockResolvedValue({ ...event, amount: 1200 });
+  await press('Pay ₹1,000 and confirm');
+  expect(createEventBooking).not.toHaveBeenCalled();
+  expect(JSON.stringify(tree.toJSON())).toContain('The event price has changed');
+});
+
+test('sold-out availability blocks checkout and does not promise a seat', async () => {
+  (getBookableEvent as jest.Mock).mockResolvedValue({ title: 'Conference', amount: 1000, capacity: 50, seatsLeft: 0 });
+  await render();
+  expect(JSON.stringify(tree.toJSON())).toContain('Fully booked');
+  expect(createEventBooking).not.toHaveBeenCalled();
+  expect(tree.root.findAll(b => b.props.label === 'Review booking')).toHaveLength(0);
+});
+
+test('ticket lookup errors never silently open a fresh booking form', async () => {
+  (getEventBooking as jest.Mock).mockRejectedValueOnce(new Error('Network unavailable'));
+  await act(async () => { tree = Renderer.create(<EventBookingScreen navigation={navigation} route={{ params: { eventId: 'conference', ref: 'EXISTING' } }} />); });
+  expect(JSON.stringify(tree.toJSON())).toContain('The booking could not be loaded');
+  expect(inputs()).toHaveLength(0);
+  expect(createEventBooking).not.toHaveBeenCalled();
+});
+
+test('active failed payment shows failure, never confirmation or entry pass', async () => {
+  (getEventBooking as jest.Mock).mockResolvedValueOnce({ bookingRef: 'FAILED', eventId: 'conference', status: 'active', payment: { status: 'failed' }, totalAmount: 1000 });
+  await act(async () => { tree = Renderer.create(<EventBookingScreen navigation={navigation} route={{ params: { eventId: 'conference', ref: 'FAILED' } }} />); });
+  const text = JSON.stringify(tree.toJSON());
+  expect(text).toContain('Payment failed'); expect(text).not.toContain('Booking confirmed');
+  expect(text).not.toContain('Show this entry pass');
+});

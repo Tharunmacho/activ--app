@@ -55,8 +55,14 @@ const CMS_EVENT = {
   registrationFee: 0, agenda: [], days: [], speakers: [], attachments: [],
 };
 const PLAN = { id: 'p1', key: 'basic', name: 'Beginner', description: '', price: 10000, audience: 'business', membershipType: 'annual', minYears: 0, maxYears: 5, features: ['A'], popular: false, active: true, order: 1 };
+const MEMBERSHIP_REPORT = { filename: 'membership-members.xlsx', base64: 'UEsDBAoAAAA=', contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
+const BOOKING_REPORT = { ...MEMBERSHIP_REPORT, filename: 'event-bookings.xlsx' };
 
 const mockByUrl = (url: string): any => {
+  if (url.endsWith('/membership/registrations/export')) return MEMBERSHIP_REPORT;
+  if (url.endsWith('/membership/platinum/accounts')) return { id: 'm1', fullName: 'Office Member', email: 'office@example.com', blockedReason: 'Application not submitted', canAdmitManually: true };
+  if (/\/membership\/registrations\/[^/]+/.test(url)) return { member: { id: 'm1', name: 'Office Member', email: 'office@example.com', phone: '9000000000', applicationStatus: 'Pending', status: 'pending', canConfirm: true, collected: 0 }, payments: [], confirmation: { kind: 'student', commencementYear: '', plans: [{ id: 'student', key: 'student', name: 'Student', price: 10, audience: 'student', commencementYears: [] }] } };
+  if (url.includes('/membership/registrations')) return { rows: [{ id: 'm1', name: 'Office Member', email: 'office@example.com', status: 'pending', applicationStatus: 'Pending', collected: 0 }], payments: [], plans: [{ id: 'student', name: 'Student', price: 10 }], summary: { registered: 1, submitted: 1, active: 0, collected: 0, awaiting: 0, pendingReview: 1 } };
   if (url.includes('/notifications/logs/booking/')) {
     return { bookingRef: BOOKING.bookingRef, rows: [LOG, LOG2], summary: { email: { status: 'accepted' }, whatsapp: { status: 'failed', reason: 'Not allowed' } } };
   }
@@ -76,7 +82,10 @@ const mockByUrl = (url: string): any => {
   }
   if (url.includes('/events/bookings/overview')) {
     return {
-      events: [{ id: EVENT_ID, title: CMS_EVENT.title, startAt: CMS_EVENT.startAt, venue: 'Annamalai University', category: 'Awareness', status: 'published', registrationEnabled: true, price: 500, memberPrice: 400, hasMemberRate: true, totalSeats: 500, bookedSeats: 3, remainingSeats: 497, waitlistedSeats: 1, bookings: 3, paidBookings: 1, collected: 1010, pendingAmount: 500 }],
+      events: [{ id: EVENT_ID, historyCategory: 'current', title: CMS_EVENT.title, startAt: CMS_EVENT.startAt, venue: 'Annamalai University', category: 'Awareness', status: 'published', registrationEnabled: true, price: 500, memberPrice: 400, hasMemberRate: true, totalSeats: 500, bookedSeats: 3, remainingSeats: 497, waitlistedSeats: 1, bookings: 3, paidBookings: 1, collected: 1010, pendingAmount: 500 },
+        { id: 'past-event', title: 'Completed workshop', historyCategory: 'past', status: 'published' },
+        { id: 'deleted-event', title: 'Removed workshop', historyCategory: 'deleted', bookingHistoryOnly: true, status: 'deleted' }],
+      historyTotals: { current: { events: 1, seats: 3, capacity: 500, bookings: 3, collected: 1010, pending: 500 }, past: { events: 1 }, deleted: { events: 1 } },
       totals: { events: 1, seats: 3, capacity: 500, bookings: 3, collected: 1010, pending: 500 },
     };
   }
@@ -84,7 +93,7 @@ const mockByUrl = (url: string): any => {
     return { people: [{ email: 't@example.com', name: 'Tharun V', phone: '9092317264', isMember: true, bookings: 2, seats: 2, events: 2, cancelled: 0, paid: 1, pending: 1, lastBookedAt: '2026-09-30T06:13:03.792Z' }], total: 1 };
   }
   if (url.includes('/events/bookings/person')) return { person: { email: 't@example.com', name: 'Tharun V' }, bookings: [{ ...BOOKING, event: { id: EVENT_ID, title: CMS_EVENT.title } }] };
-  if (/\/events\/[^/]+\/bookings\/export/.test(url)) return 'ref,name\n';
+  if (/\/events\/[^/]+\/bookings\/export/.test(url)) return BOOKING_REPORT;
   if (/\/events\/[^/]+\/bookings/.test(url)) {
     return { bookings: [BOOKING], summary: { bookings: 1, paidBookings: 0, seats: 2, collected: 0, pending: 1000, pendingBookings: 1 }, pagination: { page: 1, limit: 10, total: 1, pages: 1 } };
   }
@@ -159,6 +168,9 @@ const Super = () => require('../src/screens/admin/super/context/SuperAdminContex
 const S = (file: string) => () => require(`../src/screens/admin/super/${file}`).default;
 
 const screens: [string, () => React.ComponentType<any>, any][] = [
+  ['Membership registrations', S('SuperMembershipRegistrationsScreen'), {}],
+  ['Member account for Platinum', S('SuperOfficeAccountScreen'), {}],
+  ['Platinum direct office admission', S('SuperPlatinumGrantScreen'), { member: { id: 'm1', fullName: 'Office Member', blockedReason: 'Application not submitted', canAdmitManually: true }, price: 200000 }],
   ['Events (tab)', S('ManageEventsScreen'), {}],
   ['Event editor · new', S('SuperEventEditorScreen'), {}],
   ['Event editor · edit', S('SuperEventEditorScreen'), { event: CMS_EVENT }],
@@ -229,6 +241,201 @@ describe.each([false, true])('super admin parity screens (api failing: %s)', (fa
 describe('super admin parity interactions', () => {
   beforeAll(() => { mockFailAll = false; });
   beforeEach(() => { mockNavigate.mockClear(); });
+  test('membership and booking exports download and save the server Excel workbooks', async () => {
+    const api = require('../src/services/api').default;
+    const save = jest.spyOn(require('../src/services/reportExport'), 'saveSpreadsheetReport').mockResolvedValue(true);
+    const memberships = await mount(S('SuperMembershipRegistrationsScreen')(), {});
+    expect(await press(memberships, 'Export Excel report')).toBe(true);
+    expect(api.get).toHaveBeenCalledWith('/admin/super/membership/registrations/export', expect.objectContaining({ params: { tab: 'members', filter: 'all', search: '', format: 'xlsx', encoding: 'base64' } }));
+    expect(save).toHaveBeenCalledWith(MEMBERSHIP_REPORT);
+    await ReactTestRenderer.act(async () => { memberships.unmount(); });
+    const bookings = await mount(S('SuperEventBookingsScreen')(), { eventId: EVENT_ID, title: CMS_EVENT.title });
+    expect(await press(bookings, 'Excel report')).toBe(true);
+    expect(api.get).toHaveBeenCalledWith(`/events/${EVENT_ID}/bookings/export`, expect.objectContaining({ params: { format: 'xlsx', encoding: 'base64' } }));
+    expect(save).toHaveBeenCalledWith(BOOKING_REPORT);
+    await ReactTestRenderer.act(async () => { bookings.unmount(); });
+    save.mockRestore();
+  });
+  test('membership details include the real confirmation choices and receipts', async () => {
+    const tree = await mount(S('SuperMembershipRegistrationsScreen')(), {});
+    expect(texts(tree)).toContain('Registered');
+    expect(await press(tree, 'Open membership Office Member')).toBe(true);
+    expect(texts(tree)).toContain('Payment history');
+    expect(texts(tree)).toContain('Member type');
+    expect(texts(tree)).toContain('Confirmation');
+    expect(await press(tree, 'Confirm membership / record payment')).toBe(true);
+    expect(texts(tree)).toContain('Fee waiver');
+    expect(texts(tree)).toContain('Cash');
+    expect(texts(tree)).toContain('Super Admin review workflow');
+    await ReactTestRenderer.act(async () => { tree.unmount(); });
+  });
+  test('fee waiver confirmation records zero collected and its reason', async () => {
+    const kit = require('../src/screens/admin/super/superKit');
+    const confirmation = jest.spyOn(kit, 'confirm').mockResolvedValue(true);
+    const api = require('../src/services/api').default;
+    api.post.mockClear();
+    const tree = await mount(S('SuperMembershipRegistrationsScreen')(), {});
+    await press(tree, 'Open membership Office Member');
+    await press(tree, 'Confirm membership / record payment');
+    const ChipRow = kit.ChipRow;
+    const ToggleRow = kit.ToggleRow;
+    const { PremiumInput, ConsoleButton } = require('../src/ui');
+    await ReactTestRenderer.act(async () => { tree.root.findAllByType(ChipRow).find((n: any) => n.props.options.some((p: any) => p.value === 'waived')).props.onChange('waived'); });
+    await ReactTestRenderer.act(async () => {
+      tree.root.findAllByType(ChipRow).find((n: any) => n.props.options.some((p: any) => p.value === 'student')).props.onChange('student');
+      tree.root.findAllByType(PremiumInput).find((n: any) => n.props.label === 'Reason for fee waiver').props.onChangeText('Approved student fee waiver');
+      tree.root.findByType(ToggleRow).props.onChange(true);
+    });
+    await ReactTestRenderer.act(async () => { await tree.root.findAllByType(ConsoleButton).find((n: any) => n.props.label === 'Confirm membership').props.onPress(); });
+    expect(api.post).toHaveBeenCalledWith('/admin/super/membership/registrations/m1/confirm', expect.objectContaining({ planId: 'student', mode: 'waived', amount: 0, note: 'Approved student fee waiver' }));
+    confirmation.mockRestore();
+    await ReactTestRenderer.act(async () => { tree.unmount(); });
+  });
+  test('membership summary cards filter members and paid receipts', async () => {
+    const tree = await mount(S('SuperMembershipRegistrationsScreen')(), {});
+    const { ConsoleStatTile } = require('../src/ui');
+    const kit = require('../src/screens/admin/super/superKit');
+    await ReactTestRenderer.act(async () => { tree.root.findAllByType(ConsoleStatTile).find((n: any) => n.props.label === 'Active members').props.onPress(); });
+    expect(texts(tree)).not.toContain('Office Member');
+    expect(tree.root.findByType(kit.ChipRow).props.value).toBe('active');
+    await ReactTestRenderer.act(async () => { tree.root.findAllByType(ConsoleStatTile).find((n: any) => n.props.label === 'Registered').props.onPress(); });
+    expect(texts(tree)).toContain('Office Member');
+    await ReactTestRenderer.act(async () => { tree.root.findAllByType(ConsoleStatTile).find((n: any) => n.props.label === 'Collected').props.onPress(); });
+    expect(tree.root.findByType(kit.ChipRow).props.value).toBe('paid');
+    await ReactTestRenderer.act(async () => { tree.unmount(); });
+  });
+  test('membership office admission defaults to cash and records the checked details', async () => {
+    const api = require('../src/services/api').default;
+    const kit = require('../src/screens/admin/super/superKit');
+    const confirmation = jest.spyOn(kit, 'confirm').mockResolvedValue(true);
+    const tree = await mount(S('SuperMembershipRegistrationsScreen')(), {});
+    api.get.mockImplementationOnce(() => Promise.resolve({ data: { success: true, data: { member: { id: 'm1', name: 'Office Member', canConfirm: true, requiresManualAdmission: true, applicationStatus: 'Not submitted' }, payments: [], confirmation: { kind: 'student', commencementYear: '', plans: [{id:'student',key:'student',name:'Student',price:10,audience:'student',commencementYears:[]}] } } } }));
+    await press(tree, 'Open membership Office Member');
+    await press(tree, 'Confirm membership / record payment');
+    const { PremiumInput, ConsoleButton } = require('../src/ui');
+    await ReactTestRenderer.act(async () => {
+      tree.root.findAllByType(kit.ChipRow).find((n: any) => n.props.options.some((p: any) => p.value === 'student')).props.onChange('student');
+      tree.root.findAllByType(PremiumInput).find((n: any) => n.props.label === 'Payment / confirmation notes').props.onChangeText('Cash received; details verified');
+      tree.root.findAllByType(PremiumInput).find((n: any) => n.props.label === 'Membership ID').props.onChangeText('ACTIV-20261012-099');
+      tree.root.findByType(kit.ToggleRow).props.onChange(true);
+    });
+    await ReactTestRenderer.act(async () => { await tree.root.findAllByType(ConsoleButton).find((n: any) => n.props.label === 'Confirm membership').props.onPress(); });
+    expect(api.post).toHaveBeenCalledWith('/admin/super/membership/registrations/m1/confirm', expect.objectContaining({ mode: 'cash', amount: 10, membershipNumber: 'ACTIV-20261012-099', manualAdmission: true }));
+    confirmation.mockRestore();
+    await ReactTestRenderer.act(async () => { tree.unmount(); });
+  });
+  test('office business confirmation uses only the eligible plan and its commencement years', async () => {
+    const api = require('../src/services/api').default;
+    const kit = require('../src/screens/admin/super/superKit');
+    const confirmation = jest.spyOn(kit, 'confirm').mockResolvedValue(true);
+    const tree = await mount(S('SuperMembershipRegistrationsScreen')(), {});
+    api.get.mockImplementationOnce(() => Promise.resolve({ data: { data: {
+      member: { id: 'm1', name: 'Office Member', canConfirm: true, requiresManualAdmission: true }, payments: [],
+      confirmation: { kind: 'business', commencementYear: '2012', plans: [{ id: 'ideal', key: 'ideal', name: 'Ideal', audience: 'business', price: 33000, commencementYears: ['2016','2015','2014','2013','2012'], commencementYearLabel: '2016 or earlier' }] }
+    } } }));
+    await press(tree, 'Open membership Office Member'); await press(tree, 'Confirm membership / record payment');
+    const { PremiumSelect, PremiumInput, ConsoleButton } = require('../src/ui');
+    const picker = tree.root.findAllByType(PremiumSelect).find((n: any) => n.props.label === 'Business commencement year');
+    expect(picker.props.options).toEqual(['2016','2015','2014','2013','2012']);
+    const choices = tree.root.findAllByType(kit.ChipRow).find((n: any) => n.props.options.some((p: any) => p.value === 'ideal'));
+    expect(choices.props.options.map((p: any) => p.value)).toEqual(['ideal']);
+    await ReactTestRenderer.act(async () => {
+      picker.props.onChange('2013');
+      tree.root.findAllByType(PremiumInput).find((n: any) => n.props.label === 'Payment / confirmation notes').props.onChangeText('Office business details checked');
+      tree.root.findByType(kit.ToggleRow).props.onChange(true);
+    });
+    await ReactTestRenderer.act(async () => { await tree.root.findAllByType(ConsoleButton).find((n: any) => n.props.label === 'Confirm membership').props.onPress(); });
+    expect(api.post).toHaveBeenCalledWith('/admin/super/membership/registrations/m1/confirm', expect.objectContaining({ planId: 'ideal', amount: 33000, commencementYear: '2013' }));
+    confirmation.mockRestore(); await ReactTestRenderer.act(async () => tree.unmount());
+  });
+  test('submitted application filtering and application review keep the selected member reference', async () => {
+    const api = require('../src/services/api').default;
+    const tree = await mount(S('SuperMembershipRegistrationsScreen')(), {});
+    const kit = require('../src/screens/admin/super/superKit');
+    const filters = tree.root.findByType(kit.ChipRow);
+    expect(filters.props.options).toContainEqual({ value: 'submitted', label: 'Applications submitted' });
+    await ReactTestRenderer.act(async () => { filters.props.onChange('submitted'); });
+    expect(texts(tree)).not.toContain('Office Member');
+    await ReactTestRenderer.act(async () => { tree.root.findByType(kit.ChipRow).props.onChange('all'); });
+    api.get.mockImplementationOnce(() => Promise.resolve({ data: { data: { member: { id: 'm1', name: 'Office Member', applicationId: 'app-selected', applicationStatus: 'Pending' }, payments: [] } } }));
+    await press(tree, 'Open membership Office Member');
+    expect(await press(tree, 'Open application review')).toBe(true);
+    expect(mockNavigate).toHaveBeenCalledWith('ApplicantDetail', expect.objectContaining({ applicant: expect.objectContaining({ id: 'app-selected', applicationId: 'app-selected' }) }));
+    await ReactTestRenderer.act(async () => { tree.unmount(); });
+  });
+  test('a PDF uploaded on the phone is retained in the event save payload', async () => {
+    const api = require('../src/services/api').default;
+    const picker = require('@react-native-documents/picker');
+    const { ConsoleButton } = require('../src/ui');
+    picker.pick.mockResolvedValueOnce([{ uri: 'content://files/agenda', name: 'Agenda.pdf', type: 'application/pdf', size: 512, hasRequestedType: true }]);
+    picker.keepLocalCopy.mockResolvedValueOnce([{ status: 'success', localUri: 'file:///cache/Agenda.pdf' }]);
+    const tree = await mount(S('SuperEventEditorScreen')(), { event: CMS_EVENT });
+    api.post.mockResolvedValueOnce({ data: { data: { url: '/uploads/agenda.pdf', name: 'Agenda.pdf', type: 'application/pdf', size: 512 } } });
+    await ReactTestRenderer.act(async () => { await tree.root.findAllByType(ConsoleButton).find((n: any) => n.props.label === 'Upload document').props.onPress(); });
+    expect(api.post).toHaveBeenCalledWith('/cms/attachments', expect.any(FormData), expect.any(Object));
+    expect(tree.root.findAll((n: any) => n.props.accessibilityLabel === 'Document name').some((n: any) => n.props.value === 'Agenda.pdf')).toBe(true);
+    await ReactTestRenderer.act(async () => { await tree.root.findAllByType(ConsoleButton).find((n: any) => /Save/.test(n.props.label)).props.onPress(); });
+    expect(api.put).toHaveBeenCalledWith(`/cms/events/${EVENT_ID}`, expect.objectContaining({ attachments: expect.stringContaining('/uploads/agenda.pdf') }));
+    await ReactTestRenderer.act(async () => { tree.unmount(); });
+  });
+  test('membership deletion calls the archive endpoint after confirmation', async () => {
+    const kit = require('../src/screens/admin/super/superKit');
+    const confirmation = jest.spyOn(kit, 'confirm').mockResolvedValue(true);
+    const api = require('../src/services/api').default;
+    api.delete.mockClear();
+    const tree = await mount(S('SuperMembershipRegistrationsScreen')(), {});
+    await press(tree, 'Open membership Office Member');
+    const { ConsoleButton } = require('../src/ui');
+    await ReactTestRenderer.act(async () => { await tree.root.findAllByType(ConsoleButton).find((n: any) => n.props.label === 'Delete registration').props.onPress(); });
+    expect(api.delete).toHaveBeenCalledWith('/admin/super/membership/registrations/m1');
+    confirmation.mockRestore();
+    await ReactTestRenderer.act(async () => { tree.unmount(); });
+  });
+  test('booking history switches between server-defined current, past and deleted groups', async () => {
+    const tree = await mount(S('SuperBookingsScreen')(), {});
+    const { ConsoleTabs } = require('../src/ui');
+    const categoryTabs = () => tree.root.findAllByType(ConsoleTabs).find((node: any) => node.props.options.some((option: any) => option.value === 'deleted'));
+    expect(texts(tree)).toContain(CMS_EVENT.title);
+    expect(texts(tree)).not.toContain('Completed workshop');
+    await ReactTestRenderer.act(async () => { categoryTabs().props.onChange('past'); });
+    expect(texts(tree)).toContain('Completed workshop');
+    expect(texts(tree)).not.toContain(CMS_EVENT.title);
+    await ReactTestRenderer.act(async () => { categoryTabs().props.onChange('deleted'); });
+    expect(texts(tree)).toContain('Removed workshop');
+    expect(texts(tree)).not.toContain('Completed workshop');
+    await ReactTestRenderer.act(async () => { tree.unmount(); });
+  });
+  test('booking details keep cancellation but never offer deletion', async () => {
+    const api = require('../src/services/api').default;
+    api.delete.mockClear();
+    const tree = await mount(S('SuperBookingDetailScreen')(), { eventId: EVENT_ID, booking: { ...BOOKING, status: 'active' } });
+    const { ConsoleButton } = require('../src/ui');
+    expect(tree.root.findAllByType(ConsoleButton).some((n: any) => n.props.label === 'Delete booking')).toBe(false);
+    expect(tree.root.findAllByType(ConsoleButton).some((n: any) => n.props.label === 'Cancel booking')).toBe(true);
+    expect(api.delete).not.toHaveBeenCalled();
+    await ReactTestRenderer.act(async () => { tree.unmount(); });
+  });
+  test('office account uses the registration endpoint then opens Lifetime receipt entry', async () => {
+    const api = require('../src/services/api').default;
+    api.post.mockClear();
+    const tree = await mount(S('SuperOfficeAccountScreen')(), {});
+    const { PremiumInput, PremiumSelect, ConsoleButton } = require('../src/ui');
+    await ReactTestRenderer.act(async () => { tree.root.findAllByType(ConsoleButton).find((n: any) => n.props.label === 'Create a new member instead').props.onPress(); });
+    const values: Record<string, string> = { 'Full name': 'Office Member', Email: 'office@example.com', Password: 'test-password', Mobile: '9000000000', 'WhatsApp number': '9000000000' };
+    await ReactTestRenderer.act(async () => { tree.root.findAllByType(PremiumInput).forEach((n: any) => n.props.onChangeText(values[n.props.label])); });
+    const select = (label: string) => tree.root.findAllByType(PremiumSelect).find((n: any) => n.props.label === label);
+    await ReactTestRenderer.act(async () => { select('State').props.onChange('Tamil Nadu'); });
+    expect(select('District').props.options).toContain('Cuddalore');
+    await ReactTestRenderer.act(async () => { select('District').props.onChange('Cuddalore'); });
+    expect(select('Block').props.options).toContain('Chidambaram');
+    await ReactTestRenderer.act(async () => { select('Block').props.onChange('Chidambaram'); });
+    const password = tree.root.findAllByType(PremiumInput).find((n: any) => n.props.label === 'Password');
+    expect(password.props.secureTextEntry).toBe(true);
+    await ReactTestRenderer.act(async () => { await tree.root.findAllByType(ConsoleButton).find((n: any) => n.props.label === 'Continue to Lifetime payment').props.onPress(); });
+    expect(api.post).toHaveBeenCalledWith('/admin/super/membership/platinum/accounts', expect.objectContaining({ email: 'office@example.com', state: 'Tamil Nadu' }));
+    expect(tree.root.findAllByType(PremiumInput).find((n: any) => n.props.label === 'Password').props.value).toBe('');
+    await ReactTestRenderer.act(async () => { tree.unmount(); });
+  });
 
   test('every registered super route has a component', () => {
     const { superScreens } = require('../src/navigation/routes/superRoutes');
@@ -291,7 +498,7 @@ describe('super admin parity interactions', () => {
     const tree = await mount(S('SuperMenuScreen')(), {});
     const labels = tree.root.findAll((n: any) => typeof n.props?.onPress === 'function' && n.props?.accessibilityLabel)
       .map((n: any) => String(n.props.accessibilityLabel));
-    for (const l of ['Membership plans', 'Platinum', 'Bookings & revenue', 'Donations', 'Events', 'Event categories', 'Event attendance', 'Member updates', 'Message delivery', 'Notifications']) {
+    for (const l of ['Membership plans', 'Lifetime', 'Bookings & revenue', 'Donations', 'Events', 'Event categories', 'Event attendance', 'Member updates', 'Message delivery', 'Notifications']) {
       expect(labels.some((x: string) => x.startsWith(`${l},`))).toBe(true);
     }
     expect(await press(tree, /^Bookings & revenue,/)).toBe(true);

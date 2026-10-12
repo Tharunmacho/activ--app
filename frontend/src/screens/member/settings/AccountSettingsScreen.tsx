@@ -12,6 +12,7 @@ import {
   getMyProfile, getMyApplications, changePassword, uploadProfilePhoto, isPaidMember, logoutOnServer,
 } from '../../../services/memberApi';
 import { resolveMediaUrl } from '../../../config/api.config';
+import { WEBSITE_PATHS } from '../../../config/website.config';
 import { clearSession } from '../../../services/session';
 import { useAuthStore } from '../../../stores/exampleStore';
 import { pickMostAdvancedApplication } from '../dashboard/memberRules';
@@ -299,6 +300,7 @@ const AccountSettingsScreen = ({ navigation }: any) => {
           <LinkRow icon="person-outline" tone="blue" title="My Profile" subtitle="Your application details" onPress={profileRoute} />
           <LinkRow icon="storefront" tone="teal" title="Business Account" subtitle="Companies, catalogue and reach" onPress={() => navigation.navigate('BusinessDashboard')} />
           <LinkRow icon="support-agent" tone="green" title="Help & Support" subtitle="Contact your regional office" onPress={() => navigation.navigate('MemberHelp')} />
+          <LinkRow icon="person-remove" title="Delete account" subtitle="Request account and data deletion" danger onPress={() => navigation.navigate('WebsiteViewer', { path: WEBSITE_PATHS.deleteAccount, title: 'Delete account', publicAccess: true })} />
           <LinkRow icon="logout" title="Sign out" subtitle="You can sign back in any time" danger onPress={signOut} last />
         </SurfaceCard>
       </FadeInUp>

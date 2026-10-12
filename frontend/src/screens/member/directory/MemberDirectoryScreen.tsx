@@ -210,7 +210,7 @@ const MemberDirectoryScreen = ({ navigation }: any) => {
       setError('');
     } catch (err) {
       if (requestId.current !== id) return;
-      setError(errorText(err, 'Could not search the directory'));
+      setError(errorText(err, 'Could not search ACTIV Network'));
       if (p === 1) setRows([]);
     } finally {
       if (requestId.current === id) { setLoading(false); setRefreshing(false); setMore(false); }
@@ -252,7 +252,7 @@ const MemberDirectoryScreen = ({ navigation }: any) => {
   const pageHeader = (withSearch: boolean) => (
     <PremiumPageHeader
       eyebrow="Find members"
-      title="Member Directory"
+      title="ACTIV Network"
       subtitle="Members and businesses across the association"
       onBack={back}
       art={<DirectorySearch3D size={84} />}
@@ -291,7 +291,7 @@ const MemberDirectoryScreen = ({ navigation }: any) => {
       <PremiumPage header={pageHeader(false)}>
         <View style={styles.overlap}>
           <MemberLocked
-            title="The member directory opens with your membership"
+            title="The ACTIV Network opens with your membership"
             detail="Who the members are — their businesses, their districts and their trades — is what the membership buys. Complete yours and the whole association is searchable from here."
             action={cta.label}
             actionDetail={cta.detail}
@@ -378,7 +378,7 @@ const MemberDirectoryScreen = ({ navigation }: any) => {
         <MemberCard m={item} index={index} onPress={() => navigation.navigate('DirectoryProfile', { id: String(item?.id || item?._id || ''), name: item?.fullName })} />
       )}
       ListEmptyComponent={loading ? <CardSkeletons rows={4} /> : error ? (
-        <StateView kind="error" title="The directory could not be searched" message={error} onAction={() => load(1, 'load')} />
+        <StateView kind="error" title="ACTIV Network could not be searched" message={error} onAction={() => load(1, 'load')} />
       ) : (
         <StateView
           art={<DirectorySearch3D size={80} />}

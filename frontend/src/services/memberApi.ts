@@ -1,3 +1,5 @@
+import { isPastEvent } from '../utils/eventLifecycle';
+import { withEventAgenda } from '../utils/eventAgenda';
 import api from './api';
 import { unwrap, asArray } from '../ui';
 
@@ -152,19 +154,7 @@ export const listMemberEvents = async (params: Record<string, any> = {}) =>
 
 export const getMemberEvent = async (id: string) => {
   const event = unwrap<any>(await api.get(`/events/${encodeURIComponent(id)}`), null);
-  // Sessions written with the DAY editor live on days[].agenda (website withDayAgenda).
-  if (!event) return event;
-  const flat = asArray<any>(event.agenda).filter((r) => r && (r.title || r.startTime));
-  const days = asArray<any>(event.days);
-  if (flat.length || !days.length) return event;
-  const multi = days.filter((d) => d && d.date).length > 1;
-  const merged: any[] = [];
-  days.forEach((day, i) => {
-    asArray<any>(day?.agenda).filter((r) => r && (r.title || r.startTime)).forEach((row) => {
-      merged.push({ ...row, title: multi ? `Day ${i + 1} — ${row.title || 'Session'}` : row.title });
-    });
-  });
-  return merged.length ? { ...event, agenda: merged } : event;
+  return withEventAgenda(event);
 };
 
 export const listMyEventRegistrations = async () => {
@@ -204,6 +194,7 @@ export const checkEventBooking = async (eventId: string, body: Record<string, an
 export const createEventBooking = async (eventId: string, body: {
   name: string; email: string; phone: string; noOfPersons: number;
   participants: { name: string; email: string; phone: string }[]; note?: string;
+  responses?: Record<string, string | boolean>;
 }) => unwrap<any>(await api.post(`/event-bookings/event/${encodeURIComponent(eventId)}`, body), {});
 
 export const getEventBooking = async (ref: string) =>
@@ -212,10 +203,9 @@ export const getEventBooking = async (ref: string) =>
 /** Registration gate — the website's eventFormat.registrationGate. */
 export const registrationGate = (event: any): { open: boolean; reason: string } => {
   if (!event?.registrationEnabled) return { open: false, reason: 'Registration is not open for this event' };
-  const end = event?.endAt || event?.startAt;
-  if (end && new Date(end).getTime() < Date.now()) return { open: false, reason: 'This event has finished' };
+  if (event?.archivedAt || isPastEvent(event)) return { open: false, reason: 'This event has finished' };
   const closes = event?.registrationClosesAt ? new Date(event.registrationClosesAt) : null;
-  if (closes && !Number.isNaN(closes.getTime()) && closes.getTime() < Date.now()) {
+  if (closes && !Number.isNaN(closes.getTime()) && closes.getTime() <= Date.now()) {
     return { open: false, reason: 'Registration has closed' };
   }
   return { open: true, reason: '' };

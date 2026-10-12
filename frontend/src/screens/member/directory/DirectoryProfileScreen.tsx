@@ -100,13 +100,13 @@ const DirectoryProfileScreen = ({ navigation, route }: any) => {
   if (error || !m) {
     return (
       <PremiumPage
-        header={<PremiumPageHeader eyebrow="Member Directory" title={fallbackName} onBack={() => navigation.goBack()} right={allMembers} />}
+        header={<PremiumPageHeader eyebrow="ACTIV Network" title={fallbackName} onBack={() => navigation.goBack()} right={allMembers} />}
       >
         <StateView
           kind={error ? 'error' : 'empty'}
           title="This member is not listed"
-          message={error || 'Only members with an active membership appear in the directory.'}
-          action={error ? 'Try again' : 'Back to the directory'}
+          message={error || 'Only members with an active membership appear in ACTIV Network.'}
+          action={error ? 'Try again' : 'Back to ACTIV Network'}
           actionIcon={error ? 'refresh' : 'groups'}
           onAction={() => (error ? reload() : navigation.navigate('MemberDirectory'))}
         />

@@ -131,12 +131,12 @@ const MemberMenuScreen = ({ navigation }: any) => {
     { key: 'docs', label: 'Documents', sub: 'What you have submitted', icon: 'folder-open', tone: 'amber', go: () => navigation.navigate('MemberDocuments') },
   ];
   const association: Item[] = [
-    { key: 'dir', label: 'Member Directory', sub: 'Find members and their businesses', icon: 'groups', tone: 'sky', paidOnly: true, go: gated('MemberDirectory') },
+    { key: 'dir', label: 'ACTIV Network', sub: 'Find members and their businesses', icon: 'groups', tone: 'sky', paidOnly: true, go: gated('MemberDirectory') },
     { key: 'events', label: 'Events', sub: 'Upcoming events and your tickets', icon: 'event', tone: 'rose', go: () => navigation.navigate('MemberEvents') },
     { key: 'updates', label: 'Association Updates', sub: 'News for your region', icon: 'campaign', tone: 'amber', go: () => navigation.navigate('AssociationUpdates') },
     { key: 'msgs', label: 'Messages', sub: 'Talk to other members', icon: 'chat-bubble-outline', tone: 'green', paidOnly: true, go: gated('MemberMessages') },
     { key: 'donate', label: 'Donate', sub: 'Support ACTIV · 80G receipts', icon: 'volunteer-activism', tone: 'rose', go: () => navigation.navigate('MemberDonations') },
-    { key: 'website', label: 'Explore ACTIV website', sub: 'News, gallery, zones and schemes', icon: 'public', tone: 'navy', go: () => navigation.navigate('WebsiteViewer', { path: '/', title: 'ACTIV' }) },
+    { key: 'website', label: 'Explore ACTIV website', sub: 'News, gallery, zones and schemes', icon: 'public', tone: 'navy', go: () => navigation.navigate('WebsiteViewer', { path: '/', title: 'ACTIV', publicAccess: true }) },
   ];
   const support: Item[] = [
     { key: 'notif', label: 'Notifications', sub: 'Everything we have sent you', icon: 'notifications-none', tone: 'blue', go: () => navigation.navigate('MemberNotifications') },
@@ -172,7 +172,7 @@ const MemberMenuScreen = ({ navigation }: any) => {
       {paid || platinum ? (
         <FadeInUp delay={120} style={styles.chips}>
           {paid ? <GlassChip label="Active" dot="#34D399" /> : null}
-          {platinum ? <GlassChip label="Platinum" icon="diamond" /> : null}
+          {platinum ? <GlassChip label="Lifetime" icon="diamond" /> : null}
         </FadeInUp>
       ) : null}
       {!paid ? (

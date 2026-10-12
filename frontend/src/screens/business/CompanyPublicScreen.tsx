@@ -14,6 +14,7 @@ import {
   getPublicCompany, addToTrustList, removeFromTrustList, errorMessage, Company, PublicProduct,
 } from '../../services/businessApi';
 import { recordProductView } from '../../services/memberApi';
+import { governmentSchemes } from '../../utils/governmentSchemes';
 import { BizSectionTitle, BizStatePage, CoverHero, GlassTag } from './businessKit';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CompanyPublic'>;
@@ -173,7 +174,7 @@ const CompanyPublicScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const shareLink = async () => {
     try {
-      const url = `${WEB_ORIGIN}/business/company/${encodeURIComponent(company?._id || companyId)}`;
+      const url = `${WEB_ORIGIN}/network/company/${encodeURIComponent(company?._id || companyId)}`;
       await Share.share({ title: company?.businessName || 'Company', message: `${company?.businessName || 'Company'} on ACTIV
 ${url}`, url });
     } catch (err) {
@@ -185,8 +186,8 @@ ${url}`, url });
     Linking.openURL(url).catch(() => Alert.alert('Cannot open', url));
   };
 
-  if (loading) return <BizStatePage title="Company" eyebrow="On the ACTIV network" onBack={() => navigation.goBack()} />;
-  if (error || !company) return <BizStatePage title="Company" eyebrow="On the ACTIV network" onBack={() => navigation.goBack()} error={error} onRetry={load} />;
+  if (loading) return <BizStatePage title="Company" eyebrow="On the ACTIV Network" onBack={() => navigation.goBack()} />;
+  if (error || !company) return <BizStatePage title="Company" eyebrow="On the ACTIV Network" onBack={() => navigation.goBack()} error={error} onRetry={load} />;
 
   const banner = company?.banner ? resolveMediaUrl(company.banner) : '';
   const logo = company?.logo ? resolveMediaUrl(company.logo) : '';
@@ -194,6 +195,7 @@ ${url}`, url });
   const phone = String(company?.mobileNumber || '').replace(/[^\d+]/g, '');
   const place = [company?.area, company?.location].filter(Boolean).join(', ');
   const categories = (company?.productCategories || []).filter((c) => c && c.description);
+  const { schemes, explicitlyNone } = governmentSchemes(company?.govtSchemes);
   const isOwner = company?.isOwner === true;
   isOwnerRef.current = isOwner;
   const trustedBy = Number(company?.trustedBy || 0);
@@ -327,10 +329,11 @@ ${url}`, url });
             <View style={styles.tags}>{(company?.govtRegistrations || []).map((t) => <Badge key={t} label={t} icon="verified" color={PALETTE.violetDark} bg={PALETTE.violetSoft} />)}</View>
           </View>
         ) : null}
-        {(company?.govtSchemes || []).length ? (
+        {schemes.length || explicitlyNone ? (
           <View style={styles.tagsBlock}>
             <Text style={styles.tagsLabel}>Schemes availed</Text>
-            <View style={styles.tags}>{(company?.govtSchemes || []).map((t) => <Badge key={t} label={t} color={PALETTE.greenDark} bg={PALETTE.greenSoft} />)}</View>
+            {schemes.length ? <View style={styles.tags}>{schemes.map((t) => <Badge key={t} label={t} color={PALETTE.greenDark} bg={PALETTE.greenSoft} />)}</View>
+              : <Text style={TYPE.body}>No government schemes availed.</Text>}
           </View>
         ) : null}
       </LiftCard>

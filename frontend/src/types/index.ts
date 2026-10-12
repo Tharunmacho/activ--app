@@ -25,6 +25,8 @@ type BaseStackParamList = {
   SocialSignIn: { code?: string; error?: string; provider?: string; email?: string; name?: string } | undefined;
   // Auth Stack
   Onboarding: undefined;
+  PublicExplore: { section?: 'home' | 'events' | 'news' | 'gallery' | 'zones' } | undefined;
+  PublicEventDetail: { id: string };
   Welcome: undefined;
   Login: undefined;
   /** The admin sign-in (website /admin/login): no social, no register. */

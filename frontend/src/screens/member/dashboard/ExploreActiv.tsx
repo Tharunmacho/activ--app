@@ -1,3 +1,5 @@
+import { isUpcomingEvent } from '../../../utils/eventLifecycle';
+import { useEventClock } from '../../../utils/useEventClock';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -8,16 +10,20 @@ import {
 import {
   getSiteNav, getLegalLinks, getZones, getLatestNews, getGalleryStrip, getPublicEvents,
   FALLBACK_NAV, FALLBACK_LEGAL, SiteLink, Zone, NewsTeaser, GalleryThumb, EventTeaser,
+  toExploreEvents, toExploreGallery, toExploreNews, toExploreZones,
 } from '../../../services/websiteContent';
-import { WEBSITE_PATHS, websiteUrl } from '../../../config/website.config';
+import { WEBSITE_PATHS } from '../../../config/website.config';
+import { openWebsitePage } from '../../../services/websiteNavigation';
+import { ExploreContact, ExploreQuickLinks, ExploreSchemes, ExploreZones } from '../../../components/explore/ExploreDestinations';
+import type { ExploreContent } from '../../../services/publicContent';
 
 /**
  * ============================================================================
  * EXPLORE ACTIV — the association's public website, from the dashboard
  * ============================================================================
  *
- * Shown on BOTH member dashboards (unpaid and paid). Every tap opens the exact
- * website page in the in-app viewer (`WebsiteViewer`).
+ * Shared by guests and both member dashboards. Members open events in the
+ * native booking flow. Guests see the same native programme with public reads.
  *
  *   Page tiles ....... the website's own header menu (GET /cms/site), plus
  *                      Donate and Zones; each with its own drawn glyph
@@ -32,6 +38,8 @@ import { WEBSITE_PATHS, websiteUrl } from '../../../config/website.config';
  */
 
 type Nav = { navigate: (route: string, params?: any) => void };
+export type ExploreSection = 'intro' | 'nav' | 'news' | 'events' | 'gallery' | 'schemes' | 'zones' | 'contact' | 'legal';
+const ALL_SECTIONS: readonly ExploreSection[] = ['intro', 'nav', 'news', 'events', 'gallery', 'schemes', 'zones', 'contact', 'legal'];
 
 type TileMeta = { art: SiteArtKind; colors: string[]; blurb: string };
 
@@ -56,7 +64,11 @@ const metaFor = (path: string): TileMeta => {
 
 const MONTHS3 = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
-export default function ExploreActiv({ navigation, refreshKey = 0 }: { navigation: Nav; refreshKey?: number }) {
+export default function ExploreActiv({ navigation, refreshKey = 0, sections, showEmpty = false, content, publicAccess = false }: {
+  navigation: Nav; refreshKey?: number; sections?: readonly ExploreSection[]; showEmpty?: boolean; content?: ExploreContent; publicAccess?: boolean;
+}) {
+  const sectionKey = (sections || ALL_SECTIONS).join('|');
+  const shown = useMemo(() => new Set(sectionKey.split('|')), [sectionKey]);
   const { width } = useWindowDimensions();
   const [nav, setNav] = useState<SiteLink[]>(FALLBACK_NAV);
   const [legal, setLegal] = useState<SiteLink[]>(FALLBACK_LEGAL);
@@ -64,30 +76,45 @@ export default function ExploreActiv({ navigation, refreshKey = 0 }: { navigatio
   const [news, setNews] = useState<NewsTeaser[] | null>(null);
   const [gallery, setGallery] = useState<GalleryThumb[] | null>(null);
   const [events, setEvents] = useState<EventTeaser[] | null>(null);
+  const eventNow = useEventClock();
+  const upcomingEvents = events?.filter(event => isUpcomingEvent(event, eventNow)) ?? null;
   const [page, setPage] = useState(0);
 
   useEffect(() => {
+    // Guest onboarding supplies its anonymous feed; it never reads member credentials.
+    if (content) {
+      setEvents(toExploreEvents(content.events));
+      setGallery(toExploreGallery(content.gallery));
+      setNews(toExploreNews(content.news));
+      setZones(toExploreZones(content.zones));
+      return;
+    }
     let cancelled = false;
     const force = refreshKey > 0;
-    const safe = <T,>(p: Promise<T>, set: (v: T) => void) => {
-      p.then((v) => { if (!cancelled) set(v); }).catch(() => { /* the service never rejects; belt and braces */ });
+    const safe = <T,>(p: Promise<T>, set: (v: T) => void, fallback: T) => {
+      p.then((v) => { if (!cancelled) set(v); }).catch(() => { if (!cancelled) set(fallback); });
     };
-    safe(getSiteNav(force), (v) => setNav(Array.isArray(v) && v.length ? v : FALLBACK_NAV));
-    safe(getLegalLinks(force), (v) => setLegal(Array.isArray(v) && v.length ? v : FALLBACK_LEGAL));
-    safe(getZones(force), (v) => setZones(Array.isArray(v) ? v : []));
-    safe(getLatestNews(3, force), (v) => setNews(Array.isArray(v) ? v : []));
-    safe(getGalleryStrip(8, force), (v) => setGallery(Array.isArray(v) ? v : []));
-    safe(getPublicEvents(3, force), (v) => setEvents(Array.isArray(v) ? v : []));
+    if (shown.has('nav')) safe(getSiteNav(force), (v) => setNav(Array.isArray(v) && v.length ? v : FALLBACK_NAV), FALLBACK_NAV);
+    if (shown.has('legal')) safe(getLegalLinks(force), (v) => setLegal(Array.isArray(v) && v.length ? v : FALLBACK_LEGAL), FALLBACK_LEGAL);
+    if (shown.has('zones') || shown.has('nav')) safe(getZones(force), (v) => setZones(Array.isArray(v) ? v : []), []);
+    if (shown.has('news')) safe(getLatestNews(3, force), (v) => setNews(Array.isArray(v) ? v : []), []);
+    if (shown.has('gallery')) safe(getGalleryStrip(8, force), (v) => setGallery(Array.isArray(v) ? v : []), []);
+    if (shown.has('events')) safe(getPublicEvents(3, force), (v) => setEvents(Array.isArray(v) ? v : []), []);
     return () => { cancelled = true; };
-  }, [refreshKey]);
+  }, [refreshKey, shown, content]);
 
   const open = useCallback((path: string, title?: string) => {
     try {
-      navigation.navigate('WebsiteViewer', { url: websiteUrl(path), title: title || 'ACTIV' });
+      if (path === WEBSITE_PATHS.events) {
+        if (publicAccess) navigation.navigate('PublicExplore', { section: 'events' });
+        else navigation.navigate('MemberEvents');
+        return;
+      }
+      openWebsitePage(navigation, path, title || 'ACTIV');
     } catch (err) {
       console.warn('Opening the website viewer safely caught:', err);
     }
-  }, [navigation]);
+  }, [navigation, publicAccess]);
 
   const openExternal = useCallback(async (url: string) => {
     try {
@@ -98,7 +125,9 @@ export default function ExploreActiv({ navigation, refreshKey = 0 }: { navigatio
   }, []);
 
   const tiles = useMemo(() => {
-    const list = (nav || []).map((l) => ({ key: l.path, label: l.label, path: l.path, meta: metaFor(l.path) }));
+    const quickPaths: string[] = [WEBSITE_PATHS.about, WEBSITE_PATHS.membership, WEBSITE_PATHS.schemes, WEBSITE_PATHS.contact];
+    const list = (nav || []).filter(l => !quickPaths.includes(l.path))
+      .map((l) => ({ key: l.path, label: l.label, path: l.path, meta: metaFor(l.path) }));
     if (!list.some((t) => t.path === WEBSITE_PATHS.donate)) {
       list.push({ key: 'donate', label: 'Donate', path: WEBSITE_PATHS.donate, meta: TILE_BY_PATH['/donate'] });
     }
@@ -109,15 +138,11 @@ export default function ExploreActiv({ navigation, refreshKey = 0 }: { navigatio
     return list;
   }, [nav, zones]);
 
-  const states = useMemo(
-    () => (zones || []).flatMap((z) => (z?.states || []).map((s) => ({ ...s, zone: z.label }))),
-    [zones],
-  );
-
   const cardW = Math.round(Math.min(340, (width || 360) * 0.8));
 
   return (
     <View>
+      {shown.has('intro') && <>
       <PremiumSectionHeader
         title="Explore ACTIV"
         subtitle="The association's website, right here in the app"
@@ -157,43 +182,21 @@ export default function ExploreActiv({ navigation, refreshKey = 0 }: { navigatio
           </LinearGradient>
         </PressableScale>
       </FadeInUp>
-
-      {/* ---- page tiles */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={x.tileRow}>
-        {tiles.map((t, i) => (
-          <FadeInUp key={t.key} delay={120 + Math.min(i, 6) * 60} distance={12}>
-            <PressableScale
-              onPress={() => open(t.path, t.label)}
-              scaleTo={0.95}
-              contentStyle={[x.tileShadow, { shadowColor: t.meta.colors[0] }]}
-              accessibilityRole="button"
-              accessibilityLabel={`${t.label}. ${t.meta.blurb}. Opens the website.`}
-            >
-              <LinearGradient colors={t.meta.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={x.tile}>
-                <View style={x.tileOrb} />
-                <View style={x.tileHead}>
-                  <SiteArt kind={t.meta.art} size={40} />
-                  <Icon name="arrow-outward" size={16} color="rgba(255,255,255,0.8)" />
-                </View>
-                <Text style={x.tileLabel} numberOfLines={1} maxFontSizeMultiplier={1.2}>{t.label}</Text>
-                <Text style={x.tileBlurb} numberOfLines={2} maxFontSizeMultiplier={1.2}>{t.meta.blurb}</Text>
-              </LinearGradient>
-            </PressableScale>
-          </FadeInUp>
-        ))}
-      </ScrollView>
+      </>}
 
       {/* ---- latest news */}
-      {news === null || news.length > 0 ? (
+      {shown.has('news') && (showEmpty || news === null || news.length > 0) ? (
         <>
           <View style={x.subHead}>
-            <Text style={x.subTitle} maxFontSizeMultiplier={1.3}>Latest news</Text>
+            <Text style={x.subTitle} accessibilityRole="header" maxFontSizeMultiplier={1.3}>Latest news</Text>
             <PressableScale onPress={() => open(WEBSITE_PATHS.news, 'News')} scaleTo={0.94} accessibilityRole="button" accessibilityLabel="All news" hitSlop={8}>
               <Text style={x.subAction} maxFontSizeMultiplier={1.3}>All news</Text>
             </PressableScale>
           </View>
           {news === null ? (
             <View style={x.gutter}><Skeleton width="100%" height={220} radius={22} /></View>
+          ) : news.length === 0 ? (
+            <Text style={x.empty}>News and chapter updates will appear here.</Text>
           ) : (
             <>
               <ScrollView
@@ -249,27 +252,33 @@ export default function ExploreActiv({ navigation, refreshKey = 0 }: { navigatio
       ) : null}
 
       {/* ---- upcoming public events */}
-      {events && events.length > 0 ? (
+      {shown.has('events') && (showEmpty || (upcomingEvents && upcomingEvents.length > 0)) ? (
         <>
           <View style={x.subHead}>
-            <Text style={x.subTitle} maxFontSizeMultiplier={1.3}>On the public calendar</Text>
+            <Text style={x.subTitle} accessibilityRole="header" maxFontSizeMultiplier={1.3}>{sections ? 'Upcoming events' : 'On the public calendar'}</Text>
             <PressableScale onPress={() => open(WEBSITE_PATHS.events, 'Events')} scaleTo={0.94} accessibilityRole="button" accessibilityLabel="All events" hitSlop={8}>
               <Text style={x.subAction} maxFontSizeMultiplier={1.3}>All events</Text>
             </PressableScale>
           </View>
-          <View style={[x.gutter, x.eventCard]}>
-            {events.map((e, i) => {
+          {upcomingEvents === null ? <View style={x.gutter}><Skeleton width="100%" height={160} radius={22} /></View> : upcomingEvents.length === 0 ? (
+            <Text style={x.empty}>New upcoming events will appear here. Open All events to explore the calendar.</Text>
+          ) : <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={x.newsRow} snapToInterval={cardW + SPACE.md} decelerationRate="fast">
+            {upcomingEvents.map((e) => {
               const d = e.startAt ? new Date(e.startAt) : null;
               const ok = !!d && !Number.isNaN(d.getTime());
               return (
                 <PressableScale
                   key={e.key}
-                  onPress={() => open(e.path, 'Event')}
+                  onPress={() => publicAccess ? navigation.navigate('PublicEventDetail', { id: e.id || e.key }) : e.id
+                    ? navigation.navigate('MemberEventDetail', { id: e.id }) : navigation.navigate('MemberEvents')}
                   scaleTo={0.985}
-                  contentStyle={[x.eventRow, i < events.length - 1 && x.divider]}
+                  style={[x.eventCard, { width: cardW }]}
+                  contentStyle={x.eventSurface}
                   accessibilityRole="button"
-                  accessibilityLabel={`${e.title}. ${ok && d ? shortDate(e.startAt) : 'Date to be confirmed'}. Opens the website.`}
+                  accessibilityLabel={`${e.title}. ${ok && d ? shortDate(e.startAt) : 'Date to be confirmed'}. View event details.`}
                 >
+                  {!!e.image && <FitImage uri={e.image} style={x.eventBanner} />}
+                  <View style={x.eventRow}>
                   <LinearGradient colors={TILE_BY_PATH['/events'].colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={x.date}>
                     <Text style={x.dateDay} maxFontSizeMultiplier={1.1}>{ok && d ? String(d.getDate()).padStart(2, '0') : '--'}</Text>
                     <Text style={x.dateMon} maxFontSizeMultiplier={1.1}>{ok && d ? MONTHS3[d.getMonth()] : 'TBC'}</Text>
@@ -284,23 +293,24 @@ export default function ExploreActiv({ navigation, refreshKey = 0 }: { navigatio
                     </View>
                   </View>
                   <Icon name="chevron-right" size={20} color={PALETTE.textFaint} />
+                  </View>
                 </PressableScale>
               );
             })}
-          </View>
+          </ScrollView>}
         </>
       ) : null}
 
       {/* ---- gallery strip */}
-      {gallery === null || gallery.length > 0 ? (
+      {shown.has('gallery') && (showEmpty || gallery === null || gallery.length > 0) ? (
         <>
           <View style={x.subHead}>
-            <Text style={x.subTitle} maxFontSizeMultiplier={1.3}>From the gallery</Text>
+            <Text style={x.subTitle} accessibilityRole="header" maxFontSizeMultiplier={1.3}>From the gallery</Text>
             <PressableScale onPress={() => open(WEBSITE_PATHS.gallery, 'Gallery')} scaleTo={0.94} accessibilityRole="button" accessibilityLabel="Open the gallery" hitSlop={8}>
               <Text style={x.subAction} maxFontSizeMultiplier={1.3}>Gallery</Text>
             </PressableScale>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={x.photoRow}>
+          {gallery?.length === 0 ? <Text style={x.empty}>Photographs from ACTIV events will appear here.</Text> : <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={x.photoRow}>
             {gallery === null
               ? [0, 1, 2, 3].map((i) => <Skeleton key={i} width={112} height={112} radius={18} />)
               : gallery.map((g, i) => (
@@ -321,56 +331,43 @@ export default function ExploreActiv({ navigation, refreshKey = 0 }: { navigatio
                   </PressableScale>
                 </FadeInUp>
               ))}
-          </ScrollView>
+          </ScrollView>}
         </>
       ) : null}
 
-      {/* ---- zones & states */}
-      {zones.length > 0 ? (
-        <>
-          <View style={x.subHead}>
-            <Text style={x.subTitle} maxFontSizeMultiplier={1.3}>ACTIV across India</Text>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={x.chipRow}>
-            {zones.map((z) => (
-              <PressableScale
-                key={z.slug}
-                onPress={() => open(WEBSITE_PATHS.region(z.slug), z.label)}
-                scaleTo={0.94}
-                contentStyle={x.zoneChip}
-                accessibilityRole="button"
-                accessibilityLabel={`${z.label} zone${z.states.length ? `, ${z.states.length} states` : ''}. Opens the zone page.`}
-              >
-                <LinearGradient colors={z.national ? ['#92400E', '#F59E0B'] : ['#1E3A8A', '#3B82F6']} style={x.zoneIcon}>
-                  <Icon name={z.national ? 'flag' : 'explore'} size={14} color={PALETTE.white} />
-                </LinearGradient>
-                <Text style={x.zoneText} numberOfLines={1} maxFontSizeMultiplier={1.2}>{z.national ? '🇮🇳 ' : ''}{z.label}</Text>
-                {z.states.length ? <Text style={x.zoneCount} maxFontSizeMultiplier={1.1}>{z.states.length}</Text> : null}
-              </PressableScale>
-            ))}
-          </ScrollView>
-          {states.length ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[x.chipRow, { paddingTop: 0 }]}>
-              {states.map((s) => (
-                <PressableScale
-                  key={s.slug}
-                  onPress={() => open(WEBSITE_PATHS.state(s.slug), s.name)}
-                  scaleTo={0.94}
-                  contentStyle={x.stateChip}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${s.name}, ${s.zone} zone. Opens the state page.`}
-                >
-                  <Icon name="place" size={13} color={PALETTE.blue} />
-                  <Text style={x.stateText} numberOfLines={1} maxFontSizeMultiplier={1.2}>{s.name}</Text>
-                </PressableScale>
-              ))}
-            </ScrollView>
-          ) : null}
-        </>
-      ) : null}
+      {shown.has('schemes') && <View style={x.gutter}><ExploreSchemes openPage={open} /></View>}
+      {shown.has('zones') && <View style={x.gutter}><ExploreZones zones={zones} openPage={open} /></View>}
+      {shown.has('contact') && <View style={x.gutter}><ExploreContact openPage={open} refreshKey={refreshKey} /></View>}
+
+      {/* ---- page tiles */}
+      {shown.has('nav') && <>
+      <View style={x.gutter}><ExploreQuickLinks openPage={open} /></View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={x.tileRow}>
+        {tiles.map((t, i) => (
+          <FadeInUp key={t.key} delay={120 + Math.min(i, 6) * 60} distance={12}>
+            <PressableScale
+              onPress={() => open(t.path, t.label)}
+              scaleTo={0.95}
+              contentStyle={[x.tileShadow, { shadowColor: t.meta.colors[0] }]}
+              accessibilityRole="button"
+              accessibilityLabel={`${t.label}. ${t.meta.blurb}. Opens the website.`}
+            >
+              <LinearGradient colors={t.meta.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={x.tile}>
+                <View style={x.tileOrb} />
+                <View style={x.tileHead}>
+                  <SiteArt kind={t.meta.art} size={40} />
+                  <Icon name="arrow-outward" size={16} color="rgba(255,255,255,0.8)" />
+                </View>
+                <Text style={x.tileLabel} numberOfLines={1} maxFontSizeMultiplier={1.2}>{t.label}</Text>
+                <Text style={x.tileBlurb} numberOfLines={2} maxFontSizeMultiplier={1.2}>{t.meta.blurb}</Text>
+              </LinearGradient>
+            </PressableScale>
+          </FadeInUp>
+        ))}
+      </ScrollView></>}
 
       {/* ---- policies */}
-      <View style={x.legal}>
+      {shown.has('legal') && <View style={x.legal}>
         {legal.map((l, i) => (
           <React.Fragment key={l.path}>
             {i > 0 ? <Text style={x.legalDot}>·</Text> : null}
@@ -379,13 +376,14 @@ export default function ExploreActiv({ navigation, refreshKey = 0 }: { navigatio
             </PressableScale>
           </React.Fragment>
         ))}
-      </View>
+      </View>}
     </View>
   );
 }
 
 const x = StyleSheet.create({
   gutter: { marginHorizontal: SPACE.lg },
+  empty: { ...TYPE.body, color: PALETTE.textMuted, marginHorizontal: SPACE.lg, padding: SPACE.lg, borderRadius: 18, backgroundColor: PALETTE.white },
   center: { alignItems: 'center', justifyContent: 'center' },
 
   bannerShadow: {
@@ -412,8 +410,8 @@ const x = StyleSheet.create({
   tileLabel: { ...TYPE.bodyStrong, color: PALETTE.white, marginTop: SPACE.md },
   tileBlurb: { ...TYPE.caption, fontSize: 11, lineHeight: 15, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
 
-  subHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: SPACE.lg, marginTop: SPACE.xl, marginBottom: SPACE.md },
-  subTitle: { ...TYPE.subheading },
+  subHead: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.sm, marginHorizontal: SPACE.lg, marginTop: SPACE.xl, marginBottom: SPACE.md },
+  subTitle: { ...TYPE.subheading, flexShrink: 1 },
   subAction: { fontSize: 13, lineHeight: 18, fontWeight: '700', color: PALETTE.blue },
 
   newsRow: { paddingHorizontal: SPACE.lg, gap: SPACE.md, paddingBottom: SPACE.sm },
@@ -439,7 +437,9 @@ const x = StyleSheet.create({
     backgroundColor: PALETTE.white, borderRadius: 22, borderWidth: 1, borderColor: 'rgba(226,232,240,0.9)',
     shadowColor: BRAND.shadowNavy, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.07, shadowRadius: 14, elevation: 2,
   },
-  eventRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, paddingHorizontal: SPACE.md, paddingVertical: SPACE.md, minHeight: 72 },
+  eventSurface: { overflow: 'hidden', borderRadius: 22, backgroundColor: PALETTE.white },
+  eventBanner: { width: '100%', aspectRatio: 16 / 9, backgroundColor: PALETTE.blueSoft },
+  eventRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, paddingHorizontal: SPACE.md, paddingVertical: SPACE.md, minHeight: 104 },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: PALETTE.divider },
   date: { width: 48, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   dateDay: { fontSize: 18, lineHeight: 22, fontWeight: '800', color: PALETTE.white, fontVariant: ['tabular-nums'] },
@@ -453,20 +453,6 @@ const x = StyleSheet.create({
   photoImg: { width: '100%', height: '100%' },
   photoCap: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: SPACE.sm, paddingTop: SPACE.lg, paddingBottom: SPACE.sm },
   photoCapText: { fontSize: 10.5, lineHeight: 13, fontWeight: '700', color: PALETTE.white },
-
-  chipRow: { paddingHorizontal: SPACE.lg, gap: SPACE.sm, paddingBottom: SPACE.sm },
-  zoneChip: {
-    flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, minHeight: 40, paddingLeft: 5, paddingRight: SPACE.md,
-    borderRadius: 999, backgroundColor: PALETTE.white, borderWidth: 1, borderColor: PALETTE.border,
-  },
-  zoneIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  zoneText: { ...TYPE.bodyStrong, fontSize: 13 },
-  zoneCount: { fontSize: 11, fontWeight: '800', color: PALETTE.blueDark, backgroundColor: PALETTE.blueSoft, borderRadius: 999, paddingHorizontal: 6, paddingVertical: 1, overflow: 'hidden' },
-  stateChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 34, paddingHorizontal: SPACE.md, borderRadius: 999,
-    backgroundColor: PALETTE.blueTint, borderWidth: 1, borderColor: PALETTE.blueSoft,
-  },
-  stateText: { fontSize: 12.5, fontWeight: '600', color: PALETTE.blueDark },
 
   legal: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: SPACE.xs, marginTop: SPACE.lg, marginHorizontal: SPACE.lg },
   legalDot: { color: PALETTE.textFaint },
