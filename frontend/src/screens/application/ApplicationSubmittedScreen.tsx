@@ -12,7 +12,7 @@ import { getMyApplications, getMyProfile, formatApplicationRef, isPaidMember } f
 import { pickMostAdvancedApplication, deriveApprovalFlags, applicantKindLabel } from '../member/dashboard/memberRules';
 
 /** The website's support address on this screen. */
-const SUPPORT_EMAIL = 'support@activ.org.in';
+const SUPPORT_EMAIL = 'member@activ.org.in';
 
 /**
  * ============================================================================
