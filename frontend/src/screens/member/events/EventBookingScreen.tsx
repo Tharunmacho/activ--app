@@ -265,7 +265,10 @@ const EventBookingScreen = ({ navigation, route }: any) => {
   const [error, setError] = useState('');
   const [me, setMe] = useState<Person>({ name: '', email: '', phone: '' });
   const [count, setCount] = useState(1);
-  const [participants, setParticipants] = useState<Person[]>([{ name: '', email: '', phone: '' }]);
+  const [participantDetails, setParticipants] = useState<Person[]>([{ name: '', email: '', phone: '' }]);
+  const [firstUsesBooker, setFirstUsesBooker] = useState(true);
+  const participants = Array.from({ length: count }, (_, index) => index === 0 && firstUsesBooker
+    ? me : participantDetails[index] || { name: '', email: '', phone: '' });
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -325,7 +328,11 @@ const EventBookingScreen = ({ navigation, route }: any) => {
     return () => listener.remove();
   }, [step, booking, submitting]);
   const clear = (key: string) => setErrors(prev => ({ ...prev, [key]: '' }));
-  const setParticipant = (i: number, key: keyof Person, value: string) => { setParticipants(prev => prev.map((row, index) => index === i ? { ...row, [key]: value } : row)); clear('p' + i + '.' + key); };
+  const setParticipant = (i: number, key: keyof Person, value: string) => {
+    setParticipants(participants.map((row, index) => index === i ? { ...row, [key]: value } : row));
+    if (i === 0) setFirstUsesBooker(false);
+    clear('p' + i + '.' + key);
+  };
   const pay = (b: any) => navigation.navigate('PaymentCheckout', { orderType: 'event_booking', bookingRef: String(b?.bookingRef || ''), eventId: effectiveId || String(b?.eventId || '') });
   const formFailure = (err: any) => {
     const found = mapBookingErrors(err);
@@ -568,16 +575,16 @@ const EventBookingScreen = ({ navigation, route }: any) => {
                   </View>
                   {errors.count ? <Text style={styles.err}>{errors.count}</Text> : null}
                   <Text style={[styles.qtyLabel, { marginTop: SPACE.lg }]}>Participants</Text>
-                  <Text style={[styles.small, { marginTop: SPACE.xs }]}>Who is attending? Leave a row blank if you do not have their details yet. Participant 1 defaults to your details above.</Text>
+                  <Text style={[styles.small, { marginTop: SPACE.xs }]}>Name, email and mobile are required for every participant. Participant 1 is filled from your booking details; edit it if someone else is attending.</Text>
                   {participants.map((p, i) => (
                     <View key={i} style={styles.other}>
                       <View style={styles.otherHead}>
                         <GradientGlyph icon="person-add-alt" tone="sky" size={30} />
-                        <Text style={styles.otherTitle}>{`Participant ${i + 1}${i === 0 ? ' — defaults to you' : ''}`}</Text>
+                        <Text style={styles.otherTitle}>{`Participant ${i + 1}${i === 0 && firstUsesBooker ? ' — your details' : ''}`}</Text>
                       </View>
-                      <PremiumInput label="Name" placeholder="Name" value={p.name} onChangeText={(v) => setParticipant(i, 'name', v)} icon="person-outline" autoCapitalize="words" />
-                      <PremiumInput label="Email" placeholder="Email (optional)" value={p.email} error={errors[`p${i}.email`]} onChangeText={(v) => setParticipant(i, 'email', v)} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} icon="mail-outline" />
-                      <PremiumInput label="Mobile" placeholder="Mobile (optional)" value={p.phone} error={errors[`p${i}.phone`]} onChangeText={(v) => setParticipant(i, 'phone', v)} keyboardType="phone-pad" icon="call" style={{ marginBottom: 0 }} />
+                      <PremiumInput label="Name" required placeholder="Full name" value={p.name} error={errors[`p${i}.name`]} onChangeText={(v) => setParticipant(i, 'name', v)} icon="person-outline" autoCapitalize="words" />
+                      <PremiumInput label="Email" required placeholder="Email address" value={p.email} error={errors[`p${i}.email`]} onChangeText={(v) => setParticipant(i, 'email', v)} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} icon="mail-outline" />
+                      <PremiumInput label="Mobile" required placeholder="Mobile number" value={p.phone} error={errors[`p${i}.phone`]} onChangeText={(v) => setParticipant(i, 'phone', v)} keyboardType="phone-pad" icon="call" style={{ marginBottom: 0 }} />
                     </View>
                   ))}
                   <PremiumInput

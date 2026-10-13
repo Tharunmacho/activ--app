@@ -14,7 +14,7 @@ export const nationalMobile = (value: string): string => {
 export const bookingParticipants = (booker: BookingPerson, rows: BookingPerson[], count: number): BookingPerson[] =>
   Array.from({ length: count }, (_, index) => {
     const row = rows[index] || { name: '', email: '', phone: '' };
-    const person = index === 0 && !row.name.trim() ? booker : row;
+    const person = index === 0 && ![row.name, row.email, row.phone].some(value => value.trim()) ? booker : row;
     return { name: person.name.trim(), email: person.email.trim().toLowerCase(), phone: nationalMobile(person.phone) };
   });
 
@@ -50,10 +50,11 @@ export function validateBookingForm(booker: BookingPerson, rows: BookingPerson[]
   const seenEmail = new Set<string>();
   const seenPhone = new Set<string>();
   bookingParticipants(booker, rows, count).forEach((row, i) => {
-    // Validate typed contacts even when the unnamed first row falls back to the booker.
-    const typed = rows[i];
-    if (typed?.email.trim() && !EMAIL_RE.test(typed.email.trim())) errors[`p${i}.email`] = 'Enter a valid email address';
-    if (typed?.phone.trim() && !MOBILE_RE.test(nationalMobile(typed.phone))) errors[`p${i}.phone`] = 'Enter a valid 10-digit mobile number';
+    if (!row.name) errors[`p${i}.name`] = 'Please enter the participant’s name';
+    if (!row.email) errors[`p${i}.email`] = 'Please enter the participant’s email address';
+    else if (!EMAIL_RE.test(row.email)) errors[`p${i}.email`] = 'Enter a valid email address';
+    if (!row.phone) errors[`p${i}.phone`] = 'Please enter the participant’s mobile number';
+    else if (!MOBILE_RE.test(row.phone)) errors[`p${i}.phone`] = 'Enter a valid 10-digit mobile number';
     if (row.email && seenEmail.has(row.email)) errors[`p${i}.email`] = 'Use another email';
     if (row.phone && seenPhone.has(row.phone)) errors[`p${i}.phone`] = 'Use another mobile number';
     if (row.email) seenEmail.add(row.email);

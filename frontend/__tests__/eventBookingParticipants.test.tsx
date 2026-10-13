@@ -46,10 +46,16 @@ beforeEach(() => {
 });
 afterEach(async () => { if (tree) await act(async () => tree.unmount()); });
 
-test('one seat displays an editable Participant 1 and defaults its blank row to the booker', async () => {
+test('one seat visibly fills Participant 1 and follows changes to the booking contact', async () => {
   await render();
   expect(JSON.stringify(tree.toJSON())).toContain('Participant 1');
   expect(inputs()).toHaveLength(7);
+  expect(inputs()[3].props.value).toBe('Booker');
+  expect(inputs()[4].props.value).toBe('booker@example.test');
+  expect(inputs()[5].props.value).toBe('9000000001');
+  await edit(0, 'Updated Booker');
+  expect(inputs()[3].props.value).toBe('Updated Booker');
+  await edit(0, 'Booker');
   await confirm();
   expect(createEventBooking).toHaveBeenCalledWith('conference', expect.objectContaining({
     noOfPersons: 1, participants: [{ name: 'Booker', email: 'booker@example.test', phone: '9000000001' }],
@@ -105,12 +111,33 @@ test('server error for Participant 1 appears on its own field', async () => {
 test('paid guest booking keeps all attendee rows and opens the shared checkout', async () => {
   (getBookableEvent as jest.Mock).mockResolvedValue({ title: 'Conference', amount: 1000, maxPerBooking: 10 });
   (createEventBooking as jest.Mock).mockResolvedValue({ bookingRef: 'PAID-REF', payment: { status: 'pending' } });
-  await render(); await press('One more seat'); await edit(6, 'Guest');
+  await render(); await press('One more seat'); await edit(6, 'Guest'); await edit(7, 'guest@example.test'); await edit(8, '9173652408');
   await press('Review booking');
   expect(createEventBooking).not.toHaveBeenCalled();
   await press('Pay ₹2,000 and confirm');
   expect((createEventBooking as jest.Mock).mock.calls[0][1].participants).toHaveLength(2);
   expect(navigation.navigate).toHaveBeenCalledWith('PaymentCheckout', { orderType: 'event_booking', bookingRef: 'PAID-REF', eventId: 'conference' });
+});
+
+test('ten seats require all ten complete participants before review or payment', async () => {
+  await render();
+  for (let i = 1; i < 10; i++) await press('One more seat');
+  await press('Review booking');
+  expect(checkEventBooking).not.toHaveBeenCalled();
+  expect(createEventBooking).not.toHaveBeenCalled();
+  for (let i = 1; i < 10; i++) {
+    expect(inputs()[3 + i * 3].props.error).toBeTruthy();
+    expect(inputs()[4 + i * 3].props.error).toBeTruthy();
+    expect(inputs()[5 + i * 3].props.error).toBeTruthy();
+    await edit(3 + i * 3, 'Delegate ' + i);
+    await edit(4 + i * 3, `delegate${i}@example.test`);
+    await edit(5 + i * 3, '91736524' + String(i).padStart(2, '0'));
+  }
+  await confirm();
+  const payload = (createEventBooking as jest.Mock).mock.calls[0][1];
+  expect(payload.noOfPersons).toBe(10);
+  expect(payload.participants).toHaveLength(10);
+  expect(payload.participants.every((person: any) => person.name && person.email && person.phone)).toBe(true);
 });
 
 test('required event questions validate before review and persist through edit', async () => {

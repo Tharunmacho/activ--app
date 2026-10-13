@@ -162,7 +162,7 @@ describe.each([[false, false], [false, true], [true, false], [true, true]])('das
       tree = ReactTestRenderer.create(<Screen navigation={navigation} route={{}} />);
       await flush(); await flush();
     });
-    const expected = ['upcoming events', 'quick actions', 'from the gallery', 'latest news', 'schemes', 'zones', 'contact us', 'my documents'];
+    const expected = [...(paid ? ['association updates'] : []), 'upcoming events', 'quick actions', 'from the gallery', 'latest news', 'schemes', 'zones', 'my documents', 'contact us'];
     const headings = () => tree.root.findAllByType(Text).filter((node: any) => node.props.children !== 'Schemes' || node.props.accessibilityRole === 'header')
       .map((node: any) => String(node.props.children).toLowerCase())
       .filter((label: string) => expected.includes(label));

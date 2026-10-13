@@ -109,7 +109,7 @@ export default function PublicExploreScreen({ navigation, route }: any) {
       <ExploreActiv navigation={navigation} sections={['gallery']} content={data} publicAccess showEmpty />
       <ExploreActiv navigation={navigation} sections={['news']} content={data} publicAccess showEmpty />
     </>}
-    <ExploreActiv navigation={navigation} sections={['schemes', 'zones', 'contact']} content={data} publicAccess refreshKey={contactRefresh} />
+    <ExploreActiv navigation={navigation} sections={['schemes', 'zones']} content={data} publicAccess refreshKey={contactRefresh} />
     <View style={s.gutter}>
     <ExploreQuickLinks openPage={openPage} />
     <SurfaceCard padded={false} style={s.joinCard}>
@@ -128,6 +128,7 @@ export default function PublicExploreScreen({ navigation, route }: any) {
         </LinearGradient>
     </SurfaceCard>
     </View>
+    <ExploreActiv navigation={navigation} sections={['contact']} publicAccess refreshKey={contactRefresh} />
   </View>;
 
   const tabs = <View style={[s.tabs, { paddingBottom: Math.max(insets.bottom, 10) }]}>

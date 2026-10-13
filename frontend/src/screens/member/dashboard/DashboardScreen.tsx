@@ -404,7 +404,7 @@ const DashboardScreen = ({ navigation }: any) => {
 
           <ExploreActiv navigation={navigation} refreshKey={exploreKey} sections={['gallery']} showEmpty />
           <ExploreActiv navigation={navigation} refreshKey={exploreKey} sections={['news']} showEmpty />
-          <ExploreActiv navigation={navigation} refreshKey={exploreKey} sections={['schemes', 'zones', 'contact', 'nav']} />
+          <ExploreActiv navigation={navigation} refreshKey={exploreKey} sections={['schemes', 'zones', 'nav']} />
 
           <PremiumSectionHeader title="My Documents" subtitle="Your application records and certificates" />
           <PremiumCard style={styles.gutter} onPress={() => navigation.navigate('MemberDocuments')} accessibilityLabel="View documents and application records">
@@ -605,7 +605,7 @@ const DashboardScreen = ({ navigation }: any) => {
           </PremiumCard>
 
           {/* ---------------- Explore ACTIV (the public website) */}
-          <ExploreActiv navigation={navigation} refreshKey={exploreKey} sections={['legal']} />
+          <ExploreActiv navigation={navigation} refreshKey={exploreKey} sections={['contact', 'legal']} />
 
           {/* ---------------- What your membership unlocks */}
           <PremiumSectionHeader title="What your membership unlocks" />

@@ -36,6 +36,15 @@ export function ExploreContact({ openPage, refreshKey = 0 }: { openPage: (path: 
       value={officeChoices.find(item => item.id === office?.id)?.label || ''} options={officeChoices.map(item => item.label)}
       onChange={label => { const choice = officeChoices.find(item => item.label === label); if (choice) setSelected(choice.id); }} />}
     <SurfaceCard padded={false}>
+      <View style={s.body}>
+        <View style={s.titleRow}><View style={s.art}><SiteArt kind="contact" size={34} /></View>
+          <View style={s.copy}><Text style={s.title}>{office?.label || 'Let’s connect'}</Text>
+            <Text style={s.description}>{office?.address || 'Questions about ACTIV? Our team is here to help.'}</Text></View>
+        </View>
+        <PressableScale onPress={contact} accessibilityRole="button" accessibilityLabel="Get in touch with ACTIV" contentStyle={s.contactButton}>
+          <Text style={s.contactButtonText}>Contact our team</Text><Icon name="arrow-forward" size={17} color={BRAND.blue} />
+        </PressableScale>
+      </View>
       {office && <PressableScale onPress={directions} accessibilityRole="button" accessibilityLabel={'Open directions to ' + office.label}>
         <View style={s.map} pointerEvents="none">
           {MapView && office.mapEmbedUrl && !mapFailed ? <MapView key={office.mapEmbedUrl + refreshKey} source={{ html: contactMapHtml(office.mapEmbedUrl), baseUrl: 'https://activ.org.in/' }} style={s.map}
@@ -46,15 +55,6 @@ export function ExploreContact({ openPage, refreshKey = 0 }: { openPage: (path: 
           <View style={s.mapLabel}><Icon name="directions" size={17} color={BRAND.blue} /><Text style={s.mapLabelText}>Open map</Text></View>
         </View>
       </PressableScale>}
-      <View style={s.body}>
-        <View style={s.titleRow}><View style={s.art}><SiteArt kind="contact" size={34} /></View>
-          <View style={s.copy}><Text style={s.title}>{office?.label || 'Let’s connect'}</Text>
-            <Text style={s.description}>{office?.address || 'Questions about ACTIV? Our team is here to help.'}</Text></View>
-        </View>
-        <PressableScale onPress={contact} accessibilityRole="button" accessibilityLabel="Get in touch with ACTIV" contentStyle={s.contactButton}>
-          <Text style={s.contactButtonText}>Contact our team</Text><Icon name="arrow-forward" size={17} color={BRAND.blue} />
-        </PressableScale>
-      </View>
     </SurfaceCard>
   </View>;
 }
