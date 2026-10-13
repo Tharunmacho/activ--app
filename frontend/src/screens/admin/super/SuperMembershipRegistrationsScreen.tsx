@@ -81,9 +81,9 @@ export default function SuperMembershipRegistrationsScreen() {
     finally { setSaving(false); }
   };
   const remove = async () => {
-    if (!detail || saving || !(await confirm('Delete registration?', `Remove ${detail.member.name} and disable their login and membership access? Payment history is retained. Payments are not refunded.`))) return;
+    if (!detail || saving || !(await confirm('Permanently delete registration?', `Delete ${detail.member.name}'s account, application, business profile and membership payments from the database? This cannot be undone and does not refund payments. They must register again to sign in.`))) return;
     setSaving(true);
-    try { await deleteMembershipRegistration(detail.member.id); setDetail(null); await load(); Alert.alert('Registration deleted', 'Payment records have been retained.'); }
+    try { await deleteMembershipRegistration(detail.member.id); setDetail(null); await load(); Alert.alert('Permanently deleted', 'The member account and registration have been removed from the database.'); }
     catch (err) { Alert.alert('Could not delete registration', errorText(err)); }
     finally { setSaving(false); }
   };

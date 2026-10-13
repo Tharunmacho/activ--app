@@ -1,10 +1,10 @@
 import React from 'react';
 import Renderer from 'react-test-renderer';
-import { StyleSheet } from 'react-native';
+import { Alert, StyleSheet } from 'react-native';
 import WebsiteViewer from '../src/screens/member/website/WebsiteViewerScreen';
 import Register from '../src/screens/admin/super/SuperMembershipIdsScreen';
 import { getPublicNewsArticle } from '../src/services/publicContent';
-import { getMembershipId, listMembershipIds, updateMembershipId } from '../src/services/membershipIdApi';
+import { getMembershipId, listMembershipIds, updateMembershipId, deleteMembershipId } from '../src/services/membershipIdApi';
 
 const mockNavigation = { goBack: jest.fn(), navigate: jest.fn() };
 jest.mock('@react-navigation/native', () => ({
@@ -13,7 +13,7 @@ jest.mock('@react-navigation/native', () => ({
 }));
 jest.mock('../src/services/publicContent', () => ({ getPublicNewsArticle: jest.fn() }));
 jest.mock('../src/services/membershipIdApi', () => ({
-  ...jest.requireActual('../src/services/membershipIdApi'), getMembershipId: jest.fn(), listMembershipIds: jest.fn(), updateMembershipId: jest.fn(),
+  ...jest.requireActual('../src/services/membershipIdApi'), getMembershipId: jest.fn(), listMembershipIds: jest.fn(), updateMembershipId: jest.fn(), deleteMembershipId: jest.fn(),
 }));
 jest.mock('../src/services/api', () => ({ __esModule: true, default: { get: jest.fn() } }));
 let screen: Renderer.ReactTestRenderer;
@@ -26,7 +26,7 @@ const press = (label: string) => {
   expect(node).toBeTruthy(); return node.props.onPress();
 };
 const input = (label: string, value: string) => screen.root.findAll(n => n.props.label === label && typeof n.props.onChangeText === 'function')[0].props.onChangeText(value);
-afterEach(async () => { await Renderer.act(async () => screen?.unmount()); jest.clearAllMocks(); });
+afterEach(async () => { await Renderer.act(async () => screen?.unmount()); jest.clearAllMocks(); jest.restoreAllMocks(); });
 test.each([true, false])('news detail uses a full native letter before/after login (guest=%s)', async publicAccess => {
   (getPublicNewsArticle as jest.Mock).mockResolvedValue({ title: 'Official letter', body: 'Complete body', image: { url: 'https://example.test/letter.png', alt: 'Letter' }, photos: [] });
   await Renderer.act(async () => { screen = Renderer.create(<WebsiteViewer navigation={mockNavigation} route={{ params: { path: '/news/official-letter', publicAccess } }} />); await flush(); });
@@ -57,4 +57,27 @@ test('register submits corrections and keeps the form on duplicate-ID rejection'
   await Renderer.act(async () => { await press('Save changes'); });
   expect(screen.root.findAll(node => node.props.text === 'Membership record updated.').length).toBeGreaterThan(0);
   expect(listMembershipIds).toHaveBeenCalledTimes(2);
+});
+
+test('account deletion requires confirmation and refreshes the register', async () => {
+  (listMembershipIds as jest.Mock).mockResolvedValue({ rows: [record], total: 1, limit: 20, page: 1 });
+  (deleteMembershipId as jest.Mock).mockResolvedValue({ deleted: true });
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  await Renderer.act(async () => { screen = Renderer.create(<Register />); await flush(); });
+  await Renderer.act(async () => { press('Delete account'); });
+  expect(deleteMembershipId).not.toHaveBeenCalled();
+  expect(alert.mock.calls[0][1]).toContain('fresh registration');
+  const confirm = alert.mock.calls[0][2]!.find(action => action.style === 'destructive')!;
+  (listMembershipIds as jest.Mock).mockResolvedValue({ rows: [], total: 0, limit: 20, page: 1 });
+  await Renderer.act(async () => { await confirm.onPress!(); });
+  expect(deleteMembershipId).toHaveBeenCalledWith(record.id);
+  expect(screen.root.findAll(node => typeof node.props.text === 'string' && node.props.text.includes('new registration is required')).length).toBeGreaterThan(0);
+  expect(screen.root.findAll(node => node.props.children === record.membershipNumber)).toHaveLength(0);
+});
+
+test('archived members from an older API cannot appear in the register', async () => {
+  (listMembershipIds as jest.Mock).mockResolvedValue({ rows: [record, { ...record, id: 'old', fullName: 'Archived person', status: 'archived', editable: false }], total: 2, limit: 20, page: 1 });
+  await Renderer.act(async () => { screen = Renderer.create(<Register />); await flush(); });
+  expect(screen.root.findAll(node => node.props.children === 'Archived person')).toHaveLength(0);
+  expect(screen.root.findAll(node => node.props.children === 'Fixture Member').length).toBeGreaterThan(0);
 });

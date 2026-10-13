@@ -45,6 +45,8 @@ export interface Plan {
 }
 
 export interface MyPlans {
+  kind?: string;
+  currentPlanDetails?: Plan | null;
   canPurchase?: boolean;
   commencementYear?: string;
   plans: Plan[];
@@ -123,7 +125,8 @@ export const getUpgradePlans = async (): Promise<MyPlans> => {
   if (typeof d?.canPurchase !== 'boolean') throw new Error('Membership upgrade options are temporarily unavailable. Please try again later.');
   const plans = asArray(d?.plans).map(toPlan).filter((p) => p.key && p.audience !== 'platinum');
   return {
-    plans, canPurchase: d?.canPurchase !== false, matched: null, years: null, commencementYear: String(d?.commencementYear || ''),
+    plans, kind: d?.kind, currentPlanDetails: d?.currentPlanDetails ? toPlan(d.currentPlanDetails) : null,
+    canPurchase: d?.canPurchase !== false, matched: null, years: null, commencementYear: String(d?.commencementYear || ''),
     reason: String(d?.reason || ''), showAllPlans: true, failed: false,
   };
 };

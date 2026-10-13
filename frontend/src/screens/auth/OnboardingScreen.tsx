@@ -255,7 +255,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
   if (isCheckingAuth) {
     return (
       <View style={styles.loadingRoot}>
-        <StatusBar barStyle="light-content" backgroundColor={BRAND.navyDeep} />
+        <StatusBar barStyle="light-content" />
         <BrandBackdrop tone="member" waveColor={BRAND.navyDeep} waveHeight={0} style={StyleSheet.absoluteFill} />
         <FadeInUp scaleFrom={0.9} style={styles.loadingCenter}>
           <BrandLogo variant="disc" />
@@ -270,7 +270,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor={BRAND.navyDeep} />
+      <StatusBar barStyle="light-content" />
       <BrandBackdrop
         tone="member"
         waveColor={PALETTE.white}

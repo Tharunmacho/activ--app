@@ -100,6 +100,28 @@ test('missing LinkedIn permissions are explained', async () => {
   expect(text(tree)).toContain('LinkedIn has not enabled the email and profile permissions');
 });
 
+test.each(['no_email', 'email_permission', 'facebook_no_email'])('Facebook %s offers consent retry and an ordinary login fallback', async error => {
+  const nav = navigation();
+  await mount(<SocialSignInScreen navigation={nav as any} route={{ params: { error, provider: 'facebook' } } as any} />);
+  const button = (label: string) => tree.root.findAll(node => node.props.label === label && typeof node.props.onPress === 'function')[0];
+  await act(async () => { await button('Try Facebook again').props.onPress(); });
+  expect(Linking.openURL).toHaveBeenCalledWith(`${API_BASE_URL}/auth/oauth/facebook/start?client=app`);
+  expect(api.post).not.toHaveBeenCalled();
+  expect(login).not.toHaveBeenCalled();
+  await act(async () => { button('Use email and password').props.onPress(); });
+  expect(nav.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'Login' }] });
+});
+
+test('Facebook retry failure leaves the email login available', async () => {
+  (Linking.openURL as jest.Mock).mockRejectedValueOnce(new Error('browser unavailable'));
+  await mount(<SocialSignInScreen navigation={navigation() as any} route={{ params: { error: 'email_permission', provider: 'facebook' } } as any} />);
+  const button = tree.root.findAll(node => node.props.label === 'Try Facebook again' && typeof node.props.onPress === 'function')[0];
+  await act(async () => { await button.props.onPress(); });
+  expect(text(tree)).toContain('Could not open Facebook');
+  expect(text(tree)).toContain('Use email and password');
+  expect(login).not.toHaveBeenCalled();
+});
+
 test('a new social member opens registration with their email and name', async () => {
   const nav = navigation();
   await mount(<SocialSignInScreen navigation={nav as any} route={{ params: { error: 'no_account', provider: 'facebook', email: 'new@example.test', name: 'New Member' } } as any} />);

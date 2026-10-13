@@ -14,7 +14,6 @@ import { isUpcomingEvent } from '../../utils/eventLifecycle';
 import { useEventClock } from '../../utils/useEventClock';
 import { clearPublicAction } from '../../services/publicNavigation';
 import { openWebsitePage } from '../../services/websiteNavigation';
-import { ExploreQuickLinks } from '../../components/explore/ExploreDestinations';
 import ExploreActiv from '../member/dashboard/ExploreActiv';
 import { PublicContentCard, PublicZoneCard, publicRecordKey } from './PublicExploreCards';
 
@@ -82,8 +81,10 @@ export default function PublicExploreScreen({ navigation, route }: any) {
   };
   const openPage = (path: string, title: string) => {
     const eventPath = /^\/events\/([^/?#]+)\/?$/.exec(path);
+    const tabs: Partial<Record<string, ExploreSection>> = { '/': 'home', '/events': 'events', '/news': 'news', '/gallery': 'gallery' };
+    const nativeTab = tabs[path];
     if (eventPath) navigation.navigate('PublicEventDetail', { id: decodeURIComponent(eventPath[1]) });
-    else if (path === WEBSITE_PATHS.events) switchTab('events');
+    else if (nativeTab) switchTab(nativeTab);
     else openWebsitePage(navigation, path, title);
   };
   const signIn = () => { clearPublicAction(); navigation.navigate('Login'); };
@@ -110,8 +111,8 @@ export default function PublicExploreScreen({ navigation, route }: any) {
       <ExploreActiv navigation={navigation} sections={['news']} content={data} publicAccess showEmpty />
     </>}
     <ExploreActiv navigation={navigation} sections={['schemes', 'zones']} content={data} publicAccess refreshKey={contactRefresh} />
+    <ExploreActiv navigation={navigation} sections={['nav']} content={data} publicAccess onOpenPage={openPage} />
     <View style={s.gutter}>
-    <ExploreQuickLinks openPage={openPage} />
     <SurfaceCard padded={false} style={s.joinCard}>
         <LinearGradient colors={[BRAND.navyDeep, BRAND.blue900]} style={s.joinInner}>
           <View style={s.joinOrb} />
@@ -209,7 +210,7 @@ export default function PublicExploreScreen({ navigation, route }: any) {
 
 const s = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 }, body: { flexGrow: 1, backgroundColor: PALETTE.canvas, paddingBottom: SPACE.sm },
-  contentRow: { paddingHorizontal: SPACE.lg, gap: SPACE.md, paddingBottom: SPACE.md, alignItems: 'flex-start' },
+  contentRow: { paddingHorizontal: SPACE.lg, gap: SPACE.md, paddingBottom: SPACE.md, alignItems: 'stretch' },
   gutter: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: SPACE.lg },
   heroContent: { width: '100%', maxWidth: 680, alignSelf: 'center' }, topbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.md },
   signIn: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 44, paddingHorizontal: 15, borderRadius: 16, backgroundColor: BRAND.glass, borderWidth: 1, borderColor: BRAND.glassBorder },

@@ -14,7 +14,7 @@ import {
 } from '../../../services/websiteContent';
 import { WEBSITE_PATHS } from '../../../config/website.config';
 import { openWebsitePage } from '../../../services/websiteNavigation';
-import { ExploreContact, ExploreQuickLinks, ExploreSchemes, ExploreZones } from '../../../components/explore/ExploreDestinations';
+import { ExploreContact, ExploreSchemes, ExploreZones } from '../../../components/explore/ExploreDestinations';
 import type { ExploreContent } from '../../../services/publicContent';
 
 /**
@@ -64,8 +64,9 @@ const metaFor = (path: string): TileMeta => {
 
 const MONTHS3 = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
-export default function ExploreActiv({ navigation, refreshKey = 0, sections, showEmpty = false, content, publicAccess = false }: {
+export default function ExploreActiv({ navigation, refreshKey = 0, sections, showEmpty = false, content, publicAccess = false, onOpenPage }: {
   navigation: Nav; refreshKey?: number; sections?: readonly ExploreSection[]; showEmpty?: boolean; content?: ExploreContent; publicAccess?: boolean;
+  onOpenPage?: (path: string, title: string) => void;
 }) {
   const sectionKey = (sections || ALL_SECTIONS).join('|');
   const shown = useMemo(() => new Set(sectionKey.split('|')), [sectionKey]);
@@ -105,6 +106,7 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
 
   const open = useCallback((path: string, title?: string) => {
     try {
+      if (onOpenPage) { onOpenPage(path, title || 'ACTIV'); return; }
       if (path === WEBSITE_PATHS.events) {
         if (publicAccess) navigation.navigate('PublicExplore', { section: 'events' });
         else navigation.navigate('MemberEvents');
@@ -114,7 +116,7 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
     } catch (err) {
       console.warn('Opening the website viewer safely caught:', err);
     }
-  }, [navigation, publicAccess]);
+  }, [navigation, publicAccess, onOpenPage]);
 
   const openExternal = useCallback(async (url: string) => {
     try {
@@ -126,8 +128,15 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
 
   const tiles = useMemo(() => {
     const quickPaths: string[] = [WEBSITE_PATHS.about, WEBSITE_PATHS.membership, WEBSITE_PATHS.schemes, WEBSITE_PATHS.contact];
-    const list = (nav || []).filter(l => !quickPaths.includes(l.path))
-      .map((l) => ({ key: l.path, label: l.label, path: l.path, meta: metaFor(l.path) }));
+    const allNav = [...(nav || [])];
+    for (const path of quickPaths) {
+      if (!allNav.some(link => link.path === path)) {
+        const link = FALLBACK_NAV.find(item => item.path === path);
+        if (link) allNav.push(link);
+      }
+    }
+    const list = allNav
+      .map((l) => ({ key: l.path, label: l.path === WEBSITE_PATHS.about ? 'About ACTIV' : l.path === WEBSITE_PATHS.contact ? 'Contact us' : l.label, path: l.path, meta: metaFor(l.path) }));
     if (!list.some((t) => t.path === WEBSITE_PATHS.donate)) {
       list.push({ key: 'donate', label: 'Donate', path: WEBSITE_PATHS.donate, meta: TILE_BY_PATH['/donate'] });
     }
@@ -217,7 +226,8 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
                     key={n.key}
                     onPress={() => (n.external ? openExternal(n.external) : open(n.path, 'News'))}
                     scaleTo={0.98}
-                    contentStyle={[x.newsCard, { width: cardW }]}
+                    style={{ width: cardW }}
+                    contentStyle={[x.newsCard, { flex: 1 }]}
                     accessibilityRole="button"
                     accessibilityLabel={`${n.title}. ${n.category}. Read on the website.`}
                   >
@@ -277,7 +287,7 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
                   accessibilityRole="button"
                   accessibilityLabel={`${e.title}. ${ok && d ? shortDate(e.startAt) : 'Date to be confirmed'}. View event details.`}
                 >
-                  {!!e.image && <FitImage uri={e.image} style={x.eventBanner} />}
+                  {e.image ? <FitImage uri={e.image} style={x.eventBanner} /> : <LinearGradient colors={TILE_BY_PATH['/events'].colors} style={[x.eventBanner, x.center]}><SiteArt kind="events" size={72} /></LinearGradient>}
                   <View style={x.eventRow}>
                   <LinearGradient colors={TILE_BY_PATH['/events'].colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={x.date}>
                     <Text style={x.dateDay} maxFontSizeMultiplier={1.1}>{ok && d ? String(d.getDate()).padStart(2, '0') : '--'}</Text>
@@ -341,7 +351,6 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
 
       {/* ---- page tiles */}
       {shown.has('nav') && <>
-      <View style={x.gutter}><ExploreQuickLinks openPage={open} /></View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={x.tileRow}>
         {tiles.map((t, i) => (
           <FadeInUp key={t.key} delay={120 + Math.min(i, 6) * 60} distance={12}>
@@ -414,7 +423,7 @@ const x = StyleSheet.create({
   subTitle: { ...TYPE.subheading, flexShrink: 1 },
   subAction: { fontSize: 13, lineHeight: 18, fontWeight: '700', color: PALETTE.blue },
 
-  newsRow: { paddingHorizontal: SPACE.lg, gap: SPACE.md, paddingBottom: SPACE.sm },
+  newsRow: { paddingHorizontal: SPACE.lg, gap: SPACE.md, paddingBottom: SPACE.sm, alignItems: 'stretch' },
   newsCard: {
     backgroundColor: PALETTE.white, borderRadius: 22, borderWidth: 1, borderColor: 'rgba(226,232,240,0.9)',
     shadowColor: BRAND.shadowNavy, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 18, elevation: 4,
@@ -425,10 +434,10 @@ const x = StyleSheet.create({
   newsCat: { position: 'absolute', left: SPACE.md, bottom: SPACE.sm, backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 999, paddingHorizontal: SPACE.sm, paddingVertical: 2, maxWidth: '70%' },
   newsCatText: { fontSize: 10, lineHeight: 14, fontWeight: '800', color: PALETTE.white, letterSpacing: 0.8 },
   newsExt: { position: 'absolute', right: SPACE.md, top: SPACE.md, width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(11,26,69,0.5)', alignItems: 'center', justifyContent: 'center' },
-  newsBody: { padding: SPACE.md, paddingBottom: SPACE.lg },
+  newsBody: { padding: SPACE.md, paddingBottom: SPACE.lg, flexGrow: 1 },
   newsTitle: { ...TYPE.subheading, lineHeight: 21 },
   newsSummary: { ...TYPE.caption, fontWeight: '400', lineHeight: 17, marginTop: SPACE.xs },
-  newsDate: { fontSize: 11, lineHeight: 15, color: PALETTE.textFaint, marginTop: SPACE.sm },
+  newsDate: { fontSize: 11, lineHeight: 15, color: PALETTE.textFaint, marginTop: 'auto', paddingTop: SPACE.sm },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: SPACE.xs },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: PALETTE.borderStrong },
   dotOn: { width: 18, backgroundColor: PALETTE.blue },
@@ -437,9 +446,9 @@ const x = StyleSheet.create({
     backgroundColor: PALETTE.white, borderRadius: 22, borderWidth: 1, borderColor: 'rgba(226,232,240,0.9)',
     shadowColor: BRAND.shadowNavy, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.07, shadowRadius: 14, elevation: 2,
   },
-  eventSurface: { overflow: 'hidden', borderRadius: 22, backgroundColor: PALETTE.white },
+  eventSurface: { overflow: 'hidden', borderRadius: 22, backgroundColor: PALETTE.white, flex: 1 },
   eventBanner: { width: '100%', aspectRatio: 16 / 9, backgroundColor: PALETTE.blueSoft },
-  eventRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, paddingHorizontal: SPACE.md, paddingVertical: SPACE.md, minHeight: 104 },
+  eventRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, paddingHorizontal: SPACE.md, paddingVertical: SPACE.md, minHeight: 104, flexGrow: 1 },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: PALETTE.divider },
   date: { width: 48, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   dateDay: { fontSize: 18, lineHeight: 22, fontWeight: '800', color: PALETTE.white, fontVariant: ['tabular-nums'] },
@@ -458,4 +467,3 @@ const x = StyleSheet.create({
   legalDot: { color: PALETTE.textFaint },
   legalText: { fontSize: 12, lineHeight: 18, color: PALETTE.textMuted, fontWeight: '600', paddingVertical: SPACE.xs },
 });
-

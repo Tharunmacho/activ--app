@@ -74,7 +74,7 @@ export function ConsoleFrame({ children, footer, style, avoidKeyboard }: {
   const top = Number(insets?.top || 0);
   return (
     <View style={[f.flex, { backgroundColor: CONSOLE_CANVAS }, style]}>
-      <StatusBar barStyle="light-content" backgroundColor={ADMIN.top} />
+      <StatusBar barStyle="light-content" />
       <View pointerEvents="none" style={[f.overscroll, { backgroundColor: ADMIN.top }]} />
       {avoidKeyboard && Platform.OS === 'ios' ? (
         <KeyboardAvoidingView style={f.flex} behavior="padding">

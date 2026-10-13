@@ -1,8 +1,8 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { View, Text, StyleSheet, RefreshControl } from 'react-native';
+import { Alert, View, Text, StyleSheet, RefreshControl } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { ConsoleScroll, ConsoleHeader, ConsoleCard, ConsoleSearch, ConsoleButton, ConsoleNote, GlassIconButton, PremiumInput, SPACE, PALETTE } from '../../../ui';
-import { correctionForm, listMembershipIds, getMembershipId, updateMembershipId, type MembershipIdRecord, type MembershipIdCorrection, type MembershipIdPage } from '../../../services/membershipIdApi';
+import { correctionForm, listMembershipIds, getMembershipId, updateMembershipId, deleteMembershipId, visibleMembershipIds, type MembershipIdRecord, type MembershipIdCorrection, type MembershipIdPage } from '../../../services/membershipIdApi';
 import { errorText } from '../../../services/superApi';
 import { ToggleRow } from './superKit';
 
@@ -18,7 +18,7 @@ export default function SuperMembershipIdsScreen() {
   const generation = useRef(0);
   const load = useCallback(async () => {
     const current = ++generation.current; setLoading(true); setError('');
-    try { const next = await listMembershipIds(search, page); if (current === generation.current) setData(next); }
+    try { const next = await listMembershipIds(search, page); if (current === generation.current) setData(visibleMembershipIds(next)); }
     catch (e) { if (current === generation.current) setError(errorText(e)); }
     finally { if (current === generation.current) setLoading(false); }
   }, [search, page]);
@@ -37,6 +37,24 @@ export default function SuperMembershipIdsScreen() {
     finally { setSaving(false); }
   };
   const back = () => { if (saving) return; if (selected) { setSelected(null); setForm(null); setError(''); } else navigation.goBack(); };
+  const confirmDelete = (row: MembershipIdRecord) => {
+    if (saving) return;
+    Alert.alert('Permanently delete member?', `${row.fullName}\n${row.membershipNumber}\n\nThe account, registration, business profile and membership payment records will be permanently removed from the database. This cannot be undone and does not issue a refund. Existing sign-ins will end. A fresh registration is required to sign in again.`, [
+      { text: 'Keep account', style: 'cancel' },
+      { text: 'Delete account', style: 'destructive', onPress: async () => {
+        setSaving(true); setError('');
+        try {
+          await deleteMembershipId(row.id);
+          setData(current => current && ({ ...current, rows: current.rows.filter(item => item.id !== row.id), total: Math.max(0, current.total - 1) }));
+          setSelected(null); setForm(null); setMessage('Account deleted. A new registration is required to sign in.');
+          if (page > 1 && data?.rows.length === 1) setPage(value => value - 1);
+          else await load();
+        }
+        catch (e) { setError(errorText(e)); }
+        finally { setSaving(false); }
+      } },
+    ]);
+  };
   return <ConsoleScroll avoidKeyboard refreshControl={!selected ? <RefreshControl refreshing={loading} onRefresh={load} /> : undefined}>
     <ConsoleHeader compact title={selected ? 'Membership record' : 'Membership IDs'} subtitle={selected ? selected.fullName : 'Member identities and correction history'} left={<GlassIconButton icon="arrow-back" accessibilityLabel="Back" onPress={back} />} />
     {!!message && <ConsoleNote style={s.card} text={message} />}
@@ -64,7 +82,10 @@ export default function SuperMembershipIdsScreen() {
         <Text selectable style={s.id}>{row.membershipNumber || 'ID pending'}</Text><Text style={s.heading}>{row.fullName}</Text>
         <Text style={s.body}>{row.planName} · {row.status}</Text><Text style={s.help}>{row.email}</Text><Text style={s.help}>{row.phoneNumber}</Text>
         <View style={s.dates}><View style={s.half}><Text style={s.help}>Member since</Text><Text style={s.body}>{row.memberSince || 'Not recorded'}</Text></View><View style={s.half}><Text style={s.help}>Valid until</Text><Text style={s.body}>{row.lifetime ? 'Lifetime' : row.validUntil || 'Not recorded'}</Text></View></View>
-        <ConsoleButton label={row.editable ? 'Edit record' : 'View record'} icon="edit" onPress={() => open(row.id)} />
+        <View style={s.actions}>
+          <ConsoleButton label="Edit record" icon="edit" kind="soft" disabled={saving} onPress={() => open(row.id)} />
+          <ConsoleButton label="Delete account" icon="delete-outline" kind="danger" disabled={saving} onPress={() => confirmDelete(row)} />
+        </View>
       </ConsoleCard>)}
       {!loading && !data?.rows.length && !error && <ConsoleNote style={s.card} text="No membership records match your search." />}
       <View style={[s.card, s.dates]}><View style={s.half}><ConsoleButton label="Previous" disabled={loading || page <= 1} onPress={() => setPage(p => p - 1)} /></View><View style={s.half}><ConsoleButton label="Next" disabled={loading || page * (data?.limit || 20) >= (data?.total || 0)} onPress={() => setPage(p => p + 1)} /></View></View>
@@ -79,4 +100,5 @@ const s = StyleSheet.create({
   help: { fontSize: 13, lineHeight: 20, color: '#64748B', marginVertical: 3 },
   dates: { flexDirection: 'row', gap: SPACE.md, marginVertical: SPACE.md }, half: { flex: 1, minWidth: 0 },
   history: { borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 12, marginTop: 12 },
+  actions: { gap: SPACE.sm, alignItems: 'stretch' },
 });

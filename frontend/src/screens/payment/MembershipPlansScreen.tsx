@@ -196,9 +196,9 @@ const MembershipPlansScreen: React.FC<any> = ({ navigation, route }) => {
       setAppStatus(app ? String(app?.status || '').toLowerCase() : '');
       setData(plans);
       // Display the membership actually held, never an unpurchased upgrade.
-      setHeldPlan(upgrading && (plans.canPurchase === false || !plans.plans.length) && profile
-        ? await getHeldMembershipPlan(profile).catch(() => null) : null);
-      if (upgrading && !quiet) setCommencementYear(plans.commencementYear || '');
+      setHeldPlan(upgrading && (plans.canPurchase === false || !plans.plans.length)
+        ? plans.currentPlanDetails || (profile ? await getHeldMembershipPlan(profile).catch(() => null) : null) : null);
+      if (upgrading && (!quiet || plans.canPurchase === false)) setCommencementYear(plans.commencementYear || '');
       if (upgrading) setUpgradeReason(plans.reason || 'The full plan fee is charged. The new annual membership starts after successful payment and is valid for one year.');
       setRenewal(readRenewal(profile));
       setStatus(String(profile?.membershipStatus || '').toLowerCase());
@@ -247,9 +247,7 @@ const MembershipPlansScreen: React.FC<any> = ({ navigation, route }) => {
   const onContinue = () => {
     if (!selected || blocked) return;
     if (upgrading && selected.audience === 'business') {
-      const year = Number(commencementYear), age = new Date().getFullYear() - year;
-      if (!/^\d{4}$/.test(commencementYear) || year < 1800 || age < 0) { Alert.alert('Commencement year', 'Enter a valid business commencement year.'); return; }
-      if (age < Number(selected.minYears || 0) || (selected.maxYears != null && age >= selected.maxYears)) { Alert.alert('Choose a matching plan', 'Select the business plan matching your commencement year.'); return; }
+      if (!selected.commencementYears?.includes(commencementYear)) { Alert.alert('Business commencement year', 'Choose the year your business started from the available plan range.'); return; }
     }
     navigation.navigate('PaymentCheckout', {
       orderType: 'membership', planId: selected.key, renew: renewing,
@@ -331,6 +329,12 @@ const MembershipPlansScreen: React.FC<any> = ({ navigation, route }) => {
                 </View>
               </View>
               {heldPlan.description ? <Text style={s.desc}>{heldPlan.description}</Text> : null}
+              {data?.kind === 'business' && <View style={{ marginTop: SPACE.lg, padding: SPACE.md, borderRadius: 16, backgroundColor: PALETTE.blueSoft }}>
+                <Text style={s.bandText}>BUSINESS COMMENCEMENT YEAR</Text>
+                <Text accessibilityLabel="Business commencement year" style={s.planName}>{commencementYear || 'Not recorded'}</Text>
+                <Text style={s.desc}>{heldPlan.commencementYearLabel ? `${heldPlan.name}: businesses started ${heldPlan.commencementYearLabel}.` : 'Your plan follows your saved business commencement year.'}</Text>
+                <Text style={s.desc}>Your plan advances automatically as your business reaches the next year range. The new fee applies at renewal.</Text>
+              </View>}
               <View style={s.planRule} />
               <Text style={s.planName}>Included in your plan</Text>
               <View style={[s.features, { marginTop: SPACE.md }]}>
@@ -377,7 +381,11 @@ const MembershipPlansScreen: React.FC<any> = ({ navigation, route }) => {
       ) : undefined}
     >
       <Overlap>
-        {upgrading && <View style={s.notice}><Notice kind="info" text={upgradeReason} />{selected?.audience === 'business' && data?.canPurchase !== false && <PremiumSelect label="Business commencement year" value={commencementYear} options={selected.commencementYears || []} onChange={setCommencementYear} placeholder="Choose commencement year" hint={`Started ${selected.commencementYearLabel || 'within the configured year range'}. Your profile changes after verified payment.`} />}</View>}
+        {upgrading && <View style={s.notice}><Notice kind="info" text={upgradeReason} />{selected?.audience === 'business' && data?.canPurchase !== false && <SurfaceCard style={{ marginTop: SPACE.md }}>
+          <Text style={s.planName}>When did your business start?</Text>
+          <Text style={[s.desc, { marginBottom: SPACE.md }]}>Select the actual year of commencement. {selected.name} covers businesses started {selected.commencementYearLabel || 'within the configured year range'}.</Text>
+          <PremiumSelect label="Business commencement year" value={commencementYear} options={selected.commencementYears || []} onChange={setCommencementYear} placeholder="Select a year" hint="Required before payment. Your business profile updates after verified payment." />
+        </SurfaceCard>}</View>}
         {notApproved ? (
           <Notice
             kind="warning"

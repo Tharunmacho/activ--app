@@ -86,7 +86,7 @@ export function Screen({
   );
   return (
     <SafeAreaView style={[{ flex: 1, backgroundColor: t.canvas }, style]} edges={edges}>
-      <StatusBar barStyle={statusBar} backgroundColor={t.canvas} />
+      <StatusBar barStyle={statusBar} />
       {avoidKeyboard && Platform.OS === 'ios' ? (
         <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
           {body}

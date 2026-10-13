@@ -33,7 +33,6 @@ function Fact({ icon, children }: { icon: string; children: React.ReactNode }) {
 /** Shared by the home preview and each public tab. No account is needed to open it. */
 export function PublicContentCard({ item, kind, openPage }: { item: any; kind: ContentKind; openPage: PublicPageOpener }) {
   const [failedImage, setFailedImage] = useState('');
-  const [imageSize, setImageSize] = useState({ url: '', ratio: 1.5 });
   const title = publicText(item.title || item.caption) || (kind === 'gallery' ? 'From our community' : 'ACTIV update');
   const image = resolveMediaUrl(kind === 'events' ? item.imageUrl || item.bannerUrl || item.media?.url
     : kind === 'news' ? item.image?.url || (typeof item.image === 'string' ? item.image : item.imageUrl)
@@ -47,26 +46,21 @@ export function PublicContentCard({ item, kind, openPage }: { item: any; kind: C
   const place = item.mode === 'online' ? (item.onlinePlatform || 'Online event') : (item.location || item.venue || item.state);
   const time = calendar(item.startAt, { hour: 'numeric', minute: '2-digit', hour12: true });
 
-  return <SurfaceCard padded={false} style={s.card} accessibilityLabel={title} onPress={() => openPage(path, title)}>
+  return <SurfaceCard stretch padded={false} style={s.card} accessibilityLabel={title} onPress={() => openPage(path, title)}>
     {hasImage && <View style={s.imageFrame}>
-      <Image source={{ uri: image }} style={[s.image, kind === 'news' && imageSize.url === image && { aspectRatio: imageSize.ratio }]}
-        resizeMode="contain" onError={() => setFailedImage(image)} accessibilityLabel={title}
-        onLoad={({ nativeEvent }) => {
-          const { width, height } = nativeEvent.source;
-          if (width > 0 && height > 0) setImageSize({ url: image, ratio: width / height });
-        }} />
+      <Image source={{ uri: image }} style={s.image}
+        resizeMode="contain" onError={() => setFailedImage(image)} accessibilityLabel={title} />
       {kind === 'gallery' && item.media?.type === 'video' && <View style={s.play}><Icon name="play-arrow" size={28} color={PALETTE.white} /></View>}
     </View>}
+    {!hasImage && <LinearGradient colors={[BRAND.navy, BRAND.blue900]} style={[s.image, s.artCover]}>
+      <SiteArt kind={kind} size={70} /><View style={s.artCopy}><Text style={s.artEyebrow}>ACTIV</Text><Text style={s.artLabel}>{kind === 'events' ? 'Connect. Learn. Grow.' : kind === 'news' ? 'Stories that connect us' : 'Moments that matter'}</Text></View>
+    </LinearGradient>}
     {kind === 'events' ? <LinearGradient colors={[PALETTE.blueSoft, PALETTE.white]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.eventHeader}>
       <EventDate value={item.startAt} />
       <View style={s.eventIntro}>
         <View style={s.category}><View style={s.dot} /><Text style={s.categoryText}>{publicText(item.category) || 'Upcoming event'}</Text></View>
-        <Text style={s.title}>{title}</Text>
+        <Text style={s.title} numberOfLines={3}>{title}</Text>
       </View>
-    </LinearGradient> : !hasImage ? <LinearGradient colors={[BRAND.navy, BRAND.blue900]} style={s.artCover}>
-      <View style={s.artHalo} />
-      <SiteArt kind={kind} size={86} />
-      <View style={s.artCopy}><Text style={s.artEyebrow}>ACTIV {kind === 'news' ? 'NEWSROOM' : 'GALLERY'}</Text><Text style={s.artLabel}>{kind === 'news' ? 'Stories that connect us' : 'Moments that matter'}</Text></View>
     </LinearGradient> : null}
     <View style={s.body}>
       {kind !== 'events' && <>
@@ -79,6 +73,7 @@ export function PublicContentCard({ item, kind, openPage }: { item: any; kind: C
         {!!time && <Fact icon="schedule">{time} IST</Fact>}
       </View>}
       {kind === 'news' && !!date(item.publishedAt || item.createdAt) && <View style={s.facts}><Fact icon="schedule">{calendar(item.publishedAt || item.createdAt, { day: 'numeric', month: 'short', year: 'numeric' })}</Fact></View>}
+      <View style={s.footerSpacer} />
       <View style={s.cardFoot}>
         {showPrice ? <View style={[s.price, fee > 0 && s.paidPrice]}><Text style={[s.priceText, fee > 0 && s.paidPriceText]}>{fee > 0 ? '₹' + fee.toLocaleString('en-IN') : 'Free entry'}</Text></View>
           : <Text style={s.footNote}>{kind === 'events' ? 'Event information' : kind === 'gallery' ? item.media?.type === 'video' ? 'Video' : 'Community gallery' : 'ACTIV news'}</Text>}
@@ -117,7 +112,7 @@ function StateLink({ state, openPage }: { state: any; openPage: PublicPageOpener
 const s = StyleSheet.create({
   card: { marginBottom: SPACE.lg },
   imageFrame: { backgroundColor: PALETTE.blueTint, borderBottomWidth: 1, borderBottomColor: PALETTE.divider },
-  image: { width: '100%', aspectRatio: 1.5 },
+  image: { width: '100%', aspectRatio: 16 / 9 },
   play: { position: 'absolute', alignSelf: 'center', top: '40%', width: 48, height: 48, borderRadius: 24, backgroundColor: BRAND.navy, alignItems: 'center', justifyContent: 'center' },
   eventHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, padding: SPACE.lg },
   eventIntro: { flex: 1, minWidth: 0 },
@@ -127,7 +122,7 @@ const s = StyleSheet.create({
   dateBody: { alignItems: 'center', paddingVertical: 6 }, dateDay: { color: BRAND.navy, fontSize: 27, lineHeight: 32, fontWeight: '800' }, datePending: { fontSize: 17 }, dateYear: { color: PALETTE.textMuted, fontSize: 10, fontWeight: '600' },
   category: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 7 }, dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: BRAND.blue }, categoryText: { flex: 1, color: BRAND.blue900, fontSize: 11, fontWeight: '700' },
   title: { color: BRAND.navyDeep, fontSize: 18, lineHeight: 25, fontWeight: '800', letterSpacing: -0.35 },
-  body: { padding: SPACE.lg, paddingTop: SPACE.md }, kicker: { fontSize: 11, fontWeight: '700', color: BRAND.blue, marginBottom: 6 },
+  body: { padding: SPACE.lg, paddingTop: SPACE.md, flexGrow: 1 }, footerSpacer: { flexGrow: 1 }, kicker: { fontSize: 11, fontWeight: '700', color: BRAND.blue, marginBottom: 6 },
   summary: { color: PALETTE.textMuted, fontSize: 14, lineHeight: 21, marginTop: 5 }, facts: { gap: 9, marginTop: SPACE.md },
   fact: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 }, factText: { flex: 1, minWidth: 0, fontSize: 13, lineHeight: 19, color: PALETTE.textSoft },
   cardFoot: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderTopWidth: 1, borderTopColor: PALETTE.divider, marginTop: SPACE.lg, paddingTop: SPACE.md },

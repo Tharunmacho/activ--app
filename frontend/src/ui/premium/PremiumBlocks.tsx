@@ -69,17 +69,18 @@ export function GlassIconBadgeButton({ icon, onPress, accessibilityLabel, badge,
 
 /* ------------------------------------------------------------ card */
 
-export function PremiumCard({ children, style, onPress, tone = 'member', padded = true, accessibilityLabel }: {
+export function PremiumCard({ children, style, onPress, tone = 'member', padded = true, accessibilityLabel, stretch = false }: {
   children: React.ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; tone?: Tone; padded?: boolean;
   accessibilityLabel?: string;
+  stretch?: boolean;
 }) {
   const p = premiumTone(tone);
-  const box = [s.card, padded && s.cardPad, { shadowColor: p.shadow }];
+  const box = [s.card, padded && s.cardPad, { shadowColor: p.shadow }, stretch && { flex: 1 }];
   if (!onPress) return <View style={[box, style]}>{children}</View>;
   return (
     <PressableScale
       onPress={onPress}
-      style={style}
+      style={[stretch && { flex: 1 }, style]}
       scaleTo={0.985}
       contentStyle={box}
       accessibilityRole="button"

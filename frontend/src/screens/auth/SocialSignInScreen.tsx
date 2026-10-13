@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Text, View, ActivityIndicator, StyleSheet } from 'react-native';
+import { Text, View, ActivityIndicator, StyleSheet, Linking } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
 import api from '../../services/api';
+import { API_BASE_URL } from '../../config/api.config';
 import { homeForRole, clearSession, sanitizeUser, isAdminRole, UNSUPPORTED_ACCOUNT_MESSAGE } from '../../services/session';
 import { useAuthStore } from '../../stores/exampleStore';
 import { PALETTE, SPACE, TYPE, GradientButton, SocialConnect3D, SocialMark } from '../../ui';
@@ -43,6 +44,8 @@ const REASONS: Record<string, string> = {
   expired: 'That sign-in took too long or was started in another window. Please try again.',
   failed: 'We could not complete the sign-in with that provider. Please try again.',
   no_email: 'That account did not share a verified email address with us, so we cannot match it to an ACTIV account.',
+  email_permission: 'Facebook did not give ACTIV permission to read your email. Try again and allow email access. Use the same email as your ACTIV account.',
+  facebook_no_email: 'Facebook allowed email access but did not return an email address. Confirm your ACTIV login email in Facebook, then try again. You can also sign in with your ACTIV email and password.',
   admin: 'Administrators sign in with their email and password on the admin login screen.',
   not_configured: 'That sign-in option is not available yet. Please use your email and password.',
   unavailable: 'That sign-in option is not available yet. Please use your email and password.',
@@ -59,13 +62,17 @@ const SocialSignInScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const [error, setError] = useState('');
   const [welcome, setWelcome] = useState('');
+  const [retrying, setRetrying] = useState(false);
   const exchanged = useRef('');
   const { login } = useAuthStore();
 
   useEffect(() => {
     if (reason === 'no_account') return;
     if (!code) {
-      setError((REASONS[reason] || REASONS.failed).replace('{provider}', PROVIDER_NAME[provider] || 'Sign-in provider'));
+      const message = provider === 'facebook' && reason === 'no_email'
+        ? 'Facebook did not share your email. Try again and allow email access. If your Facebook account uses only a phone number, confirm your ACTIV email there or sign in with your ACTIV email and password.'
+        : REASONS[reason] || REASONS.failed;
+      setError(message.replace('{provider}', PROVIDER_NAME[provider] || 'Sign-in provider'));
       return;
     }
     if (exchanged.current === code) return;
@@ -105,9 +112,18 @@ const SocialSignInScreen: React.FC<Props> = ({ navigation, route }) => {
         setError(err?.response ? errorText(err, REASONS.failed) : String(err?.message || REASONS.failed));
       }
     })();
-  }, [code, reason, login, navigation]);
+  }, [code, reason, provider, login, navigation]);
 
   const backToLogin = () => navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+  const facebookRecovery = provider === 'facebook' && ['no_email', 'email_permission', 'facebook_no_email', 'cancelled', 'expired'].includes(reason);
+  const retryFacebook = async () => {
+    setRetrying(true);
+    try {
+      await Linking.openURL(`${API_BASE_URL}/auth/oauth/facebook/start?client=app`);
+    } catch {
+      setError('Could not open Facebook. Please try again or sign in with your ACTIV email and password.');
+    } finally { setRetrying(false); }
+  };
 
   const providerName = PROVIDER_NAME[provider] || '';
   const shell = {
@@ -158,7 +174,12 @@ const SocialSignInScreen: React.FC<Props> = ({ navigation, route }) => {
           icon="error-outline"
           kind="warning"
           title="Sign-in did not finish"
-          actions={<GradientButton label="Back to sign in" icon="arrow-back" size="lg" onPress={backToLogin} />}
+          actions={(
+            <>
+              {facebookRecovery && <GradientButton label="Try Facebook again" size="lg" disabled={retrying} onPress={retryFacebook} />}
+              <GradientButton label={facebookRecovery ? 'Use email and password' : 'Back to sign in'} variant={facebookRecovery ? 'outline' : 'primary'} icon="arrow-back" size="lg" onPress={backToLogin} />
+            </>
+          )}
         >
           {error}
         </StatusPanel>

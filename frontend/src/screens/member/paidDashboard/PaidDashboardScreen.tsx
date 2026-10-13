@@ -18,7 +18,7 @@ import {
 import ExploreActiv from '../dashboard/ExploreActiv';
 import PlatinumMembershipCard, { PlatinumMemberShortcuts } from './PlatinumMembershipCard';
 import {
-  getMyProfile, getBusinessInfo, listMyCompanies, getMyApplications, getRecentActivity,
+  getMyProfile, getBusinessInfo, listMyCompanies, getMyApplications,
   listAnnouncements, listMemberEvents, formatApplicationRef, isPaidMember, getUnreadMessages,
 } from '../../../services/memberApi';
 import { resolveMediaUrl } from '../../../config/api.config';
@@ -35,7 +35,7 @@ import RenewalBanner from '../dashboard/RenewalBanner';
  * ============================================================================
  *
  * Identity (allSettled): getMyProfile · getBusinessInfo · getMyCompanies ·
- * getMyApplication; sections: announcements(6) · events · recent activity(6).
+ * getMyApplication; sections: announcements(6) · events.
  *
  * Real data only: Member ID = membershipNumber (ACTIV-YYYY-NNN), member since =
  * membershipActivatedAt || approvedAt, valid until = membershipExpiresAt (or a
@@ -46,43 +46,10 @@ import RenewalBanner from '../dashboard/RenewalBanner';
  * Premium layout: brand header (greeting with avatar and time of day) → the
  * membership as a 3D card with a light sweep → facts → stats → quick actions
  * → My Documents (+ View all) → Upcoming Events (poster, venue) → Explore
- * ACTIV → Association Updates → Recent Activity → plan band → Platinum.
+ * ACTIV → Association Updates → plan band → Platinum.
  */
 
 const MONTHS3 = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-
-/** Website timeAgo on the paid dashboard: "2 hours ago", dated after a month. */
-const ago = (iso?: string | null) => {
-  if (!iso) return '';
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return '';
-  const mins = Math.max(0, Math.round((Date.now() - then) / 60000));
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} ago`;
-  const hours = Math.round(mins / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
-  const days = Math.round(hours / 24);
-  if (days < 30) return `${days} day${days === 1 ? '' : 's'} ago`;
-  return shortDate(iso);
-};
-
-/** Website activityIcon. */
-const activityIcon = (type: string) => {
-  const k = String(type || '').toLowerCase();
-  if (k.includes('event') || k.includes('register')) return 'event';
-  if (k.includes('payment') || k.includes('paid')) return 'credit-card';
-  if (k.includes('document') || k.includes('certificate')) return 'description';
-  if (k.includes('profile')) return 'manage-accounts';
-  return 'history';
-};
-const activityTone = (type: string): ChipTone => {
-  const k = String(type || '').toLowerCase();
-  if (k.includes('event') || k.includes('register')) return 'rose';
-  if (k.includes('payment') || k.includes('paid')) return 'green';
-  if (k.includes('document') || k.includes('certificate')) return 'amber';
-  return 'blue';
-};
-
 
 function Fact({ label, value, icon, wide }: { label: string; value: string; icon: string; wide?: boolean }) {
   return (
@@ -120,16 +87,15 @@ const PaidDashboardScreen = ({ navigation }: any) => {
   const [businessType, setBusinessType] = useState('');
   const [updates, setUpdates] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
-  const [activity, setActivity] = useState<any[]>([]);
   const [bell, setBell] = useState(0);
   const [unreadMsgs, setUnreadMsgs] = useState(0);
   const [exploreKey, setExploreKey] = useState(0);
 
   const load = useCallback(async (mode: 'load' | 'refresh' = 'load') => {
     if (mode === 'refresh') setRefreshing(true);
-    const [p, biz, comps, apps, ann, evs, acts] = await Promise.allSettled([
+    const [p, biz, comps, apps, ann, evs] = await Promise.allSettled([
       getMyProfile(), getBusinessInfo(), listMyCompanies(), getMyApplications(),
-      listAnnouncements({ limit: 6 }), listMemberEvents(), getRecentActivity(6),
+      listAnnouncements({ limit: 6 }), listMemberEvents(),
     ]);
     const prof = p.status === 'fulfilled' ? p.value : null;
     if (prof && !isPaidMember(prof)) {
@@ -152,7 +118,6 @@ const PaidDashboardScreen = ({ navigation }: any) => {
     setBusinessType(type);
     setUpdates(ann.status === 'fulfilled' ? asArray<any>(ann.value?.announcements) : []);
     setEvents(evs.status === 'fulfilled' ? asArray<any>(evs.value?.events) : []);
-    setActivity(acts.status === 'fulfilled' ? acts.value : []);
     setLoading(false);
     setRefreshing(false);
   }, [navigation]);
@@ -257,7 +222,7 @@ const PaidDashboardScreen = ({ navigation }: any) => {
             onAction={() => navigation.navigate('MemberEvents')}
           />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={eventCardWidth + SPACE.md} decelerationRate="fast"
-            contentContainerStyle={{ paddingHorizontal: SPACE.lg, gap: SPACE.md, paddingBottom: SPACE.sm, alignItems: 'flex-start' }}>
+            contentContainerStyle={{ paddingHorizontal: SPACE.lg, gap: SPACE.md, paddingBottom: SPACE.sm, alignItems: 'stretch' }}>
             {upcoming.length ? upcoming.slice(0, 3).map((e, i) => {
               const d = e?.startAt ? new Date(e.startAt) : null;
               const valid = !!d && !Number.isNaN(d.getTime());
@@ -266,7 +231,7 @@ const PaidDashboardScreen = ({ navigation }: any) => {
               const venue = [e?.venue, e?.district].map((v) => String(v || '').trim()).filter(Boolean).join(', ');
               return (
                 <FadeInUp key={String(e?.id || i)} delay={i * 70} distance={10}>
-                  <PremiumCard
+                  <PremiumCard stretch
                     padded={false}
                     style={{ marginBottom: SPACE.md, width: eventCardWidth }}
                     onPress={() => navigation.navigate('MemberEventDetail', { id: String(e?.id || '') })}
@@ -278,7 +243,7 @@ const PaidDashboardScreen = ({ navigation }: any) => {
                         <LinearGradient colors={['rgba(11,26,69,0)', 'rgba(11,26,69,0.65)']} style={styles.posterShade} />
                         {e?.category ? <View style={styles.posterCat}><Text style={styles.posterCatText} numberOfLines={1}>{String(e.category).toUpperCase()}</Text></View> : null}
                       </View>
-                    ) : null}
+                    ) : <LinearGradient colors={['#1E3A8A', '#3B82F6']} style={[styles.poster, { alignItems: 'center', justifyContent: 'center' }]}><Icon name="event" size={60} color="#FFFFFF" /></LinearGradient>}
                     <View style={styles.eventRow}>
                       <LinearGradient colors={['#1E3A8A', '#3B82F6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.dateBox}>
                         <Text style={styles.dateDay} maxFontSizeMultiplier={1.2}>{valid && d ? String(d.getDate()).padStart(2, '0') : '--'}</Text>
@@ -445,22 +410,6 @@ const PaidDashboardScreen = ({ navigation }: any) => {
 
 
 
-          {/* ---------------- recent activity */}
-          <PremiumSectionHeader title="Recent Activity" subtitle="Your latest actions" />
-          <PremiumCard padded={false} style={styles.gutter}>
-            {activity.length ? activity.slice(0, 5).map((a, i, arr) => (
-              <View key={String(a?.id || i)} style={[styles.row, i < arr.length - 1 && styles.divider]}>
-                <GradientIconChip icon={activityIcon(a?.type)} tone={activityTone(a?.type)} size={36} />
-                <View style={styles.rowText}>
-                  <Text style={styles.actText} numberOfLines={2}>{a?.description || a?.type || 'Update'}</Text>
-                  <Text style={styles.rowSub}>{ago(a?.at)}</Text>
-                </View>
-              </View>
-            )) : (
-              <PremiumEmptyState icon="history" title="Nothing yet" text="Activity appears here as your account changes." />
-            )}
-          </PremiumCard>
-
           {/* ---------------- More opportunities await (website closing band) */}
           <PremiumCard style={[styles.gutter, { marginTop: SPACE.xl }]}>
             <View style={styles.moreHead}>
@@ -569,7 +518,6 @@ const styles = StyleSheet.create({
   updCat: { ...TYPE.eyebrow, fontSize: 10, lineHeight: 13, marginBottom: SPACE.xxs },
   updDate: { fontSize: 11, lineHeight: 15, color: PALETTE.textFaint, marginTop: SPACE.xs },
 
-  actText: { ...TYPE.bodyStrong, fontWeight: '500' },
 
   moreHead: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md },
   moreTitle: { ...TYPE.heading, fontSize: 17, lineHeight: 23 },

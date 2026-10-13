@@ -131,7 +131,7 @@ function Chrome({ tone, children }: { tone: Tone; children: React.ReactNode }) {
   const canvas = toneOf(tone).canvas;
   return (
     <View style={[s.flex, { backgroundColor: canvas }]}>
-      <StatusBar barStyle="light-content" backgroundColor={p.top} />
+      <StatusBar barStyle="light-content" />
       <View pointerEvents="none" style={[s.overscroll, { backgroundColor: p.top }]} />
       {Platform.OS === 'ios' ? (
         <KeyboardAvoidingView style={s.flex} behavior="padding">{children}</KeyboardAvoidingView>
@@ -307,7 +307,7 @@ export function PremiumTopBar({
   );
   return (
     <View style={[s.barWrap, { shadowColor: p.shadow }]}>
-      <StatusBar barStyle="light-content" backgroundColor={p.top} />
+      <StatusBar barStyle="light-content" />
       <LinearGradient
         colors={p.header}
         locations={p.header.length === 4 ? [0, 0.38, 0.72, 1] : undefined}

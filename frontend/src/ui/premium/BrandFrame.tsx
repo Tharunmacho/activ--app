@@ -95,7 +95,7 @@ export function BrandFrame({ tone = 'member', children, footer, style }: {
 
   return (
     <View ref={kb.ref} onLayout={kb.onLayout} style={[s.flex, { backgroundColor: canvas }, style]}>
-      <StatusBar barStyle="light-content" backgroundColor={p.top} />
+      <StatusBar barStyle="light-content" />
       <View pointerEvents="none" style={[s.overscroll, { backgroundColor: p.top }]} />
       {Platform.OS === 'ios' ? (
         <KeyboardAvoidingView style={s.flex} behavior="padding">{body}</KeyboardAvoidingView>

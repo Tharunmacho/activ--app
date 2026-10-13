@@ -215,7 +215,7 @@ const WebsiteViewerScreen = ({ navigation, route }: any) => {
 
   return (
     <View style={s.root}>
-      <StatusBar barStyle="light-content" backgroundColor={BRAND.navyDeep} />
+      <StatusBar barStyle="light-content" />
       {bar}
       {progressLine}
       {!WebViewComp ? errorView : failed ? errorView : (
