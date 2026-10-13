@@ -100,8 +100,8 @@ android {
         applicationId "in.activ.membership"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 15
-        versionName "1.0.14"
+        versionCode 16
+        versionName "1.0.15"
     }
     signingConfigs {
         debug {
@@ -183,6 +183,23 @@ tasks.matching { it.name == 'preReleaseBuild' }.configureEach {
     doFirst {
         if (!releaseSigningReady) {
             throw new GradleException('ACTIV: configure android/release-signing.properties with the upload key before building a release.')
+        }
+    }
+}
+
+// Inspect the packaged DEX, so a successful R8 build cannot silently ship
+// without the Java classes looked up by React Native's JNI initialization.
+def releaseJniChecks = [
+    assembleRelease: 'outputs/apk/release/app-release.apk',
+    bundleRelease: 'outputs/bundle/release/app-release.aab'
+]
+releaseJniChecks.each { taskName, artifactPath ->
+    tasks.matching { it.name == taskName }.configureEach {
+        doLast {
+            project.exec {
+                commandLine 'node', rootProject.file('../scripts/verify-release-jni.cjs'),
+                    layout.buildDirectory.file(artifactPath).get().asFile
+            }
         }
     }
 }
