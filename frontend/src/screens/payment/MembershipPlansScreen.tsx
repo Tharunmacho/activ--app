@@ -10,7 +10,7 @@ import {
   SurfaceCard, GradientGlyph, GroupTitle, StateView, CardSkeletons, ReceiptLine, PREMIUM_TYPE, PremiumSelect,
 } from '../../ui';
 import {
-  getMyPlans, getUpgradePlans, getMyProfile, readRenewal, bandLabel, Plan, MyPlans, RenewalInfo,
+  getMyPlans, getUpgradePlans, getMyProfile, getHeldMembershipPlan, readRenewal, bandLabel, Plan, MyPlans, RenewalInfo,
 } from '../../services/paymentFlow';
 import { getMyApplications } from '../../services/memberApi';
 import { pickMostAdvancedApplication } from '../member/dashboard/memberRules';
@@ -172,6 +172,7 @@ const MembershipPlansScreen: React.FC<any> = ({ navigation, route }) => {
   const [upgradeReason, setUpgradeReason] = useState('');
   const [commencementYear, setCommencementYear] = useState('');
   const [data, setData] = useState<MyPlans | null>(null);
+  const [heldPlan, setHeldPlan] = useState<Plan | null>(null);
   const [renewal, setRenewal] = useState<RenewalInfo | null>(null);
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(true);
@@ -194,6 +195,9 @@ const MembershipPlansScreen: React.FC<any> = ({ navigation, route }) => {
       setApplicationId(String(app?.applicationId || app?._id || app?.id || ''));
       setAppStatus(app ? String(app?.status || '').toLowerCase() : '');
       setData(plans);
+      // Display the membership actually held, never an unpurchased upgrade.
+      setHeldPlan(upgrading && (plans.canPurchase === false || !plans.plans.length) && profile
+        ? await getHeldMembershipPlan(profile).catch(() => null) : null);
       if (upgrading && !quiet) setCommencementYear(plans.commencementYear || '');
       if (upgrading) setUpgradeReason(plans.reason || 'The full plan fee is charged. The new annual membership starts after successful payment and is valid for one year.');
       setRenewal(readRenewal(profile));
@@ -223,6 +227,7 @@ const MembershipPlansScreen: React.FC<any> = ({ navigation, route }) => {
   /* A paid member may only pay again when the SERVER says they can renew —
      never offer a button the order would refuse. */
   const blocked = upgrading ? data?.canPurchase === false : isPaid && renewal?.canRenew !== true;
+  const viewingCurrentPlan = upgrading && !loading && !data?.failed && (blocked || !plans.length);
   /* The website's PaymentRegistration gate: a first payment needs an
      application, and that application must be approved. */
   const notApproved = !upgrading && !isPaid && !renewing && appStatus !== null
@@ -260,9 +265,9 @@ const MembershipPlansScreen: React.FC<any> = ({ navigation, route }) => {
     <PremiumPageHeader
       onBack={onBack}
       right={<GlassBadge label="Secure" icon="lock" />}
-      eyebrow={upgrading ? 'Membership upgrade' : renewing ? 'Renewal' : notApproved ? 'ACTIV membership' : 'Application approved'}
-      title={upgrading ? 'Upgrade membership' : renewing ? 'Keep your benefits going' : plans.length === 1 && !loading ? 'One step away' : 'Choose your membership'}
-      subtitle={loading ? 'Prices are set by ACTIV.' : upgrading
+      eyebrow={viewingCurrentPlan ? 'Your ACTIV membership' : upgrading ? 'Membership upgrade' : renewing ? 'Renewal' : notApproved ? 'ACTIV membership' : 'Application approved'}
+      title={viewingCurrentPlan ? 'Your plan & benefits' : upgrading ? 'Upgrade membership' : renewing ? 'Keep your benefits going' : plans.length === 1 && !loading ? 'One step away' : 'Choose your membership'}
+      subtitle={viewingCurrentPlan ? 'Explore what is included in your membership and how it grows with you.' : loading ? 'Prices are set by ACTIV.' : upgrading
         ? 'Choose your new plan using the same email, password and mobile. Your profile updates after verified payment.'
         : renewing
         ? 'Your new year starts when the current one ends — renewing early loses nothing.'
@@ -272,7 +277,7 @@ const MembershipPlansScreen: React.FC<any> = ({ navigation, route }) => {
       art={<PremiumPlan3D size={88} />}
       artLabel="Membership card"
     >
-      <View style={s.journey} accessibilityLabel="Your progress">
+      {!viewingCurrentPlan && <View style={s.journey} accessibilityLabel="Your progress">
         {journey.map((step, i) => (
           <React.Fragment key={step.label}>
             <View style={[s.step, step.state === 'now' ? s.stepNow : step.state === 'done' ? s.stepDone : s.stepNext]}>
@@ -282,7 +287,7 @@ const MembershipPlansScreen: React.FC<any> = ({ navigation, route }) => {
             {i < journey.length - 1 ? <View style={s.stepLine} /> : null}
           </React.Fragment>
         ))}
-      </View>
+      </View>}
     </PremiumPageHeader>
   );
 
@@ -310,6 +315,42 @@ const MembershipPlansScreen: React.FC<any> = ({ navigation, route }) => {
   const payLabel = selected
     ? `${renewing ? 'Renew' : 'Pay'} ${money(selected.price)}`
     : 'Choose a plan';
+
+  if (viewingCurrentPlan) {
+    return (
+      <PremiumPage header={header} refreshing={refreshing} onRefresh={() => load(true)}>
+        <Overlap>
+          <SurfaceCard style={s.gutter}>
+            {heldPlan ? <>
+              <View style={s.planTop}>
+                <GradientGlyph icon="workspace-premium" tone="blue" size={48} />
+                <View style={s.planHeadText}>
+                  <Text style={s.bandText}>CURRENT PLAN</Text>
+                  <Text style={s.planName}>{heldPlan.name}</Text>
+                  <Text style={s.desc}>{heldPlan.membershipType === 'lifetime' ? 'Lifetime membership' : 'Annual membership'}</Text>
+                </View>
+              </View>
+              {heldPlan.description ? <Text style={s.desc}>{heldPlan.description}</Text> : null}
+              <View style={s.planRule} />
+              <Text style={s.planName}>Included in your plan</Text>
+              <View style={[s.features, { marginTop: SPACE.md }]}>
+                {(heldPlan.features || []).map((feature, i) => <View key={i} style={s.feature}>
+                  <View style={s.featureTick}><Icon name="check" size={12} color={PALETTE.blue} /></View>
+                  <Text style={s.featureText}>{feature}</Text>
+                </View>)}
+                {!heldPlan.features?.length ? <Text style={s.desc}>View your membership details for your plan and validity.</Text> : null}
+              </View>
+              <GradientButton label="View membership details" iconRight="arrow-forward"
+                style={{ marginTop: SPACE.lg }} onPress={() => navigation.navigate('MembershipPlanDetails')} />
+            </> : <StateView kind="error" compact title="Your plan details could not be loaded"
+              message="Refresh to see your current membership and its benefits."
+              onAction={() => load()} />}
+          </SurfaceCard>
+        </Overlap>
+        {data?.reason ? <View style={[s.notice, { marginTop: SPACE.lg }]}><Notice kind="info" text={data.reason} /></View> : null}
+      </PremiumPage>
+    );
+  }
 
   return (
     <PremiumPage

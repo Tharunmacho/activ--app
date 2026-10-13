@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Platform, StatusBar, useWindowDimensions } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TaxCertificateView } from './CertificateViews';
+import { TaxCertificateView, MembershipCertificateView } from './CertificateViews';
 
 /**
  * The 80G certificate, full screen — the SAME A4 page (CertificateViews'
@@ -28,6 +28,7 @@ const BG = '#0B1330';
 const CertificateZoomScreen = ({ navigation, route }: any) => {
   const params = route?.params || {};
   const cert = params?.cert || null;
+  const membership = params?.kind === 'membership';
   const insets = useSafeAreaInsets();
   const { width: winW } = useWindowDimensions();
   const [zoom, setZoom] = useState(1);
@@ -52,8 +53,8 @@ const CertificateZoomScreen = ({ navigation, route }: any) => {
           <Icon name="close" size={24} color="#FFFFFF" />
         </Pressable>
         <View style={s.titleCol}>
-          <Text style={s.title} numberOfLines={1} maxFontSizeMultiplier={1.3}>Tax exemption certificate</Text>
-          <Text style={s.subtitle} numberOfLines={1} maxFontSizeMultiplier={1.3}>A4 · 210 × 297 mm</Text>
+          <Text style={s.title} numberOfLines={1} maxFontSizeMultiplier={1.3}>{membership ? 'Membership certificate' : 'Tax exemption certificate'}</Text>
+          <Text style={s.subtitle} numberOfLines={1} maxFontSizeMultiplier={1.3}>{membership ? 'A4 landscape · 297 × 210 mm' : 'A4 · 210 × 297 mm'}</Text>
         </View>
         <View style={s.zooms} accessibilityRole="radiogroup">
           {ZOOMS.map((z) => {
@@ -91,14 +92,14 @@ const CertificateZoomScreen = ({ navigation, route }: any) => {
             scrollEnabled={zoom > 1}
             showsHorizontalScrollIndicator={zoom > 1}
           >
-            <TaxCertificateView
+            {membership ? <MembershipCertificateView cert={cert} width={pageW} onPress={nextZoom} /> : <TaxCertificateView
               cert={cert}
               stamp={String(params?.stamp || '')}
               receiptColumn={params?.receiptColumn === true}
               amountInWords={String(params?.amountInWords || '')}
               width={pageW}
               onPress={nextZoom}
-            />
+            />}
           </ScrollView>
           <Text style={s.help} maxFontSizeMultiplier={1.3}>
             {Platform.OS === 'ios' ? 'Pinch or tap the page to zoom · drag to move around' : 'Tap the page to zoom · drag to move around'}

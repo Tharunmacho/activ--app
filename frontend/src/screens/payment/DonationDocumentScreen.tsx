@@ -111,7 +111,7 @@ const DonationDocumentScreen = ({ navigation, route }: any) => {
     setSavingPdf(true);
     try {
       const saved = await saveCertificatePdf(pdfRef.current, `ACTIV-${cert.reference || kind}.pdf`);
-      if (saved) Alert.alert('PDF saved', 'Your document has been saved in the folder you selected.');
+      if (saved) Alert.alert('PDF saved', 'Your document has been saved in Downloads on this device.');
     } catch (err) {
       Alert.alert('PDF could not be saved', errorText(err, 'Please try again.'));
     } finally {
@@ -211,7 +211,7 @@ const DonationDocumentScreen = ({ navigation, route }: any) => {
     <PremiumPage
       header={header}
       footer={(
-        <BottomActionBar note="Choose Downloads or another folder, then tap Save to keep your PDF.">
+        <BottomActionBar note="Your PDF saves directly to Downloads on this device.">
           <GradientButton label="Download PDF" icon="download" onPress={downloadPdf} loading={savingPdf} style={s.flex} />
         </BottomActionBar>
       )}

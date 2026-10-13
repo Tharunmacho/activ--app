@@ -21,7 +21,7 @@ export type MemberRoutes = {
   UpdateDetail: { id: string };
   MemberCertificate: { kind: 'membership' | 'tax-exemption' };
   /** The 80G A4 page full screen, zoomable — the same props the caller drew it with. */
-  CertificateZoom: { cert: any; stamp?: string; receiptColumn?: boolean; amountInWords?: string };
+  CertificateZoom: { cert: any; kind?: 'membership' | 'tax-exemption'; stamp?: string; receiptColumn?: boolean; amountInWords?: string };
   MemberDocuments: undefined;
   MembershipPlanDetails: undefined;
   MemberHelp: undefined;

@@ -248,36 +248,6 @@ const PaidDashboardScreen = ({ navigation }: any) => {
     <PremiumScrollScreen header={header} refreshing={refreshing} onRefresh={refresh}>
       {loading ? <PremiumDashboardSkeleton style={styles.overlap} /> : (
         <>
-          {/* ---------------- association updates */}
-          <PremiumSectionHeader title="Association Updates" subtitle="Latest news & announcements" action="See all" onAction={() => navigation.navigate('AssociationUpdates')} />
-          <PremiumCard padded={false} style={styles.gutter}>
-            {pinnedFirst.length ? pinnedFirst.slice(0, 3).map((u, i, arr) => {
-              const cat = categoryStyle(u?.category);
-              const banner = u?.bannerUrl ? resolveMediaUrl(u.bannerUrl) : '';
-              return (
-                <Row
-                  key={String(u?.id || i)}
-                  last={i === arr.length - 1}
-                  onPress={() => navigation.navigate('UpdateDetail', { id: String(u?.id || '') })}
-                  accessibilityLabel={u?.title || 'Update'}
-                >
-                  {banner ? <FitImage uri={banner} style={styles.updThumb} /> : (
-                    <GradientIconChip icon={u?.pinned ? 'push-pin' : 'campaign'} tone="amber" />
-                  )}
-                  <View style={styles.rowText}>
-                    <Text style={[styles.updCat, { color: cat.fg }]} numberOfLines={1}>{String(cat.label || '').toUpperCase()}</Text>
-                    <Text style={styles.rowTitle} numberOfLines={2}>{u?.title || 'Update'}</Text>
-                    {u?.summary ? <Text style={styles.rowSub} numberOfLines={2}>{u.summary}</Text> : null}
-                    {u?.publishedAt ? <Text style={styles.updDate}>{shortDate(u.publishedAt)}</Text> : null}
-                  </View>
-                  <Icon name="chevron-right" size={22} color={PALETTE.textFaint} />
-                </Row>
-              );
-            }) : (
-              <PremiumEmptyState icon="campaign" title="No updates yet" text="Notices published for your region appear here first." />
-            )}
-          </PremiumCard>
-
           {profile?.currentMembership?.message ? <PremiumCard style={styles.gutter}><Text accessibilityRole="header" style={styles.rowTitle}>Membership progression</Text><Text style={styles.rowSub}>{profile.currentMembership.message}</Text></PremiumCard> : null}
           {/* ---------------- upcoming events */}
           <PremiumSectionHeader
@@ -341,6 +311,36 @@ const PaidDashboardScreen = ({ navigation }: any) => {
               </PremiumCard>
             )}
           </ScrollView>
+
+          {/* ---------------- association updates */}
+          <PremiumSectionHeader title="Association Updates" subtitle="Latest news & announcements" action="See all" onAction={() => navigation.navigate('AssociationUpdates')} />
+          <PremiumCard padded={false} style={styles.gutter}>
+            {pinnedFirst.length ? pinnedFirst.slice(0, 3).map((u, i, arr) => {
+              const cat = categoryStyle(u?.category);
+              const banner = u?.bannerUrl ? resolveMediaUrl(u.bannerUrl) : '';
+              return (
+                <Row
+                  key={String(u?.id || i)}
+                  last={i === arr.length - 1}
+                  onPress={() => navigation.navigate('UpdateDetail', { id: String(u?.id || '') })}
+                  accessibilityLabel={u?.title || 'Update'}
+                >
+                  {banner ? <FitImage uri={banner} style={styles.updThumb} /> : (
+                    <GradientIconChip icon={u?.pinned ? 'push-pin' : 'campaign'} tone="amber" />
+                  )}
+                  <View style={styles.rowText}>
+                    <Text style={[styles.updCat, { color: cat.fg }]} numberOfLines={1}>{String(cat.label || '').toUpperCase()}</Text>
+                    <Text style={styles.rowTitle} numberOfLines={2}>{u?.title || 'Update'}</Text>
+                    {u?.summary ? <Text style={styles.rowSub} numberOfLines={2}>{u.summary}</Text> : null}
+                    {u?.publishedAt ? <Text style={styles.updDate}>{shortDate(u.publishedAt)}</Text> : null}
+                  </View>
+                  <Icon name="chevron-right" size={22} color={PALETTE.textFaint} />
+                </Row>
+              );
+            }) : (
+              <PremiumEmptyState icon="campaign" title="No updates yet" text="Notices published for your region appear here first." />
+            )}
+          </PremiumCard>
 
           {/* ---------------- quick actions */}
           <PremiumSectionHeader title="Quick Actions" subtitle="Access your most used features" />

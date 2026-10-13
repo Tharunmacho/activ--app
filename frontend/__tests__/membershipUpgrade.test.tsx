@@ -26,8 +26,8 @@ jest.mock('../src/services/api', () => ({
       const data = url.includes('/upgrade/plans')
         ? { canPurchase: !mockAutomatic, commencementYear: String(new Date().getFullYear() - 2), plans: mockAvailable ? [{ key: 'basic', name: 'Business Starter', audience: 'business', price: 5000, membershipType: 'annual', features: [], minYears: 0, maxYears: 5, commencementYears: Array.from({length:5}, (_,i)=>String(new Date().getFullYear()-i)) }] : [], reason: mockAvailable ? '' : 'Update your profile category to qualify for a different plan.' }
         : url.includes('/payment/config') ? { mode: 'gateway', provider: 'instamojo', hosted: true, configured: true }
-        : url.includes('/my-profile') ? { membershipStatus: mockExpired ? 'expired' : 'active', renewal: { state: mockExpired ? 'expired' : 'active', canRenew: false } }
-          : [];
+        : url.includes('/my-profile') ? { membershipStatus: mockExpired ? 'expired' : 'active', paidMembership: { planId: 'current' }, renewal: { state: mockExpired ? 'expired' : 'active', canRenew: false } }
+          : url === '/membership/plans' ? [{ key: 'current', name: 'Current Business Plan', price: 1200, audience: 'business', membershipType: 'annual', features: ['Trade networking', 'Business workshops'] }] : [];
       return { data: { data } };
     }),
     post: jest.fn(async (url: string) => ({ data: { data: url.includes('create-request')
@@ -37,6 +37,7 @@ jest.mock('../src/services/api', () => ({
   },
 }));
 
+const visibleText = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(visibleText).join(' ') : node?.children ? visibleText(node.children) : '';
 const flush = () => new Promise<void>(resolve => setTimeout(resolve, 0));
 const mount = async () => {
   const navigation = { navigate: jest.fn(), goBack: jest.fn(), canGoBack: () => true };
@@ -62,7 +63,8 @@ test('no published alternative plans means no payment action', async () => {
   mockAvailable = false;
   const { tree } = await mount();
   const buttons = tree.root.findAllByType(GradientButton);
-  expect(tree.root.findAllByType(StateView).length).toBeGreaterThan(0);
+  expect(visibleText(tree.toJSON())).toContain('Current Business Plan');
+  expect(visibleText(tree.toJSON())).toContain('Trade networking');
   expect(buttons.some(button => String(button.props.label).startsWith('Pay'))).toBe(false);
   await act(async () => tree.unmount());
 });
@@ -70,6 +72,10 @@ test('no published alternative plans means no payment action', async () => {
 test('automatic progression offers no immediate payment or editable commencement year', async () => {
   mockAutomatic = true;
   const { tree } = await mount();
+  expect(visibleText(tree.toJSON())).toContain('Current Business Plan');
+  expect(visibleText(tree.toJSON())).toContain('Business workshops');
+  expect(visibleText(tree.toJSON())).not.toContain('Order summary');
+  expect(visibleText(tree.toJSON())).not.toContain('No different plan');
   expect(tree.root.findAllByType(GradientButton).some(button => String(button.props.label).startsWith('Pay'))).toBe(false);
   expect(tree.root.findAllByType(PremiumSelect).some(input => input.props.label === 'Business commencement year')).toBe(false);
   await act(async () => tree.unmount());

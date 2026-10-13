@@ -105,17 +105,6 @@ export const fullYear = (fy?: string | null) => {
 /** An id safe for `url(#…)` — two medallions on one screen must not share one. */
 const useSvgId = (prefix: string) => `${prefix}${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
 
-/** The paper's measured size, so the frame is drawn in real pixels (no stretching). */
-function usePaperSize() {
-  const [size, setSize] = useState({ w: 0, h: 0 });
-  const onLayout = (e: LayoutChangeEvent) => {
-    const w = Math.round(Number(e?.nativeEvent?.layout?.width || 0));
-    const h = Math.round(Number(e?.nativeEvent?.layout?.height || 0));
-    setSize((prev) => (prev.w === w && prev.h === h ? prev : { w, h }));
-  };
-  return { ...size, onLayout };
-}
-
 const at = (cx: number, cy: number, r: number, deg: number) => {
   const a = (deg * Math.PI) / 180;
   return { x: cx + r * Math.cos(a), y: cy - r * Math.sin(a) };
@@ -383,62 +372,16 @@ function FadeRule({ width, height, fade, color = GOLD }: { width: number; height
 
 /* ------------------------------------------------------------------ furniture */
 
-function Rules({ children }: { children: React.ReactNode }) {
-  return (
-    <View style={f.rules}>
-      <View style={f.rule} />
-      <View style={{ flexShrink: 1 }}>{children}</View>
-      <View style={f.rule} />
-    </View>
-  );
-}
-
-function FactRow({ icon, label, value, last }: { icon: string; label: string; value: string; last?: boolean }) {
-  return (
-    <View style={[f.fact, !last && f.factDivider]}>
-      <Icon name={icon} size={18} color={NAVY_MID} style={{ marginTop: 1 }} />
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={f.factLabel}>{label}</Text>
-        <Text style={f.factValue} selectable>{value}</Text>
-      </View>
-    </View>
-  );
-}
-
-/**
- * ONE TEMPLATE FOR EVERYONE. The sheet is laid out at a fixed design width and
- * then scaled as a picture to whatever width the phone gives it. Laid out at
- * the phone's own width instead, the text re-wrapped and the logo, seal and
- * rules landed in different places on every device — two members comparing
- * certificates saw two different documents.
- */
-const SHEET_W = 360;
-
 type PdfSheetRef = React.RefObject<View | null>;
-
-function Paper({ children, pdfRef }: { children: React.ReactNode; pdfRef?: PdfSheetRef }) {
-  const { w, h, onLayout } = usePaperSize();
-  const [avail, setAvail] = useState(0);
-  const scale = avail > 0 ? avail / SHEET_W : 1;
-  return (
-    <View
-      style={[f.paperShadow, avail > 0 && h > 0 ? { height: Math.round(h * scale) } : null]}
-      onLayout={(e: LayoutChangeEvent) => {
-        const next = Math.round(Number(e?.nativeEvent?.layout?.width || 0));
-        if (next > 0 && next !== avail) setAvail(next);
-      }}
-    >
-      <View ref={pdfRef} collapsable={false} style={[f.paper, { width: SHEET_W, transformOrigin: 'top left', transform: [{ scale }] }]} onLayout={onLayout}>
-        <MembershipFrame w={w} h={h} />
-        {children}
-      </View>
-    </View>
-  );
-}
 
 /* ------------------------------------------------------------------ membership */
 
-export function MembershipCertificateView({ cert, pdfRef }: { cert: any; pdfRef?: PdfSheetRef }) {
+export function MembershipCertificateView({ cert, pdfRef, width, onPress, hint = '' }: {
+  cert: any; pdfRef?: PdfSheetRef; width?: number; onPress?: () => void; hint?: string;
+}) {
+  const [contentHeight, setContentHeight] = useState(0);
+  // The complete header and facts shrink together when unusually long records need space.
+  const fit = contentHeight > 552 ? 552 / contentHeight : 1;
   const member = cert?.member || {};
   const company = String(member?.companyName || member?.name || '—');
   const platinum = String(cert?.membershipTier || '') === 'platinum';
@@ -470,58 +413,57 @@ export function MembershipCertificateView({ cert, pdfRef }: { cert: any; pdfRef?
     { icon: 'event-available', label: 'Valid Till', value: validTill },
     { icon: 'verified', label: 'Membership', value: platinum ? 'Lifetime Member' : '' },
   ]);
-  const rows = [...identity, ...address, ...dates];
+  const columns = identity.length <= 3 ? [[...identity, ...dates], address] : [identity, [...address, ...dates]];
   const issued = certDate(cert?.issuedAt);
 
   return (
-    <Paper pdfRef={pdfRef}>
-      <View style={f.content}>
-        <Image source={LOGO} style={f.logo} resizeMode="contain" accessibilityLabel="ACTIV" />
-        <Text style={f.assoc}>{ASSOCIATION_NAME.toUpperCase()}</Text>
-
-        <Text style={f.titleBig}>MEMBERSHIP{'\n'}CERTIFICATE</Text>
-        <Rules><Text style={f.subGold}>Empowering SC/ST Entrepreneurs</Text></Rules>
-
-        <Text style={f.certify}>This is to certify that</Text>
-        <Text style={[f.holder, company.length > 30 && { fontSize: 20, lineHeight: 25 }]} selectable>{company}</Text>
-        <View style={f.goldLine} />
-        <Text style={f.admitted}>
-          has been admitted as {platinum ? 'a Lifetime Member' : 'an official member'} of
-        </Text>
-        <Text style={f.activ}>ACTIV</Text>
-
-        {rows.length ? (
-          <View style={f.panel}>
-            {rows.map((r, i) => <FactRow key={r.label} {...r} last={i === rows.length - 1} />)}
+    <View>
+      <A4Page width={width} onPress={onPress} pdfRef={pdfRef} landscape>
+        <View style={[m.flow, { transformOrigin: 'top center', transform: [{ scale: fit }] }]}
+          onLayout={e => setContentHeight(e.nativeEvent.layout.height)}>
+          <Image source={LOGO} style={m.logo} resizeMode="contain" accessibilityLabel="ACTIV" />
+          <T style={m.association}>{ASSOCIATION_NAME.toUpperCase()}</T>
+          <T style={m.title}>MEMBERSHIP CERTIFICATE</T>
+          <View style={m.rules}><View style={m.rule} /><T style={m.subtitle}>Empowering SC/ST Entrepreneurs</T><View style={m.rule} /></View>
+          <T style={m.certify}>This is to certify that</T>
+          <T style={[m.holder, company.length > 40 ? { fontSize: 29, lineHeight: 35 } : company.length > 30 ? { fontSize: 34, lineHeight: 40 } : null]}>{company}</T>
+          <View style={m.holderRule} />
+          <T style={m.admitted}>has been admitted as {platinum ? 'a Lifetime Member' : 'an official member'} of</T>
+          <T style={m.activ}>ACTIV</T>
+          <View style={m.panel}>
+            {columns.map((rows, col) => <React.Fragment key={col}>
+              {col === 1 ? <View style={m.divider} /> : null}
+              <View style={{ flex: col === 0 ? 1.12 : 1, minWidth: 0 }}>
+                {rows.map((row, i) => <View key={row.label} style={[m.row, i < rows.length - 1 && m.rowBorder]}>
+                  <Icon name={row.icon} size={20} color={NAVY_MID} />
+                  <T style={m.label}>{row.label}</T>
+                  <T style={m.value}>{row.value}</T>
+                </View>)}
+              </View>
+            </React.Fragment>)}
           </View>
-        ) : null}
-
-        <Rules><Text style={f.motto}>TOGETHER <Text style={{ color: GOLD }}>•</Text> TRADE <Text style={{ color: GOLD }}>•</Text> GROW</Text></Rules>
-
-        <View style={f.signRow}>
-          <View style={f.signCol}>
-            <Text style={f.signLabel}>Founder President</Text>
-            <Image source={SIGNATURE} style={f.signature} resizeMode="contain" accessibilityLabel="Signature of the Founder President" />
-            <View style={f.signLine} />
+          <View style={[m.rules, { marginTop: 9 }]}><View style={m.rule} /><T style={m.motto}>TOGETHER  ·  TRADE  ·  GROW</T><View style={m.rule} /></View>
+        </View>
+        <View style={m.signatures}>
+          <View style={m.signColumn}>
+            <T style={m.signLabel}>Founder President</T>
+            <Image source={SIGNATURE} style={m.signature} resizeMode="contain" accessibilityLabel="Signature of the Founder President" />
+            <View style={m.signRule} />
           </View>
-          <View style={f.sealCol}>
-            <Seal line="Membership" size={92} />
-            <Text style={f.sealCaption}>Official Seal</Text>
-          </View>
-          <View style={f.signCol}>
-            <Text style={f.signLabel}>Date of Issue</Text>
-            <View style={f.dateBox}><Text style={f.signDate}>{issued || '—'}</Text></View>
-            <View style={f.signLine} />
+          <View style={m.seal}><Seal line="Membership" size={112} /><T style={m.sealCaption}>Official Seal</T></View>
+          <View style={m.signColumn}>
+            <T style={m.signLabel}>Date of Issue</T>
+            <View style={m.issueDate}><T style={m.date}>{issued || '—'}</T></View>
+            <View style={m.signRule} />
           </View>
         </View>
-      </View>
-      <View style={f.footBar}>
-        <Text style={f.footText} numberOfLines={1}>
-          <Icon name="description" size={13} color={GOLD_LIGHT} />  Certificate No: <Text style={{ fontWeight: '800' }}>{cert?.reference || '—'}</Text>
-        </Text>
-        <Text style={f.footTextSmall}>Issued by: ACTIV | Chennai, Tamil Nadu · www.activ.org.in</Text>
-      </View>
-    </Paper>
+        <View style={m.footer}>
+          <T style={m.footerText}>Certificate No: {cert?.reference || '—'}</T>
+          <T style={m.footerText}>Issued by: ACTIV | Chennai, Tamil Nadu · www.activ.org.in</T>
+        </View>
+      </A4Page>
+      {hint ? <Text style={m.hint}>{hint}</Text> : null}
+    </View>
   );
 }
 
@@ -539,14 +481,16 @@ const T = (props: React.ComponentProps<typeof Text>) => <Text allowFontScaling={
  * 794:1123 (1 : 1.4143) aspect at whatever width it is given — `width` when the
  * caller fixes it (the zoom view), otherwise the width its parent offers.
  */
-function A4Page({ width, onPress, children, pdfRef }: { width?: number; onPress?: () => void; children: React.ReactNode; pdfRef?: PdfSheetRef }) {
+function A4Page({ width, onPress, children, pdfRef, landscape = false }: { width?: number; onPress?: () => void; children: React.ReactNode; pdfRef?: PdfSheetRef; landscape?: boolean }) {
+  const pageW = landscape ? A4_H : A4_W;
+  const pageH = landscape ? A4_W : A4_H;
   const fixed = typeof width === 'number' && width > 0 ? width : 0;
   const [measured, setMeasured] = useState(0);
   const w = fixed || measured;
-  const scale = w > 0 ? w / A4_W : 0;
+  const scale = w > 0 ? w / pageW : 0;
   const sheet = (
     <View
-      style={[f.a4Shadow, fixed ? { width: fixed, height: Math.round((fixed * A4_H) / A4_W) } : f.a4Fluid]}
+      style={[f.a4Shadow, fixed ? { width: fixed, height: Math.round((fixed * pageH) / pageW) } : { width: '100%', aspectRatio: pageW / pageH }]}
       onLayout={(e: LayoutChangeEvent) => {
         if (fixed) return;
         const next = Number(e?.nativeEvent?.layout?.width || 0);
@@ -555,8 +499,8 @@ function A4Page({ width, onPress, children, pdfRef }: { width?: number; onPress?
     >
       <View style={f.a4Clip}>
         {scale > 0 ? (
-          <View ref={pdfRef} collapsable={false} style={[f.a4Sheet, { transformOrigin: 'top left', transform: [{ scale }] }]}>
-            <TaxFrame />
+          <View ref={pdfRef} collapsable={false} style={[f.a4Sheet, { width: pageW, height: pageH, transformOrigin: 'top left', transform: [{ scale }] }]}>
+            {landscape ? <MembershipFrame w={pageW} h={pageH} /> : <TaxFrame />}
             {children}
           </View>
         ) : null}
@@ -568,7 +512,7 @@ function A4Page({ width, onPress, children, pdfRef }: { width?: number; onPress?
     <Pressable
       onPress={onPress}
       accessibilityRole="imagebutton"
-      accessibilityLabel="Certificate of Tax Exemption, A4 page"
+      accessibilityLabel={landscape ? "Membership certificate, A4 landscape page" : "Certificate of Tax Exemption, A4 page"}
       accessibilityHint="Opens the certificate full screen, where it can be enlarged"
     >
       {sheet}
@@ -734,6 +678,40 @@ export function TaxCertificateView({ cert, stamp = '', receiptColumn = false, am
 }
 
 /* ------------------------------------------------------------------ styles */
+
+const m = StyleSheet.create({
+  flow: { position: 'absolute', top: 38, left: 92, right: 92, alignItems: 'center' },
+  logo: { width: 212, height: 66 },
+  association: { fontSize: 13.5, lineHeight: 20, fontWeight: '700', letterSpacing: 1.5, color: NAVY_MID, textAlign: 'center', marginTop: 4 },
+  title: { fontFamily: 'serif', fontSize: 49, lineHeight: 59, fontWeight: '700', color: NAVY, textAlign: 'center', marginTop: 6 },
+  rules: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, marginTop: 4 },
+  rule: { height: 1.5, width: 150, backgroundColor: GOLD },
+  subtitle: { fontSize: 18, lineHeight: 24, fontWeight: '700', color: GOLD_DEEP },
+  certify: { fontSize: 18, lineHeight: 25, fontStyle: 'italic', color: INK, marginTop: 6 },
+  holder: { fontSize: 40, lineHeight: 46, fontWeight: '800', color: NAVY, textAlign: 'center', maxWidth: 860, marginTop: 2 },
+  holderRule: { width: 440, height: 1.5, backgroundColor: GOLD, marginTop: 4 },
+  admitted: { fontSize: 17, lineHeight: 24, color: INK, textAlign: 'center', marginTop: 4 },
+  activ: { fontSize: 20, lineHeight: 27, fontWeight: '700', color: NAVY },
+  panel: { alignSelf: 'stretch', flexDirection: 'row', gap: 18, marginTop: 8, borderRadius: 16, borderWidth: 1, borderColor: PANEL_LINE, backgroundColor: '#FFFFFFE8', paddingHorizontal: 20, paddingVertical: 6 },
+  divider: { width: 2, marginVertical: 4, backgroundColor: GOLD_LIGHT },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 33, paddingVertical: 4 },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: LINE },
+  label: { width: 126, fontSize: 13.5, lineHeight: 19, color: MUTED, fontWeight: '500' },
+  value: { flex: 1, fontSize: 15, lineHeight: 20, color: INK, fontWeight: '700' },
+  motto: { fontSize: 14, lineHeight: 22, letterSpacing: 3, color: NAVY_MID, fontWeight: '700' },
+  signatures: { position: 'absolute', top: 608, left: 210, right: 210, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  signColumn: { width: 220, alignItems: 'center', paddingTop: 10 },
+  signLabel: { fontSize: 16, lineHeight: 23, fontWeight: '700', color: NAVY },
+  signature: { width: 210, height: 60, tintColor: NAVY_MID },
+  signRule: { width: 220, height: 1, backgroundColor: NAVY_MID },
+  seal: { alignItems: 'center' },
+  sealCaption: { fontSize: 12, color: NAVY_MID },
+  issueDate: { height: 60, justifyContent: 'center' },
+  date: { fontSize: 24, fontWeight: '700', color: NAVY_MID },
+  footer: { position: 'absolute', left: 22, right: 22, bottom: 22, height: 40, paddingHorizontal: 18, borderTopWidth: 2, borderTopColor: GOLD, backgroundColor: NAVY, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  footerText: { fontSize: 12, color: '#FFF', flexShrink: 1 },
+  hint: { fontSize: 13, lineHeight: 20, textAlign: 'center', color: MUTED, marginTop: 12 },
+});
 
 const f = StyleSheet.create({
   // Shadow on the wrapper, clipping on the sheet — iOS drops a shadow on a clipped view.

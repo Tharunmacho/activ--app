@@ -109,7 +109,7 @@ const MemberCertificateScreen = ({ navigation, route }: any) => {
     setSavingPdf(true);
     try {
       const saved = await saveCertificatePdf(pdfRef.current, `ACTIV-${kind}-${cert.reference || 'certificate'}.pdf`);
-      if (saved) Alert.alert('PDF saved', 'Your certificate has been saved in the folder you selected.');
+      if (saved) Alert.alert('PDF saved', 'Your certificate has been saved in Downloads on this device.');
     } catch (err) {
       Alert.alert('PDF could not be saved', errorText(err, 'Please try again.'));
     } finally {
@@ -200,7 +200,7 @@ const MemberCertificateScreen = ({ navigation, route }: any) => {
       onRefresh={() => load('refresh')}
       refreshing={refreshing}
       footer={(
-        <BottomActionBar note="Choose Downloads or another folder, then tap Save to keep your PDF.">
+        <BottomActionBar note="Your PDF saves directly to Downloads on this device.">
           <GradientButton label="Download PDF" icon="download" onPress={downloadPdf} loading={savingPdf} disabled={refreshing} style={s.grow} />
         </BottomActionBar>
       )}
@@ -225,7 +225,7 @@ const MemberCertificateScreen = ({ navigation, route }: any) => {
               }
             }}
           />
-        ) : <MembershipCertificateView cert={cert} pdfRef={pdfRef} />}
+        ) : <MembershipCertificateView cert={cert} pdfRef={pdfRef} hint="A4 landscape · Tap to zoom" onPress={() => navigation.navigate('CertificateZoom', { cert, kind: 'membership' })} />}
       </FadeInUp>
       <FadeInUp delay={320}>
         <SurfaceCard style={s.verify}>
