@@ -23,7 +23,7 @@ const render = async () => { await Renderer.act(async () => { screen = Renderer.
 beforeEach(() => { jest.clearAllMocks(); clearPublicAction(); (getPublicEventDetail as jest.Mock).mockResolvedValue(event); (getPublicEvent as jest.Mock).mockResolvedValue(event); });
 afterEach(async () => { await Renderer.act(async () => screen?.unmount()); });
 
-test('guest can read native programme and availability, then sign in only when booking', async () => {
+test('guest can read the native programme and open the guest/member booking flow', async () => {
   await render();
   expect(getPublicEventDetail).toHaveBeenCalledWith('public-slug');
   expect(getMemberEvent).not.toHaveBeenCalled(); expect(getBookableEvent).not.toHaveBeenCalled();
@@ -32,8 +32,7 @@ test('guest can read native programme and availability, then sign in only when b
   await Renderer.act(async () => button('All events').props.onPress());
   expect(navigation.navigate).toHaveBeenLastCalledWith('PublicExplore', { section: 'events' });
   await Renderer.act(async () => button('Book Now').props.onPress());
-  expect(navigation.navigate).toHaveBeenLastCalledWith('Login');
-  expect(takePublicAction()).toEqual({ name: 'EventBooking', params: { eventId: event.id } });
+  expect(navigation.navigate).toHaveBeenLastCalledWith('EventBooking', { eventId: event.id });
   expect(takePublicAction()).toBeNull();
   expect(navigation.navigate.mock.calls.some(call => call[0] === 'WebsiteViewer')).toBe(false);
 });
@@ -47,7 +46,7 @@ test.each(['closed', 'full', 'deleted'])('guest cannot start booking when the ev
   expect(getAuthToken).not.toHaveBeenCalled(); expect(takePublicAction()).toBeNull();
 });
 
-test('a deletion between reading and tapping Book Now is rechecked before login', async () => {
+test('a deletion between reading and tapping Book Now is rechecked before booking', async () => {
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   try {
     await render();

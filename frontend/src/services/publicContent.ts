@@ -1,10 +1,8 @@
-import axios from 'axios';
-import { API_BASE_URL } from '../config/api.config';
+import visitorApi from './publicApi';
 import { isUpcomingEvent } from '../utils/eventLifecycle';
 import { withEventAgenda } from '../utils/eventAgenda';
 
 // Public browsing never reads a saved token or calls a member/admin endpoint.
-const visitorApi = axios.create({ baseURL: API_BASE_URL, timeout: 20000, withCredentials: false });
 export type ExploreSection = 'home' | 'events' | 'news' | 'gallery' | 'zones';
 export type ExploreContent = { events: any[]; news: any[]; gallery: any[]; zones: any[] };
 const rows = (value: any): any[] => Array.isArray(value) ? value : [];

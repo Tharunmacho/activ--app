@@ -95,13 +95,13 @@ test('visitor feeds use public requests without saved credentials and filter unp
   expect(get.mock.calls[5][1].params.scope).toBe('public');
   expect(getAuthToken).not.toHaveBeenCalled();
 });
-test('a guest booking opens login and resumes the chosen event only once', async () => {
+test('a guest booking opens the selected native booking without forcing sign-in', async () => {
   get.mockResolvedValue({ data: { data: { id: '507f1f77bcf86cd799439011' } } });
   const navigate = jest.fn();
   await openPublicAction({ navigate }, { kind: 'event', id: 'conference' });
   expect(get).toHaveBeenCalledWith('/cms/events/conference', expect.objectContaining({ params: { scope: 'public' } }));
-  expect(navigate).toHaveBeenCalledWith('Login');
-  expect(takePublicAction()).toEqual({ name: 'EventBooking', params: { eventId: '507f1f77bcf86cd799439011' } });
+  expect(navigate).toHaveBeenCalledWith('EventBooking', { eventId: '507f1f77bcf86cd799439011' });
+  expect(getAuthToken).not.toHaveBeenCalled();
   expect(takePublicAction()).toBeNull();
 });
 test('signed-in members continue through the existing event screen and stale intent expires', async () => {

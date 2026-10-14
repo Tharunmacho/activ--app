@@ -82,16 +82,22 @@ export function Photo({ url, alt = 'ACTIV photo', caption }: { url?: string; alt
 export function ContentMedia({ media, title }: { media: any; title: string }) {
   const [failed, setFailed] = useState(false);
   const uri = resolveMediaUrl(media?.url || '');
+  useEffect(() => { setFailed(false); }, [uri, media?.type]);
   if (!uri) return null;
   if (media.type !== 'video') return <Photo url={uri} alt={media.alt || title} />;
-  if (failed) return <Text style={contentStyles.body}>This video could not be played. Pull down to reload.</Text>;
+  if (failed) return <View>
+    <Text accessibilityRole="alert" style={contentStyles.body}>This video could not be played. Try again.</Text>
+    <PressableScale accessibilityRole="button" accessibilityLabel="Retry video" onPress={() => setFailed(false)} contentStyle={contentStyles.link}>
+      <Text style={contentStyles.linkText}>Retry video</Text>
+    </PressableScale>
+  </View>;
   const youtube = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]+)/i.exec(uri);
   const vimeo = /vimeo\.com\/(?:video\/)?(\d+)/i.exec(uri);
   if (youtube || vimeo) {
-    const source = youtube ? `https://www.youtube.com/embed/${youtube[1]}` : `https://player.vimeo.com/video/${vimeo![1]}`;
-    return <View style={contentStyles.video}><WebView source={{ uri: source }} allowsFullscreenVideo mediaPlaybackRequiresUserAction originWhitelist={['https://*']} onShouldStartLoadWithRequest={req => !req.isTopFrame || req.url === source || req.url === 'about:blank'} onError={() => setFailed(true)} /></View>;
+    const source = youtube ? `https://www.youtube.com/embed/${youtube[1]}` : `https://player.vimeo.com/video/${vimeo?.[1] || ''}`;
+    return <View style={contentStyles.video}><WebView key={uri} source={{ uri: source }} allowsFullscreenVideo mediaPlaybackRequiresUserAction originWhitelist={['https://*']} onShouldStartLoadWithRequest={req => !req.isTopFrame || req.url === source || req.url === 'about:blank'} onError={() => setFailed(true)} /></View>;
   }
-  return <Video source={{ uri }} controls resizeMode="contain" paused style={contentStyles.video} onError={() => setFailed(true)} />;
+  return <Video key={uri} source={{ uri }} controls resizeMode="contain" paused style={contentStyles.video} onError={() => setFailed(true)} />;
 }
 export function ExtraFields({ fields, navigation }: { fields: any[]; navigation: any }) {
   return <>{(Array.isArray(fields) ? fields : []).filter(field => field && field.value && !field.isHidden).map((field, i) => <SurfaceCard key={i} style={contentStyles.section}>

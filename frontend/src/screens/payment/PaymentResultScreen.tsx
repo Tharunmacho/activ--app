@@ -10,6 +10,7 @@ import { checkPaymentOrder, getMyProfile } from '../../services/paymentFlow';
 import { clearPendingPayment, getPendingPayment, PendingPayment } from '../../services/paymentRecovery';
 import { useAuthStore } from '../../stores/exampleStore';
 import { useActiveCompanyStore } from '../../stores/activeCompanyStore';
+import { getAuthToken, getUserRole } from '../../services/api';
 
 /**
  * ============================================================================
@@ -112,11 +113,22 @@ const PaymentResultScreen: React.FC<any> = ({ navigation, route }) => {
   const retry = () => setRevision(value => value + 1);
   const toDashboard = () => navigation.reset({ index: 0, routes: [{ name: 'PaidDashboard' }] });
   const home = signedIn ? 'MemberMain' : 'PublicExplore';
-  const toEvents = () => navigation.reset({ index: 1, routes: [{ name: home }, { name: 'MemberEvents' }] });
-  /* A paid booking lands on its ticket (GET /event-bookings/:ref), member area underneath. */
-  const toTicket = () => (bookingRef
-    ? navigation.reset({ index: 1, routes: [{ name: home }, { name: 'EventBooking', params: { eventId: eventId || undefined, ref: bookingRef } }] })
-    : toEvents());
+  const bookingHome = async () => {
+    const [token, role] = await Promise.all([getAuthToken(), getUserRole()]);
+    return token && role === 'member' ? 'MemberMain' : 'PublicExplore';
+  };
+  const toEvents = async () => {
+    const destination = await bookingHome();
+    navigation.reset(destination === 'MemberMain'
+      ? { index: 1, routes: [{ name: destination }, { name: 'MemberEvents' }] }
+      : { index: 0, routes: [{ name: 'PublicExplore', params: { section: 'events' } }] });
+  };
+  /* The ticket stays public unless the saved session belongs to a member. */
+  const toTicket = async () => {
+    if (!bookingRef) return toEvents();
+    const destination = await bookingHome();
+    navigation.reset({ index: 1, routes: [{ name: destination }, { name: 'EventBooking', params: { eventId: eventId || undefined, ref: bookingRef } }] });
+  };
   const booking = orderType === 'event_booking';
   const companyPayment = orderType === 'company_listing';
   const orderShort = orderId ? `Order ${orderId.slice(-8).toUpperCase()}` : '';

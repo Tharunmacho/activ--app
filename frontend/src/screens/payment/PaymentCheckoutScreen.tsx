@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import api from '../../services/api';
+import api, { getAuthToken, getUserRole } from '../../services/api';
 import { View, Text, StyleSheet, Linking, Alert, BackHandler } from 'react-native';
 import { usePaymentResumeCheck } from './usePaymentResumeCheck';
 import {
@@ -13,7 +13,6 @@ import {
   PaymentConfig, checkPaymentOrder,
 } from '../../services/paymentFlow';
 import { CheckoutContext, findPendingCheckout, getPendingPayment, getPaymentStorageOwner, sameCheckout, setPendingPayment } from '../../services/paymentRecovery';
-import { useAuthStore } from '../../stores/exampleStore';
 
 /*
  * The in-app browser. Required lazily and guarded (RULE 2.4): a build that
@@ -66,7 +65,6 @@ const PaymentCheckoutScreen: React.FC<any> = ({ navigation, route }) => {
   /* The website sends the application id with the membership order when it has one. */
   const applicationId: string = String(params?.applicationId || '');
   const resumeOrderId = String(params?.resumeOrderId || '');
-  const signedIn = useAuthStore(state => state.isAuthenticated);
   const context = useMemo<CheckoutContext>(() => ({
     orderType, companyId: companyId || undefined, planId: planId || undefined,
     bookingRef: bookingRef || undefined, eventId: eventId || undefined,
@@ -280,6 +278,11 @@ const PaymentCheckoutScreen: React.FC<any> = ({ navigation, route }) => {
   }
 
   const goBack = () => navigation.goBack();
+  const viewTicket = async () => {
+    const [token, role] = await Promise.all([getAuthToken(), getUserRole()]);
+    const home = token && role === 'member' ? 'MemberMain' : 'PublicExplore';
+    navigation.reset({ index: 1, routes: [{ name: home }, { name: 'EventBooking', params: { eventId, ref: bookingRef } }] });
+  };
   const eyebrow = orderType === 'company_listing' ? 'Company publishing' : orderType === 'event_booking' ? 'Event booking' : upgrade ? 'Upgrade' : renew ? 'Renewal' : 'Membership';
 
   if (phase === 'preparing' || phase === 'paying') {
@@ -342,8 +345,7 @@ const PaymentCheckoutScreen: React.FC<any> = ({ navigation, route }) => {
             <GradientButton
               label="View your ticket"
               icon="confirmation-number"
-              // The ticket, with the member area under it (not the checkout).
-              onPress={() => navigation.reset({ index: 1, routes: [{ name: signedIn ? 'MemberMain' : 'PublicExplore' }, { name: 'EventBooking', params: { eventId, ref: bookingRef } }] })}
+              onPress={viewTicket}
               style={s.flex}
             />
           </BottomActionBar>

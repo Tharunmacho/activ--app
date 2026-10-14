@@ -14,6 +14,8 @@ import DonationResultScreen from '../src/screens/payment/DonationResultScreen';
 import { readDonationDocs } from '../src/screens/payment/donationStore';
 
 let mockSignedIn = true;
+let mockStoredRole: string | null = 'member';
+let mockPaymentMode = 'gateway';
 let mockPublicFailure = false;
 let mockPrivateFailure = false;
 let mockStatus: any;
@@ -30,6 +32,7 @@ jest.mock('../src/services/api', () => ({
   __esModule: true,
   getUserData: jest.fn(async () => mockSignedIn ? { _id: 'member-one', email: 'member@example.test' } : null),
   getAuthToken: jest.fn(async () => mockSignedIn ? 'test-only-token' : null),
+  getUserRole: jest.fn(async () => mockSignedIn ? mockStoredRole : null),
   default: {
     get: jest.fn(async (url: string) => {
       const id = url.split('/').pop();
@@ -42,7 +45,7 @@ jest.mock('../src/services/api', () => ({
         if (mockPrivateFailure) throw Error('offline');
         return { data: { data: { ...mockPrivate, orderId: id } } };
       }
-      const data = url.includes('/payment/config') ? { mode: 'gateway', provider: 'instamojo', configured: true, hosted: true }
+      const data = url.includes('/payment/config') ? { mode: mockPaymentMode, provider: 'instamojo', configured: true, hosted: true }
         : url.includes('/membership/plans/mine') || url.includes('/upgrade/plans') ? { plans: [{ key: 'annual', name: 'Business Annual', audience: 'business', price: 5000 }] }
         : url.includes('/publishing') ? { paymentRequired: true, amount: 5000, companyName: 'Test Company' }
         : url.includes('/donations/return/') ? { ...mockGift, orderId: id }
@@ -71,6 +74,7 @@ const polls = async (count: number) => {
 beforeEach(async () => {
   jest.useFakeTimers(); jest.clearAllMocks(); await AsyncStorage.clear();
   navigation = nav(); mockSignedIn = true; mockPublicFailure = false; mockPrivateFailure = false; mockDeferred = null;
+  mockStoredRole = 'member'; mockPaymentMode = 'gateway';
   mockStatus = { orderType: 'membership', status: 'paid', amount: 5000, planName: 'Business Annual', paidAt: '2026-10-01T09:00:00Z', paymentId: 'BANK-REFERENCE' };
   mockPrivate = { ...mockStatus };
   mockGift = { status: 'paid', amount: 1000, receiptToken: 'receipt-token', receiptNumber: 'ACTIV-TEST-GIFT', statementToken: 'year-token', financialYear: '2026-27' };
@@ -215,6 +219,28 @@ test('guest event success opens its verified booking above the public home', asy
   await mount(PaymentResultScreen, { orderId: 'order-one', orderType: 'event_booking' });
   await act(async () => button('View your ticket').props.onPress());
   expect(navigation.reset).toHaveBeenCalledWith({ index: 1, routes: [{ name: 'PublicExplore' }, { name: 'EventBooking', params: { eventId: 'event-one', ref: 'BOOK-1' } }] });
+});
+
+test.each(['member', 'super_admin', 'attendance_admin', null])('event payment returns use the stored account role: %s', async role => {
+  mockStoredRole = role;
+  mockStatus = { ...mockStatus, status: 'failed', orderType: 'event_booking', bookingRef: 'BOOK-1', eventId: 'event-one' };
+  await mount(PaymentResultScreen, { orderId: 'order-one', orderType: 'event_booking' });
+  await act(async () => button('Back to events').props.onPress());
+  expect(navigation.reset).toHaveBeenLastCalledWith(role === 'member'
+    ? { index: 1, routes: [{ name: 'MemberMain' }, { name: 'MemberEvents' }] }
+    : { index: 0, routes: [{ name: 'PublicExplore', params: { section: 'events' } }] });
+  await act(async () => { button('View booking').props.onPress(); await flush(); });
+  expect(navigation.reset).toHaveBeenLastCalledWith({ index: 1, routes: [{ name: role === 'member' ? 'MemberMain' : 'PublicExplore' }, { name: 'EventBooking', params: { eventId: 'event-one', ref: 'BOOK-1' } }] });
+});
+
+test.each(['member', 'super_admin', null])('mock booking checkout returns use the stored account role: %s', async role => {
+  mockStoredRole = role; mockPaymentMode = 'mock';
+  mockOrderReply = { gatewayPaymentId: 'test-payment', signature: 'test-signature' };
+  await mount(PaymentCheckoutScreen, { orderType: 'event_booking', bookingRef: 'BOOK-1', eventId: 'event-one' });
+  const pay = tree!.root.findAllByType(GradientButton).find(item => String(item.props.label).startsWith('Pay'))!;
+  await act(async () => pay.props.onPress());
+  await act(async () => button('View your ticket').props.onPress());
+  expect(navigation.reset).toHaveBeenLastCalledWith({ index: 1, routes: [{ name: role === 'member' ? 'MemberMain' : 'PublicExplore' }, { name: 'EventBooking', params: { eventId: 'event-one', ref: 'BOOK-1' } }] });
 });
 
 test('guest donor can pay without member API, double taps create only one gift and a WebView error has browser recovery', async () => {

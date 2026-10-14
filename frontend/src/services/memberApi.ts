@@ -1,6 +1,7 @@
 import { isPastEvent } from '../utils/eventLifecycle';
 import { withEventAgenda } from '../utils/eventAgenda';
 import api from './api';
+import publicApi from './publicApi';
 import { unwrap, asArray } from '../ui';
 
 /**
@@ -183,19 +184,19 @@ export const recordProductView = async (id: string): Promise<void> => {
 };
 
 /** The event as the booking page needs it: price for THIS caller, seats left, closed. */
-export const getBookableEvent = async (eventId: string) =>
-  unwrap<any>(await api.get(`/event-bookings/event/${encodeURIComponent(eventId)}`), null);
+export const getBookableEvent = async (eventId: string, guest = false) =>
+  unwrap<any>(await (guest ? publicApi : api).get(`/event-bookings/event/${encodeURIComponent(eventId)}`), null);
 
 /** "Already booked / entered twice" check without writing anything. */
-export const checkEventBooking = async (eventId: string, body: Record<string, any>) =>
-  unwrap<any>(await api.post(`/event-bookings/event/${encodeURIComponent(eventId)}/check`, body), {});
+export const checkEventBooking = async (eventId: string, body: Record<string, any>, guest = false) =>
+  unwrap<any>(await (guest ? publicApi : api).post(`/event-bookings/event/${encodeURIComponent(eventId)}/check`, body), {});
 
 /** Take a booking. Sends NO amount — the server prices it. */
 export const createEventBooking = async (eventId: string, body: {
   name: string; email: string; phone: string; noOfPersons: number;
   participants: { name: string; email: string; phone: string }[]; note?: string;
   responses?: Record<string, string | boolean>;
-}) => unwrap<any>(await api.post(`/event-bookings/event/${encodeURIComponent(eventId)}`, body), {});
+}, guest = false) => unwrap<any>(await (guest ? publicApi : api).post(`/event-bookings/event/${encodeURIComponent(eventId)}`, body), {});
 
 export const getEventBooking = async (ref: string) =>
   unwrap<any>(await api.get(`/event-bookings/${encodeURIComponent(ref)}`), null);

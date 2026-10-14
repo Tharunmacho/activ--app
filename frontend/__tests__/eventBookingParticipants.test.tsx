@@ -1,10 +1,16 @@
 import React from 'react';
 import Renderer, { act } from 'react-test-renderer';
-import { TextInput } from 'react-native';
+import { BackHandler, Text, TextInput } from 'react-native';
 import EventBookingScreen from '../src/screens/member/events/EventBookingScreen';
 import { createEventBooking, checkEventBooking, getBookableEvent, getMyProfile, getEventBooking } from '../src/services/memberApi';
+import api, { getAuthToken, getUserRole } from '../src/services/api';
+import { clearPublicAction, takePublicAction } from '../src/services/publicNavigation';
+
+const mockLogin = jest.fn().mockResolvedValue(undefined);
+jest.mock('../src/stores/exampleStore', () => ({ useAuthStore: (select: any) => select({ login: mockLogin }) }));
 
 jest.mock('@react-navigation/native', () => ({ useFocusEffect: jest.fn() }));
+jest.mock('../src/services/api', () => ({ __esModule: true, default: { post: jest.fn() }, getAuthToken: jest.fn(), getUserRole: jest.fn() }));
 jest.mock('../src/services/memberApi', () => ({
   getBookableEvent: jest.fn(), getMyProfile: jest.fn(), createEventBooking: jest.fn(),
   checkEventBooking: jest.fn(), getEventBooking: jest.fn().mockResolvedValue(null),
@@ -25,9 +31,10 @@ jest.mock('../src/ui', () => {
   };
 });
 
-const navigation = { navigate: jest.fn(), goBack: jest.fn(), setParams: jest.fn() };
+const navigation = { navigate: jest.fn(), goBack: jest.fn(), setParams: jest.fn(), isFocused: jest.fn(() => true) };
 let tree: Renderer.ReactTestRenderer;
 const inputs = () => tree.root.findAllByType(TextInput);
+const screenText = () => tree.root.findAllByType(Text).map(node => React.Children.toArray(node.props.children).filter(value => typeof value === 'string' || typeof value === 'number').join('')).join('\n');
 const edit = async (i: number, value: string) => { await act(async () => inputs()[i].props.onChangeText(value)); };
 const press = async (label: string) => {
   const button = tree.root.findAll(b => b.props.accessibilityLabel === label && typeof b.props.onPress === 'function')[0];
@@ -39,6 +46,11 @@ const confirm = async () => { await press('Review booking'); expect(createEventB
 
 beforeEach(() => {
   jest.clearAllMocks();
+  navigation.isFocused.mockReturnValue(true);
+  clearPublicAction();
+  (api.post as jest.Mock).mockReset();
+  (getAuthToken as jest.Mock).mockResolvedValue('member-token');
+  (getUserRole as jest.Mock).mockResolvedValue('member');
   (getBookableEvent as jest.Mock).mockResolvedValue({ title: 'Conference', amount: 0, maxPerBooking: 10, capacity: 100, seatsLeft: 100 });
   (getMyProfile as jest.Mock).mockResolvedValue({ fullName: 'Booker', email: 'booker@example.test', phoneNumber: '9000000001' });
   (checkEventBooking as jest.Mock).mockResolvedValue({});
@@ -59,7 +71,7 @@ test('one seat visibly fills Participant 1 and follows changes to the booking co
   await confirm();
   expect(createEventBooking).toHaveBeenCalledWith('conference', expect.objectContaining({
     noOfPersons: 1, participants: [{ name: 'Booker', email: 'booker@example.test', phone: '9000000001' }],
-  }));
+  }), false);
 });
 
 test('a single guest can differ from the booking contact, and the same data reaches check and create', async () => {
@@ -150,7 +162,7 @@ test('required event questions validate before review and persist through edit',
   await press('Review booking'); await press('Edit details');
   expect(inputs()[7].props.value).toBe('ACTIV');
   await confirm();
-  expect(createEventBooking).toHaveBeenCalledWith('conference', expect.objectContaining({ responses: { organisation: 'ACTIV' } }));
+  expect(createEventBooking).toHaveBeenCalledWith('conference', expect.objectContaining({ responses: { organisation: 'ACTIV' } }), false);
 });
 
 test('changed price must be reviewed before booking is created', async () => {
@@ -185,4 +197,127 @@ test('active failed payment shows failure, never confirmation or entry pass', as
   const text = JSON.stringify(tree.toJSON());
   expect(text).toContain('Payment failed'); expect(text).not.toContain('Booking confirmed');
   expect(text).not.toContain('Show this entry pass');
+});
+
+const guestSession = () => {
+  (getAuthToken as jest.Mock).mockResolvedValue(null);
+  (getUserRole as jest.Mock).mockResolvedValue(null);
+};
+const guestDetails = async () => { await edit(0, 'Visitor'); await edit(1, 'visitor@example.test'); await edit(2, '9000000003'); };
+const memberCredentials = async () => { await edit(0, ' MEMBER@EXAMPLE.TEST '); await edit(1, 'test-password'); };
+const loginResponse = { data: { data: { token: 'new-member-token', role: 'member', user: { fullName: 'Member', password: 'must-not-persist' } } } };
+
+test('signed-out Book Now shows both choices and never reads a member profile', async () => {
+  guestSession(); await render();
+  const view = screenText();
+  expect(view).toContain('Continue as guest'); expect(view).toContain('Sign in & checkout');
+  expect(view).not.toContain('Review booking');
+  expect(getBookableEvent).toHaveBeenCalledWith('conference', true);
+  expect(getMyProfile).not.toHaveBeenCalled();
+  expect(navigation.navigate).not.toHaveBeenCalled();
+});
+
+test('guest completes a free native booking and returns to public events', async () => {
+  guestSession(); await render(); await press('Continue as guest'); await guestDetails(); await confirm();
+  expect(createEventBooking).toHaveBeenCalledWith('conference', expect.objectContaining({ name: 'Visitor', email: 'visitor@example.test', noOfPersons: 1 }), true);
+  expect(checkEventBooking).toHaveBeenCalledWith('conference', expect.any(Object), true);
+  expect(getMyProfile).not.toHaveBeenCalled(); expect(mockLogin).not.toHaveBeenCalled();
+  expect(JSON.stringify(tree.toJSON())).toContain('Booking confirmed');
+  await press('Back to events');
+  expect(navigation.navigate).toHaveBeenLastCalledWith('PublicExplore', { section: 'events' });
+});
+
+test('Android Back leaves policy screens alone and preserves the booking review until focused again', async () => {
+  const addListener = jest.spyOn(BackHandler, 'addEventListener');
+  guestSession(); await render(); await press('Continue as guest'); await guestDetails(); await press('Review booking');
+  const back = () => {
+    const calls = addListener.mock.calls.filter(([event]) => event === 'hardwareBackPress');
+    return calls[calls.length - 1][1]();
+  };
+  navigation.isFocused.mockReturnValue(false);
+  await act(async () => { expect(back()).toBe(false); });
+  expect(screenText()).toContain('Confirm booking');
+  navigation.isFocused.mockReturnValue(true);
+  await act(async () => { expect(back()).toBe(true); });
+  expect(screenText()).toContain('Review booking');
+  expect(inputs()[0].props.value).toBe('Visitor');
+  await act(async () => { expect(back()).toBe(true); });
+  expect(screenText()).toContain('Continue as guest');
+  addListener.mockRestore();
+});
+
+test('priced guest booking uses the server total and the existing payment checkout', async () => {
+  guestSession();
+  (getBookableEvent as jest.Mock).mockResolvedValue({ id: 'conference', title: 'Conference', price: 1000, amount: 1000, hasMemberRate: true, memberPrice: 500 });
+  (createEventBooking as jest.Mock).mockResolvedValue({ bookingRef: 'GUEST-PAID', payment: { status: 'pending' }, totalAmount: 1000 });
+  await render(); await press('Continue as guest'); await guestDetails(); await press('Review booking'); await press('Pay ₹1,000 and confirm');
+  expect(createEventBooking).toHaveBeenCalledWith('conference', expect.not.objectContaining({ amount: expect.anything() }), true);
+  expect(navigation.navigate).toHaveBeenCalledWith('PaymentCheckout', { orderType: 'event_booking', bookingRef: 'GUEST-PAID', eventId: 'conference' });
+  expect(getMyProfile).not.toHaveBeenCalled();
+});
+
+test.each([true, false])('inline sign-in refreshes the server rate, active paid membership: %s', async active => {
+  guestSession();
+  (getBookableEvent as jest.Mock).mockImplementation(async (_id: string, guest: boolean) => ({ id: 'conference', title: 'Conference', price: 1000, amount: !guest && active ? 500 : 1000, memberPrice: 500, hasMemberRate: true, memberRateApplied: !guest && active, memberSaving: !guest && active ? 500 : 0 }));
+  (api.post as jest.Mock).mockResolvedValue(loginResponse);
+  await render(); await memberCredentials(); await press('Sign in & checkout');
+  expect(api.post).toHaveBeenCalledWith('/auth/login', { email: 'member@example.test', password: 'test-password', portal: 'member' });
+  expect(mockLogin).toHaveBeenCalledWith({ fullName: 'Member' }, 'new-member-token', 'member');
+  expect(getBookableEvent).toHaveBeenLastCalledWith('conference', false);
+  expect(navigation.navigate).not.toHaveBeenCalled();
+  await guestDetails(); await press('Review booking');
+  const payLabel = active ? 'Pay ₹500 and confirm' : 'Pay ₹1,000 and confirm';
+  expect(JSON.stringify(tree.toJSON())).toContain(payLabel);
+  await press(payLabel);
+  expect(createEventBooking).toHaveBeenCalledWith('conference', expect.any(Object), false);
+});
+
+test('incorrect member credentials keep both choices available', async () => {
+  guestSession(); (api.post as jest.Mock).mockRejectedValue({ response: { data: { message: 'Invalid email or password' } } });
+  await render(); await memberCredentials(); await press('Sign in & checkout');
+  expect(screenText()).toContain('Invalid email or password');
+  expect(mockLogin).not.toHaveBeenCalled(); expect(createEventBooking).not.toHaveBeenCalled();
+  await press('Continue as guest'); expect(JSON.stringify(tree.toJSON())).toContain('Review booking');
+});
+
+test('a failed member-price refresh blocks checkout and retries without posting the password again', async () => {
+  guestSession(); (api.post as jest.Mock).mockResolvedValue(loginResponse);
+  await render(); await memberCredentials();
+  (getBookableEvent as jest.Mock).mockRejectedValueOnce(new Error('Price unavailable'));
+  await press('Sign in & checkout');
+  expect(screenText()).toContain('Price unavailable');
+  expect(JSON.stringify(tree.toJSON())).not.toContain('Review booking');
+  await press('Continue with membership rate');
+  expect(api.post).toHaveBeenCalledTimes(1); expect(JSON.stringify(tree.toJSON())).toContain('Review booking');
+});
+
+test('admin credentials cannot be used for the paid member option', async () => {
+  guestSession(); (api.post as jest.Mock).mockResolvedValue({ data: { data: { token: 'admin-token', role: 'super_admin' } } });
+  await render(); await memberCredentials(); await press('Sign in & checkout');
+  expect(mockLogin).not.toHaveBeenCalled(); expect(createEventBooking).not.toHaveBeenCalled();
+  expect(screenText()).toContain('Use your ACTIV member account');
+});
+
+test('a saved administrator session is not sent with a guest booking', async () => {
+  (getAuthToken as jest.Mock).mockResolvedValue('admin-token'); (getUserRole as jest.Mock).mockResolvedValue('super_admin');
+  await render(); await press('Continue as guest'); await guestDetails(); await confirm();
+  expect(getBookableEvent).toHaveBeenCalledWith('conference', true);
+  expect(createEventBooking).toHaveBeenCalledWith('conference', expect.any(Object), true);
+  expect(getMyProfile).not.toHaveBeenCalled();
+});
+
+test('forgot-password remembers this booking for the existing login return', async () => {
+  guestSession(); await render(); await press('Forgot password?');
+  expect(navigation.navigate).toHaveBeenCalledWith('ForgotPassword', { portal: 'member' });
+  expect(takePublicAction()).toEqual({ name: 'EventBooking', params: { eventId: 'conference' } });
+});
+
+test('guest payment return opens the existing ticket without asking for sign-in or a second booking', async () => {
+  guestSession();
+  (getEventBooking as jest.Mock).mockResolvedValueOnce({ bookingRef: 'GUEST-DONE', eventId: 'conference', status: 'active', payment: { status: 'paid' }, totalAmount: 1000 });
+  await act(async () => { tree = Renderer.create(<EventBookingScreen navigation={navigation} route={{ params: { eventId: 'conference', ref: 'GUEST-DONE' } }} />); });
+  expect(JSON.stringify(tree.toJSON())).toContain('Booking confirmed');
+  expect(JSON.stringify(tree.toJSON())).not.toContain('Continue as guest');
+  expect(getMyProfile).not.toHaveBeenCalled(); expect(createEventBooking).not.toHaveBeenCalled();
+  await press('Back to events'); expect(navigation.navigate).toHaveBeenLastCalledWith('PublicExplore', { section: 'events' });
 });

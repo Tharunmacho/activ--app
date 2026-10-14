@@ -6,6 +6,9 @@ import type { PublicAction } from '../utils/publicBrowse';
 type Destination = { name: 'EventBooking'; params: { eventId: string } } | { name: 'MembershipPlans' | 'MemberDonations' };
 let pending: { destination: Destination; at: number } | null = null;
 export const clearPublicAction = () => { pending = null; };
+export const rememberEventBooking = (eventId: string) => {
+  pending = { destination: { name: 'EventBooking', params: { eventId } }, at: Date.now() };
+};
 export const takePublicAction = (): Destination | null => {
   const value = pending;
   pending = null;
@@ -18,7 +21,10 @@ export async function openPublicAction(navigation: any, action: PublicAction) {
     const event = await getPublicEvent(action.id);
     const id = String(event?.id || event?._id || '');
     if (!id) throw new Error('This event is no longer available.');
-    destination = { name: 'EventBooking', params: { eventId: id } };
+    // The native booking screen offers guest checkout and member sign-in.
+    // Opening a public event must never require an account first.
+    navigation.navigate('EventBooking', { eventId: id });
+    return;
   } else if (action.kind === 'membership') destination = { name: 'MembershipPlans' };
   else if (action.kind === 'donate') destination = { name: 'MemberDonations' };
   const [token, role] = await Promise.all([getAuthToken(), getUserRole()]);

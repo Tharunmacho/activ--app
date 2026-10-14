@@ -65,7 +65,7 @@ jest.mock('../src/services/api', () => {
     delete: jest.fn((url: string) => respond(url)),
     interceptors: { request: { use: jest.fn() }, response: { use: jest.fn() } },
   };
-  return { __esModule: true, default: inst, STORAGE_KEYS: { AUTH_TOKEN: 't', USER_DATA: 'u', USER_ROLE: 'r' } };
+  return { __esModule: true, default: inst, getAuthToken: jest.fn().mockResolvedValue('member-token'), getUserRole: jest.fn().mockResolvedValue('member'), STORAGE_KEYS: { AUTH_TOKEN: 't', USER_DATA: 'u', USER_ROLE: 'r' } };
 });
 
 jest.mock('../src/services/publicContent', () => ({

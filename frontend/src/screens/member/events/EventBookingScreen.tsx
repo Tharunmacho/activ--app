@@ -10,6 +10,9 @@ import {
   EventTicket3D, EventCalendar3D, PREMIUM_OVERLAP, FitImage,
 } from '../../../ui';
 import { getBookableEvent, createEventBooking, getEventBooking, getMyProfile, checkEventBooking } from '../../../services/memberApi';
+import { getAuthToken, getUserRole } from '../../../services/api';
+import { clearPublicAction, openPublicAction } from '../../../services/publicNavigation';
+import EventBookingChoice from './EventBookingChoice';
 import { WEBSITE_PATHS, websiteUrl } from '../../../config/website.config';
 import { openPublicAttachment, openWebsitePage } from '../../../services/websiteNavigation';
 import { QrCode } from '../../admin/super/events/qr';
@@ -20,8 +23,8 @@ import { RegistrationFields } from './RegistrationFields';
 import { whereOf, googleCalendarUrl, directionsUrl, shareLine, formatWhen } from './eventFormat';
 
 /**
- * Book seats — the website's EventBookingPage (member shell), same booking
- * system as the public site, attached to the member by their token.
+ * Book seats through the website's shared guest/member booking system.
+ * Visitors choose guest checkout or member sign-in inside this screen.
  *
  *   GET  /event-bookings/event/:eventId          price for THIS caller, seats left
  *   POST /event-bookings/event/:eventId/check    "already booked" before writing
@@ -32,8 +35,8 @@ import { whereOf, googleCalendarUrl, directionsUrl, shareLine, formatWhen } from
  * handed to checkout (PaymentCheckout, event_booking) — the payment area.
  *
  * Validation is the website's (and so the server's) rules, no stricter: name,
- * a valid email, a 10-digit mobile starting 6–9; participant rows optional,
- * but a typed email / mobile must be valid and two participant rows may not
+ * a valid email, a 10-digit mobile starting 6–9; every participant is required,
+ * every email / mobile must be valid and two participant rows may not
  * repeat each other. "Already booked" answers from /check land under the
  * field they are about (`fields: { email, phone, 'participants.N.email' … }`).
  *
@@ -251,7 +254,8 @@ const EventBookingScreen = ({ navigation, route }: any) => {
   const now = useEventClock();
   const scroll = useRef<ScrollView>(null);
   const busy = useRef(false);
-  const [step, setStep] = useState<'form' | 'review'>('form');
+  const [step, setStep] = useState<'choice' | 'form' | 'review'>('choice');
+  const [signedIn, setSignedIn] = useState(false);
   const [answers, setAnswers] = useState<RegistrationAnswers>({});
   const [checking, setChecking] = useState(false);
   const [statusError, setStatusError] = useState('');
@@ -280,13 +284,17 @@ const EventBookingScreen = ({ navigation, route }: any) => {
       const byRef = initialRef ? await getEventBooking(initialRef) : null;
       if (initialRef && !byRef?.bookingRef) throw new Error('This booking could not be found. Check your reference and try again.');
       const id = eventId || String(byRef?.eventId || '');
+      const [token, role] = await Promise.all([getAuthToken(), getUserRole()]);
+      const memberSession = !!token && role === 'member';
       const [ev, prof] = await Promise.all([
-        getBookableEvent(id).catch((err) => { if (byRef) return { id, title: byRef.eventTitle, startAt: byRef.eventStartAt, endAt: byRef.eventEndAt, days: byRef.eventDays, venue: byRef.eventVenue, mode: byRef.mode, closed: true }; throw err; }),
-        getMyProfile().catch(() => ({})),
+        getBookableEvent(id, !memberSession).catch((err) => { if (byRef) return { id, title: byRef.eventTitle, startAt: byRef.eventStartAt, endAt: byRef.eventEndAt, days: byRef.eventDays, venue: byRef.eventVenue, mode: byRef.mode, closed: true }; throw err; }),
+        memberSession ? getMyProfile().catch(() => ({})) : Promise.resolve({}),
       ]);
       const existing = byRef;
       setEvent(ev);
       setBooking(existing);
+      setSignedIn(memberSession);
+      setStep(memberSession || existing ? 'form' : 'choice');
       setMe({ name: String(prof?.fullName || ''), email: String(prof?.email || ''), phone: String(prof?.phoneNumber || '') });
     } catch (err) {
       setError(errorText(err));
@@ -295,6 +303,21 @@ const EventBookingScreen = ({ navigation, route }: any) => {
     }
   };
   useEffect(() => { load(); }, [eventId, initialRef]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const enterForm = () => { setStep('form'); setFormError(''); scroll.current?.scrollTo({ y: 0, animated: false }); };
+  const memberSignIn = async () => {
+    const fresh = await getBookableEvent(eventId || String(event?.id || ''), false);
+    if (!fresh) throw new Error('The event could not be refreshed. Please try again.');
+    setEvent(fresh); setSignedIn(true); clearPublicAction(); enterForm();
+  };
+  const backToEvents = () => signedIn ? navigation.navigate('MemberEvents') : navigation.navigate('PublicExplore', { section: 'events' });
+  const backStep = () => {
+    if (booking || submitting || checking) return false;
+    if (step === 'review') setStep('form');
+    else if (step === 'form' && !signedIn) setStep('choice');
+    else return false;
+    scroll.current?.scrollTo({ y: 0, animated: false }); return true;
+  };
 
   /* Back from checkout (paid, abandoned or failed): re-read the ticket quietly
      so its state is the server's, not the one we left with. GET only. */
@@ -319,11 +342,11 @@ const EventBookingScreen = ({ navigation, route }: any) => {
   useEffect(() => { setParticipants(prev => Array.from({ length: count }, (_, i) => prev[i] || { name: '', email: '', phone: '' })); }, [count]);
   useEffect(() => {
     const listener = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (step !== 'review' || booking || submitting) return false;
-      setStep('form'); scroll.current?.scrollTo({ y: 0, animated: false }); return true;
+      if (!navigation.isFocused()) return false;
+      return backStep();
     });
     return () => listener.remove();
-  }, [step, booking, submitting]);
+  }, [navigation, step, booking, submitting, checking, signedIn]); // eslint-disable-line react-hooks/exhaustive-deps
   const clear = (key: string) => setErrors(prev => ({ ...prev, [key]: '' }));
   const setParticipant = (i: number, key: keyof Person, value: string) => {
     setParticipants(participants.map((row, index) => index === i ? { ...row, [key]: value } : row));
@@ -351,9 +374,9 @@ const EventBookingScreen = ({ navigation, route }: any) => {
     if (busy.current || !validate()) return;
     busy.current = true; setChecking(true); setFormError('');
     try {
-      const fresh = await getBookableEvent(effectiveId); setEvent(fresh);
+      const fresh = await getBookableEvent(effectiveId, !signedIn); setEvent(fresh);
       checkAvailability(fresh); if (!validate(fresh)) return;
-      await checkEventBooking(effectiveId, { email: me.email.trim(), phone: nationalMobile(me.phone), participants: attendees });
+      await checkEventBooking(effectiveId, { email: me.email.trim(), phone: nationalMobile(me.phone), participants: attendees }, !signedIn);
       setStep('review'); scroll.current?.scrollTo({ y: 0, animated: false });
     } catch (err) { formFailure(err); }
     finally { busy.current = false; setChecking(false); }
@@ -362,13 +385,13 @@ const EventBookingScreen = ({ navigation, route }: any) => {
     if (busy.current || !validate()) return;
     busy.current = true; setSubmitting(true); setFormError('');
     try {
-      const fresh = await getBookableEvent(effectiveId); setEvent(fresh);
+      const fresh = await getBookableEvent(effectiveId, !signedIn); setEvent(fresh);
       checkAvailability(fresh); if (!validate(fresh)) return;
       if (Number(fresh.amount ?? fresh.price ?? 0) !== unit) { setFormError('The event price has changed. Review the updated total before continuing.'); return; }
       const b = await createEventBooking(effectiveId, {
         name: me.name.trim(), email: me.email.trim().toLowerCase(), phone: nationalMobile(me.phone), noOfPersons: count, participants: attendees, responses: answers, note: note.trim() || undefined,
-      });
-      if (!b?.bookingRef) throw new Error('The booking response was incomplete. Check My registrations before retrying.');
+      }, !signedIn);
+      if (!b?.bookingRef) throw new Error('The booking response was incomplete. Check your confirmation email or contact the organiser before retrying.');
       setBooking(b); scroll.current?.scrollTo({ y: 0, animated: false });
       if (String(b.payment?.status) === 'pending' && String(b.status || 'active') === 'active') pay(b);
       else getEventBooking(String(b.bookingRef)).then(freshBooking => { if (freshBooking?.bookingRef) setBooking(freshBooking); }).catch(() => setStatusError('Your booking was saved. Refresh to load the latest ticket details.'));
@@ -389,13 +412,13 @@ const EventBookingScreen = ({ navigation, route }: any) => {
       const freshBooking = await getEventBooking(bookingRef); setBooking(freshBooking);
       const state = bookingState(freshBooking);
       if (state.settled || state.payable || state.status === 'waitlist') { setStatusError('Your booking status has changed. Review this ticket before taking another action.'); return; }
-      const fresh = await getBookableEvent(effectiveId); setEvent(fresh); checkAvailability(fresh);
+      const fresh = await getBookableEvent(effectiveId, !signedIn); setEvent(fresh); checkAvailability(fresh);
       setBooking(null); setStep('form'); setErrors({}); setFormError(''); navigation.setParams({ ref: undefined });
     } catch (err) { setStatusError(errorText(err)); }
     finally { busy.current = false; setChecking(false); }
   };
 
-  const showForm = !loading && !error && !!event && !booking && !closed && !full;
+  const showForm = !loading && !error && !!event && !booking && !closed && !full && step !== 'choice';
 
   return (
     <PremiumPage
@@ -403,9 +426,9 @@ const EventBookingScreen = ({ navigation, route }: any) => {
       header={(
         <PremiumPageHeader
           eyebrow={booking ? 'Your booking' : 'Book Now'}
-          title={booking ? 'Your ticket' : step === 'review' ? 'Review your booking' : 'Book seats'}
-          subtitle={booking ? 'Show this reference at the venue.' : 'Book early to avoid missing out.'}
-          onBack={() => { if (step === 'review' && !booking) { setStep('form'); scroll.current?.scrollTo({ y: 0, animated: false }); } else navigation.goBack(); }}
+          title={booking ? 'Your ticket' : step === 'choice' ? 'Choose how to book' : step === 'review' ? 'Review your booking' : 'Book seats'}
+          subtitle={booking ? 'Keep your reference and entry pass.' : step === 'choice' ? 'Continue as a guest or sign in for your membership rate.' : 'Book early to avoid missing out.'}
+          onBack={() => { if (!backStep()) navigation.goBack(); }}
           art={booking ? <EventTicket3D size={88} /> : <EventCalendar3D size={88} />}
         />
       )}
@@ -415,7 +438,7 @@ const EventBookingScreen = ({ navigation, route }: any) => {
         </BottomActionBar>
       ) : booking && !loading ? (
         <BottomActionBar>
-          <GradientButton label="Back to events" variant="outline" icon="event-note" onPress={() => navigation.navigate('MemberEvents')} style={{ flex: 1 }} />
+          <GradientButton label="Back to events" variant="outline" icon="event-note" onPress={backToEvents} style={{ flex: 1 }} />
         </BottomActionBar>
       ) : undefined}
     >
@@ -432,7 +455,7 @@ const EventBookingScreen = ({ navigation, route }: any) => {
                 message={error}
                 action="Activate membership"
                 actionIcon="workspace-premium"
-                onAction={() => navigation.navigate('MembershipPlans')}
+                onAction={() => openPublicAction(navigation, { kind: 'membership' })}
               />
             ) : (
               <StateView kind="error" compact title="The booking could not be loaded" message={error} onAction={load} />
@@ -441,7 +464,7 @@ const EventBookingScreen = ({ navigation, route }: any) => {
         </FadeInUp>
       ) : !event ? (
         <FadeInUp style={styles.overlap}>
-          <SurfaceCard><StateView compact art={<EventCalendar3D size={64} />} title="Event not found" message="It may have been withdrawn." action="Back to events" onAction={() => navigation.navigate('MemberEvents')} /></SurfaceCard>
+          <SurfaceCard><StateView compact art={<EventCalendar3D size={64} />} title="Event not found" message="It may have been withdrawn." action="Back to events" onAction={backToEvents} /></SurfaceCard>
         </FadeInUp>
       ) : (
         <>
@@ -470,8 +493,8 @@ const EventBookingScreen = ({ navigation, route }: any) => {
                     <Text style={styles.priceStripValue}>{unit > 0 ? money(unit) : 'Free'}{unit > 0 ? <Text style={styles.small}>  per seat</Text> : null}</Text>
                     {event?.memberRateApplied && Number(event?.memberSaving) > 0 ? (
                       <Text style={styles.saveText}>Member rate — you save {money(Number(event.memberSaving))} per seat <Text style={styles.strike}>{money(Number(event?.price))}</Text></Text>
-                    ) : event?.hasMemberRate && !event?.memberRateApplied && Number(event?.memberPrice) < Number(event?.price) ? (
-                      <Text style={styles.memberHint} onPress={() => navigation.navigate('MembershipPlans')}>Members pay {money(Number(event.memberPrice))} — activate your membership</Text>
+                    ) : step !== 'choice' && event?.hasMemberRate && !event?.memberRateApplied && Number(event?.memberPrice) < Number(event?.price) ? (
+                      <Text style={styles.memberHint} onPress={() => { if (signedIn) navigation.navigate('MembershipPlans'); else { setStep('choice'); scroll.current?.scrollTo({ y: 0, animated: false }); } }}>Members pay {money(Number(event.memberPrice))} — {signedIn ? 'activate your membership' : 'sign in for your member rate'}</Text>
                     ) : null}
                   </View>
                   {event?.registrationClosesAt ? (
@@ -495,7 +518,7 @@ const EventBookingScreen = ({ navigation, route }: any) => {
             </SurfaceCard>
           </FadeInUp>
 
-          {!booking ? <View style={styles.steps}>{['Details', 'Review', 'Confirmation'].map((label, index) => <View key={label} style={styles.stepItem}><Text style={[styles.stepNumber, (step === 'review' ? index <= 1 : index === 0) && styles.stepCurrent]}>{index + 1}</Text><Text style={styles.stepLabel}>{label}</Text></View>)}</View> : null}
+          {!booking && step !== 'choice' ? <View style={styles.steps}>{['Details', 'Review', 'Confirmation'].map((label, index) => <View key={label} style={styles.stepItem}><Text style={[styles.stepNumber, (step === 'review' ? index <= 1 : index === 0) && styles.stepCurrent]}>{index + 1}</Text><Text style={styles.stepLabel}>{label}</Text></View>)}</View> : null}
           {formError ? <Notice kind="danger" text={formError} style={styles.noteBox} /> : null}
           {statusError ? <Notice kind="warning" text={statusError} style={styles.noteBox} /> : null}
           {booking ? (
@@ -516,6 +539,10 @@ const EventBookingScreen = ({ navigation, route }: any) => {
                 <StateView compact art={<EventCalendar3D size={64} />} title={full ? 'Fully booked' : 'Bookings closed'} message={full ? 'This event has no seats available. Please contact the organiser.' : 'Bookings for this event have closed.'} />
               </SurfaceCard>
             </FadeInUp>
+          ) : step === 'choice' ? (
+            <View style={styles.pad}>
+              <EventBookingChoice event={{ ...event, id: effectiveId }} navigation={navigation} onGuest={() => { clearPublicAction(); enterForm(); }} onMember={memberSignIn} />
+            </View>
           ) : step === 'review' ? (
             <View style={styles.pad}>
               <SurfaceCard>
