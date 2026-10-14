@@ -1,7 +1,7 @@
 import { isUpcomingEvent } from '../../../utils/eventLifecycle';
 import { useEventClock } from '../../../utils/useEventClock';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { AppState, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
@@ -37,7 +37,7 @@ import type { ExploreContent } from '../../../services/publicContent';
  * read hides that teaser; the tiles always render (fixed fallback menu).
  */
 
-type Nav = { navigate: (route: string, params?: any) => void };
+type Nav = { navigate: (route: string, params?: any) => void; isFocused?: () => boolean; addListener?: (event: string, callback: () => void) => () => void };
 export type ExploreSection = 'intro' | 'nav' | 'news' | 'events' | 'gallery' | 'schemes' | 'zones' | 'contact' | 'legal';
 const ALL_SECTIONS: readonly ExploreSection[] = ['intro', 'nav', 'news', 'events', 'gallery', 'schemes', 'zones', 'contact', 'legal'];
 
@@ -80,6 +80,16 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
   const eventNow = useEventClock();
   const upcomingEvents = events?.filter(event => isUpcomingEvent(event, eventNow)) ?? null;
   const [page, setPage] = useState(0);
+  const [syncKey, setSyncKey] = useState(0);
+  useEffect(() => {
+    if (content) return;
+    const visible = () => (!navigation.isFocused || navigation.isFocused()) && AppState.currentState !== 'background';
+    const refresh = () => { if (visible()) setSyncKey(value => value + 1); };
+    const focus = navigation.addListener?.('focus', refresh);
+    const app = AppState.addEventListener('change', state => { if (state === 'active') refresh(); });
+    const timer = setInterval(refresh, 60000);
+    return () => { focus?.(); app.remove(); clearInterval(timer); };
+  }, [navigation, content]);
 
   useEffect(() => {
     // Guest onboarding supplies its anonymous feed; it never reads member credentials.
@@ -91,7 +101,7 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
       return;
     }
     let cancelled = false;
-    const force = refreshKey > 0;
+    const force = refreshKey > 0 || syncKey > 0;
     const safe = <T,>(p: Promise<T>, set: (v: T) => void, fallback: T) => {
       p.then((v) => { if (!cancelled) set(v); }).catch(() => { if (!cancelled) set(fallback); });
     };
@@ -102,7 +112,7 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
     if (shown.has('gallery')) safe(getGalleryStrip(8, force), (v) => setGallery(Array.isArray(v) ? v : []), []);
     if (shown.has('events')) safe(getPublicEvents(3, force), (v) => setEvents(Array.isArray(v) ? v : []), []);
     return () => { cancelled = true; };
-  }, [refreshKey, shown, content]);
+  }, [refreshKey, syncKey, shown, content]);
 
   const open = useCallback((path: string, title?: string) => {
     try {
@@ -117,14 +127,6 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
       console.warn('Opening the website viewer safely caught:', err);
     }
   }, [navigation, publicAccess, onOpenPage]);
-
-  const openExternal = useCallback(async (url: string) => {
-    try {
-      if (typeof Linking?.openURL === 'function') await Linking.openURL(url);
-    } catch (err) {
-      console.warn('External link safely caught:', err);
-    }
-  }, []);
 
   const tiles = useMemo(() => {
     const quickPaths: string[] = [WEBSITE_PATHS.about, WEBSITE_PATHS.membership, WEBSITE_PATHS.schemes, WEBSITE_PATHS.contact];
@@ -154,8 +156,8 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
       {shown.has('intro') && <>
       <PremiumSectionHeader
         title="Explore ACTIV"
-        subtitle="The association's website, right here in the app"
-        action="Website"
+        subtitle="News, moments and opportunities in your app"
+        action="Explore"
         onAction={() => open(WEBSITE_PATHS.home, 'ACTIV')}
       />
 
@@ -224,12 +226,12 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
                 {news.map((n) => (
                   <PressableScale
                     key={n.key}
-                    onPress={() => (n.external ? openExternal(n.external) : open(n.path, 'News'))}
+                    onPress={() => open(n.path, 'News')}
                     scaleTo={0.98}
                     style={{ width: cardW }}
                     contentStyle={[x.newsCard, { flex: 1 }]}
                     accessibilityRole="button"
-                    accessibilityLabel={`${n.title}. ${n.category}. Read on the website.`}
+                    accessibilityLabel={`${n.title}. ${n.category}. Read story.`}
                   >
                     <View style={x.newsImgWrap}>
                       {n.image ? (
@@ -347,7 +349,7 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
 
       {shown.has('schemes') && <View style={x.gutter}><ExploreSchemes openPage={open} /></View>}
       {shown.has('zones') && <View style={x.gutter}><ExploreZones zones={zones} openPage={open} /></View>}
-      {shown.has('contact') && <View style={x.gutter}><ExploreContact openPage={open} refreshKey={refreshKey} /></View>}
+      {shown.has('contact') && <View style={x.gutter}><ExploreContact openPage={open} refreshKey={refreshKey + syncKey} /></View>}
 
       {/* ---- page tiles */}
       {shown.has('nav') && <>
@@ -359,7 +361,7 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
               scaleTo={0.95}
               contentStyle={[x.tileShadow, { shadowColor: t.meta.colors[0] }]}
               accessibilityRole="button"
-              accessibilityLabel={`${t.label}. ${t.meta.blurb}. Opens the website.`}
+              accessibilityLabel={`${t.label}. ${t.meta.blurb}. Explore in ACTIV.`}
             >
               <LinearGradient colors={t.meta.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={x.tile}>
                 <View style={x.tileOrb} />

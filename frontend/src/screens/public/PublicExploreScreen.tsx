@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Keyboard, RefreshControl, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { AppState, FlatList, Keyboard, RefreshControl, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -71,7 +71,15 @@ export default function PublicExploreScreen({ navigation, route }: any) {
       if (!controller.signal.aborted) { setLoading(false); setRefreshing(false); }
     }
   }, [section]);
-  useEffect(() => { read(); return () => abort.current?.abort(); }, [read]);
+  useEffect(() => {
+    read();
+    const visible = () => (!navigation.isFocused || navigation.isFocused()) && AppState.currentState !== 'background';
+    const focus = navigation.addListener?.('focus', () => { if (abort.current?.signal.aborted) void read(true); });
+    const blur = navigation.addListener?.('blur', () => abort.current?.abort());
+    const subscription = AppState.addEventListener('change', state => { if (state === 'active' && visible()) void read(true); });
+    const timer = setInterval(() => { if (visible()) void read(true); }, 60000);
+    return () => { abort.current?.abort(); focus?.(); blur?.(); subscription.remove(); clearInterval(timer); };
+  }, [read, navigation]);
 
   const switchTab = (tab: ExploreSection) => {
     Keyboard.dismiss();

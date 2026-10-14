@@ -45,10 +45,10 @@ test.each([false, true])('all four public destinations and membership registrati
   await Renderer.act(async () => { screen = Renderer.create(<PublicExplore navigation={navigation} route={{ params: {} }} />); });
   for (const [title, path] of [['About ACTIV', '/about'], ['Membership', '/membership'], ['Schemes', '/schemes'], ['Contact us', '/contact']]) {
     await Renderer.act(async () => button(title).props.onPress());
-    expect(navigation.navigate).toHaveBeenLastCalledWith('WebsiteViewer', { path, title, publicAccess: true });
+    expect(navigation.navigate).toHaveBeenLastCalledWith(path === '/schemes' ? 'PublicContent' : 'PublicInfo', { path, title });
   }
   await Renderer.act(async () => button('Discover membership benefits').props.onPress());
-  expect(navigation.navigate).toHaveBeenLastCalledWith('WebsiteViewer', { path: '/membership', title: 'Membership', publicAccess: true });
+  expect(navigation.navigate).toHaveBeenLastCalledWith('PublicInfo', { path: '/membership', title: 'Membership' });
   await Renderer.act(async () => button('Become a member').props.onPress());
   expect(clearPublicAction).toHaveBeenCalledTimes(1);
   expect(navigation.navigate).toHaveBeenLastCalledWith('RegistrationStep1');
@@ -88,7 +88,7 @@ test('a state search finds its region and opens the public state page', async ()
   await Renderer.act(async () => { screen = Renderer.create(<PublicExplore navigation={navigation} route={{ params: { section: 'zones' } }} />); });
   await Renderer.act(async () => screen.root.findByType(TextInput).props.onChangeText('tamil'));
   await Renderer.act(async () => button('Explore Tamil Nadu').props.onPress());
-  expect(navigation.navigate).toHaveBeenCalledWith('WebsiteViewer', { path: '/states/tamil-nadu', title: 'Tamil Nadu', publicAccess: true });
+  expect(navigation.navigate).toHaveBeenCalledWith('PublicContent', { path: '/states/tamil-nadu', title: 'Tamil Nadu' });
 });
 
 test('failed content can be retried and a late response cannot replace another tab', async () => {
@@ -120,7 +120,7 @@ test('the public footer opens the account deletion request form without requirin
   await Renderer.act(async () => { screen = Renderer.create(<PublicExplore navigation={navigation} route={{ params: {} }} />); });
   await Renderer.act(async () => button('Delete account').props.onPress());
   expect(navigation.navigate).toHaveBeenCalledTimes(1);
-  expect(navigation.navigate).toHaveBeenCalledWith('WebsiteViewer', {
-    path: '/delete-account', title: 'Delete account', publicAccess: true,
+  expect(navigation.navigate).toHaveBeenCalledWith('PublicInfo', {
+    path: '/delete-account', title: 'Delete account',
   });
 });

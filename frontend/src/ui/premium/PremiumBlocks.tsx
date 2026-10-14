@@ -306,7 +306,7 @@ const s = StyleSheet.create({
   statRow: { flexDirection: 'row', gap: SPACE.sm, marginHorizontal: SPACE.lg },
   statFlex: { flex: 1, minWidth: 0 },
   stat: {
-    alignItems: 'flex-start', padding: SPACE.md, backgroundColor: PALETTE.white, borderRadius: 18, borderWidth: 1,
+    flexGrow: 1, alignItems: 'flex-start', padding: SPACE.md, backgroundColor: PALETTE.white, borderRadius: 18, borderWidth: 1,
     borderColor: 'rgba(226,232,240,0.9)', shadowColor: BRAND.shadowNavy, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.07, shadowRadius: 12, elevation: 2, minHeight: 104,
   },

@@ -1,17 +1,22 @@
 package com.activ
 
 import android.Manifest
+import android.app.DownloadManager
+import android.content.Context
 import android.content.ContentValues
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.pdf.PdfDocument
 import android.media.MediaScannerConnection
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.os.SystemClock
 import android.provider.MediaStore
 import android.util.Base64
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.NativeModule
+import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
@@ -20,12 +25,17 @@ import com.facebook.react.uimanager.ViewManager
 import com.facebook.react.uimanager.UIManagerHelper
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.net.URI
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.min
 
 /** All generated documents stay in the device's public Downloads directory. */
 class ReportExportModule(private val context: ReactApplicationContext) : ReactContextBaseJavaModule(context) {
   private val busy = AtomicBoolean(false)
+  private data class DownloadReceipt(val id: Long, val filename: String, val queuedAt: Long)
+  private val downloadLock = Any()
+  private val recentDownloads = mutableMapOf<String, DownloadReceipt>()
   override fun getName() = "ReportExport"
 
   private fun begin(promise: Promise): Boolean {
@@ -47,6 +57,56 @@ class ReportExportModule(private val context: ReactApplicationContext) : ReactCo
       require(bytes.size >= 4 && bytes[0] == 0x50.toByte() && bytes[1] == 0x4B.toByte()) { "Invalid Excel workbook." }
       bytes
     }
+  }
+
+  /** Public HTTPS attachments only. DownloadManager owns progress/completion;
+   * enqueueing is not evidence that the file has finished downloading. */
+  @ReactMethod
+  fun downloadPublicFile(url: String, filename: String, promise: Promise) {
+    Thread {
+      try {
+        val parsed = URI(url)
+        require(parsed.scheme.equals("https", ignoreCase = true) && !parsed.host.isNullOrBlank()
+          && parsed.rawUserInfo == null && parsed.fragment == null
+          && (parsed.port == -1 || parsed.port in 1..65535)) { "Choose a valid public HTTPS file link." }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+          check(context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+            "Allow storage access to download files to Downloads."
+          }
+        }
+        val receipt = synchronized(downloadLock) {
+          val now = SystemClock.elapsedRealtime()
+          recentDownloads.entries.removeAll { now - it.value.queuedAt > 5000 }
+          recentDownloads[url] ?: run {
+            val safeName = filename.replace(Regex("[^\\p{L}\\p{N}\\p{M}._ -]"), "-")
+              .trim('.', ' ').take(120).ifBlank { "activ-download" }
+            val extension = safeName.substringAfterLast('.', "")
+              .takeIf { it.matches(Regex("[A-Za-z0-9]{1,10}")) }?.let { ".$it" } ?: ""
+            val stem = if (extension.isEmpty()) safeName else safeName.dropLast(extension.length)
+            // A fresh destination every time; never replace an existing file.
+            val uniqueName = "${stem.take(60)}-${System.currentTimeMillis()}-${UUID.randomUUID().toString().take(8)}$extension"
+            val manager = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
+              ?: throw IllegalStateException("Android Downloads is unavailable.")
+            val request = DownloadManager.Request(Uri.parse(parsed.toASCIIString()))
+              .setTitle(safeName)
+              .setDescription("ACTIV attachment · Downloads")
+              .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, uniqueName)
+              .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            // Do not copy app authorization headers or cookies to public hosts.
+            val id = manager.enqueue(request)
+            check(id > 0) { "Android could not start this download." }
+            DownloadReceipt(id, uniqueName, now).also { recentDownloads[url] = it }
+          }
+        }
+        promise.resolve(Arguments.createMap().apply {
+          putString("id", receipt.id.toString())
+          putString("filename", receipt.filename)
+          putString("status", "started")
+        })
+      } catch (error: Exception) {
+        promise.reject("DOWNLOAD_FAILED", "The download could not be started. Check the file link, storage permission and Android Downloads, then try again.", error)
+      }
+    }.start()
   }
 
   /** Draw the complete, unscaled sheet. Membership is landscape; tax is portrait. */

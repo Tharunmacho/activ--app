@@ -43,6 +43,7 @@ jest.mock('react-native-webview', () => {
   const { View } = require('react-native');
   return { __esModule: true, WebView: View, default: View };
 });
+jest.mock('react-native-video', () => ({ __esModule: true, default: require('react-native').View }));
 // react-native-vision-camera (event check-in scanner): no native camera under
 // Jest. A plain View for <Camera>, a granted permission, a back camera, and a
 // code scanner that never fires — the screens' manual-entry path is testable.

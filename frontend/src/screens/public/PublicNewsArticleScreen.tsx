@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Image, Linking, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getPublicNewsArticle } from '../../services/publicContent';
+import { openWebsitePage } from '../../services/websiteNavigation';
 import { resolveMediaUrl } from '../../config/api.config';
 import { GlassIconButton, PressableScale } from '../../ui';
 
@@ -33,7 +34,7 @@ export default function PublicNewsArticleScreen({ slug, navigation }: { slug: st
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [slug, reload]);
-  const openSource = (url: string) => { if (/^https?:\/\//i.test(url)) void Linking.openURL(url).catch(() => setError('Could not open the link.')); };
+  const openSource = (url: string) => openWebsitePage(navigation, url, 'Original source');
   return <View style={s.screen}>
     <View style={[s.header, { paddingTop: insets.top + 12 }]}><GlassIconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => navigation.goBack()} /><Text style={s.headerTitle}>ACTIV News</Text><GlassIconButton icon="refresh" accessibilityLabel="Reload article" onPress={() => setReload(v => v + 1)} /></View>
     <ScrollView contentContainerStyle={[s.content, { paddingBottom: insets.bottom + 28 }]}>

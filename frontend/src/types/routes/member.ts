@@ -3,6 +3,8 @@
  * `RootStackParamList` (types/index.ts) merges every area's file.
  */
 export type MemberRoutes = {
+  PublicContent: { path: string; title?: string };
+  PublicInfo: { path: string; title?: string };
   /** Everything a member can open, grouped like the website's member sidebar. */
   MemberMenu: undefined;
   /** The notifications list as a stack screen (paid members are not inside the tabs). */

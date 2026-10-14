@@ -93,9 +93,9 @@ const PaidDashboardScreen = ({ navigation }: any) => {
 
   const load = useCallback(async (mode: 'load' | 'refresh' = 'load') => {
     if (mode === 'refresh') setRefreshing(true);
-    const [p, biz, comps, apps, ann, evs] = await Promise.allSettled([
+    const [p, biz, comps, apps, ann, evs, alerts, messages] = await Promise.allSettled([
       getMyProfile(), getBusinessInfo(), listMyCompanies(), getMyApplications(),
-      listAnnouncements({ limit: 6 }), listMemberEvents(),
+      listAnnouncements({ limit: 6 }), listMemberEvents(), feedUnreadCount(), getUnreadMessages(),
     ]);
     const prof = p.status === 'fulfilled' ? p.value : null;
     if (prof && !isPaidMember(prof)) {
@@ -118,6 +118,8 @@ const PaidDashboardScreen = ({ navigation }: any) => {
     setBusinessType(type);
     setUpdates(ann.status === 'fulfilled' ? asArray<any>(ann.value?.announcements) : []);
     setEvents(evs.status === 'fulfilled' ? asArray<any>(evs.value?.events) : []);
+    if (alerts.status === 'fulfilled') setBell(alerts.value);
+    if (messages.status === 'fulfilled') setUnreadMsgs(messages.value);
     setLoading(false);
     setRefreshing(false);
   }, [navigation]);
@@ -135,8 +137,6 @@ const PaidDashboardScreen = ({ navigation }: any) => {
     };
     const timer = setInterval(syncIdentity, 30000);
     const foreground = AppState.addEventListener('change', state => { if (state === 'active') void syncIdentity(); });
-    feedUnreadCount().then((n) => { if (!cancelled) setBell(n); });
-    getUnreadMessages().then((n) => { if (!cancelled) setUnreadMsgs(n); }).catch(() => null);
     return () => { cancelled = true; clearInterval(timer); foreground.remove(); };
   }, [load]));
 
@@ -213,6 +213,14 @@ const PaidDashboardScreen = ({ navigation }: any) => {
     <PremiumScrollScreen header={header} refreshing={refreshing} onRefresh={refresh}>
       {loading ? <PremiumDashboardSkeleton style={styles.overlap} /> : (
         <>
+          {/* Keep the member's live counters directly below the greeting. */}
+          <FadeInUp delay={60}>
+            <StatRow style={{ marginTop: SPACE.md, marginBottom: SPACE.sm }}>
+              <StatPill value={myEventCount} label="Events booked" icon="event-available" tone="rose" onPress={() => navigation.navigate('MemberEvents')} />
+              <StatPill value={unreadMsgs} label="Unread messages" icon="chat" tone="blue" onPress={() => navigation.navigate('MemberMessages')} />
+              <StatPill value={bell} label="New alerts" icon="notifications" tone="amber" onPress={() => navigation.navigate('MemberNotifications')} />
+            </StatRow>
+          </FadeInUp>
           {profile?.currentMembership?.message ? <PremiumCard style={styles.gutter}><Text accessibilityRole="header" style={styles.rowTitle}>Membership progression</Text><Text style={styles.rowSub}>{profile.currentMembership.message}</Text></PremiumCard> : null}
           {/* ---------------- upcoming events */}
           <PremiumSectionHeader
@@ -398,17 +406,6 @@ const PaidDashboardScreen = ({ navigation }: any) => {
           </FadeInUp>
 
           <RenewalBanner renewal={profile?.renewal} onRenew={() => navigation.navigate('MembershipPlans', { renew: true })} />
-
-          {/* ---------------- stats */}
-          <FadeInUp delay={300}>
-            <StatRow style={{ marginTop: SPACE.lg }}>
-              <StatPill value={myEventCount} label="Events booked" icon="event-available" tone="rose" onPress={() => navigation.navigate('MemberEvents')} />
-              <StatPill value={unreadMsgs} label="Unread messages" icon="chat" tone="blue" onPress={() => navigation.navigate('MemberMessages')} />
-              <StatPill value={bell} label="New alerts" icon="notifications" tone="amber" onPress={() => navigation.navigate('MemberNotifications')} />
-            </StatRow>
-          </FadeInUp>
-
-
 
           {/* ---------------- More opportunities await (website closing band) */}
           <PremiumCard style={[styles.gutter, { marginTop: SPACE.xl }]}>

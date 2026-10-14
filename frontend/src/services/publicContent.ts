@@ -8,8 +8,13 @@ const visitorApi = axios.create({ baseURL: API_BASE_URL, timeout: 20000, withCre
 export type ExploreSection = 'home' | 'events' | 'news' | 'gallery' | 'zones';
 export type ExploreContent = { events: any[]; news: any[]; gallery: any[]; zones: any[] };
 const rows = (value: any): any[] => Array.isArray(value) ? value : [];
-async function read(path: string, signal?: AbortSignal, params?: Record<string, any>) {
+export async function readPublicCms(path: string, signal?: AbortSignal, params?: Record<string, any>) {
   const response = await visitorApi.get(path, { signal, params: { scope: 'public', ...params } });
+  return response.data?.data ?? response.data;
+}
+const read = readPublicCms;
+export async function submitPublicCms(path: '/cms/contact-messages' | '/cms/leader-messages', data: any) {
+  const response = await visitorApi.post(path, data);
   return response.data?.data ?? response.data;
 }
 export async function loadExploreContent(section: ExploreSection, signal?: AbortSignal): Promise<ExploreContent> {

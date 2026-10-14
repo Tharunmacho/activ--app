@@ -1,7 +1,7 @@
 import { useEventClock } from '../../../utils/useEventClock';
 import React, { useState, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, StyleSheet, TouchableOpacity, Linking, Alert, Share } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Share } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
@@ -15,6 +15,7 @@ import {
 import { resolveMediaUrl } from '../../../config/api.config';
 import { getPublicEventDetail } from '../../../services/publicContent';
 import { openPublicAction } from '../../../services/publicNavigation';
+import { openWebsitePage } from '../../../services/websiteNavigation';
 import type { PublicAction } from '../../../utils/publicBrowse';
 import { WEBSITE_PATHS, websiteUrl } from '../../../config/website.config';
 import { QrCode } from '../../admin/super/events/qr';
@@ -92,12 +93,8 @@ function ActionPill({ icon, label, onPress }: { icon: string; label: string; onP
   );
 }
 
-const open = (url: string) => {
-  if (!url) return;
-  Linking.openURL(url).catch((err) => console.warn('Open link safely caught:', err));
-};
-
 const MemberEventDetailScreen = ({ navigation, route, publicAccess = false }: any) => {
+  const open = (url: string) => { if (url) openWebsitePage(navigation, url, 'Event information'); };
   const eventNow = useEventClock();
   const id = String(route?.params?.id || '');
   const { data: e, loading, error, reload, refreshing, refresh } = useLoad<any>(

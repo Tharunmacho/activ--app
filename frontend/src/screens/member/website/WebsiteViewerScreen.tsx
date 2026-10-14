@@ -10,7 +10,11 @@ import {
 import { WEBSITE_ORIGIN, isWebsiteUrl, publicWebsiteUrl, websiteUrl } from '../../../config/website.config';
 import { publicActionFor, publicWebsitePath } from '../../../utils/publicBrowse';
 import { openPublicAction } from '../../../services/publicNavigation';
-import PublicNewsArticleScreen from '../../public/PublicNewsArticleScreen';
+import PublicContentScreen from '../../public/PublicContentScreen';
+import PublicInfoScreen from '../../public/PublicInfoScreen';
+import PublicExploreScreen from '../../public/PublicExploreScreen';
+import PublicEventDetailScreen from '../../public/PublicEventDetailScreen';
+import { nativeContentRoute } from '../../../services/nativeContentRoute';
 
 /*
  * The in-app browser, required lazily and guarded (RULE 2.4): a build without
@@ -286,7 +290,8 @@ const s = StyleSheet.create({
 });
 
 export default function WebsiteOrArticleScreen(props: any) {
-  const path = publicWebsitePath(String(props.route?.params?.path || props.route?.params?.url || ''));
-  const article = path && /^\/news\/([^/]+)$/.exec(path);
-  return article ? <PublicNewsArticleScreen slug={article[1]} navigation={props.navigation} /> : <WebsiteViewerScreen {...props} />;
+  const destination = nativeContentRoute(String(props.route?.params?.path || props.route?.params?.url || '/'), props.route?.params?.title);
+  const Screen = destination?.name === 'PublicContent' ? PublicContentScreen : destination?.name === 'PublicInfo' ? PublicInfoScreen
+    : destination?.name === 'PublicExplore' ? PublicExploreScreen : destination?.name === 'PublicEventDetail' ? PublicEventDetailScreen : null;
+  return Screen ? <Screen {...props} route={{ ...props.route, params: destination?.params }} /> : <WebsiteViewerScreen {...props} />;
 }

@@ -32,7 +32,7 @@ export function ExploreSchemes({ openPage }: { openPage: OpenPage }) {
     <Text style={s.heading} accessibilityRole="header">Schemes</Text>
     <View style={s.schemeRow}>{[
       { title: 'Central schemes', path: '/schemes/central', detail: 'Across India', colors: ['#086552', '#21AE8B'] },
-      { title: 'State schemes', path: '/schemes/states', detail: 'In your state', colors: ['#1C2E68', '#3577DA'] },
+      { title: 'State schemes', path: '/schemes/state', detail: 'In your state', colors: ['#1C2E68', '#3577DA'] },
     ].map(item => <SurfaceCard key={item.path} padded={false} style={s.schemeCard} contentStyle={s.schemeInner}
       accessibilityLabel={'Explore ' + item.title.toLowerCase()} onPress={() => openPage(item.path, item.title)}>
       <LinearGradient colors={item.colors} style={s.bannerArt}><SiteArt kind="schemes" size={43} /></LinearGradient>

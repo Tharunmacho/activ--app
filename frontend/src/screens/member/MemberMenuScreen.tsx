@@ -136,7 +136,10 @@ const MemberMenuScreen = ({ navigation }: any) => {
     { key: 'updates', label: 'Association Updates', sub: 'News for your region', icon: 'campaign', tone: 'amber', go: () => navigation.navigate('AssociationUpdates') },
     { key: 'msgs', label: 'Messages', sub: 'Talk to other members', icon: 'chat-bubble-outline', tone: 'green', paidOnly: true, go: gated('MemberMessages') },
     { key: 'donate', label: 'Donate', sub: 'Support ACTIV · 80G receipts', icon: 'volunteer-activism', tone: 'rose', go: () => navigation.navigate('MemberDonations') },
-    { key: 'website', label: 'Explore ACTIV website', sub: 'News, gallery, zones and schemes', icon: 'public', tone: 'navy', go: () => navigation.navigate('WebsiteViewer', { path: '/', title: 'ACTIV', publicAccess: true }) },
+    { key: 'gallery', label: 'Gallery', sub: 'Community albums and photographs', icon: 'collections', tone: 'sky', go: () => navigation.navigate('PublicContent', { path: '/gallery', title: 'Gallery' }) },
+    { key: 'news', label: 'News', sub: 'Stories from the ACTIV community', icon: 'newspaper', tone: 'navy', go: () => navigation.navigate('PublicContent', { path: '/news', title: 'News' }) },
+    { key: 'zones', label: 'Zones & States', sub: 'Leadership and local updates', icon: 'public', tone: 'green', go: () => navigation.navigate('PublicContent', { path: '/zones', title: 'Zones & States' }) },
+    { key: 'schemes', label: 'Government Schemes', sub: 'Benefits, eligibility and application steps', icon: 'account-balance', tone: 'amber', go: () => navigation.navigate('PublicContent', { path: '/schemes', title: 'Schemes' }) },
   ];
   const support: Item[] = [
     { key: 'notif', label: 'Notifications', sub: 'Everything we have sent you', icon: 'notifications-none', tone: 'blue', go: () => navigation.navigate('MemberNotifications') },

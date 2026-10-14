@@ -71,6 +71,7 @@ jest.mock('../src/services/api', () => {
 jest.mock('../src/services/publicContent', () => ({
   ...jest.requireActual('../src/services/publicContent'),
   getPublicContactInfo: jest.fn(() => mockFailAll ? Promise.reject(new Error('offline')) : Promise.resolve(mockByUrl('/cms/contact-info'))),
+  readPublicCms: jest.fn((path: string) => mockFailAll ? Promise.reject(new Error('offline')) : Promise.resolve(mockByUrl(path))),
 }));
 
 const nav = () => ({
@@ -163,15 +164,15 @@ describe.each([[false, false], [false, true], [true, false], [true, true]])('das
       await flush(); await flush();
     });
     const expected = ['upcoming events', ...(paid ? ['association updates'] : []), 'quick actions', 'from the gallery', 'latest news', 'schemes', 'zones', 'my documents', 'contact us'];
-    const headings = () => tree.root.findAllByType(Text).filter((node: any) => node.props.children !== 'Schemes' || node.props.accessibilityRole === 'header')
+    const headings = () => tree.root.findAllByType(Text).filter((node: any) => !['Schemes', 'Contact us'].includes(node.props.children) || node.props.accessibilityRole === 'header')
       .map((node: any) => String(node.props.children).toLowerCase())
       .filter((label: string) => expected.includes(label));
     expect(headings()).toEqual(expected);
     for (const [title, path] of [['About ACTIV', '/about'], ['Membership', '/membership'], ['Schemes', '/schemes'], ['Contact us', '/contact']]) {
-      const destination = tree.root.findAll((node: any) => node.props.accessibilityLabel === title && typeof node.props.onPress === 'function')[0];
+      const destination = tree.root.findAll((node: any) => (node.props.accessibilityLabel === title || String(node.props.accessibilityLabel).startsWith(title + '.')) && typeof node.props.onPress === 'function')[0];
       expect(destination).toBeTruthy();
       await ReactTestRenderer.act(async () => destination.props.onPress());
-      expect(navigation.navigate).toHaveBeenLastCalledWith('WebsiteViewer', { path, title, publicAccess: true });
+      expect(navigation.navigate).toHaveBeenLastCalledWith(path === '/schemes' ? 'PublicContent' : 'PublicInfo', { path, title });
     }
     const refresh = tree.root.findAll((node: any) => typeof node.props.onRefresh === 'function')[0].props.onRefresh;
     await ReactTestRenderer.act(async () => { await refresh(); await flush(); await flush(); });
@@ -184,6 +185,11 @@ describe.each([[false, false], [false, true], [true, false], [true, true]])('das
     await ReactTestRenderer.act(async () => { documents.props.onPress(); });
     expect(navigation.navigate).toHaveBeenCalledWith('MemberDocuments');
     if (paid) {
+      const labels = tree.root.findAllByType(Text).map((node: any) => String(node.props.children));
+      for (const label of ['Events booked', 'Unread messages', 'New alerts']) {
+        expect(labels.filter((text: string) => text === label)).toHaveLength(1);
+        expect(labels.indexOf(label)).toBeLessThan(labels.indexOf('Upcoming Events'));
+      }
       const { PremiumCard, GradientButton, SPACE, PALETTE } = require('../src/ui');
       const upgrade = tree.root.findAllByType(PremiumCard).find((card: any) => card.findAllByType(Text).some((n: any) => n.props.children === 'Upgrade your membership'));
       expect(StyleSheet.flatten(upgrade.props.style).marginHorizontal).toBe(SPACE.lg);

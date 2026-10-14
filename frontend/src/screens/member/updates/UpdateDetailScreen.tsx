@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Linking, Share } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Share } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
   Skeleton, Badge, BottomActionBar, PALETTE, SPACE, SIZE, TYPE, shortDate, timeAgo, BRAND,
@@ -9,6 +9,8 @@ import { getAnnouncement } from '../../../services/memberApi';
 import { resolveMediaUrl } from '../../../config/api.config';
 import { useLoad } from '../useLoad';
 import { categoryStyle, categoryGlyph, htmlToText } from './updateFormat';
+import { openWebsitePage } from '../../../services/websiteNavigation';
+import { Body } from '../../public/PublicContentKit';
 
 /**
  * One Association Update — website `features/member/pages/AnnouncementDetail.tsx`.
@@ -30,7 +32,7 @@ const UpdateDetailScreen = ({ navigation, route }: any) => {
 
   const openAttachment = async () => {
     if (!attachment) return;
-    try { await Linking.openURL(attachment); } catch (err) { console.warn('Open attachment safely caught:', err); }
+    openWebsitePage(navigation, attachment, update?.attachmentLabel || 'Attachment');
   };
 
   const share = async () => {
@@ -113,7 +115,7 @@ const UpdateDetailScreen = ({ navigation, route }: any) => {
                   <Text style={styles.summary} selectable>{update.summary}</Text>
                 </View>
               ) : null}
-              {body ? <Text style={styles.text} selectable>{body}</Text> : null}
+              {body ? <Body value={update.body} navigation={navigation} /> : null}
               {attachment ? (
                 <TouchableOpacity style={styles.attach} onPress={openAttachment} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={`Open ${update?.attachmentLabel || 'attachment'}`}>
                   <GradientGlyph icon="attach-file" tone="blue" size={40} />

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, StyleSheet, Linking, Share, ScrollView, BackHandler } from 'react-native';
+import { View, Text, StyleSheet, Share, ScrollView, BackHandler } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
@@ -11,6 +11,7 @@ import {
 } from '../../../ui';
 import { getBookableEvent, createEventBooking, getEventBooking, getMyProfile, checkEventBooking } from '../../../services/memberApi';
 import { WEBSITE_PATHS, websiteUrl } from '../../../config/website.config';
+import { openPublicAttachment, openWebsitePage } from '../../../services/websiteNavigation';
 import { QrCode } from '../../admin/super/events/qr';
 import { useEventClock } from '../../../utils/useEventClock';
 import { resolveMediaUrl } from '../../../config/api.config';
@@ -46,11 +47,6 @@ type Person = { name: string; email: string; phone: string };
 type Errors = Record<string, string>;
 
 
-const open = (url?: string) => {
-  if (!url) return;
-  Linking.openURL(url).catch((err) => console.warn('Open link safely caught:', err));
-};
-
 function Stepper({ value, min, max, onChange }: { value: number; min: number; max: number; onChange: (n: number) => void }) {
   return (
     <View style={styles.stepper}>
@@ -77,7 +73,7 @@ function TicketAction({ icon, label, onPress }: { icon: string; label: string; o
 }
 
 /** The confirmation, drawn as a real ticket: gradient stub, perforation, details, torn foot. */
-function Ticket({ b, event, fallbackEmail, onPay, onRebook }: { b: any; event: any; fallbackEmail: string; onPay: () => void; onRebook: () => void }) {
+function Ticket({ b, event, fallbackEmail, onPay, onRebook, open }: { b: any; event: any; fallbackEmail: string; onPay: () => void; onRebook: () => void; open: (url: string) => void }) {
   const now = useEventClock();
   const { status, payment: payStatus, payable, settled, headline, paymentLabel, expired } = bookingState(b, now);
   const copy = settled
@@ -203,7 +199,7 @@ function Ticket({ b, event, fallbackEmail, onPay, onRebook }: { b: any; event: a
           </View>
         )) : <Text style={[styles.small, { marginTop: SPACE.md }]}>Your signed entry pass is available in your confirmation email. You can also quote your booking reference to event staff.</Text>) : null}
         {settled && b?.whatsappChannelUrl ? <GradientButton label="Join the event WhatsApp group or channel" icon="chat" onPress={() => open(String(b.whatsappChannelUrl))} style={{ marginTop: SPACE.md }} /> : null}
-        {settled ? asArray<any>(b?.attachments).map((file, index) => <GradientButton key={file.id || index} label={file.title || file.name || 'Event document ' + (index + 1)} icon="description" variant="outline" onPress={() => open(resolveMediaUrl(file.url || file.fileUrl))} style={{ marginTop: SPACE.sm }} />) : null}
+        {settled ? asArray<any>(b?.attachments).map((file, index) => <GradientButton key={file.id || index} label={'Download ' + (file.title || file.name || 'event document ' + (index + 1))} icon="download" variant="outline" onPress={() => openPublicAttachment(resolveMediaUrl(file.url || file.fileUrl))} style={{ marginTop: SPACE.sm }} />) : null}
 
         <Text style={styles.tSection}>BOOKING DETAILS</Text>
         {b?.bookedBy?.name ? <ReceiptLine label="Name" value={b.bookedBy.name} /> : null}
@@ -250,6 +246,7 @@ function Ticket({ b, event, fallbackEmail, onPay, onRebook }: { b: any; event: a
 }
 
 const EventBookingScreen = ({ navigation, route }: any) => {
+  const open = (url: string) => { if (url) openWebsitePage(navigation, url, 'Event information'); };
   const eventId = String(route?.params?.eventId || '');
   const now = useEventClock();
   const scroll = useRef<ScrollView>(null);
@@ -504,6 +501,7 @@ const EventBookingScreen = ({ navigation, route }: any) => {
           {booking ? (
             <FadeInUp delay={140} style={styles.pad}>
               <Ticket
+                open={open}
                 b={booking}
                 event={event}
                 fallbackEmail={me.email}
