@@ -134,8 +134,8 @@ export const getThread = async (conversationId: string, before?: string) =>
   unwrap<any>(await api.get(`/messages/${encodeURIComponent(conversationId)}`, { params: before ? { before } : {} }),
     { conversation: null, messages: [], hasMore: false });
 
-export const sendMessage = async (conversationId: string, body: string, attachmentUrl = '') =>
-  unwrap<any>(await api.post(`/messages/${encodeURIComponent(conversationId)}`, { body, attachmentUrl }), {});
+export const sendMessage = async (conversationId: string, body: string, attachmentUrl = '', attachment?: { token?: string }) =>
+  unwrap<any>(await api.post(`/messages/${encodeURIComponent(conversationId)}`, { body, attachmentUrl, ...(attachment?.token ? { attachment: { token: attachment.token } } : {}) }), {});
 
 export const markConversationRead = async (conversationId: string) => {
   try { await api.post(`/messages/${encodeURIComponent(conversationId)}/read`); } catch { /* best effort */ }
@@ -146,6 +146,15 @@ export const uploadMessageImage = async (uri: string, type = 'image/jpeg', name 
   const form = new FormData();
   form.append('image', { uri, type, name } as any);
   return unwrap<any>(await api.post('/messages/attachment', form, { headers: { 'Content-Type': 'multipart/form-data' } }), {});
+};
+
+export const uploadMessageAttachment = async (file: { uri: string; type: string; name: string }, onProgress?: (percent: number) => void) => {
+  const form = new FormData();
+  form.append('file', file as any);
+  return unwrap<any>(await api.post('/messages/attachment', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: event => { if (event.total) onProgress?.(Math.min(99, Math.round(event.loaded * 100 / event.total))); },
+  }), {});
 };
 
 /* ------------------------------------------------------------------ events */

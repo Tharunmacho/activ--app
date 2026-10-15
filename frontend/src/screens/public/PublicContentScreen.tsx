@@ -13,7 +13,7 @@ import { galleryMediaUrl, galleryPath, galleryPhotos, relatedGalleryAlbums } fro
 import { ContentImage } from '../../ui/ContentImage';
 import { ContentLayout, Body, Photo, ContentMedia, ActionLink, ExtraFields, Heading, contentStyles as s, contentText } from './PublicContentKit';
 import PublicRegionContent from './PublicRegionContent';
-import { NewsArticleContent } from './PublicNewsArticleScreen';
+import { NewsArticleContent, newsMetadata } from './PublicNewsArticleScreen';
 
 export default function PublicContentScreen({ navigation, route }: any) {
   const path = String(route?.params?.path || '');
@@ -26,7 +26,8 @@ export default function PublicContentScreen({ navigation, route }: any) {
   const districts = useMemo(() => Array.from(new Set<string>((page?.items || []).map(item => item.district).filter(value => typeof value === 'string' && value.trim()))).sort(), [page?.items]);
   const records = useMemo(() => (page?.items || []).filter(item => (!category || item.category === category) && (!district || item.district === district) && (!query.trim() || [item.title, item.caption, item.summary, item.category, item.sector, item.state, item.district, item.location, item.label, item.name, ...(Array.isArray(item.states) ? item.states : []).map((state: any) => state?.name)].join(' ').toLowerCase().includes(query.trim().toLowerCase()))), [page?.items, category, district, query]);
   const list = page && ['news', 'gallery', 'schemeStates', 'schemes'].includes(page.kind);
-  return <ContentLayout navigation={navigation} title={page?.title || route?.params?.title || 'ACTIV'} art={page?.kind === 'gallery' || page?.kind === 'album' ? 'gallery' : page?.kind?.startsWith('scheme') ? 'schemes' : page?.kind === 'region' || page?.kind === 'zones' ? 'zones' : 'news'} resource={resource}>
+  return <ContentLayout navigation={navigation} title={page?.title || route?.params?.title || 'ACTIV'} subtitle={page?.kind === 'article' ? newsMetadata(page.item) : undefined}
+    readingPanel={!list} art={page?.kind === 'gallery' || page?.kind === 'album' ? 'gallery' : page?.kind?.startsWith('scheme') ? 'schemes' : page?.kind === 'region' || page?.kind === 'zones' ? 'zones' : 'news'} resource={resource}>
     {list && <>
       {page.kind.startsWith('scheme') && <View style={x.schemeTabs}>{[['/schemes/central', 'Central schemes'], ['/schemes/state', 'State schemes']].map(([href, label]) => {
         const selected = href === '/schemes/state' ? path.includes('/state') : !path.includes('/state');

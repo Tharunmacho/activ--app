@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Linking, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Keyboard, Platform, ActivityIndicator, Linking, ScrollView, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -9,7 +9,9 @@ import {
   Notice, PALETTE, SPACE, SIZE, TYPE, asArray,
   PremiumTopBar, GradientAvatar, GradientGlyph, CardSkeletons, StateView, ArtBadge, ChatBubbles3D, PressableScale,
   PREMIUM_GRADIENTS, BRAND, FitImage } from '../../../ui';
-import { getThread, sendMessage, markConversationRead, uploadMessageImage } from '../../../services/memberApi';
+import { getThread, sendMessage, markConversationRead, uploadMessageAttachment } from '../../../services/memberApi';
+import { ChatDraftAttachment, ChatAttachment, pickChatDocument, validateChatFile, fileSizeLabel, downloadChatAttachment } from '../../../services/messageAttachments';
+import { useThreadKeyboard } from './useThreadKeyboard';
 import { resolveMediaUrl } from '../../../config/api.config';
 import { memberFacing, OPENERS, EMOJI, timeOf } from './messageCopy';
 import { useMemberAccess } from '../useMemberAccess';
@@ -73,12 +75,33 @@ function DaySeparator({ label }: { label: string }) {
 
 function Bubble({ m, tail }: { m: any; tail: boolean }) {
   const mine = !!m?.mine;
-  const img = m?.attachmentUrl ? resolveMediaUrl(m.attachmentUrl) : '';
+  const [downloading, setDownloading] = useState(false);
+  const document = m?.attachment?.kind === 'file' ? m.attachment as ChatAttachment : null;
+  const img = !document && m?.attachmentUrl ? resolveMediaUrl(m.attachmentUrl) : '';
+  const openDocument = async () => {
+    if (!document || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadChatAttachment(document);
+      if (Platform.OS === 'android') Alert.alert('Document saved', `${document.name}\nFind it in Downloads.`);
+    } catch (error) { Alert.alert('Could not download', memberFacing(error, 'Please try downloading the document again.')); }
+    finally { setDownloading(false); }
+  };
   const openImage = () => {
     try { Linking.openURL(img).catch(() => null); } catch { /* nothing to open */ }
   };
   const content = (
     <>
+      {document ? (
+        <TouchableOpacity onPress={openDocument} disabled={downloading} accessibilityRole="button" accessibilityLabel={`Download ${document.name}`} style={styles.document}>
+          {downloading ? <ActivityIndicator color={mine ? PALETTE.white : PALETTE.blue} /> : <Icon name="description" size={28} color={mine ? PALETTE.white : PALETTE.blue} />}
+          <View style={styles.documentText}>
+            <Text style={[styles.documentName, mine && styles.white]} numberOfLines={2}>{document.name}</Text>
+            <Text style={[styles.documentHint, mine && styles.white]}>{fileSizeLabel(document.size)} · {downloading ? 'Downloading…' : 'Tap to download'}</Text>
+          </View>
+          <Icon name="download" size={19} color={mine ? PALETTE.white : PALETTE.blue} />
+        </TouchableOpacity>
+      ) : null}
       {img ? (
         <TouchableOpacity activeOpacity={0.9} onPress={openImage} accessibilityRole="imagebutton" accessibilityLabel="Open picture">
           <FitImage uri={img} style={[styles.img, !m?.body && { marginBottom: SPACE.xs }]} />
@@ -116,8 +139,6 @@ function Bubble({ m, tail }: { m: any; tail: boolean }) {
   );
 }
 
-type Picture = { uri: string; type: string; name: string };
-
 const MessageThreadScreen = ({ navigation, route }: any) => {
   const { profile } = useMemberAccess();
   const conversationId = String(route?.params?.conversationId || '');
@@ -128,16 +149,28 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
   const [older, setOlder] = useState(false);
   const [error, setError] = useState('');
   const [text, setText] = useState('');
-  const [picture, setPicture] = useState<Picture | null>(null);
+  const [picture, setPicture] = useState<ChatDraftAttachment | null>(null);
+  const [attachOpen, setAttachOpen] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const uploaded = useRef<ChatAttachment | null>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState('');
   const [selection, setSelection] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
   const listRef = useRef<FlatList>(null);
   const focused = useRef(false);
+  const followLatest = useRef(true);
+  const dragging = useRef(false);
+  const loadingOlder = useRef(false);
+  const [showLatest, setShowLatest] = useState(false);
+  const keyboard = useThreadKeyboard();
   // The composer is the screen's bottom edge — pad it past the home indicator.
   const insets = useSafeAreaInsets();
-  const composerBottom = Math.max(Number(insets?.bottom || 0), SPACE.md);
+  const composerBottom = keyboard.visible ? SPACE.sm : Math.max(Number(insets?.bottom || 0), SPACE.md);
+  const scrollLatest = useCallback((animated = false) => {
+    if (followLatest.current && !loadingOlder.current) listRef.current?.scrollToEnd({ animated });
+  }, []);
+  const jumpToLatest = () => { followLatest.current = true; setShowLatest(false); scrollLatest(true); };
 
   const load = useCallback(async (quiet = false) => {
     if (!conversationId) return;
@@ -146,7 +179,12 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
       const res = await getThread(conversationId);
       const list = asArray<any>(res?.messages);
       // A quiet poll only ever grows the thread — it never drops "load earlier" pages.
-      setMessages((prev) => (quiet && prev.length > list.length ? prev : list));
+      setMessages((prev) => {
+        if (!quiet) return list;
+        const merged = new Map(prev.map(message => [String(message.id || message._id), message]));
+        list.forEach(message => merged.set(String(message.id || message._id), message));
+        return [...merged.values()].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+      });
       if (!quiet) setHasMore(!!res?.hasMore);
       setOther(res?.conversation?.withMember || null);
       markConversationRead(conversationId);
@@ -157,7 +195,7 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
     }
   }, [conversationId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { followLatest.current = true; setShowLatest(false); load(); }, [load]);
 
   useFocusEffect(useCallback(() => {
     focused.current = true;
@@ -172,12 +210,16 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
 
   const loadOlder = async () => {
     if (!hasMore || older || !messages.length) return;
+    followLatest.current = false;
+    loadingOlder.current = true;
+    setShowLatest(true);
     setOlder(true);
     try {
       const res = await getThread(conversationId, String(messages[0]?.at || ''));
       setMessages((prev) => [...asArray<any>(res?.messages), ...prev]);
       setHasMore(!!res?.hasMore);
     } catch { /* keep what is shown */ } finally {
+      loadingOlder.current = false;
       setOlder(false);
     }
   };
@@ -214,35 +256,58 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
     setSendError('');
     try {
       let url = '';
+      let attachment: ChatAttachment | null = null;
       if (picture) {
-        const up = await uploadMessageImage(picture.uri, picture.type, picture.name);
+        setUploadProgress(0);
+        const up = uploaded.current || await uploadMessageAttachment(picture, setUploadProgress);
+        uploaded.current = up;
+        attachment = up;
         url = String(up?.url || '');
-        if (!url) throw new Error('The picture could not be uploaded');
+        if (!url || !up.token) throw new Error('The attachment could not be uploaded. Choose the file again.');
       }
-      const msg = await sendMessage(conversationId, body, url);
+      setUploadProgress(null);
+      const msg = await sendMessage(conversationId, body, url, attachment || undefined);
+      followLatest.current = true;
+      setShowLatest(false);
       setText('');
       setPicture(null);
+      uploaded.current = null;
       if (msg && (msg.id || msg.body || msg.attachmentUrl)) setMessages((prev) => [...prev, msg]);
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
+      scrollLatest(true);
     } catch (err) {
       setSendError(memberFacing(err, 'That message could not be sent'));
     } finally {
       setSending(false);
+      setUploadProgress(null);
     }
   };
 
   const pickPicture = () => {
+    Keyboard.dismiss();
+    setAttachOpen(false);
     try {
       if (typeof launchImageLibrary !== 'function') return;
       launchImageLibrary({ mediaType: 'photo', quality: 0.8, maxWidth: 1600, maxHeight: 1600 }, (res) => {
         const asset = res?.assets?.[0];
         if (!asset?.uri || res?.didCancel) return;
-        setPicture({ uri: asset.uri, type: asset.type || 'image/jpeg', name: asset.fileName || 'photo.jpg' });
-        setEmojiOpen(false);
+        try {
+          const meta = validateChatFile(asset.fileName || 'photo.jpg', asset.type || 'image/jpeg', asset.fileSize);
+          setPicture({ ...meta, uri: asset.uri });
+          uploaded.current = null;
+          setSendError(''); setEmojiOpen(false);
+        } catch (error) { setSendError(memberFacing(error, 'Choose another photo.')); }
       });
     } catch (err) {
       console.warn('Native module call safely caught:', err);
     }
+  };
+
+  const pickDocument = async () => {
+    Keyboard.dismiss(); setAttachOpen(false); setEmojiOpen(false);
+    try {
+      const document = await pickChatDocument();
+      if (document) { setPicture(document); uploaded.current = null; setSendError(''); }
+    } catch (error) { setSendError(memberFacing(error, 'The document could not be opened.')); }
   };
 
   const insertEmoji = (mark: string) => {
@@ -265,7 +330,7 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
   const draftEmpty = !(text || '').trim();
   const cannotSend = sending || (draftEmpty && !picture);
   const placeholder = picture
-    ? 'Add a caption, or send the picture on its own…'
+    ? 'Add a caption (optional)…'
     : messages.length === 0
       ? 'Write about your business — what you make, what you need…'
       : `Message ${firstName === 'there' ? 'member' : firstName}…`;
@@ -296,12 +361,30 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
     <>
       <FlatList
         ref={listRef}
+        testID="chat-message-list"
+        style={styles.flex}
         data={rows}
         keyExtractor={(r, i) => String(r?.key || i)}
         renderItem={({ item }) => (item.kind === 'day'
           ? <DaySeparator label={item.label} />
           : <Bubble m={item.m} tail={item.tail} />)}
-        onContentSizeChange={() => { if (!older) listRef.current?.scrollToEnd({ animated: false }); }}
+        onContentSizeChange={() => scrollLatest()}
+        onLayout={() => scrollLatest()}
+        onScrollBeginDrag={() => { dragging.current = true; }}
+        onScrollEndDrag={() => { dragging.current = false; }}
+        onMomentumScrollBegin={() => { dragging.current = true; }}
+        onMomentumScrollEnd={() => { dragging.current = false; }}
+        onScroll={event => {
+          const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+          const nearBottom = contentSize.height - layoutMeasurement.height - contentOffset.y <= 80;
+          // A keyboard/layout resize is not the reader choosing older history.
+          if (nearBottom || dragging.current) {
+            followLatest.current = nearBottom;
+            setShowLatest(!nearBottom);
+          }
+        }}
+        scrollEventThrottle={100}
+        maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
         ListHeaderComponent={hasMore ? (
           <TouchableOpacity onPress={loadOlder} style={styles.older} accessibilityRole="button">
             {older ? <ActivityIndicator color={PALETTE.blue} /> : (
@@ -327,7 +410,7 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
       />
 
       {/* An EMPTY thread: the labelled openers (website "What is it about?"). */}
-      {messages.length === 0 && draftEmpty && !picture ? (
+      {messages.length === 0 && draftEmpty && !picture && !keyboard.visible ? (
         <View style={styles.openers}>
           <Text style={styles.openersTitle}>What is it about?</Text>
           <Text style={styles.openersHint}>Pick one to start. It goes in the box below for you to change before you send it.</Text>
@@ -351,7 +434,7 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
       ) : null}
 
       {/* A LIVE thread: one quiet chip row, only while the box is empty. */}
-      {messages.length > 0 && draftEmpty && !picture ? (
+      {messages.length > 0 && draftEmpty && !picture && !keyboard.visible ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow} keyboardShouldPersistTaps="handled" style={styles.chipScroll}>
           <Text style={styles.chipLead}>START WITH</Text>
           {OPENERS.map((o) => (
@@ -366,12 +449,12 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
       {/* The chosen picture, before it goes. */}
       {picture ? (
         <View style={styles.preview}>
-          <FitImage uri={picture.uri} style={styles.previewImg} />
+          {picture.kind === 'image' ? <FitImage uri={picture.uri} style={styles.previewImg} /> : <Icon name="description" size={36} color={PALETTE.blue} />}
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={styles.previewName} numberOfLines={1}>{picture.name}</Text>
-            <Text style={styles.previewHint}>Ready to send — a caption is optional.</Text>
+            <Text style={styles.previewHint}>{sending ? uploadProgress === null ? 'Sending…' : `Uploading ${uploadProgress}%…` : [fileSizeLabel(picture.size), 'Caption optional'].filter(Boolean).join(' · ')}</Text>
           </View>
-          <TouchableOpacity onPress={() => setPicture(null)} accessibilityLabel="Remove picture" style={styles.previewX}>
+          <TouchableOpacity disabled={sending} onPress={() => { setPicture(null); uploaded.current = null; }} accessibilityLabel="Remove attachment" style={styles.previewX}>
             <Icon name="close" size={SIZE.icon} color={PALETTE.textMuted} />
           </TouchableOpacity>
         </View>
@@ -388,14 +471,21 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
       ) : null}
 
       {sendError ? <Notice kind="warning" text={sendError} style={styles.sendError} /> : null}
+      {showLatest ? <TouchableOpacity onPress={jumpToLatest} accessibilityRole="button" accessibilityLabel="Jump to latest messages" style={styles.latest}><Icon name="arrow-downward" size={16} color={PALETTE.blue} /><Text style={styles.olderText}>Latest messages</Text></TouchableOpacity> : null}
+      {attachOpen ? <View style={styles.attachmentMenu}>
+        <TouchableOpacity onPress={pickPicture} style={styles.attachmentChoice} accessibilityRole="button" accessibilityLabel="Choose a photo"><Icon name="photo-library" size={24} color={PALETTE.blue} /><Text style={styles.olderText}>Photo · up to 5 MB</Text></TouchableOpacity>
+        <TouchableOpacity onPress={pickDocument} style={styles.attachmentChoice} accessibilityRole="button" accessibilityLabel="Choose a document"><Icon name="description" size={24} color={PALETTE.blue} /><Text style={styles.olderText}>Document · up to 10 MB</Text></TouchableOpacity>
+      </View> : null}
       <View style={[styles.composer, { paddingBottom: composerBottom }]}>
-        <TouchableOpacity onPress={pickPicture} disabled={sending} style={styles.iconBtn} accessibilityRole="button" accessibilityLabel="Send a picture">
-          <Icon name="add-photo-alternate" size={SIZE.iconLg - 2} color={PALETTE.blueDark} />
+        <TouchableOpacity onPress={() => { setAttachOpen(value => !value); setEmojiOpen(false); }} disabled={sending} style={styles.iconBtn} accessibilityRole="button" accessibilityLabel={attachOpen ? 'Close attachments' : 'Attach a photo or document'}>
+          <Icon name="attach-file" size={SIZE.iconLg - 2} color={PALETTE.blueDark} />
         </TouchableOpacity>
         <View style={styles.inputWrap}>
           <TextInput
             style={styles.input}
             value={text}
+            editable={!sending}
+            onFocus={() => { setAttachOpen(false); setEmojiOpen(false); }}
             onChangeText={(v) => { setText(v); if (sendError) setSendError(''); }}
             onSelectionChange={(ev) => setSelection(ev?.nativeEvent?.selection || { start: (text || '').length, end: (text || '').length })}
             placeholder={placeholder}
@@ -436,17 +526,17 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
 
   if (isStudentMembership(profile)) return <StudentNetworkingGate navigation={navigation} />;
   return (
-    <View style={styles.screen}>
+    <View ref={keyboard.ref} onLayout={keyboard.onLayout} style={styles.screen}>
       {Platform.OS === 'ios' ? (
         <KeyboardAvoidingView style={styles.flex} behavior="padding">
           {topBar}
           {body}
         </KeyboardAvoidingView>
       ) : (
-        <>
+        <View style={[styles.flex, { paddingBottom: keyboard.overlap }]} testID="chat-keyboard-frame">
           {topBar}
           <View style={styles.flex}>{body}</View>
-        </>
+        </View>
       )}
     </View>
   );
@@ -455,6 +545,14 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: PALETTE.canvas },
   flex: { flex: 1 },
+  document: { flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 170, maxWidth: 250, paddingVertical: 6 },
+  documentText: { flex: 1, minWidth: 0 },
+  documentName: { fontSize: 14, fontWeight: '700', color: PALETTE.text },
+  documentHint: { fontSize: 11, color: PALETTE.textMuted, marginTop: 4 },
+  white: { color: PALETTE.white },
+  attachmentMenu: { paddingHorizontal: SPACE.lg, paddingVertical: SPACE.sm, gap: SPACE.sm, backgroundColor: PALETTE.white },
+  attachmentChoice: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, minHeight: SIZE.touch },
+  latest: { flexDirection: 'row', alignItems: 'center', alignSelf: 'center', gap: 6, padding: SPACE.sm, backgroundColor: PALETTE.white, borderRadius: 20, marginBottom: SPACE.xs },
   barBtn: {
     width: SIZE.touch, height: SIZE.touch, borderRadius: SIZE.touch / 2, alignItems: 'center', justifyContent: 'center',
     backgroundColor: BRAND.glass, borderWidth: 1, borderColor: BRAND.glassBorder,

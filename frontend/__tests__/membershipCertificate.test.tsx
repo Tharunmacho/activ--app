@@ -2,6 +2,7 @@ import React from 'react';
 import Renderer, { act } from 'react-test-renderer';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { MembershipCertificateView } from '../src/screens/member/certificates/CertificateViews';
+import { MEMBERSHIP_PAGE } from '../src/screens/member/certificates/certificateLayout';
 
 const certificate = {
   member: { name: 'Sample Member', companyName: 'Example Enterprise', membershipNumber: 'ACTIV-BEG-20261013-001',
@@ -48,4 +49,43 @@ test('long international lifetime records fit within the landscape sheet without
   expect(text).toContain('Lifetime Member');
   expect(text).toContain('United Kingdom');
   expect(text).not.toContain('Example Block');
+});
+
+test.each(['student', 'aspirant'])('%s certificates keep personal identity when no company is supplied', async memberType => {
+  await act(async () => { tree = Renderer.create(<MembershipCertificateView width={360} cert={{ ...certificate,
+    membershipType: 'annual', member: { ...certificate.member, companyName: '', memberType } }} />); });
+  const text = JSON.stringify(tree.toJSON());
+  expect(text).toContain('Sample Member');
+  expect(text).not.toContain('Company Name');
+  expect(text).not.toContain('Example Enterprise');
+  expect(text).not.toContain('Lifetime Member');
+});
+
+test('wrapped facts share rows and every detail stays above the centered signatories', async () => {
+  const company = 'A long registered company name that needs more than one line in the details panel';
+  const representative = 'A representative with a long full name that must stay completely visible';
+  await act(async () => { tree = Renderer.create(<MembershipCertificateView width={390} cert={{ ...certificate,
+    member: { ...certificate.member, companyName: company, name: representative } }} />); });
+  const pairs = tree.root.findAllByType(View).filter(node => /^membership-fact-pair-\d+$/.test(node.props.testID || ''));
+  expect(pairs.length).toBeGreaterThan(3);
+  // Every complete pair has one shared height and two equal flexible cells;
+  // a wrapped left value therefore cannot move the next left row on its own.
+  pairs.forEach(pair => {
+    const cells = pair.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.flex === 1);
+    expect(cells).toHaveLength(2);
+    cells.forEach(cell => expect(StyleSheet.flatten(cell.props.style).minWidth).toBe(0));
+  });
+  for (const value of [company, representative, certificate.member.membershipNumber]) {
+    const text = tree.root.findAllByType(Text).filter(node => node.props.children === value);
+    expect(text.length).toBeGreaterThan(0);
+    text.forEach(node => expect(node.props.numberOfLines).toBeUndefined());
+  }
+  const flow = () => tree.root.findByProps({ testID: 'membership-content-block' });
+  await act(async () => flow().props.onLayout({ nativeEvent: { layout: { height: 900 } } }));
+  const scaledBottom = MEMBERSHIP_PAGE.contentTop + 900 * StyleSheet.flatten(flow().props.style).transform[0].scale;
+  expect(scaledBottom).toBeLessThan(MEMBERSHIP_PAGE.signaturesTop);
+  expect(MEMBERSHIP_PAGE.signaturesTop + MEMBERSHIP_PAGE.signatureHeight).toBeLessThan(MEMBERSHIP_PAGE.footerTop);
+  const band = tree.root.findByProps({ testID: 'membership-signatories' });
+  expect(StyleSheet.flatten(band.props.style).left).toBe(StyleSheet.flatten(band.props.style).right);
+  expect(JSON.stringify(tree.toJSON())).toContain(certificate.reference);
 });

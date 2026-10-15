@@ -2,7 +2,7 @@
 #import <React/RCTUtils.h>
 #import <UIKit/UIKit.h>
 
-@interface ReportExport : NSObject <RCTBridgeModule, UIDocumentPickerDelegate>
+@interface ReportExport : NSObject <RCTBridgeModule, UIDocumentPickerDelegate, NSURLSessionTaskDelegate>
 @property(nonatomic, copy) RCTPromiseResolveBlock resolveExport;
 @property(nonatomic, copy) RCTPromiseRejectBlock rejectExport;
 @property(nonatomic, strong) NSURL *exportDirectory;
@@ -14,6 +14,37 @@
 RCT_EXPORT_MODULE();
 + (BOOL)requiresMainQueueSetup { return YES; }
 - (dispatch_queue_t)methodQueue { return dispatch_get_main_queue(); }
+
+RCT_REMAP_METHOD(downloadChatFile, downloadChatFile:(NSString *)url token:(NSString *)token filename:(NSString *)filename mimeType:(NSString *)mimeType
+                 resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+{
+  NSURL *target = [NSURL URLWithString:url];
+  NSRegularExpression *path = [NSRegularExpression regularExpressionWithPattern:@"^/api/v[0-9]+/messages/attachments/[a-fA-F0-9-]{36}$" options:0 error:nil];
+  if (![target.scheme isEqualToString:@"https"] || ![target.host isEqualToString:@"api.activ.org.in"] || target.port || target.user || target.password || target.query || target.fragment
+      || [path numberOfMatchesInString:target.path options:0 range:NSMakeRange(0, target.path.length)] != 1 || !token.length
+      || [token rangeOfCharacterFromSet:[NSCharacterSet newlineCharacterSet]].location != NSNotFound) {
+    reject(@"DOWNLOAD_FAILED", @"Sign in again to download this attachment.", nil);
+    return;
+  }
+  NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:target cachePolicy:NSURLRequestReloadIgnoringLocalCacheData timeoutInterval:60];
+  [request setValue:[@"Bearer " stringByAppendingString:token] forHTTPHeaderField:@"Authorization"];
+  NSURLSession *session = [NSURLSession sessionWithConfiguration:NSURLSessionConfiguration.ephemeralSessionConfiguration delegate:self delegateQueue:nil];
+  [[session dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+    [session finishTasksAndInvalidate];
+    dispatch_async(dispatch_get_main_queue(), ^{
+      if (error || [(NSHTTPURLResponse *)response statusCode] != 200 || !data.length || data.length > 10 * 1024 * 1024) {
+        reject(@"DOWNLOAD_FAILED", @"The attachment is unavailable. Check your membership and try again.", error);
+      } else {
+        [self exportData:data filename:filename resolver:resolve rejecter:reject];
+      }
+    });
+  }] resume];
+}
+
+- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task willPerformHTTPRedirection:(NSHTTPURLResponse *)response newRequest:(NSURLRequest *)request completionHandler:(void (^)(NSURLRequest *))completionHandler
+{
+  completionHandler(nil);
+}
 
 RCT_REMAP_METHOD(saveCsv, saveCsv:(NSString *)filename contents:(NSString *)contents
                  resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)

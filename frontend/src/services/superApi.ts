@@ -396,4 +396,6 @@ export const updateStaffAccount = async (
 );
 
 export const deleteMembershipRegistration = async (id: string) => unwrap<any>(await api.delete(`${MBASE}/${enc(id)}`), null);
+export const deleteArchivedMembershipPayment = async (id: string) => unwrap<any>(await api.delete(`/admin/super/membership/payments/${enc(id)}/archived`, { data: { recordId: id, confirmation: 'DELETE' } }), null);
+export const deleteArchivedEventHistory = async (eventId: string) => unwrap<any>(await api.delete(`/events/${enc(eventId)}/bookings/history`, { data: { recordId: eventId, confirmation: 'DELETE' } }), null);
 export const deleteEventBooking = async (eventId: string, ref: string) => unwrap<any>(await api.delete(`/events/${enc(eventId)}/bookings/${enc(ref)}`), null);

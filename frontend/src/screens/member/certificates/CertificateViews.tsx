@@ -17,6 +17,7 @@ import Svg, {
 } from 'react-native-svg';
 import { asArray, RADIUS, SHADOW } from '../../../ui';
 import { amountInWords as spellAmount } from '../../../utils/amountInWords';
+import { A4_WIDTH, A4_HEIGHT, MEMBERSHIP_PAGE, membershipContentScale } from './certificateLayout';
 
 /**
  * ============================================================================
@@ -28,7 +29,7 @@ import { amountInWords as spellAmount } from '../../../utils/amountInWords';
  * `TaxExemptionCertificate.tsx` (which the server does not render — it sends
  * the fields; each client draws them), with the template's furniture in SVG.
  *
- *   membership   a fixed 360-unit-wide sheet, scaled to the screen width.
+ *   membership   a fixed A4 landscape sheet, scaled to the available viewport.
  *   tax (80G)    a TRUE A4 page: laid out at the website's 794 x 1123 units
  *                with the website's paddings, type sizes and columns, then
  *                scaled uniformly — every phone shows the identical page, at
@@ -323,8 +324,8 @@ function MembershipFrame({ w, h }: { w: number; h: number }) {
  * units. The tax certificate is laid out at exactly this size and then scaled
  * as a whole, so every phone (and the zoom view) shows the identical page.
  */
-export const A4_W = 794;
-export const A4_H = 1123;
+export const A4_W = A4_WIDTH;
+export const A4_H = A4_HEIGHT;
 
 /** White paper and navy/gold corners, matching the website's tax certificate. */
 function TaxFrame() {
@@ -381,7 +382,7 @@ export function MembershipCertificateView({ cert, pdfRef, width, onPress, hint =
 }) {
   const [contentHeight, setContentHeight] = useState(0);
   // The complete header and facts shrink together when unusually long records need space.
-  const fit = contentHeight > 552 ? 552 / contentHeight : 1;
+  const fit = membershipContentScale(contentHeight);
   const member = cert?.member || {};
   const company = String(member?.companyName || member?.name || '—');
   const platinum = String(cert?.membershipTier || '') === 'platinum';
@@ -414,13 +415,15 @@ export function MembershipCertificateView({ cert, pdfRef, width, onPress, hint =
     { icon: 'verified', label: 'Membership', value: platinum ? 'Lifetime Member' : '' },
   ]);
   const columns = identity.length <= 3 ? [[...identity, ...dates], address] : [identity, [...address, ...dates]];
+  const pairs = Array.from({ length: Math.max(...columns.map(rows => rows.length)) }, (_, index) =>
+    [columns[0][index], columns[1][index]]);
   const issued = certDate(cert?.issuedAt);
 
   return (
     <View>
       <A4Page width={width} onPress={onPress} pdfRef={pdfRef} landscape>
-        <View style={[m.flow, { transformOrigin: 'top center', transform: [{ scale: fit }] }]}
-          onLayout={e => setContentHeight(e.nativeEvent.layout.height)}>
+        <View testID="membership-content-block" style={[m.flow, { transformOrigin: 'top center', transform: [{ scale: fit }] }]}
+          onLayout={e => setContentHeight(Number(e?.nativeEvent?.layout?.height || 0))}>
           <Image source={LOGO} style={m.logo} resizeMode="contain" accessibilityLabel="ACTIV" />
           <T style={m.association}>{ASSOCIATION_NAME.toUpperCase()}</T>
           <T style={m.title}>MEMBERSHIP CERTIFICATE</T>
@@ -431,24 +434,27 @@ export function MembershipCertificateView({ cert, pdfRef, width, onPress, hint =
           <T style={m.admitted}>has been admitted as {platinum ? 'a Lifetime Member' : 'an official member'} of</T>
           <T style={m.activ}>ACTIV</T>
           <View style={m.panel}>
-            {columns.map((rows, col) => <React.Fragment key={col}>
-              {col === 1 ? <View style={m.divider} /> : null}
-              <View style={{ flex: col === 0 ? 1.12 : 1, minWidth: 0 }}>
-                {rows.map((row, i) => <View key={row.label} style={[m.row, i < rows.length - 1 && m.rowBorder]}>
-                  <Icon name={row.icon} size={20} color={NAVY_MID} />
-                  <T style={m.label}>{row.label}</T>
-                  <T style={m.value}>{row.value}</T>
-                </View>)}
-              </View>
-            </React.Fragment>)}
+            {pairs.map((pair, index) => <View key={index} testID={`membership-fact-pair-${index}`}
+              style={[m.pair, index < pairs.length - 1 && m.rowBorder]}>
+              {pair.map((row, column) => <React.Fragment key={column}>
+                {column === 1 ? <View style={m.divider} /> : null}
+                <View style={m.row}>
+                  {row ? <>
+                    <Icon name={row.icon} size={20} color={NAVY_MID} />
+                    <T style={m.label}>{row.label}</T>
+                    <T style={m.value}>{row.value}</T>
+                  </> : null}
+                </View>
+              </React.Fragment>)}
+            </View>)}
           </View>
           <View style={[m.rules, { marginTop: 9 }]}><View style={m.rule} /><T style={m.motto}>TOGETHER  ·  TRADE  ·  GROW</T><View style={m.rule} /></View>
         </View>
-        <View style={m.signatures}>
+        <View style={m.signatures} testID="membership-signatories">
           <View style={m.signerColumn} testID="membership-signature-block">
             <T style={m.signerRole}>Founder and Chairperson</T>
             <Image source={SIGNATURE} style={m.signature} resizeMode="contain" accessibilityLabel="Signature of Thamizhazhagan Nallaiyan, Founder and Chairperson" />
-            <View style={[m.signRule, { width: 250 }]} />
+            <View style={m.signRule} />
             <T style={m.signerName}>THAMIZHAZHAGAN NALLAIYAN</T>
           </View>
           <View style={m.seal}><Seal line="Membership" size={112} /><T style={m.sealCaption}>Official Seal</T></View>
@@ -459,8 +465,8 @@ export function MembershipCertificateView({ cert, pdfRef, width, onPress, hint =
           </View>
         </View>
         <View style={m.footer}>
-          <T style={m.footerText}>Certificate No: {cert?.reference || '—'}</T>
-          <T style={m.footerText}>Issued by: ACTIV | Chennai, Tamil Nadu · www.activ.org.in</T>
+          <View style={m.footerReference}><T style={m.footerLabel}>Certificate No.</T><T style={m.footerText}>{cert?.reference || '—'}</T></View>
+          <View style={m.footerIssuer}><T style={[m.footerText, m.footerRight]}>Issued by: ACTIV | Chennai, Tamil Nadu</T><T style={[m.footerText, m.footerRight]}>www.activ.org.in</T></View>
         </View>
       </A4Page>
       {hint ? <Text style={m.hint}>{hint}</Text> : null}
@@ -681,7 +687,7 @@ export function TaxCertificateView({ cert, stamp = '', receiptColumn = false, am
 /* ------------------------------------------------------------------ styles */
 
 const m = StyleSheet.create({
-  flow: { position: 'absolute', top: 38, left: 92, right: 92, alignItems: 'center' },
+  flow: { position: 'absolute', top: MEMBERSHIP_PAGE.contentTop, left: MEMBERSHIP_PAGE.side, right: MEMBERSHIP_PAGE.side, alignItems: 'center' },
   logo: { width: 212, height: 66 },
   association: { fontSize: 13.5, lineHeight: 20, fontWeight: '700', letterSpacing: 1.5, color: NAVY_MID, textAlign: 'center', marginTop: 4 },
   title: { fontFamily: 'serif', fontSize: 49, lineHeight: 59, fontWeight: '700', color: NAVY, textAlign: 'center', marginTop: 6 },
@@ -693,27 +699,32 @@ const m = StyleSheet.create({
   holderRule: { width: 440, height: 1.5, backgroundColor: GOLD, marginTop: 4 },
   admitted: { fontSize: 17, lineHeight: 24, color: INK, textAlign: 'center', marginTop: 4 },
   activ: { fontSize: 20, lineHeight: 27, fontWeight: '700', color: NAVY },
-  panel: { alignSelf: 'stretch', flexDirection: 'row', gap: 18, marginTop: 8, borderRadius: 16, borderWidth: 1, borderColor: PANEL_LINE, backgroundColor: '#FFFFFFE8', paddingHorizontal: 20, paddingVertical: 6 },
+  panel: { alignSelf: 'stretch', marginTop: 8, borderRadius: 16, borderWidth: 1, borderColor: PANEL_LINE, backgroundColor: '#FFFFFFE8', paddingHorizontal: 20, paddingVertical: 6 },
+  pair: { flexDirection: 'row', alignItems: 'stretch', gap: 18 },
   divider: { width: 2, marginVertical: 4, backgroundColor: GOLD_LIGHT },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 33, paddingVertical: 4 },
+  row: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'flex-start', gap: 8, minHeight: 33, paddingVertical: 6 },
   rowBorder: { borderBottomWidth: 1, borderBottomColor: LINE },
   label: { width: 126, fontSize: 13.5, lineHeight: 19, color: MUTED, fontWeight: '500' },
-  value: { flex: 1, fontSize: 15, lineHeight: 20, color: INK, fontWeight: '700' },
+  value: { flex: 1, minWidth: 0, flexShrink: 1, fontSize: 15, lineHeight: 20, color: INK, fontWeight: '700' },
   motto: { fontSize: 14, lineHeight: 22, letterSpacing: 3, color: NAVY_MID, fontWeight: '700' },
-  signatures: { position: 'absolute', top: 598, left: 180, right: 210, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  signColumn: { width: 220, alignItems: 'center', paddingTop: 10 },
-  signerColumn: { width: 250, alignItems: 'center' },
+  signatures: { position: 'absolute', top: MEMBERSHIP_PAGE.signaturesTop, left: MEMBERSHIP_PAGE.side, right: MEMBERSHIP_PAGE.side, height: MEMBERSHIP_PAGE.signatureHeight, flexDirection: 'row', alignItems: 'center' },
+  signColumn: { flex: 1, minWidth: 0, alignItems: 'center' },
+  signerColumn: { flex: 1, minWidth: 0, alignItems: 'center' },
   signerRole: { fontSize: 14, lineHeight: 20, fontWeight: '700', color: NAVY },
   signerName: { fontSize: 12, lineHeight: 18, marginTop: 3, fontWeight: '800', color: NAVY },
   signLabel: { fontSize: 16, lineHeight: 23, fontWeight: '700', color: NAVY },
   signature: { width: 240, height: 86, tintColor: NAVY_MID },
   signRule: { width: 220, height: 1, backgroundColor: NAVY_MID },
-  seal: { alignItems: 'center' },
+  seal: { flex: 1, minWidth: 0, alignItems: 'center' },
   sealCaption: { fontSize: 12, color: NAVY_MID },
   issueDate: { height: 60, justifyContent: 'center' },
   date: { fontSize: 24, fontWeight: '700', color: NAVY_MID },
-  footer: { position: 'absolute', left: 22, right: 22, bottom: 22, height: 40, paddingHorizontal: 18, borderTopWidth: 2, borderTopColor: GOLD, backgroundColor: NAVY, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  footerText: { fontSize: 12, color: '#FFF', flexShrink: 1 },
+  footer: { position: 'absolute', left: 22, right: 22, top: MEMBERSHIP_PAGE.footerTop, height: 40, paddingHorizontal: 18, borderTopWidth: 2, borderTopColor: GOLD, backgroundColor: NAVY, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
+  footerReference: { flex: 1.4, minWidth: 0 },
+  footerIssuer: { flex: 1, minWidth: 0 },
+  footerLabel: { fontSize: 9, lineHeight: 11, color: GOLD_PALE },
+  footerText: { fontSize: 11, lineHeight: 13, color: '#FFF', flexShrink: 1 },
+  footerRight: { textAlign: 'right' },
   hint: { fontSize: 13, lineHeight: 20, textAlign: 'center', color: MUTED, marginTop: 12 },
 });
 

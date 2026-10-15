@@ -4,7 +4,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Alert, BackHandler, RefreshControl } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { ConsoleScroll, ConsoleHeader, ConsoleGrid, ConsoleStatTile, ConsoleCard, ConsoleTabs, ConsoleSearch, ConsoleChip, ConsoleButton, ConsoleNote, ConsoleState, ConsoleSkeleton, GlassIconButton, PremiumInput, PremiumSelect, InfoRow, SPACE, TYPE, PALETTE, money, shortDate } from '../../../ui';
-import { getMembershipRegistrations, exportMembershipReport, getMembershipRegistration, confirmMembershipRegistration, deleteMembershipRegistration, errorText } from '../../../services/superApi';
+import { getMembershipRegistrations, exportMembershipReport, getMembershipRegistration, confirmMembershipRegistration, deleteMembershipRegistration, deleteArchivedMembershipPayment, errorText } from '../../../services/superApi';
 import { ChipRow, ToggleRow, confirm } from './superKit';
 
 const MODES = [{ value: 'waived', label: 'Fee waiver' }, { value: 'cash', label: 'Cash' }, { value: 'upi', label: 'UPI' }, { value: 'bank_transfer', label: 'Bank transfer' }, { value: 'cheque', label: 'Cheque' }];
@@ -30,6 +30,8 @@ export default function SuperMembershipRegistrationsScreen() {
   const [detail, setDetail] = useState<any>(null);
   const [opening, setOpening] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deletingPayment, setDeletingPayment] = useState('');
+  const deleteInFlight = useRef(false);
   const [exporting, setExporting] = useState(false);
   const [planId, setPlanId] = useState('');
   const [mode, setMode] = useState('cash');
@@ -59,6 +61,19 @@ export default function SuperMembershipRegistrationsScreen() {
     }).catch(err => { if (current) setError(errorText(err)); });
     return () => { current = false; };
   }, [load]));
+  const removeArchivedPayment = async (payment: any) => {
+    if (!payment?.registrationDeleted || !payment.id || deleteInFlight.current) return;
+    deleteInFlight.current = true;
+    try {
+      if (!(await confirm('Delete archived payment permanently?', `${payment.name || payment.email || 'Deleted account'}\n${payment.planName || 'Membership payment'}\nOrder: ${payment.orderId || payment.id}\n\nOnly this payment record will be removed from the database and reports. This cannot be undone and does not refund any payment. Export a copy first if needed.`, 'Delete permanently', true))) return;
+      setDeletingPayment(payment.id);
+      await deleteArchivedMembershipPayment(payment.id);
+      setData((current: any) => current ? { ...current, payments: (current.payments || []).filter((row: any) => row.id !== payment.id) } : current);
+      await load();
+      Alert.alert('Payment deleted', 'The archived payment was permanently removed.');
+    } catch (err) { Alert.alert('Could not delete archived payment', errorText(err)); }
+    finally { deleteInFlight.current = false; setDeletingPayment(''); }
+  };
   const open = async (id: string) => {
     if (!id || opening || saving) return;
     setOpening(true); setError(''); setAck(false); setShowConfirm(false); setPlanId(''); setMode('cash'); setAmount(''); setNote(''); setReceipt(''); setMembershipNumber('');
@@ -167,11 +182,11 @@ export default function SuperMembershipRegistrationsScreen() {
     </> : data ? <>
       <ConsoleGrid><ConsoleStatTile label="Registered" value={summary.registered || 0} icon="people" hint={`${summary.submitted || 0} applications submitted`} onPress={() => chooseSummary('members', 'all')} /><ConsoleStatTile label="Active members" value={summary.active || 0} icon="verified-user" onPress={() => chooseSummary('members', 'active')} /><ConsoleStatTile label="Collected" value={money(summary.collected)} icon="payments" hint="Money actually received" onPress={() => chooseSummary('payments', 'paid')} /><ConsoleStatTile label="Awaiting payment" value={summary.awaiting || 0} icon="schedule" hint={`${summary.pendingReview || 0} awaiting review · ${summary.expired || 0} expired`} onPress={() => chooseSummary('members', 'awaiting_payment')} /></ConsoleGrid>
       <ConsoleTabs scrollable value={tab} onChange={v => { setTab(v); setFilter('all'); setPage(1); }} options={[{ value: 'members', label: 'Members', count: data.rows?.length || 0 }, { value: 'payments', label: 'Payments', count: currentPayments.length }, { value: 'archived', label: 'Archived payments', count: archivedPayments.length }]} />
-      {tab === 'archived' ? <ConsoleNote style={s.card} text="Payments from deleted registrations are retained here for your records." /> : null}
+      {tab === 'archived' ? <ConsoleNote style={s.card} text="Payments from deleted registrations are retained here. Export any records you need before permanently deleting an unnecessary payment." /> : null}
       <ConsoleSearch value={query} onChangeText={v => { setQuery(v); setPage(1); }} placeholder="Name, email, mobile or reference" />
       <ChipRow value={filter} onChange={v => { setFilter(v); setPage(1); }} options={(tab === 'members' ? MEMBER_FILTERS : PAYMENT_FILTERS).map(([value, label]) => ({ value, label }))} />
       <View style={s.card}><ConsoleButton label="Export Excel report" icon="file-download" onPress={exportReport} loading={exporting} disabled={loading || !data} /></View>
-      {rows.slice((currentPage - 1) * 20, currentPage * 20).map(r => <ConsoleCard key={r.id} style={s.card} onPress={r.registrationDeleted ? undefined : () => void open(tab === 'members' ? r.id : r.memberId)} accessibilityLabel={`Open membership ${r.name}`}><Text style={s.title}>{r.name || r.email}</Text><ConsoleChip label={display(r.status)} /><Text style={s.body}>{r.email}{'\n'}{r.phone || r.orderId}{'\n'}{r.planName || r.applicationStatus}</Text>{tab !== 'members' ? <Receipt p={r} /> : <Text style={s.body}>Collected: {money(r.collected)}</Text>}</ConsoleCard>)}
+      {rows.slice((currentPage - 1) * 20, currentPage * 20).map(r => <ConsoleCard key={r.id} style={s.card} onPress={r.registrationDeleted ? undefined : () => void open(tab === 'members' ? r.id : r.memberId)} accessibilityLabel={`${r.registrationDeleted ? "Archived payment for" : "Open membership"} ${r.name || r.email}`}><Text style={s.title}>{r.name || r.email}</Text><ConsoleChip label={display(r.status)} /><Text style={s.body}>{r.email}{'\n'}{r.phone || r.orderId}{'\n'}{r.planName || r.applicationStatus}</Text>{tab !== 'members' ? <Receipt p={r} /> : <Text style={s.body}>Collected: {money(r.collected)}</Text>}{tab === 'archived' && r.registrationDeleted ? <ConsoleButton kind="danger" icon="delete-outline" label="Delete permanently" disabled={!!deletingPayment} loading={deletingPayment === r.id} onPress={() => void removeArchivedPayment(r)} /> : null}</ConsoleCard>)}
       {!rows.length ? <ConsoleState title="No matching records" message="Try another search or filter." /> : null}
       <View style={s.card}><Text style={s.body}>{rows.length} records · Page {currentPage} of {pages}</Text><View style={s.actions}><ConsoleButton label="Previous" disabled={currentPage <= 1} onPress={() => setPage(currentPage - 1)} /><ConsoleButton label="Next" disabled={currentPage >= pages} onPress={() => setPage(currentPage + 1)} /></View></View>
     </> : <ConsoleState kind="error" title="Could not load membership registrations" action="Try again" onAction={load} />}

@@ -343,7 +343,7 @@ ${url}`, url });
   );
 
   return (
-    <BrandFrame tone="business">
+    <BrandFrame tone="business" safeBottom>
       <FlatList
         data={products}
         keyExtractor={(item, index) => String(item?._id || index)}

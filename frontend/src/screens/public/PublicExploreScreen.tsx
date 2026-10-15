@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
-  BRAND, PALETTE, SPACE, BrandFrame, BrandHeaderBlock, BrandLogo, CardSkeletons,
+  BRAND, PALETTE, SPACE, BrandFrame, BrandHeaderBlock, BrandLogo, CardSkeletons, PREMIUM_OVERLAP,
   GradientButton,
   PressableScale, StateView, SurfaceCard,
 } from '../../ui';
@@ -155,7 +155,7 @@ export default function PublicExploreScreen({ navigation, route }: any) {
       initialNumToRender={10} maxToRenderPerBatch={10} windowSize={5}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setContactRefresh(value => value + 1); read(true); }} colors={[BRAND.blue]} tintColor={PALETTE.white} progressViewOffset={insets.top} />}
       ListHeaderComponent={<>
-        <BrandHeaderBlock waveHeight={22}>
+        <BrandHeaderBlock waveHeight={52}>
           <View style={s.heroContent}>
             <View style={s.topbar}><BrandLogo size="sm" />
               <PressableScale accessibilityRole="button" accessibilityLabel="Sign in" onPress={signIn} contentStyle={s.signIn}>
@@ -170,7 +170,7 @@ export default function PublicExploreScreen({ navigation, route }: any) {
             <Text style={s.heroSubtitle}>{tab.subtitle}</Text>
           </View>
         </BrandHeaderBlock>
-        {section === 'home' ? home : section === 'zones' ? (ready && <View style={s.gutter}><ExploreZones zones={data.zones} openPage={openPage} /></View>) : <View style={[s.gutter, s.searchWrap]}>
+        {section === 'home' ? home : section === 'zones' ? (ready && <View style={[s.gutter, s.directoryOverlap]}><SurfaceCard><ExploreZones zones={data.zones} openPage={openPage} /></SurfaceCard></View>) : <View style={[s.gutter, s.searchWrap]}>
           <SurfaceCard padded={false} contentStyle={s.searchInner}>
             <View style={s.searchIcon}><Icon name="search" size={23} color={BRAND.blue} /></View>
             <TextInput style={s.searchInput} value={query} onChangeText={setQuery} placeholder={'Search ' + tab.label.toLowerCase()}
@@ -213,7 +213,7 @@ const s = StyleSheet.create({
   eyebrow: { color: BRAND.onBrandSoft, fontSize: 10, lineHeight: 16, letterSpacing: 1.6, fontWeight: '800', marginBottom: 9 },
   heroTitle: { color: PALETTE.white, fontSize: 28, lineHeight: 35, letterSpacing: -0.4, fontWeight: '700' }, heroTitleCompact: { fontSize: 25, lineHeight: 32 },
   heroSubtitle: { color: BRAND.onBrandSoft, fontSize: 16, lineHeight: 24, marginTop: SPACE.md, paddingBottom: SPACE.sm },
-  homeContent: { marginTop: 4 },
+  homeContent: { marginTop: 0 }, directoryOverlap: { marginTop: -PREMIUM_OVERLAP },
   joinCard: { marginBottom: SPACE.md }, joinInner: { padding: SPACE.lg, overflow: 'hidden' }, joinTitle: { color: PALETTE.white, fontSize: 22, lineHeight: 30, fontWeight: '700' },
   joinOrb: { position: 'absolute', width: 180, height: 180, borderRadius: 90, right: -75, top: -70, backgroundColor: '#60A5FA22' },
   joinHeading: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
@@ -222,7 +222,7 @@ const s = StyleSheet.create({
   joinBenefits: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 3 },
   joinBenefitsText: { color: BRAND.onBrandSoft, fontSize: 12, fontWeight: '600' },
   joinCopy: { color: BRAND.onBrandSoft, fontSize: 14, lineHeight: 22, marginTop: SPACE.sm }, joinButton: { marginTop: SPACE.lg },
-  searchWrap: { marginTop: 12, marginBottom: SPACE.sm }, searchInner: { minHeight: 60, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10 },
+  searchWrap: { marginTop: -PREMIUM_OVERLAP, marginBottom: SPACE.sm }, searchInner: { minHeight: 60, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10 },
   searchIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: PALETTE.blueSoft, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   searchInput: { flex: 1, minWidth: 0, minHeight: 56, paddingVertical: 12, paddingHorizontal: 0, color: PALETTE.text, fontSize: 15, fontWeight: '500' }, clearSearch: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   resultHeading: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: SPACE.lg, marginBottom: SPACE.sm }, resultTitle: { flexShrink: 1, color: BRAND.navyDeep, fontSize: 17, fontWeight: '800', lineHeight: 24 },

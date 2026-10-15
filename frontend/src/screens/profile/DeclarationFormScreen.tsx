@@ -13,6 +13,7 @@ import api from '../../services/api';
 import { ENDPOINTS } from '../../config/api.config';
 import { FormScreen, FormFooter, FormSection, FieldLabel, CheckRow } from './formKit';
 import { normaliseStatus } from '../member/dashboard/memberRules';
+import { personalDetailsErrors } from './personalDetailsValidation';
 
 /**
  * ============================================================================
@@ -156,9 +157,7 @@ const DeclarationFormScreen: React.FC<Props> = ({ navigation, editMode = false }
 
       // The region gate refuses an application with no routable region. A
       // member outside India has none by design and routes to the head office.
-      const abroad = profile?.isInternational === true;
-      if (profile?.personalDetailsComplete === false || !profile?.religion || !profile?.socialCategory || !profile?.gender
-        || (!abroad && (!profile?.state || !profile?.district)) || (abroad && !profile?.place)) {
+      if (profile?.personalDetailsComplete === false || Object.keys(personalDetailsErrors(profile)).length > 0) {
         Alert.alert(
           'Personal details needed',
           'Please complete every required personal detail, including religion, social category and gender, before submitting.',

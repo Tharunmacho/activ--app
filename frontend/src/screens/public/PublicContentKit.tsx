@@ -1,60 +1,53 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { ContentImage } from '../../ui/ContentImage';
+import { PhotoViewer } from '../../ui/PhotoViewer';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import LinearGradient from 'react-native-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import Video from 'react-native-video';
-import { BRAND, PALETTE, SPACE, CardSkeletons, GlassIconButton, PressableScale, StateView, SurfaceCard } from '../../ui';
+import { BRAND, PALETTE, SPACE, CardSkeletons, GlassIconButton, PremiumPage, PremiumPageHeader, PREMIUM_OVERLAP, PressableScale, StateView, SurfaceCard } from '../../ui';
 import { resolveMediaUrl } from '../../config/api.config';
 import { openPublicAttachment, openWebsitePage } from '../../services/websiteNavigation';
 import { isPublicDownloadUrl } from '../../services/publicDownload';
 import { publicWebsitePath } from '../../utils/publicBrowse';
+import { publicPlainText, publicTextBlocks } from '../../utils/publicRichText';
 
-export const contentText = (value: any): string => String(value ?? '').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
-  .replace(/<br\s*\/?\s*>|<\/p>|<\/div>|<\/h[1-6]>/gi, '\n\n').replace(/<li[^>]*>/gi, '\n• ').replace(/<[^>]+>/g, '')
-  .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
-  .replace(/&#(\d+);/g, (_, n) => { const code = Number(n); return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : ''; }).trim();
-const escape = (value: string) => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const imageDocument = (url: string) => `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes"><style>html,body{margin:0;background:#fff}img{display:block;width:100%;height:auto}</style></head><body><img alt="Full image" src="${escape(url)}"></body></html>`;
+export const contentText = publicPlainText;
 
-export function ContentLayout({ navigation, title, subtitle, art = 'news', resource, children }: {
-  navigation: any; title: string; subtitle?: string; art?: any;
+export function ContentLayout({ navigation, title, subtitle, art = 'news', resource, children, readingPanel = true }: {
+  navigation: any; title: string; subtitle?: string; art?: string; readingPanel?: boolean;
   resource: { loading: boolean; refreshing: boolean; error: string; reload: () => any; data: any }; children?: React.ReactNode;
 }) {
-  const insets = useSafeAreaInsets();
-  return <KeyboardAvoidingView style={contentStyles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-    <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ paddingBottom: insets.bottom + 28 }}
-      refreshControl={<RefreshControl refreshing={resource.refreshing} onRefresh={resource.reload} colors={[BRAND.blue]} />}>
-      <LinearGradient colors={[BRAND.navyDeep, BRAND.blue900]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[contentStyles.header, { paddingTop: insets.top + 8 }]}>
-        <View style={contentStyles.headerInner}>
-          <View style={contentStyles.topbar}>
-            <PressableScale accessibilityRole="button" accessibilityLabel="Back" onPress={() => navigation.canGoBack?.() === false ? navigation.navigate('PublicExplore') : navigation.goBack()} contentStyle={contentStyles.headerButton}><Icon name="arrow-back" size={22} color="#fff" /></PressableScale>
-            <Text style={contentStyles.eyebrow}>ACTIV{art === 'gallery' ? ' / GALLERY' : art === 'schemes' ? ' / OPPORTUNITIES' : art === 'zones' ? ' / COMMUNITY' : ''}</Text>
-            <PressableScale accessibilityRole="button" accessibilityLabel="Refresh content" onPress={resource.reload} contentStyle={contentStyles.headerButton}><Icon name="refresh" size={22} color="#fff" /></PressableScale>
-          </View>
-          <Text accessibilityRole="header" style={contentStyles.heroTitle}>{title}</Text>
-          {!!subtitle && <Text style={contentStyles.heroSubtitle}>{subtitle}</Text>}
-          <View style={contentStyles.headerAccent} />
-        </View>
-      </LinearGradient>
-      <View style={contentStyles.content}>
+  const section = ({ gallery: 'Gallery', schemes: 'Opportunities', zones: 'Community', news: 'News', about: 'About us', membership: 'Membership', contact: 'Contact', policy: 'Information' } as Record<string, string>)[art] || 'ACTIV';
+  return <PremiumPage safeBottom refreshing={resource.refreshing} onRefresh={resource.reload} header={
+    <View style={contentStyles.headerInner}><PremiumPageHeader title={contentText(title)} subtitle={contentText(subtitle)} eyebrow={'ACTIV / ' + section.toUpperCase()}
+      onBack={() => navigation.canGoBack?.() === false ? navigation.navigate('PublicExplore') : navigation.goBack()}
+      right={<GlassIconButton icon="refresh" accessibilityLabel="Refresh content" onPress={resource.reload} />} /></View>
+  }>
+    <View style={[contentStyles.content, !readingPanel && contentStyles.listContent]}>
       {resource.loading && !resource.data ? <CardSkeletons rows={2} variant="media" /> : <>
-        {!!resource.error && <StateView compact kind="error" title="Content unavailable" message={resource.error} onAction={resource.reload} />}
-        {resource.data && children}
-        {!resource.error && !resource.data && <StateView compact title="Not available" message="This content has not been published or is no longer available." />}
+        {!!resource.error && <SurfaceCard><StateView compact kind="error" title="Content unavailable" message={resource.error} onAction={resource.reload} /></SurfaceCard>}
+        {resource.data && (readingPanel ? <SurfaceCard padded={false} style={contentStyles.readingCard}><View style={contentStyles.readingContent}>{children}</View></SurfaceCard> : children)}
+        {!resource.error && !resource.data && <SurfaceCard><StateView compact title="Not available" message="This content has not been published or is no longer available." /></SurfaceCard>}
       </>}
-      </View>
-    </ScrollView>
-  </KeyboardAvoidingView>;
+    </View>
+  </PremiumPage>;
 }
-export function Heading({ children }: { children: React.ReactNode }) { return <Text accessibilityRole="header" style={contentStyles.heading}>{children}</Text>; }
+export function Heading({ children }: { children: React.ReactNode }) { return <Text accessibilityRole="header" style={contentStyles.heading}>{typeof children === 'string' ? contentText(children) : children}</Text>; }
 export function Body({ value, navigation }: { value: any; navigation?: any }) {
-  const raw = String(value ?? '');
-  const links = [...raw.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)];
-  return <>{contentText(raw).split(/\n\s*\n/).filter(Boolean).map((text, i) => <Text selectable key={i} style={contentStyles.body}>{text}</Text>)}
-    {!!navigation && links.map(([_, href, label], i) => <ActionLink key={i} navigation={navigation} href={contentText(href)} label={contentText(label) || 'Open link'} />)}</>;
+  return <>{publicTextBlocks(value).map((block, index) => {
+    const text = <Text selectable accessibilityRole={block.kind === 'heading' ? 'header' : undefined}
+      style={[contentStyles.body, block.kind === 'heading' && contentStyles.richHeading, block.kind === 'quote' && contentStyles.quote, block.kind === 'code' && contentStyles.code]}>
+      {block.spans.map((span, i) => {
+        const link = navigation && span.href && /^(\/[^/]|https?:\/\/|mailto:|tel:)/i.test(span.href);
+        return span.bold || span.italic || span.code || link ? <Text key={i}
+          style={[span.bold && contentStyles.bold, span.italic && contentStyles.italic, span.code && contentStyles.codeText, link && contentStyles.inlineLink]}
+          accessibilityRole={link ? 'link' : undefined} accessibilityLabel={link ? span.text : undefined}
+          onPress={link ? () => openWebsitePage(navigation, span.href!, span.text) : undefined}>{span.text}</Text> : span.text;
+      })}
+    </Text>;
+    return block.kind === 'list' ? <View key={index} style={contentStyles.listRow}><Text style={contentStyles.listMarker}>{block.marker}</Text><View style={contentStyles.flex}>{text}</View></View> : <View key={index}>{text}</View>;
+  })}</>;
 }
 export function ActionLink({ navigation, href, label, download = false }: { navigation: any; href?: string; label: string; download?: boolean }) {
   if (!href) return null;
@@ -70,7 +63,6 @@ export function ActionLink({ navigation, href, label, download = false }: { navi
 export function Photo({ url, alt = 'ACTIV photo', caption, document = false, closeLabel = 'Close photo' }: { url?: string; alt?: string; caption?: string; document?: boolean; closeLabel?: string }) {
   const [ratio, setRatio] = useState(4 / 3), [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading'), [open, setOpen] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const insets = useSafeAreaInsets();
   const uri = resolveMediaUrl(url || '');
   useEffect(() => { setStatus('loading'); setOpen(false); setRatio(4 / 3); }, [uri, attempt]);
   useEffect(() => {
@@ -94,12 +86,7 @@ export function Photo({ url, alt = 'ACTIV photo', caption, document = false, clo
       </PressableScale>}
       {!!caption && <Text style={contentStyles.photoCaption}>{contentText(caption)}</Text>}
     </View>
-    <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
-      <View style={[contentStyles.screen, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-        <View style={contentStyles.viewerBar}><Text style={contentStyles.eyebrow}>PINCH TO ZOOM</Text><GlassIconButton icon="close" accessibilityLabel={closeLabel} onPress={() => setOpen(false)} /></View>
-        {open && <WebView source={{ html: imageDocument(uri) }} javaScriptEnabled={false} domStorageEnabled={false} originWhitelist={['about:blank']} onShouldStartLoadWithRequest={req => req.url === 'about:blank' || req.url.startsWith('data:text/html')} style={contentStyles.flex} />}
-      </View>
-    </Modal>
+    <PhotoViewer url={uri} visible={open} onClose={() => setOpen(false)} title={alt} closeLabel={closeLabel} fit={document ? 'width' : 'contain'} />
   </>;
 }
 /** Uploaded videos play in the native player. Embedded media stays in an
@@ -132,14 +119,18 @@ export function ExtraFields({ fields, navigation }: { fields: any[]; navigation:
   </SurfaceCard>)}</>;
 }
 export const contentStyles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F5F7FB' }, flex: { flex: 1, minWidth: 0 }, header: { paddingHorizontal: SPACE.lg },
-  headerInner: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingBottom: 20 },
-  headerButton: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#FFFFFF12', alignItems: 'center', justifyContent: 'center' },
-  headerAccent: { width: 32, height: 3, borderRadius: 2, backgroundColor: '#71B1FF', marginTop: 18 },
-  topbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }, eyebrow: { color: '#CEDBF5', fontSize: 12, fontWeight: '600', letterSpacing: 1.4 },
-  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 17 }, heroTitle: { fontSize: 28, lineHeight: 35, fontWeight: '700', letterSpacing: -0.5, color: PALETTE.white }, heroSubtitle: { color: '#DAE4F7', fontSize: 15, lineHeight: 23, marginTop: 8 },
-  content: { width: '100%', maxWidth: 760, alignSelf: 'center', padding: SPACE.lg, paddingTop: 22, gap: SPACE.md }, section: { marginBottom: SPACE.sm },
+  screen: { flex: 1, backgroundColor: PALETTE.canvas }, flex: { flex: 1, minWidth: 0 },
+  headerInner: { width: '100%', maxWidth: 720, alignSelf: 'center' },
+  content: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: SPACE.lg, marginTop: -PREMIUM_OVERLAP, gap: SPACE.md }, section: { marginBottom: SPACE.sm },
+  listContent: { marginTop: 0 },
+  readingCard: { borderRadius: 24 }, readingContent: { padding: SPACE.lg, gap: SPACE.md },
   heading: { color: BRAND.navyDeep, fontSize: 20, lineHeight: 28, fontWeight: '700', marginBottom: 10 }, body: { color: PALETTE.textSoft, fontSize: 16, lineHeight: 26, marginBottom: 12 },
+  richHeading: { color: BRAND.navyDeep, fontSize: 19, lineHeight: 27, fontWeight: '700', marginTop: 8 },
+  bold: { fontWeight: '700', color: BRAND.navyDeep }, italic: { fontStyle: 'italic' },
+  inlineLink: { color: BRAND.blue900, textDecorationLine: 'underline', fontWeight: '600' },
+  quote: { borderLeftWidth: 3, borderLeftColor: BRAND.blue, paddingLeft: 14, fontStyle: 'italic' },
+  code: { backgroundColor: PALETTE.blueSoft, borderRadius: 10, padding: 12 }, codeText: { fontFamily: 'monospace', fontSize: 14 },
+  listRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' }, listMarker: { minWidth: 18, color: BRAND.blue900, fontSize: 16, lineHeight: 26, fontWeight: '600' },
   meta: { color: PALETTE.textMuted, fontSize: 14, lineHeight: 21 }, title: { color: BRAND.navyDeep, fontSize: 20, lineHeight: 28, fontWeight: '700' },
   photo: { marginBottom: 8, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: '#E0E6EF', backgroundColor: '#EDF2F8' },
   photoCaption: { color: PALETTE.textSoft, fontSize: 14, lineHeight: 21, padding: 12, backgroundColor: '#fff' },
@@ -148,6 +139,6 @@ export const contentStyles = StyleSheet.create({
   errorTitle: { fontSize: 15, lineHeight: 22, color: BRAND.navy, fontWeight: '600' }, retry: { minWidth: 44, minHeight: 44, justifyContent: 'center' },
   expand: { position: 'absolute', right: 10, bottom: 10, width: 34, height: 34, borderRadius: 10, backgroundColor: '#10234BBB', alignItems: 'center', justifyContent: 'center' },
   link: { borderWidth: 1, borderColor: '#D5E0F0', borderRadius: 12, backgroundColor: PALETTE.white, minHeight: 48, padding: 14, marginVertical: 4 }, linkText: { color: BRAND.blue900, fontSize: 15, lineHeight: 22, fontWeight: '600' }, linkHint: { color: PALETTE.textMuted, fontSize: 12, marginTop: 4 },
-  viewerBar: { padding: 14, backgroundColor: BRAND.navy, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, video: { width: '100%', aspectRatio: 16 / 9, backgroundColor: '#071332', marginBottom: 14 },
+  video: { width: '100%', aspectRatio: 16 / 9, backgroundColor: '#071332', marginBottom: 14 },
   input: { backgroundColor: PALETTE.white, borderWidth: 1, borderColor: PALETTE.border, borderRadius: 14, minHeight: 48, paddingHorizontal: 14, color: PALETTE.text, fontSize: 16, marginBottom: 12 },
 });

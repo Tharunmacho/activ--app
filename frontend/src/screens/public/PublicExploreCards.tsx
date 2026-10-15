@@ -6,12 +6,13 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { BRAND, PALETTE, SPACE, PressableScale, SurfaceCard } from '../../ui';
 import { resolveMediaUrl } from '../../config/api.config';
 import { WEBSITE_PATHS } from '../../config/website.config';
+import { publicPlainText } from '../../utils/publicRichText';
 
 export const publicText = (value: any) => String(value || '').trim();
 export const publicRecordKey = (item: any) => publicText(item.slug || item.id || item._id);
 export type PublicPageOpener = (path: string, title: string) => void;
 type ContentKind = 'events' | 'news' | 'gallery';
-const cleanText = (value: any) => publicText(value).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
+const cleanText = publicPlainText;
 const date = (value: any) => value && Number.isFinite(new Date(value).getTime()) ? new Date(value) : null;
 const calendar = (value: any, options: Intl.DateTimeFormatOptions) => date(value)?.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', ...options }) || '';
 
@@ -34,7 +35,7 @@ function Fact({ icon, children }: { icon: string; children: React.ReactNode }) {
 /** Shared by the home preview and each public tab. No account is needed to open it. */
 export function PublicContentCard({ item, kind, openPage }: { item: any; kind: ContentKind; openPage: PublicPageOpener }) {
   const [failedImage, setFailedImage] = useState('');
-  const title = publicText(item.title || item.caption) || (kind === 'gallery' ? 'From our community' : 'ACTIV update');
+  const title = cleanText(item.title || item.caption) || (kind === 'gallery' ? 'From our community' : 'ACTIV update');
   const image = resolveMediaUrl(kind === 'events' ? item.imageUrl || item.bannerUrl || item.media?.url
     : kind === 'news' ? item.image?.url || (typeof item.image === 'string' ? item.image : item.imageUrl)
       : item.media?.type === 'video' ? item.thumbnailUrl || item.posterUrl : item.media?.url);

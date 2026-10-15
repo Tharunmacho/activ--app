@@ -1,9 +1,9 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { getPublicNewsArticle } from '../../services/publicContent';
 import { usePublicResource } from '../../services/usePublicResource';
 import { BRAND } from '../../ui';
-import { ActionLink, Body, ContentLayout, ExtraFields, Photo, contentStyles } from './PublicContentKit';
+import { ActionLink, Body, ContentLayout, ExtraFields, Photo } from './PublicContentKit';
 
 const escape = (value: string) => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 // Only image markup is loaded here. The browser's viewport supports native pinch
@@ -14,18 +14,19 @@ export const newsImageDocument = (url: string) => `<!doctype html><html><head><m
 export default function PublicNewsArticleScreen({ slug, navigation }: { slug: string; navigation: any }) {
   const resource = usePublicResource(navigation, 'news:' + slug, signal => getPublicNewsArticle(slug, signal));
   const article = resource.data;
-  return <ContentLayout navigation={navigation} title={article?.title || 'ACTIV News'} art="news" resource={resource}>
+  return <ContentLayout navigation={navigation} title={article?.title || 'ACTIV News'} subtitle={newsMetadata(article)} art="news" resource={resource}>
     {!!article && <NewsArticleContent article={article} navigation={navigation} />}
   </ContentLayout>;
 }
 
 /** The same article presentation for guest, member and legacy website routes. */
-export function NewsArticleContent({ article, navigation }: { article: any; navigation: any }) {
+export function newsMetadata(article: any): string {
   const published = article?.publishedAt ? new Date(article.publishedAt) : null;
-  const meta = [article?.category, published && Number.isFinite(published.getTime()) ? published.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '', article?.location].filter(Boolean).join(' · ');
+  return [article?.category, published && Number.isFinite(published.getTime()) ? published.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '', article?.location].filter(Boolean).join(' · ');
+}
+export function NewsArticleContent({ article, navigation }: { article: any; navigation: any }) {
   if (!article) return null;
   return <>
-    {!!meta && <Text style={contentStyles.meta}>{meta}</Text>}
     <Photo url={article.image?.url || article.imageUrl} alt={article.image?.alt || article.title} document closeLabel="Close image" />
     {!!article.summary && <View style={s.summary}><Body value={article.summary} navigation={navigation} /></View>}
     <Body value={article.body} navigation={navigation} />

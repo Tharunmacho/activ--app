@@ -12,6 +12,7 @@ import {
 import {
   SOCIAL_CATEGORIES, GENDERS, religionsFor, normalizeReligion, normalizeSocialCategory, normalizeGender,
 } from './memberFormOptions';
+import { personalDetailsErrors } from './personalDetailsValidation';
 
 /**
  * ============================================================================
@@ -46,9 +47,6 @@ type Props = NativeStackScreenProps<RootStackParamList, 'PersonalDetailsForm'> &
   /** Rendered above the first section (edit mode puts the photo here). */
   topSlot?: React.ReactNode;
 };
-
-/** The website's email check (Profile.tsx saveStep1). */
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const STEPS = ['Personal', 'Business', 'Declaration'];
 
@@ -134,8 +132,7 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
         gender: normalizeGender(profile?.gender),
       });
       setIsLocked(profile?.isLocked === true && profile?.personalDetailsComplete !== false
-        && !!normalizeReligion(profile?.religion) && !!normalizeSocialCategory(profile?.socialCategory)
-        && !!normalizeGender(profile?.gender));
+        && Object.keys(personalDetailsErrors(profile)).length === 0);
       setIsAbroad(profile?.isInternational === true);
       setAbroadCountry(String(profile?.country || ''));
     } catch (err) {
@@ -236,27 +233,7 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
   };
 
   const validate = (): boolean => {
-    const req = 'Required';
-    const next: Partial<Record<keyof FormState, string>> = {};
-    if (!(form.fullName || '').trim()) next.fullName = req;
-    if (!(form.phoneNumber || '').trim()) next.phoneNumber = req;
-    if (!(form.email || '').trim()) next.email = req;
-    else if (!EMAIL_RE.test((form.email || '').trim())) next.email = 'Please enter a valid email address';
-    if (isAbroad) {
-      if (!(form.place || '').trim()) next.place = req;
-    } else {
-      if (!form.state) next.state = req;
-      if (!form.district) next.district = req;
-      if (blocks.length > 0 && !form.block) next.block = req;
-      if (!(form.city || '').trim()) next.city = req;
-    }
-    if (!normalizeSocialCategory(form.socialCategory)) next.socialCategory = req;
-    if (!form.religion) next.religion = req;
-    // A saved combination the form itself would not offer (website Profile.tsx).
-    else if (form.socialCategory && !religionsFor(form.socialCategory).includes(form.religion)) {
-      next.religion = `Please choose a religion recognised for ${form.socialCategory}`;
-    }
-    if (!normalizeGender(form.gender)) next.gender = req;
+    const next = personalDetailsErrors(form, { international: isAbroad, blockRequired: blocks.length > 0 });
     setErrors(next);
     return Object.keys(next).length === 0;
   };

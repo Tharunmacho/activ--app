@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Modal, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { ContentImage } from '../../ui/ContentImage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BRAND, PALETTE, GradientButton, GlassIconButton, PremiumSelect, PressableScale, StateView, SurfaceCard } from '../../ui';
+import { BRAND, PALETTE, GradientButton, GlassIconButton, PremiumPage, PremiumPageHeader, PremiumSelect, PressableScale, StateView, SurfaceCard } from '../../ui';
 import { resolveMediaUrl } from '../../config/api.config';
 import { openWebsitePage } from '../../services/websiteNavigation';
 import { readPublicCms, submitPublicCms } from '../../services/publicContent';
@@ -94,7 +93,6 @@ function FeedCard({ item, navigation }: { item: any; navigation: any }) {
   </SurfaceCard>;
 }
 function LeaderProfile({ person, context, path, navigation, onClose }: { person: any; context: any; path: string; navigation: any; onClose: () => void }) {
-  const insets = useSafeAreaInsets();
   const inFlight = useRef(false);
   const [purposes, setPurposes] = useState<any[] | null>(null), [form, setForm] = useState(false), [loading, setLoading] = useState(false), [sending, setSending] = useState(false), [sent, setSent] = useState(false), [error, setError] = useState('');
   const [values, setValues] = useState({ name: '', phone: '', email: '', organisation: '', district: '', purpose: '', note: '' });
@@ -119,10 +117,10 @@ function LeaderProfile({ person, context, path, navigation, onClose }: { person:
     finally { inFlight.current = false; setSending(false); }
   };
   return <Modal animationType="slide" onRequestClose={onClose} visible>
-    <KeyboardAvoidingView style={[s.screen, { paddingTop: insets.top, paddingBottom: insets.bottom }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={s.viewerBar}><Text style={s.eyebrow}>ACTIV LEADERSHIP</Text><GlassIconButton icon="close" accessibilityLabel="Close profile" onPress={onClose} /></View>
-      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-        <Photo url={person.photoUrl} alt={person.name} /><Heading>{person.name}</Heading><Body value={[person.role, person.designation, person.organisation].filter(Boolean).join('\n')} /><Body value={person.bio} navigation={navigation} />
+    <PremiumPage safeBottom header={<PremiumPageHeader title={person.name} eyebrow="ACTIV LEADERSHIP" subtitle={[person.role, person.designation, person.organisation].filter(Boolean).join(' · ')}
+      right={<GlassIconButton icon="close" accessibilityLabel="Close profile" onPress={onClose} />} />}>
+      <View style={s.content}><SurfaceCard padded={false}><View style={s.readingContent}>
+        <Photo url={person.photoUrl} alt={person.name} /><Body value={person.bio} navigation={navigation} />
         <Contact contact={person} navigation={navigation} />
         {sent ? <SurfaceCard><Heading>Enquiry sent</Heading><Body value="The ACTIV office has received your request and will follow up using your contact details." /></SurfaceCard> : <>
           {!form || !purposes?.length ? <GradientButton label={loading ? 'Loading enquiry options…' : 'Request a callback'} disabled={loading} onPress={showForm} /> : null}
@@ -134,8 +132,8 @@ function LeaderProfile({ person, context, path, navigation, onClose }: { person:
           </SurfaceCard>}
           {!!error && <Text accessibilityRole="alert" style={[s.body, { color: '#B91C1C' }]}>{error}</Text>}
         </>}
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </View></SurfaceCard></View>
+    </PremiumPage>
   </Modal>;
 }
 const x = StyleSheet.create({

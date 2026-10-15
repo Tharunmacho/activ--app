@@ -1,17 +1,17 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, AppState } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, AppState, Alert } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
   PALETTE, SPACE, TYPE, money, shortDate, GradientButton,
   ConsoleFrame, ConsoleHeader, ConsoleGrid, ConsoleStatTile, ConsoleCard, ConsoleChip, ConsoleTabs,
-  ConsoleSkeleton, ConsoleState, ConsoleNote, CoverageRing, GlassIconButton, CONSOLE_LIST,
+  ConsoleSkeleton, ConsoleState, ConsoleNote, ConsoleButton, CoverageRing, GlassIconButton, CONSOLE_LIST,
 } from '../../../ui';
-import { listBookingOverview, exportFilteredBookings, errorText, type BookingHistoryCategory } from '../../../services/superApi';
+import { listBookingOverview, exportFilteredBookings, deleteArchivedEventHistory, errorText, type BookingHistoryCategory } from '../../../services/superApi';
 import { saveSpreadsheetReport } from '../../../services/reportExport';
 import type { BookingFiltersValue } from '../../../services/bookingFilters';
 import BookingFilters from './BookingFilters';
-import { ToggleRow } from './superKit';
+import { ToggleRow, confirm } from './superKit';
 import { BookingPeoplePane } from './SuperBookingPeopleScreen';
 
 /**
@@ -131,6 +131,8 @@ const SuperBookingsScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [peopleKey, setPeopleKey] = useState(0);
+  const [deletingEvent, setDeletingEvent] = useState('');
+  const deleteInFlight = useRef(false);
   const seq = useRef(0);
 
   const load = useCallback(async (mode: 'load' | 'refresh' | 'quiet' = 'load') => {
@@ -146,6 +148,21 @@ const SuperBookingsScreen: React.FC = () => {
       if (mine === seq.current) { setLoading(false); setRefreshing(false); }
     }
   }, [drafts, criteria]);
+  const removeArchivedHistory = async (event: any) => {
+    if (!event?.id || event.historyCategory !== 'deleted' || deleteInFlight.current) return;
+    deleteInFlight.current = true;
+    try {
+      if (!(await confirm('Delete old event history permanently?', `${event.title || 'Untitled event'}\n${shortDate(event.startAt) || ''}\n\nThis removes this old event and all its bookings, booking contacts, attendance and payment records from the database and reports. Member accounts stay. This cannot be undone and does not refund payments. Download an Excel copy first if needed.`, 'Delete permanently', true))) return;
+      setDeletingEvent(event.id);
+      await deleteArchivedEventHistory(event.id);
+      ++seq.current;
+      setData((current: any) => current ? { ...current, events: (current.events || []).filter((row: any) => row.id !== event.id) } : current);
+      setPeopleKey(key => key + 1);
+      await load('quiet');
+      Alert.alert('History deleted', 'The old event and its booking history were permanently removed.');
+    } catch (err) { Alert.alert('Could not delete old event history', errorText(err)); }
+    finally { deleteInFlight.current = false; setDeletingEvent(''); }
+  };
   // Quiet refetch on return from an event (a payment or a cancellation moves these figures).
   const loadedOnce = useRef(false);
   useFocusEffect(useCallback(() => {
@@ -205,7 +222,7 @@ const SuperBookingsScreen: React.FC = () => {
       <ConsoleTabs<BookingHistoryCategory> value={history} onChange={setHistory} style={s.tabs}
         options={(['current', 'past', 'deleted'] as const).map(value => ({ value,
           label: `${value === 'current' ? 'Current' : value === 'past' ? 'Past' : 'Old'} (${data?.historyTotals?.[value]?.events || 0})` }))} />
-      <ConsoleNote style={s.note} text="Completed events move to Past. Manually removed events move to Old. Booking and contact details stay in every view." />
+      <ConsoleNote style={s.note} text="Completed events move to Past. Removed events move to Old, where you can export their bookings or permanently delete unnecessary history." />
       <BookingFilters value={filters} options={data?.filterOptions} onChange={setFilters} />
       <View style={s.export}><GradientButton label={exporting ? 'Preparing report…' : 'Download filtered Excel'} icon="download" onPress={exportRows} disabled={exporting || loading} /></View>
       {!!error && tab === 'people' && <ConsoleNote kind="red" text={error} style={s.note} />}
@@ -255,7 +272,7 @@ const SuperBookingsScreen: React.FC = () => {
             text="Booked counts seats on live bookings taken through the public Book Now page together with members' own registrations — both fill the same room. A checkout somebody abandoned holds its seats for thirty minutes and then releases them, so this figure can go down as well as up. Open an event for the names, the payments and the door list."
           />
         ) : null}
-        renderItem={({ item, index }) => <EventCard e={item} index={index} onOpen={() => openEvent(item)} />}
+        renderItem={({ item, index }) => <View><EventCard e={item} index={index} onOpen={() => openEvent(item)} />{item.historyCategory === 'deleted' ? <View style={s.card}><ConsoleButton kind="danger" icon="delete-outline" label="Delete old history permanently" disabled={!!deletingEvent} loading={deletingEvent === item.id} onPress={() => void removeArchivedHistory(item)} /></View> : null}</View>}
       />
     </ConsoleFrame>
   );

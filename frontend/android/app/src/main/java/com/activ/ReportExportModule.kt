@@ -26,6 +26,7 @@ import com.facebook.react.uimanager.UIManagerHelper
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.URI
+import java.net.HttpURLConnection
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.min
@@ -56,6 +57,42 @@ class ReportExportModule(private val context: ReactApplicationContext) : ReactCo
       val bytes = Base64.decode(base64, Base64.DEFAULT)
       require(bytes.size >= 4 && bytes[0] == 0x50.toByte() && bytes[1] == 0x4B.toByte()) { "Invalid Excel workbook." }
       bytes
+    }
+  }
+
+  /** Private chat files use the app session only for this fixed API endpoint.
+   * Redirects are refused so credentials never follow an external file URL. */
+  @ReactMethod
+  fun downloadChatFile(url: String, token: String, filename: String, mimeType: String, promise: Promise) {
+    if (!begin(promise)) return
+    writeAsync(filename, mimeType, promise) {
+      val parsed = URI(url)
+      require(parsed.scheme == "https" && parsed.host == "api.activ.org.in" && parsed.port == -1
+        && parsed.rawUserInfo == null && parsed.query == null && parsed.fragment == null
+        && parsed.path.matches(Regex("/api/v[0-9]+/messages/attachments/[a-fA-F0-9-]{36}"))) { "Invalid private attachment endpoint." }
+      require(token.isNotBlank() && !token.contains('\n') && !token.contains('\r')) { "Sign in again to download this attachment." }
+      val connection = parsed.toURL().openConnection() as HttpURLConnection
+      try {
+        connection.instanceFollowRedirects = false
+        connection.connectTimeout = 20000
+        connection.readTimeout = 60000
+        connection.setRequestProperty("Authorization", "Bearer $token")
+        connection.setRequestProperty("Accept", mimeType)
+        check(connection.responseCode == 200) { "The attachment is unavailable or your membership no longer permits access." }
+        check(connection.contentLengthLong <= 10L * 1024 * 1024) { "The attachment exceeds 10 MB." }
+        connection.inputStream.use { input ->
+          val out = ByteArrayOutputStream()
+          val chunk = ByteArray(16384)
+          while (true) {
+            val count = input.read(chunk)
+            if (count < 0) break
+            check(out.size() + count <= 10 * 1024 * 1024) { "The attachment exceeds 10 MB." }
+            out.write(chunk, 0, count)
+          }
+          check(out.size() > 0) { "The attachment is empty." }
+          out.toByteArray()
+        }
+      } finally { connection.disconnect() }
     }
   }
 

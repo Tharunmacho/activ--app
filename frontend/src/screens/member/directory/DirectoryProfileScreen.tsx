@@ -1,6 +1,6 @@
 import StudentNetworkingGate from '../StudentNetworkingGate';
 import { isStudentMembership } from '../../../utils/memberAudience';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
@@ -14,6 +14,7 @@ import { useLoad } from '../useLoad';
 import { useMemberAccess, useLockedCta, runMembershipCta } from '../useMemberAccess';
 import { longDate } from '../events/eventFormat';
 import { MEMBERS_ONLY_COPY } from '../messages/messageCopy';
+import { PhotoViewer } from '../../../ui/PhotoViewer';
 
 /**
  * One member's directory card — website `DirectoryProfile.tsx`.
@@ -58,6 +59,8 @@ const DirectoryProfileScreen = ({ navigation, route }: any) => {
   const [openError, setOpenError] = useState('');
   const [askedToConnect, setAskedToConnect] = useState(false);
   const [seen] = useState(() => new Set<string>());
+  const [photoOpen, setPhotoOpen] = useState(false);
+  useEffect(() => { setPhotoOpen(false); }, [id, m?.profilePhoto]);
 
   const isSelf = !!id && [profile?.memberId, profile?._id, profile?.id, profile?.userId]
     .filter(Boolean).map(String).includes(id);
@@ -94,7 +97,7 @@ const DirectoryProfileScreen = ({ navigation, route }: any) => {
 
   if (loading) {
     return (
-      <PremiumPage
+      <PremiumPage safeBottom
         header={<PremiumPageHeader eyebrow="ACTIV member" title={fallbackName} subtitle="Opening their card…" onBack={() => navigation.goBack()} right={allMembers} />}
       >
         <View style={styles.overlap}><CardSkeletons rows={3} variant="media" /></View>
@@ -103,7 +106,7 @@ const DirectoryProfileScreen = ({ navigation, route }: any) => {
   }
   if (error || !m) {
     return (
-      <PremiumPage
+      <PremiumPage safeBottom
         header={<PremiumPageHeader eyebrow="ACTIV Network" title={fallbackName} onBack={() => navigation.goBack()} right={allMembers} />}
       >
         <StateView
@@ -128,7 +131,7 @@ const DirectoryProfileScreen = ({ navigation, route }: any) => {
   const since = yearOf(m?.memberSince);
 
   return (
-    <PremiumPage
+    <><PremiumPage safeBottom
       refreshing={refreshing}
       onRefresh={refresh}
       header={(
@@ -140,7 +143,8 @@ const DirectoryProfileScreen = ({ navigation, route }: any) => {
           right={allMembers}
           art={<GradientAvatar name={m?.fullName || 'Member'} uri={photo || undefined} size={92} status="verified" />}
           artSize={96}
-          artLabel={`${m?.fullName || 'Member'}'s photo`}
+          artLabel={photo ? `View ${m?.fullName || 'member'}'s profile photo` : `${m?.fullName || 'Member'}'s initials`}
+          onArtPress={photo ? () => setPhotoOpen(true) : undefined}
         >
           <View style={{ gap: SPACE.md }}>
             {sectors.length ? (
@@ -251,6 +255,8 @@ const DirectoryProfileScreen = ({ navigation, route }: any) => {
         )}
       </FadeInUp>
     </PremiumPage>
+      <PhotoViewer url={photo} visible={photoOpen} onClose={() => setPhotoOpen(false)} title={m?.fullName || 'Profile photo'} />
+    </>
   );
 };
 
