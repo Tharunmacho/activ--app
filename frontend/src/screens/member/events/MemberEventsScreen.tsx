@@ -1,7 +1,7 @@
 import EventFilters from '../../../components/EventFilters';
 import { EMPTY_EVENT_FILTERS, matchesEventFilters } from '../../../utils/eventFilters';
 import { useEventClock } from '../../../utils/useEventClock';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { FlatList, View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -59,6 +59,7 @@ function EventCard({ e, seat, onPress }: { e: any; seat?: SeatInfo | null; onPre
   return (
     <SurfaceCard
       padded={false}
+      stretch
       onPress={onPress}
       accent={reg ? (awaitingPayment ? '#FCD34D' : '#A7F3D0') : undefined}
       accessibilityLabel={`${e?.title || 'Untitled event'}, ${action}`}
@@ -143,10 +144,19 @@ function EventCard({ e, seat, onPress }: { e: any; seat?: SeatInfo | null; onPre
 
 const MemberEventsScreen = ({ navigation }: any) => {
   const { width } = useWindowDimensions();
-  const cardWidth = Math.min(340, width - 64);
+  const [viewportWidth, setViewportWidth] = useState(width);
+  const availableWidth = Math.max(1, viewportWidth - SPACE.lg * 2);
+  const columns = availableWidth >= 640 ? 2 : 1;
+  const cardWidth = (availableWidth - SPACE.md * (columns - 1)) / columns;
+  const carousel = useRef<FlatList<any>>(null);
   const now = useEventClock();
   const [tab, setTab] = useState<Tab>('upcoming');
   const [filters, setFilters] = useState({ ...EMPTY_EVENT_FILTERS });
+  // Search, tab changes and rotation should start with a fully visible card,
+  // including when the previous result set was scrolled to its last item.
+  useEffect(() => {
+    carousel.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [tab, filters, cardWidth]);
   const { data, loading, error, reload, refreshing, refresh } = useLoad<any>(() => listMemberEvents(), [], { events: [] });
   const events = asArray<any>(data?.events);
   // Real seat numbers per capped, open event — `registeredCount` misses every booking.
@@ -202,12 +212,19 @@ const MemberEventsScreen = ({ navigation }: any) => {
             { value: 'past', label: 'Past', count: past.length },
           ]}
         />
-        <EventFilters events={events} value={filters} onChange={setFilters} />
-        {!loading && !error && !!rows.length && <FlatList key={tab} horizontal data={rows}
+        <View testID="member-event-filters" style={styles.gutter}>
+          <EventFilters events={events} value={filters} onChange={setFilters} />
+        </View>
+        {!loading && !error && !!rows.length && <FlatList testID="member-event-carousel" ref={carousel} key={tab} horizontal data={rows}
+          onLayout={({ nativeEvent }) => {
+            const measured = nativeEvent.layout.width;
+            if (Number.isFinite(measured) && measured > 0) setViewportWidth(measured);
+          }}
           keyExtractor={(e, i) => String(e?.id || e?._id || i)} extraData={seats}
           showsHorizontalScrollIndicator={false} snapToInterval={cardWidth + SPACE.md} decelerationRate="fast"
+          keyboardShouldPersistTaps="handled" maxToRenderPerBatch={4}
           contentContainerStyle={styles.cardRow} initialNumToRender={4}
-          renderItem={({ item }) => <View style={{ width: cardWidth }}><EventCard e={item}
+          renderItem={({ item }) => <View testID="member-event-card" style={[styles.cardCell, { width: cardWidth }]}><EventCard e={item}
             seat={seats[String(item?.id || item?._id || '')]} onPress={() => openEventOrTicket(navigation, item)} /></View>} />}
         </>
       )}
@@ -215,9 +232,9 @@ const MemberEventsScreen = ({ navigation }: any) => {
       extraData={[tab, seats]}
       keyExtractor={(e, i) => String(e?.id || e?._id || i)}
       renderItem={() => null}
-      ListEmptyComponent={loading ? <CardSkeletons rows={3} variant="media" /> : error ? (
+      ListEmptyComponent={rows.length && !loading && !error ? null : <View style={styles.gutter}>{loading ? <CardSkeletons rows={3} variant="media" /> : error ? (
         <StateView kind="error" title="Events could not be loaded" message={error} onAction={reload} />
-      ) : rows.length ? null : (
+      ) : (
         <StateView
           art={tab === 'mine' ? <EventTicket3D size={84} /> : <EventCalendar3D size={84} />}
           title={Object.values(filters).some(Boolean) ? 'No matching events' : EMPTY[tab].title}
@@ -225,7 +242,7 @@ const MemberEventsScreen = ({ navigation }: any) => {
           action={tab === 'mine' && upcoming.length > 0 ? 'See all events' : undefined}
           onAction={tab === 'mine' && upcoming.length > 0 ? () => setTab('upcoming') : undefined}
         />
-      )}
+      )}</View>}
       refreshing={refreshing}
       onRefresh={refresh}
       initialNumToRender={10}
@@ -235,8 +252,10 @@ const MemberEventsScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  cardRow: { gap: SPACE.md, paddingBottom: SPACE.md, alignItems: 'flex-start' },
-  tabs: { marginTop: -PREMIUM_OVERLAP, marginBottom: SPACE.lg },
+  gutter: { paddingHorizontal: SPACE.lg },
+  cardRow: { gap: SPACE.md, paddingHorizontal: SPACE.lg, paddingTop: SPACE.xs, paddingBottom: SPACE.lg, alignItems: 'stretch' },
+  cardCell: { flexGrow: 1 },
+  tabs: { marginTop: -PREMIUM_OVERLAP },
   bannerWrap: { width: '100%', height: 148, backgroundColor: PALETTE.field },
   banner: { width: '100%', height: '100%' },
   bannerShade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 70 },
@@ -250,7 +269,7 @@ const styles = StyleSheet.create({
     backgroundColor: PALETTE.white,
   },
   pricePillText: { fontSize: 13, lineHeight: 17, fontWeight: '800', color: BRAND.navy, fontVariant: ['tabular-nums'] },
-  body: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.md, padding: SPACE.lg },
+  body: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.md, padding: SPACE.lg, flexGrow: 1 },
   main: { flex: 1, minWidth: 0 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.xs + 2, marginBottom: SPACE.sm },
   title: { ...TYPE.heading, fontSize: 17, lineHeight: 23, color: BRAND.navyDeep },

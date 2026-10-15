@@ -17,7 +17,7 @@ import Svg, {
 } from 'react-native-svg';
 import { asArray, RADIUS, SHADOW } from '../../../ui';
 import { amountInWords as spellAmount } from '../../../utils/amountInWords';
-import { A4_WIDTH, A4_HEIGHT, MEMBERSHIP_PAGE, membershipContentScale } from './certificateLayout';
+import { A4_WIDTH, A4_HEIGHT, MEMBERSHIP_PAGE, MEMBERSHIP_SIGNATURE, membershipContentScale } from './certificateLayout';
 
 /**
  * ============================================================================
@@ -440,7 +440,7 @@ export function MembershipCertificateView({ cert, pdfRef, width, onPress, hint =
                 {column === 1 ? <View style={m.divider} /> : null}
                 <View style={m.row}>
                   {row ? <>
-                    <Icon name={row.icon} size={20} color={NAVY_MID} />
+                    <View style={m.factIcon}><Icon name={row.icon} size={20} color={NAVY_MID} /></View>
                     <T style={m.label}>{row.label}</T>
                     <T style={m.value}>{row.value}</T>
                   </> : null}
@@ -453,12 +453,14 @@ export function MembershipCertificateView({ cert, pdfRef, width, onPress, hint =
         <View style={m.signatures} testID="membership-signatories">
           <View style={m.signerColumn} testID="membership-signature-block">
             <T style={m.signerRole}>Founder and Chairperson</T>
-            <Image source={SIGNATURE} style={m.signature} resizeMode="contain" accessibilityLabel="Signature of Thamizhazhagan Nallaiyan, Founder and Chairperson" />
+            <View style={m.signatureSlot} testID="membership-signature-slot">
+              <Image source={SIGNATURE} style={m.signature} resizeMode="contain" accessibilityLabel="Signature of Thamizhazhagan Nallaiyan, Founder and Chairperson" />
+            </View>
             <View style={m.signRule} />
             <T style={m.signerName}>THAMIZHAZHAGAN NALLAIYAN</T>
           </View>
-          <View style={m.seal}><Seal line="Membership" size={112} /><T style={m.sealCaption}>Official Seal</T></View>
-          <View style={m.signColumn}>
+          <View style={m.seal} testID="membership-seal-block"><Seal line="Membership" size={112} /><T style={m.sealCaption}>Official Seal</T></View>
+          <View style={m.signColumn} testID="membership-issue-block">
             <T style={m.signLabel}>Date of Issue</T>
             <View style={m.issueDate}><T style={m.date}>{issued || '—'}</T></View>
             <View style={m.signRule} />
@@ -702,22 +704,24 @@ const m = StyleSheet.create({
   panel: { alignSelf: 'stretch', marginTop: 8, borderRadius: 16, borderWidth: 1, borderColor: PANEL_LINE, backgroundColor: '#FFFFFFE8', paddingHorizontal: 20, paddingVertical: 6 },
   pair: { flexDirection: 'row', alignItems: 'stretch', gap: 18 },
   divider: { width: 2, marginVertical: 4, backgroundColor: GOLD_LIGHT },
-  row: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'flex-start', gap: 8, minHeight: 33, paddingVertical: 6 },
+  row: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'flex-start', gap: 8, minHeight: 33, paddingVertical: 4 },
+  factIcon: { width: 28, paddingTop: 1 },
   rowBorder: { borderBottomWidth: 1, borderBottomColor: LINE },
-  label: { width: 126, fontSize: 13.5, lineHeight: 19, color: MUTED, fontWeight: '500' },
+  label: { width: 126, fontSize: 13.5, lineHeight: 20, color: MUTED, fontWeight: '500' },
   value: { flex: 1, minWidth: 0, flexShrink: 1, fontSize: 15, lineHeight: 20, color: INK, fontWeight: '700' },
   motto: { fontSize: 14, lineHeight: 22, letterSpacing: 3, color: NAVY_MID, fontWeight: '700' },
-  signatures: { position: 'absolute', top: MEMBERSHIP_PAGE.signaturesTop, left: MEMBERSHIP_PAGE.side, right: MEMBERSHIP_PAGE.side, height: MEMBERSHIP_PAGE.signatureHeight, flexDirection: 'row', alignItems: 'center' },
+  signatures: { position: 'absolute', top: MEMBERSHIP_PAGE.signaturesTop, left: MEMBERSHIP_PAGE.signaturesSide, right: MEMBERSHIP_PAGE.signaturesSide, height: MEMBERSHIP_PAGE.signatureHeight, flexDirection: 'row', alignItems: 'flex-start' },
   signColumn: { flex: 1, minWidth: 0, alignItems: 'center' },
   signerColumn: { flex: 1, minWidth: 0, alignItems: 'center' },
-  signerRole: { fontSize: 14, lineHeight: 20, fontWeight: '700', color: NAVY },
-  signerName: { fontSize: 12, lineHeight: 18, marginTop: 3, fontWeight: '800', color: NAVY },
-  signLabel: { fontSize: 16, lineHeight: 23, fontWeight: '700', color: NAVY },
-  signature: { width: 240, height: 86, tintColor: NAVY_MID },
+  signerRole: { fontSize: 14, lineHeight: 20, fontWeight: '700', color: NAVY, textAlign: 'center' },
+  signerName: { fontSize: 12, lineHeight: 18, marginTop: 3, fontWeight: '800', color: NAVY, textAlign: 'center' },
+  signLabel: { fontSize: 14, lineHeight: 20, fontWeight: '700', color: NAVY, textAlign: 'center' },
+  signatureSlot: { width: 220, height: MEMBERSHIP_SIGNATURE.height, alignItems: 'center', justifyContent: 'center' },
+  signature: { width: MEMBERSHIP_SIGNATURE.width, height: MEMBERSHIP_SIGNATURE.height, tintColor: NAVY_MID, transform: [{ translateX: MEMBERSHIP_SIGNATURE.translateX }, { translateY: MEMBERSHIP_SIGNATURE.translateY }, { rotate: MEMBERSHIP_SIGNATURE.rotate }] },
   signRule: { width: 220, height: 1, backgroundColor: NAVY_MID },
   seal: { flex: 1, minWidth: 0, alignItems: 'center' },
-  sealCaption: { fontSize: 12, color: NAVY_MID },
-  issueDate: { height: 60, justifyContent: 'center' },
+  sealCaption: { fontSize: 12, lineHeight: 16, color: NAVY_MID },
+  issueDate: { height: MEMBERSHIP_SIGNATURE.height, justifyContent: 'center' },
   date: { fontSize: 24, fontWeight: '700', color: NAVY_MID },
   footer: { position: 'absolute', left: 22, right: 22, top: MEMBERSHIP_PAGE.footerTop, height: 40, paddingHorizontal: 18, borderTopWidth: 2, borderTopColor: GOLD, backgroundColor: NAVY, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
   footerReference: { flex: 1.4, minWidth: 0 },

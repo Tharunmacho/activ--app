@@ -8,8 +8,19 @@ export const MEMBERSHIP_PAGE = {
   contentTop: 38,
   contentBottom: 590,
   signaturesTop: 598,
+  signaturesSide: 210,
   signatureHeight: 128,
   footerTop: 732,
+};
+
+// The original 377 x 212 PNG is kept intact. Its ink rises to the right;
+// rotate clockwise, then centre the visible ink (including its descenders).
+export const MEMBERSHIP_SIGNATURE = {
+  width: 86 * 377 / 212,
+  height: 86,
+  rotate: '8deg' as const,
+  translateX: -3.5,
+  translateY: 4.5,
 };
 
 /** Fit the whole page in the measured viewport, including after rotation. */

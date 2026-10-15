@@ -2,6 +2,7 @@ import React from 'react';
 import Renderer, { act } from 'react-test-renderer';
 import { FlatList, Keyboard, NativeModules, Platform, Text, TextInput, View } from 'react-native';
 import { pick, keepLocalCopy } from '@react-native-documents/picker';
+import { launchImageLibrary } from 'react-native-image-picker';
 import MessageThreadScreen from '../src/screens/member/messages/MessageThreadScreen';
 import { getThread, sendMessage, uploadMessageAttachment } from '../src/services/memberApi';
 import { downloadChatAttachment, pickChatDocument, validateChatFile } from '../src/services/messageAttachments';
@@ -13,6 +14,7 @@ jest.mock('../src/screens/member/useMemberAccess', () => ({ useMemberAccess: () 
 jest.mock('../src/services/memberApi', () => ({ getThread: jest.fn(), sendMessage: jest.fn(), markConversationRead: jest.fn(), uploadMessageAttachment: jest.fn() }));
 jest.mock('../src/services/api', () => ({ getAuthToken: jest.fn() }));
 jest.mock('../src/services/downloadsPermission', () => ({ ensureDownloadsPermission: jest.fn(async () => {}) }));
+jest.mock('react-native-image-picker', () => ({ launchImageLibrary: jest.fn() }));
 jest.mock('../src/config/api.config', () => ({ API_BASE_URL: 'https://api.activ.org.in/api/v1', resolveMediaUrl: (value: string) => value }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 24, left: 0, right: 0 }) }));
 jest.mock('../src/ui', () => {
@@ -45,7 +47,7 @@ const render = async () => { await act(async () => { tree = Renderer.create(<Mes
 const choosePdf = async () => {
   (pick as jest.Mock).mockResolvedValue([{ uri: 'content://quote', name: 'quote.pdf', type: 'application/pdf', size: 100 }]);
   (keepLocalCopy as jest.Mock).mockResolvedValue([{ status: 'success', localUri: 'file:///cache/quote.pdf' }]);
-  await press('Attach a photo or document'); await press('Choose a document');
+  await press('Attach a document');
 };
 
 beforeEach(() => {
@@ -74,7 +76,7 @@ test('keyboard overlap lifts composer only by the part Android did not resize', 
   expect(tree!.root.findByProps({ testID: 'chat-keyboard-frame' }).props.style[1].paddingBottom).toBe(0);
 });
 
-test('history readers retain their position during resize and can jump back to latest', async () => {
+test('history readers retain their position during resize and resume following after scrolling to the end', async () => {
   await render(); scroll.mockClear();
   await act(async () => {
     list().props.onScrollBeginDrag();
@@ -83,7 +85,36 @@ test('history readers retain their position during resize and can jump back to l
     list().props.onContentSizeChange(); list().props.onLayout();
   });
   expect(scroll).not.toHaveBeenCalled();
-  await press('Jump to latest messages'); expect(scroll).toHaveBeenCalled();
+  expect(button('Jump to latest messages')).toBeUndefined();
+  await act(async () => {
+    list().props.onScrollBeginDrag();
+    list().props.onScroll({ nativeEvent: { contentOffset: { y: 1000 }, contentSize: { height: 1500 }, layoutMeasurement: { height: 500 } } });
+    list().props.onScrollEndDrag();
+    list().props.onContentSizeChange();
+  });
+  expect(scroll).toHaveBeenCalled();
+});
+
+test('keeps the previous photo composer and intro, with only a direct document option added', async () => {
+  (getThread as jest.Mock).mockResolvedValue({ conversation: { withMember: { fullName: 'Member' } }, messages: [], hasMore: false });
+  (launchImageLibrary as jest.Mock).mockImplementation((_options, callback) => callback({ assets: [{ uri: 'file:///photo.jpg', type: 'image/jpeg', fileName: 'photo.jpg', fileSize: 100 }] }));
+  await render();
+  expect(nodeText()).toContain('What is it about?');
+  expect(nodeText()).toContain('Supply enquiry');
+  expect(nodeText()).toContain('Ask for a quotation');
+  expect(nodeText()).toContain('Work together on an order');
+  expect(tree!.root.findByType(TextInput).props.placeholder).toBe('Write about your business — what you make, what you need…');
+  expect(button('Send a picture')).toBeDefined();
+  expect(button('Attach a document')).toBeDefined();
+  expect(button('Insert an emoji')).toBeDefined();
+  expect(button('Attach a photo or document')).toBeUndefined();
+  await press('Send a picture');
+  expect(launchImageLibrary).toHaveBeenCalledTimes(1);
+  expect(tree!.root.findAllByProps({ testID: 'chat-image' }).length).toBeGreaterThan(0);
+  expect(nodeText()).toContain('Ready to send — a caption is optional.');
+  expect(tree!.root.findByType(TextInput).props.placeholder).toBe('Add a caption, or send the picture on its own…');
+  await press('Remove picture');
+  expect(tree!.root.findAllByProps({ testID: 'chat-image' })).toHaveLength(0);
 });
 
 test('attachment preview is removable before uploading and documents never render as pictures', async () => {
