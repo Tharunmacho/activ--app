@@ -30,7 +30,7 @@ test('guest home shows public content, excludes finished events and opens native
   expect(button('Future conference')).toBeDefined();
   expect(screen.root.findAllByType(require('../src/ui').FitImage).some(node => node.props.uri === 'https://example.test/event-banner.jpg')).toBe(true);
   expect(button('Finished conference')).toBeUndefined();
-  const order = ['Upcoming events', 'From the gallery', 'Latest news', 'Schemes', 'Zones', 'Contact us'];
+  const order = ['Upcoming events', 'From the gallery', 'Latest news', 'Schemes', 'ACTIV near you', 'Contact us'];
   expect(screen.root.findAllByType(Text).filter(node => node.props.accessibilityRole === 'header').map(node => node.props.children)
     .filter(label => order.includes(label))).toEqual(order);
   expect(navigation.navigate).not.toHaveBeenCalled();

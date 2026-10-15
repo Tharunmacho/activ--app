@@ -3,7 +3,7 @@ import Renderer from 'react-test-renderer';
 import { Alert, StyleSheet } from 'react-native';
 import WebsiteViewer from '../src/screens/member/website/WebsiteViewerScreen';
 import Register from '../src/screens/admin/super/SuperMembershipIdsScreen';
-import { getPublicNewsArticle } from '../src/services/publicContent';
+import { readPublicCms } from '../src/services/publicContent';
 import { getMembershipId, listMembershipIds, updateMembershipId, deleteMembershipId } from '../src/services/membershipIdApi';
 
 const mockNavigation = { goBack: jest.fn(), navigate: jest.fn() };
@@ -11,7 +11,7 @@ jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'), useNavigation: () => mockNavigation,
   useFocusEffect: (callback: () => any) => require('react').useEffect(callback, [callback]),
 }));
-jest.mock('../src/services/publicContent', () => ({ getPublicNewsArticle: jest.fn() }));
+jest.mock('../src/services/publicContent', () => ({ readPublicCms: jest.fn() }));
 jest.mock('../src/services/membershipIdApi', () => ({
   ...jest.requireActual('../src/services/membershipIdApi'), getMembershipId: jest.fn(), listMembershipIds: jest.fn(), updateMembershipId: jest.fn(), deleteMembershipId: jest.fn(),
 }));
@@ -28,9 +28,9 @@ const press = (label: string) => {
 const input = (label: string, value: string) => screen.root.findAll(n => n.props.label === label && typeof n.props.onChangeText === 'function')[0].props.onChangeText(value);
 afterEach(async () => { await Renderer.act(async () => screen?.unmount()); jest.clearAllMocks(); jest.restoreAllMocks(); });
 test.each([true, false])('news detail uses a full native letter before/after login (guest=%s)', async publicAccess => {
-  (getPublicNewsArticle as jest.Mock).mockResolvedValue({ title: 'Official letter', body: 'Complete body', image: { url: 'https://example.test/letter.png', alt: 'Letter' }, photos: [] });
+  (readPublicCms as jest.Mock).mockResolvedValue({ title: 'Official letter', body: 'Complete body', image: { url: 'https://example.test/letter.png', alt: 'Letter' }, photos: [] });
   await Renderer.act(async () => { screen = Renderer.create(<WebsiteViewer navigation={mockNavigation} route={{ params: { path: '/news/official-letter', publicAccess } }} />); await flush(); });
-  expect(getPublicNewsArticle).toHaveBeenCalledWith('official-letter', expect.anything());
+  expect(readPublicCms).toHaveBeenCalledWith('/cms/news/official-letter', expect.anything(), undefined);
   const letter = screen.root.findAll(n => n.props.source?.uri === 'https://example.test/letter.png' && n.props.onLoad)[0];
   expect(letter.props.resizeMode).toBe('contain');
   await Renderer.act(async () => { letter.props.onLoad({ nativeEvent: { source: { width: 700, height: 1400 } } }); });

@@ -98,6 +98,21 @@ const screens: [string, () => React.ComponentType<any>, any][] = [
 ];
 
 const flush = () => new Promise<void>((r) => { setTimeout(() => r(), 0); });
+const mountedScreens = new Set<ReactTestRenderer.ReactTestRenderer>();
+const renderScreen = (element: React.ReactElement) => {
+  const tree = ReactTestRenderer.create(element);
+  mountedScreens.add(tree);
+  return tree;
+};
+const unmountScreen = async (tree?: ReactTestRenderer.ReactTestRenderer) => {
+  if (!tree || !mountedScreens.delete(tree)) return;
+  await ReactTestRenderer.act(async () => { tree.unmount(); });
+};
+// Assertion failures must still run focus-effect and event-clock cleanup.
+afterEach(async () => {
+  for (const tree of mountedScreens) await unmountScreen(tree);
+  mockWebsiteEmpty = false;
+});
 
 describe.each([false, true])('premium member screens (api failing: %s)', (failing) => {
   beforeAll(() => { mockFailAll = failing; });
@@ -106,12 +121,12 @@ describe.each([false, true])('premium member screens (api failing: %s)', (failin
     const Screen = load();
     let tree: any;
     await ReactTestRenderer.act(async () => {
-      tree = ReactTestRenderer.create(<Screen navigation={nav()} route={route} />);
+      tree = renderScreen(<Screen navigation={nav()} route={route} />);
       await flush();
       await flush();
     });
     expect(tree.toJSON()).toBeTruthy();
-    await ReactTestRenderer.act(async () => { tree.unmount(); });
+    await unmountScreen(tree);
   });
 });
 
@@ -119,7 +134,7 @@ test('Member locked card renders', async () => {
   const MemberLocked = require('../src/screens/member/MemberLocked').default;
   let tree: any;
   await ReactTestRenderer.act(async () => {
-    tree = ReactTestRenderer.create(
+    tree = renderScreen(
       <MemberLocked feature="Directory" onActivate={jest.fn()} benefits={[{ icon: 'chat', title: 'Message', detail: 'Reach members', open: true }]} />,
     );
   });
@@ -160,10 +175,10 @@ describe.each([[false, false], [false, true], [true, false], [true, true]])('das
     const navigation = nav();
     let tree: any;
     await ReactTestRenderer.act(async () => {
-      tree = ReactTestRenderer.create(<Screen navigation={navigation} route={{}} />);
+      tree = renderScreen(<Screen navigation={navigation} route={{}} />);
       await flush(); await flush();
     });
-    const expected = ['upcoming events', ...(paid ? ['association updates'] : []), 'quick actions', 'from the gallery', 'latest news', 'schemes', 'zones', 'my documents', 'contact us'];
+    const expected = ['upcoming events', ...(paid ? ['association updates'] : []), 'quick actions', 'from the gallery', 'latest news', 'schemes', 'activ near you', 'my documents', 'contact us'];
     const headings = () => tree.root.findAllByType(Text).filter((node: any) => !['Schemes', 'Contact us'].includes(node.props.children) || node.props.accessibilityRole === 'header')
       .map((node: any) => String(node.props.children).toLowerCase())
       .filter((label: string) => expected.includes(label));
@@ -198,7 +213,7 @@ describe.each([[false, false], [false, true], [true, false], [true, true]])('das
       await ReactTestRenderer.act(async () => { upgrade.findByType(GradientButton).props.onPress(); });
       expect(navigation.navigate).toHaveBeenCalledWith('MembershipPlans', { upgrade: true });
     }
-    await ReactTestRenderer.act(async () => { tree.unmount(); });
+    await unmountScreen(tree);
     mockWebsiteEmpty = false;
   });
 });
@@ -212,7 +227,7 @@ test.each([false, true])('upcoming event opens native details and the booking fo
   const navigation = nav(), id = paid ? 'm1' : 'e1';
   let tree: any;
   try {
-    await ReactTestRenderer.act(async () => { tree = ReactTestRenderer.create(<Dashboard navigation={navigation} />); await flush(); await flush(); });
+    await ReactTestRenderer.act(async () => { tree = renderScreen(<Dashboard navigation={navigation} />); await flush(); await flush(); });
     const card = tree.root.findAll((node: any) => typeof node.props.onPress === 'function'
       && String(node.props.accessibilityLabel || '').startsWith(paid ? 'Members meet,' : 'Meet.'))[0];
     expect(card).toBeTruthy();
@@ -227,7 +242,7 @@ test.each([false, true])('upcoming event opens native details and the booking fo
     expect(tree.root.findAllByType(TextInput).some((node: any) => node.props.value === MOCK_PROFILE.fullName)).toBe(true);
     expect(tree.root.findAll((node: any) => node.props.accessibilityLabel === 'Review booking')).not.toHaveLength(0);
     expect(navigation.navigate.mock.calls.some(([name]: [string]) => name === 'WebsiteViewer')).toBe(false);
-  } finally { await ReactTestRenderer.act(async () => tree?.unmount()); }
+  } finally { await unmountScreen(tree); }
 });
 
 test('paid membership card shows the last valid day before the anniversary', async () => {
@@ -236,9 +251,9 @@ test('paid membership card shows the last valid day before the anniversary', asy
   const { MembershipCard3D } = require('../src/screens/member/dashboard/DashboardPremium');
   let tree: any;
   try {
-    await ReactTestRenderer.act(async () => { tree = ReactTestRenderer.create(<Screen navigation={nav()} />); await flush(); await flush(); });
+    await ReactTestRenderer.act(async () => { tree = renderScreen(<Screen navigation={nav()} />); await flush(); await flush(); });
     expect(tree.root.findByType(MembershipCard3D).props.validValue).toBe('9 Jan 2027');
-  } finally { await ReactTestRenderer.act(async () => tree?.unmount()); }
+  } finally { await unmountScreen(tree); }
 });
 
 test('paid dashboard displays the server progression without changing validity', async () => {
@@ -248,22 +263,22 @@ test('paid dashboard displays the server progression without changing validity',
   const { MembershipCard3D } = require('../src/screens/member/dashboard/DashboardPremium');
   let tree: any;
   try {
-    await ReactTestRenderer.act(async () => { tree = ReactTestRenderer.create(<Screen navigation={nav()} />); await flush(); await flush(); });
+    await ReactTestRenderer.act(async () => { tree = renderScreen(<Screen navigation={nav()} />); await flush(); await flush(); });
     expect(tree.root.findByType(MembershipCard3D).props.planTitle).toBe('Intermediate');
     expect(tree.root.findByType(MembershipCard3D).props.validValue).toBe('9 Jan 2027');
     expect(tree.root.findAllByType(Text).some((node: any) => String(node.props.children).includes('Congratulations!'))).toBe(true);
-  } finally { delete (MOCK_PROFILE as any).currentMembership; await ReactTestRenderer.act(async () => tree?.unmount()); }
+  } finally { delete (MOCK_PROFILE as any).currentMembership; await unmountScreen(tree); }
 });
 
 test('unpaid documents expose application records while certificates remain locked', async () => {
   mockPaid = false; mockFailAll = false;
   const Screen = require('../src/screens/member/documents/MemberDocumentsScreen').default;
   let tree: any;
-  await ReactTestRenderer.act(async () => { tree = ReactTestRenderer.create(<Screen navigation={nav()} />); await flush(); await flush(); });
+  await ReactTestRenderer.act(async () => { tree = renderScreen(<Screen navigation={nav()} />); await flush(); await flush(); });
   const labels = tree.root.findAll((n: any) => typeof n.props.accessibilityLabel === 'string').map((n: any) => n.props.accessibilityLabel);
   for (const name of ['Membership Certificate', 'Tax Exemption Certificate', 'Payment Receipt']) {
     expect(labels).toContain(`${name}, locked until your membership is active`);
     expect(labels).not.toContain(`Open ${name}`);
   }
-  await ReactTestRenderer.act(async () => { tree.unmount(); });
+  await unmountScreen(tree);
 });

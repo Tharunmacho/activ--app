@@ -6,7 +6,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
   PALETTE, SPACE, TYPE, Skeleton, shortDate,
-  BRAND, FadeInUp, PressableScale, FloatingIllustration, PremiumSectionHeader, SiteArt, SiteArtKind, WebsiteGlobe3D, FitImage } from '../../../ui';
+  BRAND, FadeInUp, PressableScale, PremiumSectionHeader, SiteArtKind, FitImage } from '../../../ui';
 import {
   getSiteNav, getLegalLinks, getZones, getLatestNews, getGalleryStrip, getPublicEvents,
   FALLBACK_NAV, FALLBACK_LEGAL, SiteLink, Zone, NewsTeaser, GalleryThumb, EventTeaser,
@@ -64,13 +64,18 @@ const metaFor = (path: string): TileMeta => {
 
 const MONTHS3 = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
+function MediaPlaceholder({ icon, label }: { icon: string; label: string }) {
+  return <View style={x.mediaPlaceholder}><Icon name={icon} size={28} color={BRAND.blue} /><Text style={x.mediaPlaceholderText}>{label}</Text></View>;
+}
+
 export default function ExploreActiv({ navigation, refreshKey = 0, sections, showEmpty = false, content, publicAccess = false, onOpenPage }: {
   navigation: Nav; refreshKey?: number; sections?: readonly ExploreSection[]; showEmpty?: boolean; content?: ExploreContent; publicAccess?: boolean;
   onOpenPage?: (path: string, title: string) => void;
 }) {
   const sectionKey = (sections || ALL_SECTIONS).join('|');
   const shown = useMemo(() => new Set(sectionKey.split('|')), [sectionKey]);
-  const { width } = useWindowDimensions();
+  const { width, fontScale } = useWindowDimensions();
+  const stackedTiles = width < 360 || fontScale > 1.2;
   const [nav, setNav] = useState<SiteLink[]>(FALLBACK_NAV);
   const [legal, setLegal] = useState<SiteLink[]>(FALLBACK_LEGAL);
   const [zones, setZones] = useState<Zone[]>([]);
@@ -138,6 +143,7 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
       }
     }
     const list = allNav
+      .filter(link => !publicAccess || !['/', '/events', '/news', '/gallery'].includes(link.path))
       .map((l) => ({ key: l.path, label: l.path === WEBSITE_PATHS.about ? 'About ACTIV' : l.path === WEBSITE_PATHS.contact ? 'Contact us' : l.label, path: l.path, meta: metaFor(l.path) }));
     if (!list.some((t) => t.path === WEBSITE_PATHS.donate)) {
       list.push({ key: 'donate', label: 'Donate', path: WEBSITE_PATHS.donate, meta: TILE_BY_PATH['/donate'] });
@@ -147,7 +153,7 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
       list.push({ key: 'zones', label: 'Zones & States', path: WEBSITE_PATHS.region(firstZone.slug), meta: TILE_BY_PATH.zones });
     }
     return list;
-  }, [nav, zones]);
+  }, [nav, zones, publicAccess]);
 
   const cardW = Math.round(Math.min(340, (width || 360) * 0.8));
 
@@ -187,9 +193,7 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
                 <Icon name="arrow-forward" size={16} color={BRAND.navy} />
               </View>
             </View>
-            <FloatingIllustration size={84} amplitude={5}>
-              <WebsiteGlobe3D size={84} />
-            </FloatingIllustration>
+            <Icon name="public" size={42} color="#C8DBFF" />
           </LinearGradient>
         </PressableScale>
       </FadeInUp>
@@ -235,11 +239,9 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
                   >
                     <View style={x.newsImgWrap}>
                       {n.image ? (
-                        <FitImage uri={n.image} style={x.newsImg} />
+                        <FitImage uri={n.image} style={x.newsImg} fallback={<MediaPlaceholder icon="article" label="Association news" />} />
                       ) : (
-                        <LinearGradient colors={TILE_BY_PATH['/news'].colors} style={[x.newsImg, x.center]}>
-                          <SiteArt kind="news" size={56} />
-                        </LinearGradient>
+                        <MediaPlaceholder icon="article" label="Association news" />
                       )}
                       <LinearGradient colors={['rgba(11,26,69,0)', 'rgba(11,26,69,0.75)']} style={x.newsFade} />
                       {n.category ? <View style={x.newsCat}><Text style={x.newsCatText} numberOfLines={1}>{n.category.toUpperCase()}</Text></View> : null}
@@ -289,7 +291,7 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
                   accessibilityRole="button"
                   accessibilityLabel={`${e.title}. ${ok && d ? shortDate(e.startAt) : 'Date to be confirmed'}. View event details.`}
                 >
-                  {e.image ? <FitImage uri={e.image} style={x.eventBanner} /> : <LinearGradient colors={TILE_BY_PATH['/events'].colors} style={[x.eventBanner, x.center]}><SiteArt kind="events" size={72} /></LinearGradient>}
+                  {e.image && <FitImage uri={e.image} style={x.eventBanner} fallback={<MediaPlaceholder icon="event" label="ACTIV event" />} />}
                   <View style={x.eventRow}>
                   <LinearGradient colors={TILE_BY_PATH['/events'].colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={x.date}>
                     <Text style={x.dateDay} maxFontSizeMultiplier={1.1}>{ok && d ? String(d.getDate()).padStart(2, '0') : '--'}</Text>
@@ -334,7 +336,7 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
                     accessibilityRole="button"
                     accessibilityLabel={`${g.title || 'Photo'}. Opens in the gallery.`}
                   >
-                    <FitImage uri={g.image} style={x.photoImg} />
+                    <FitImage uri={g.image} style={x.photoImg} fallback={<MediaPlaceholder icon="photo-library" label="Gallery" />} />
                     {g.title ? (
                       <LinearGradient colors={['rgba(11,26,69,0)', 'rgba(11,26,69,0.8)']} style={x.photoCap}>
                         <Text style={x.photoCapText} numberOfLines={2} maxFontSizeMultiplier={1.1}>{g.title}</Text>
@@ -351,31 +353,19 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
       {shown.has('zones') && <View style={x.gutter}><ExploreZones zones={zones} openPage={open} /></View>}
       {shown.has('contact') && <View style={x.gutter}><ExploreContact openPage={open} refreshKey={refreshKey + syncKey} /></View>}
 
-      {/* ---- page tiles */}
-      {shown.has('nav') && <>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={x.tileRow}>
-        {tiles.map((t, i) => (
-          <FadeInUp key={t.key} delay={120 + Math.min(i, 6) * 60} distance={12}>
-            <PressableScale
-              onPress={() => open(t.path, t.label)}
-              scaleTo={0.95}
-              contentStyle={[x.tileShadow, { shadowColor: t.meta.colors[0] }]}
-              accessibilityRole="button"
-              accessibilityLabel={`${t.label}. ${t.meta.blurb}. Explore in ACTIV.`}
-            >
-              <LinearGradient colors={t.meta.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={x.tile}>
-                <View style={x.tileOrb} />
-                <View style={x.tileHead}>
-                  <SiteArt kind={t.meta.art} size={40} />
-                  <Icon name="arrow-outward" size={16} color="rgba(255,255,255,0.8)" />
-                </View>
-                <Text style={x.tileLabel} numberOfLines={1} maxFontSizeMultiplier={1.2}>{t.label}</Text>
-                <Text style={x.tileBlurb} numberOfLines={2} maxFontSizeMultiplier={1.2}>{t.meta.blurb}</Text>
-              </LinearGradient>
-            </PressableScale>
-          </FadeInUp>
-        ))}
-      </ScrollView></>}
+      {/* ---- page directory */}
+      {shown.has('nav') && <View style={x.directory}>
+        <Text style={x.directoryTitle} accessibilityRole="header">Explore more</Text>
+        <View style={x.tileRow}>{tiles.map(t => <PressableScale key={t.key}
+          onPress={() => open(t.path, t.label)} style={[x.tileOuter, stackedTiles && x.tileFull]} contentStyle={x.tile}
+          accessibilityRole="button" accessibilityLabel={`${t.label}. ${t.meta.blurb}. Explore in ACTIV.`}>
+          <View style={x.tileHead}><View style={x.tileIcon}><Icon name={
+            ({ about: 'info-outline', membership: 'card-membership', events: 'event', news: 'article', schemes: 'account-balance', gallery: 'photo-library', contact: 'call', donate: 'favorite-border', zones: 'explore', home: 'home' } as Record<string, string>)[t.meta.art] || 'language'
+          } size={22} color={BRAND.blue} /></View><Icon name="arrow-forward" size={17} color={PALETTE.textMuted} /></View>
+          <Text style={x.tileLabel}>{t.label}</Text>
+          <Text style={x.tileBlurb} numberOfLines={2}>{t.meta.blurb}</Text>
+        </PressableScale>)}</View>
+      </View>}
 
       {/* ---- policies */}
       {shown.has('legal') && <View style={x.legal}>
@@ -411,18 +401,19 @@ const x = StyleSheet.create({
   },
   bannerCtaText: { fontSize: 13, fontWeight: '800', color: BRAND.navy },
 
-  tileRow: { paddingHorizontal: SPACE.lg, paddingTop: SPACE.lg, paddingBottom: SPACE.sm, gap: SPACE.md },
-  tileShadow: {
-    borderRadius: 20, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 5, backgroundColor: PALETTE.white,
-  },
-  tile: { width: 132, height: 142, borderRadius: 20, padding: SPACE.md, overflow: 'hidden' },
-  tileOrb: { position: 'absolute', width: 110, height: 110, borderRadius: 55, right: -40, bottom: -50, backgroundColor: 'rgba(255,255,255,0.14)' },
-  tileHead: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  tileLabel: { ...TYPE.bodyStrong, color: PALETTE.white, marginTop: SPACE.md },
-  tileBlurb: { ...TYPE.caption, fontSize: 11, lineHeight: 15, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
+  directory: { paddingHorizontal: SPACE.lg, paddingTop: 24, paddingBottom: 8 },
+  directoryTitle: { color: BRAND.navyDeep, fontSize: 20, lineHeight: 28, fontWeight: '700', marginBottom: 14 },
+  tileRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  tileOuter: { flexBasis: '45%', flexGrow: 1 },
+  tileFull: { flexBasis: '100%' },
+  tile: { flex: 1, borderRadius: 16, padding: 14, backgroundColor: PALETTE.white, borderWidth: 1, borderColor: '#DDE5F1' },
+  tileHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  tileIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#EDF2FF', alignItems: 'center', justifyContent: 'center' },
+  tileLabel: { fontSize: 16, lineHeight: 23, fontWeight: '700', color: BRAND.navyDeep },
+  tileBlurb: { fontSize: 13, lineHeight: 20, color: PALETTE.textMuted, marginTop: 4 },
 
   subHead: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.sm, marginHorizontal: SPACE.lg, marginTop: SPACE.xl, marginBottom: SPACE.md },
-  subTitle: { ...TYPE.subheading, flexShrink: 1 },
+  subTitle: { color: BRAND.navyDeep, fontSize: 20, lineHeight: 28, fontWeight: '700', flexShrink: 1 },
   subAction: { fontSize: 13, lineHeight: 18, fontWeight: '700', color: PALETTE.blue },
 
   newsRow: { paddingHorizontal: SPACE.lg, gap: SPACE.md, paddingBottom: SPACE.sm, alignItems: 'stretch' },
@@ -432,14 +423,16 @@ const x = StyleSheet.create({
   },
   newsImgWrap: { height: 138, borderTopLeftRadius: 21, borderTopRightRadius: 21, overflow: 'hidden', backgroundColor: PALETTE.field },
   newsImg: { width: '100%', height: '100%' },
+  mediaPlaceholder: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, backgroundColor: '#EDF2FA' },
+  mediaPlaceholderText: { color: BRAND.navy, fontSize: 13, lineHeight: 19, fontWeight: '500', textAlign: 'center' },
   newsFade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 60 },
   newsCat: { position: 'absolute', left: SPACE.md, bottom: SPACE.sm, backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 999, paddingHorizontal: SPACE.sm, paddingVertical: 2, maxWidth: '70%' },
   newsCatText: { fontSize: 10, lineHeight: 14, fontWeight: '800', color: PALETTE.white, letterSpacing: 0.8 },
   newsExt: { position: 'absolute', right: SPACE.md, top: SPACE.md, width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(11,26,69,0.5)', alignItems: 'center', justifyContent: 'center' },
   newsBody: { padding: SPACE.md, paddingBottom: SPACE.lg, flexGrow: 1 },
-  newsTitle: { ...TYPE.subheading, lineHeight: 21 },
-  newsSummary: { ...TYPE.caption, fontWeight: '400', lineHeight: 17, marginTop: SPACE.xs },
-  newsDate: { fontSize: 11, lineHeight: 15, color: PALETTE.textFaint, marginTop: 'auto', paddingTop: SPACE.sm },
+  newsTitle: { color: BRAND.navyDeep, fontSize: 18, lineHeight: 25, fontWeight: '700' },
+  newsSummary: { color: PALETTE.textMuted, fontSize: 14, lineHeight: 22, marginTop: SPACE.xs },
+  newsDate: { fontSize: 12, lineHeight: 18, color: PALETTE.textMuted, marginTop: 'auto', paddingTop: SPACE.sm },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: SPACE.xs },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: PALETTE.borderStrong },
   dotOn: { width: 18, backgroundColor: PALETTE.blue },

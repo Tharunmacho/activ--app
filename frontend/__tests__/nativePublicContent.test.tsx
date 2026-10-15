@@ -1,7 +1,7 @@
 import React from 'react';
 import Renderer from 'react-test-renderer';
-import { AppState, Text, TextInput } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import { AppState, Image, Text, TextInput } from 'react-native';
+import { PremiumSelect } from '../src/ui';
 import PublicContentScreen from '../src/screens/public/PublicContentScreen';
 import { loadNativePublicPage } from '../src/services/nativePublicContent';
 import { readPublicCms, submitPublicCms } from '../src/services/publicContent';
@@ -13,7 +13,10 @@ const nav = { navigate: jest.fn(), push: jest.fn(), goBack: jest.fn(), isFocused
 let screen: Renderer.ReactTestRenderer;
 const button = (label: string) => screen.root.findAll(node => node.props.accessibilityLabel === label && typeof node.props.onPress === 'function')[0];
 const text = () => screen.root.findAllByType(Text).map(node => node.props.children).join(' ');
-beforeEach(() => { jest.clearAllMocks(); jest.useRealTimers(); });
+beforeEach(() => {
+  jest.clearAllMocks(); jest.useRealTimers();
+  jest.spyOn(AppState, 'addEventListener').mockImplementation(() => ({ remove: jest.fn() }));
+});
 afterEach(async () => { await Renderer.act(async () => screen?.unmount()); jest.useRealTimers(); });
 
 test('gallery list hides unpublished content and album photos are loaded from the shared API', async () => {
@@ -56,7 +59,7 @@ test('leader callback validates required details and submits only an intentional
     field('Your name').props.onChangeText('Test member');
     field('Your phone').props.onChangeText('9999999999');
     field('Enquiry note').props.onChangeText('Ask about business support');
-    screen.root.findByType(Picker).props.onValueChange('business');
+    screen.root.findByType(PremiumSelect).props.onChange('Business enquiry');
   });
   await Renderer.act(async () => button('Send enquiry').props.onPress());
   expect(submitPublicCms).toHaveBeenCalledTimes(1);
@@ -134,4 +137,72 @@ test('visible content refreshes on foreground, focus and timer and ignores stale
   expect(oldSignal.aborted).toBe(true);
   await Renderer.act(async () => finish?.('Stale')); expect(text()).toBe('Second');
   await Renderer.act(async () => screen.unmount()); app.mockRestore();
+});
+
+
+test('gallery category chips and place search compose correctly and can be cleared', async () => {
+  read.mockResolvedValue([
+    { id: 'one', title: 'Business forum', category: 'Meetings', location: 'Chennai', district: 'Chennai' },
+    { id: 'two', title: 'Annual celebration', category: 'Awards', location: 'Bengaluru', district: 'Bengaluru' },
+    { id: 'three', title: 'Enterprise gathering', category: 'Meetings', location: 'Bengaluru', district: 'Bengaluru' },
+  ]);
+  await Renderer.act(async () => { screen = Renderer.create(<PublicContentScreen navigation={nav} route={{ params: { path: '/gallery' } }} />); });
+  expect(button('All categories')).toBeDefined();
+  expect(button('Meetings')).toBeDefined();
+  await Renderer.act(async () => button('Meetings').props.onPress());
+  expect(button('Meetings').props.accessibilityState.selected).toBe(true);
+  expect(button('Annual celebration')).toBeUndefined();
+  await Renderer.act(async () => screen.root.findByType(TextInput).props.onChangeText('Bengaluru'));
+  expect(button('Business forum')).toBeUndefined();
+  expect(button('Enterprise gathering')).toBeDefined();
+  await Renderer.act(async () => button('Clear all filters').props.onPress());
+  for (const title of ['Business forum', 'Annual celebration', 'Enterprise gathering']) expect(button(title)).toBeDefined();
+  expect(screen.root.findByType(TextInput).props.value).toBe('');
+});
+
+test('album thumbnails retain photo routes when images fail and remove redundant cover navigation', async () => {
+  read.mockResolvedValue({ slug: 'album', title: 'Community album', media: { url: '/cover.jpg' }, photos: [{ url: '/missing.jpg', caption: 'Signing ceremony' }] });
+  await Renderer.act(async () => { screen = Renderer.create(<PublicContentScreen navigation={nav} route={{ params: { path: '/gallery/album' } }} />); });
+  expect(button('Open cover photo')).toBeUndefined();
+  const thumbnail = screen.root.findAllByType(Image).find(node => node.props.accessibilityLabel === 'Signing ceremony');
+  expect(thumbnail).toBeDefined();
+  await Renderer.act(async () => thumbnail?.props.onError());
+  expect(text()).toContain('View photo');
+  expect(button('Open: Signing ceremony')).toBeDefined();
+  await Renderer.act(async () => button('Open: Signing ceremony').props.onPress());
+  expect(nav.push).toHaveBeenLastCalledWith('PublicContent', { path: '/gallery/album/photo/1', title: 'Signing ceremony' });
+});
+
+test('out-of-range album photo offers recovery instead of a dead-end and ignores invalid dates', async () => {
+  read.mockResolvedValue({ slug: 'album', title: 'Community album', eventDate: 'invalid-date', media: { url: '/cover.jpg' } });
+  await Renderer.act(async () => { screen = Renderer.create(<PublicContentScreen navigation={nav} route={{ params: { path: '/gallery/album/photo/99' } }} />); });
+  expect(text()).toContain('Photo unavailable');
+  expect(text()).not.toContain('Invalid Date');
+  await Renderer.act(async () => button('View complete album').props.onPress());
+  expect(nav.push).toHaveBeenLastCalledWith('PublicContent', { path: '/gallery/album', title: 'View complete album' });
+});
+
+test('regions omit empty contacts and hidden feeds while failed leader portraits retain accessible profiles', async () => {
+  read.mockResolvedValue({ slug: 'south', regionName: 'South', leaders: [{ name: 'Regional Chair', photoUrl: '/missing.jpg' }], projects: [{ title: 'Hidden project', isHidden: true }] });
+  await Renderer.act(async () => { screen = Renderer.create(<PublicContentScreen navigation={nav} route={{ params: { path: '/regions/south' } }} />); });
+  expect(text()).not.toContain('Get in touch');
+  expect(button('Projects')).toBeUndefined();
+  const portrait = screen.root.findAllByType(Image).find(node => node.props.accessibilityLabel === 'Regional Chair');
+  await Renderer.act(async () => portrait?.props.onError());
+  expect(screen.root.findAllByType(Image).some(node => node.props.accessibilityLabel === 'Regional Chair')).toBe(false);
+  expect(button('View profile: Regional Chair')).toBeDefined();
+  await Renderer.act(async () => button('Photo gallery').props.onPress());
+  expect(nav.push).toHaveBeenLastCalledWith('PublicContent', { path: '/regions/south/gallery', title: 'Photo gallery' });
+});
+
+test('malformed and hidden CMS records never become public detail pages', async () => {
+  const signal = new AbortController().signal;
+  for (const value of [null, [], 'bad payload', { title: 'Hidden', isHidden: true }, { title: 'Hidden', visible: false }]) {
+    read.mockResolvedValueOnce(value);
+    expect(await loadNativePublicPage('/gallery/album', signal)).toBeNull();
+  }
+  read.mockResolvedValueOnce([null, 'bad row', { id: 'valid', title: 'Published album' }, { id: 'hidden', isHidden: true }]);
+  expect((await loadNativePublicPage('/gallery', signal))?.items?.map(item => item.id)).toEqual(['valid']);
+  read.mockResolvedValueOnce({ regions: null }).mockResolvedValueOnce([]);
+  expect((await loadNativePublicPage('/schemes/state/tamil-nadu', signal))?.title).toBe('Tamil Nadu schemes');
 });

@@ -142,7 +142,10 @@ export const TOTAL_FORMS = 3;
 /** ProfileContext.loadProfileCompletion — same three forms, same 100% rule. */
 export const profileCompletion = (profile: any, business: any, declaration: any, application: any) => {
   const completed: string[] = [];
-  if (profile?.fullName) completed.push('Personal Details');
+  const personalComplete = profile?.personalDetailsComplete === true
+    || (profile?.personalDetailsComplete === undefined && ['fullName', 'email', 'phoneNumber', 'religion', 'socialCategory', 'gender']
+      .every(key => String(profile?.[key] || '').trim()));
+  if (personalComplete) completed.push('Personal Details');
   if (business && business.doingBusiness !== null && business.doingBusiness !== undefined) completed.push('Business Details');
   const SUBMITTED = ['submitted', 'verified', 'approved', 'completed'];
   if (declaration?.agreeToDeclaration || SUBMITTED.includes(String(declaration?.status || '').toLowerCase())) completed.push('Declaration');

@@ -1,4 +1,5 @@
 import NotificationPreferences from '../../../components/NotificationPreferences';
+import AssociationUpdatePreferences from '../../../components/AssociationUpdatePreferences';
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -7,7 +8,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import {
   Notice, PALETTE, SPACE, SHADOW, TYPE, SIZE, errorText,
   PremiumPage, PremiumPageHeader, PREMIUM_OVERLAP, PremiumSection, PremiumInput, GradientButton, GradientAvatar, FadeInUp,
-  SurfaceCard, GradientGlyph, GroupTitle, LinkRow, MeterBar, GLYPH_COLORS, CardSkeletons, SettingsGear3D, MailMark, WhatsAppMark,
+  SurfaceCard, GradientGlyph, GroupTitle, LinkRow, MeterBar, GLYPH_COLORS, CardSkeletons, SettingsGear3D,
 } from '../../../ui';
 import {
   getMyProfile, getMyApplications, changePassword, uploadProfilePhoto, isPaidMember, logoutOnServer,
@@ -278,24 +279,10 @@ const AccountSettingsScreen = ({ navigation }: any) => {
         </PremiumSection>
       </FadeInUp>
 
-      <GroupTitle title="How we reach you" subtitle="By email, on WhatsApp and in the bell on your dashboard." style={{ marginTop: SPACE.xs }} />
-      <FadeInUp delay={300}>
-        <SurfaceCard style={styles.gutter}>
-          <View style={styles.channels}>
-            <View style={styles.channel}><MailMark size={30} /><Text style={styles.channelText}>Email</Text></View>
-            <View style={styles.channel}><WhatsAppMark size={30} /><Text style={styles.channelText}>WhatsApp</Text></View>
-            <View style={styles.channel}><GradientGlyph icon="notifications" tone="amber" size={30} /><Text style={styles.channelText}>Bell</Text></View>
-          </View>
-          {['Application received and each admin’s review', 'Approval, with your membership fee', 'Payment confirmation and your certificates', 'Events and association updates for your region'].map((line) => (
-            <View key={line} style={styles.bullet}>
-              <Icon name="check-circle" size={SIZE.iconSm} color={PALETTE.blue} style={styles.bulletIcon} />
-              <Text style={styles.bulletText}>{line}</Text>
-            </View>
-          ))}
-        </SurfaceCard>
-      </FadeInUp>
-
-      <NotificationPreferences />
+      <View style={styles.gutter}>
+        <AssociationUpdatePreferences />
+        <NotificationPreferences />
+      </View>
       <GroupTitle title="Account" />
       <FadeInUp delay={340}>
         <SurfaceCard style={styles.gutter} padded={false}>
@@ -336,12 +323,6 @@ const styles = StyleSheet.create({
   inlineNotice: { marginHorizontal: 0, marginTop: 0, marginBottom: SPACE.md },
   forgot: { minHeight: SIZE.touch, alignItems: 'center', justifyContent: 'center', marginTop: SPACE.xs },
   forgotText: { fontSize: 14, fontWeight: '700', color: PALETTE.blue },
-  channels: { flexDirection: 'row', gap: SPACE.sm, marginBottom: SPACE.md },
-  channel: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: SPACE.md, borderRadius: 16, backgroundColor: PALETTE.fieldBg, borderWidth: 1, borderColor: PALETTE.divider },
-  channelText: { ...TYPE.caption, fontWeight: '700', color: PALETTE.textSoft },
-  bullet: { flexDirection: 'row', gap: SPACE.md, alignItems: 'flex-start', paddingVertical: 6 },
-  bulletIcon: { marginTop: 2 },
-  bulletText: { ...TYPE.body, flex: 1 },
 });
 
 export default AccountSettingsScreen;

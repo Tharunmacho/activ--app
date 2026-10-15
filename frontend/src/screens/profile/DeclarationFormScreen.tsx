@@ -157,10 +157,11 @@ const DeclarationFormScreen: React.FC<Props> = ({ navigation, editMode = false }
       // The region gate refuses an application with no routable region. A
       // member outside India has none by design and routes to the head office.
       const abroad = profile?.isInternational === true;
-      if (!abroad && (!profile?.state || !profile?.district || !profile?.block)) {
+      if (profile?.personalDetailsComplete === false || !profile?.religion || !profile?.socialCategory || !profile?.gender
+        || (!abroad && (!profile?.state || !profile?.district)) || (abroad && !profile?.place)) {
         Alert.alert(
           'Personal details needed',
-          'Please complete your personal details first — we need your region to route the application.',
+          'Please complete every required personal detail, including religion, social category and gender, before submitting.',
           [
             { text: 'Open personal details', onPress: () => navigation.navigate('PersonalDetailsForm', { userData: {} }) },
             { text: 'Cancel', style: 'cancel' },
@@ -193,6 +194,7 @@ const DeclarationFormScreen: React.FC<Props> = ({ navigation, editMode = false }
             district: profile?.district,
             block: profile?.block,
             city: profile?.city || '',
+            place: profile?.place || '',
             socialCategory: profile?.socialCategory || '',
             religion: profile?.religion || '',
             gender: profile?.gender || '',

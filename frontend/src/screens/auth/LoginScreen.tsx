@@ -8,11 +8,11 @@ import { ENDPOINTS, API_BASE_URL } from '../../config/api.config';
 import { useAuthStore } from '../../stores/exampleStore';
 import {
   BRAND, PALETTE, SPACE, TYPE, PressableScale,
-  PremiumScreen, PREMIUM_OVERLAP, PremiumSheet, PremiumHeading, PremiumInput, PremiumDivider,
-  GradientButton, SocialMark, PortalSwitchCard, BrandLogo, FloatingIllustration, SecureLogin3D, FadeInUp,
+  PremiumScreen, PREMIUM_OVERLAP, PremiumSheet, PremiumInput, PremiumDivider,
+  GradientButton, SocialMark, PortalSwitchCard, BrandLogo, FadeInUp,
 } from '../../ui';
 import { EyeToggle } from '../profile/formKit';
-import { TextLink } from './authKit';
+import { AuthTitle, TextLink } from './authKit';
 import { clearPublicAction, takePublicAction } from '../../services/publicNavigation';
 
 type LoginScreenProps = {
@@ -199,6 +199,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
   return (
     <PremiumScreen
+      waveHeight={44}
       tone="member"
       header={(
         <View>
@@ -210,16 +211,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           </FadeInUp>
           <View style={styles.heroRow}>
             <FadeInUp delay={80} style={styles.heroText}>
-              <PremiumHeading
+              <AuthTitle
                 eyebrow="Welcome back"
                 title="Log in to your account"
                 subtitle="Members sign in here."
               />
-            </FadeInUp>
-            <FadeInUp delay={160} scaleFrom={0.85} distance={10}>
-              <FloatingIllustration size={108}>
-                <SecureLogin3D size={108} />
-              </FloatingIllustration>
             </FadeInUp>
           </View>
         </View>
@@ -329,8 +325,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 const SOCIAL = ['Google', 'LinkedIn', 'Facebook'];
 
 const styles = StyleSheet.create({
-  heroRow: { flexDirection: 'row', alignItems: 'flex-end', marginTop: SPACE.lg, gap: SPACE.sm },
-  heroText: { flex: 1, minWidth: 0, paddingBottom: SPACE.lg },
+  heroRow: { marginTop: SPACE.lg, marginBottom: SPACE.lg },
+  heroText: { minWidth: 0 },
   topbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.md },
   skip: { minHeight: 44, minWidth: 64, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center', borderRadius: 16, backgroundColor: BRAND.glass, borderWidth: 1, borderColor: BRAND.glassBorder },
   skipText: { color: PALETTE.white, fontSize: 14, fontWeight: '700' },

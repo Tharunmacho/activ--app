@@ -339,16 +339,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACE.xxl,
     paddingTop: SPACE.sm,
   },
-  count: { fontSize: 13, lineHeight: 18, fontWeight: '800', letterSpacing: 1.5, color: BRAND.blue, marginBottom: SPACE.sm },
+  count: { fontSize: 14, lineHeight: 20, fontWeight: '600', letterSpacing: 1.5, color: BRAND.blue, marginBottom: SPACE.sm },
   countOf: { color: PALETTE.textFaint, fontWeight: '700' },
   title: {
-    fontSize: 27,
-    lineHeight: 33,
-    fontWeight: '800',
+    fontSize: 28,
+    lineHeight: 35,
+    fontWeight: '700',
     color: PALETTE.text,
     marginBottom: SPACE.sm + 2,
     textAlign: 'center',
-    letterSpacing: -0.7,
+    letterSpacing: -0.3,
   },
   description: {
     fontSize: 16,
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
 
   loadingRoot: { flex: 1, backgroundColor: BRAND.navyDeep, alignItems: 'center', justifyContent: 'center' },
   loadingCenter: { alignItems: 'center' },
-  loadingText: { marginTop: SPACE.sm, fontSize: 15, color: BRAND.onBrandSoft, fontWeight: '600' },
+  loadingText: { marginTop: SPACE.sm, fontSize: 16, color: BRAND.onBrandSoft, fontWeight: '600' },
 });
 
 export default OnboardingScreen;

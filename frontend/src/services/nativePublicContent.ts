@@ -2,8 +2,8 @@ import { readPublicCms } from './publicContent';
 import { publicWebsitePath } from '../utils/publicBrowse';
 
 export type PublicPageData = { kind: string; title: string; item?: any; items?: any[]; page?: any; section?: string; scope?: string; photo?: number; total?: number };
-const rows = (value: any) => Array.isArray(value) ? value.filter(row => row && row.visible !== false && !row.isHidden && (!row.status || row.status === 'published')) : [];
-const published = (value: any) => value && value.visible !== false && (!value.status || value.status === 'published') ? value : null;
+const published = (value: any) => value && typeof value === 'object' && !Array.isArray(value) && value.visible !== false && !value.isHidden && (!value.status || value.status === 'published') ? value : null;
+const rows = (value: any) => Array.isArray(value) ? value.filter(row => published(row)) : [];
 const stateName = (slug: string) => slug.split('-').map(word => word[0]?.toUpperCase() + word.slice(1)).join(' ');
 export const REGION_SECTIONS: Record<string, string> = {
   about: 'About', gallery: 'Photo gallery', leaders: 'Leadership', achievements: 'Highlights', keyAchievements: 'Key achievements', events: 'Events', projects: 'Projects',
@@ -36,14 +36,14 @@ export async function loadNativePublicPage(value: string, signal: AbortSignal, o
   }
   if (['/schemes/state', '/schemes/states'].includes(path)) {
     const items = await read('/cms/schemes/states');
-    return { kind: 'schemeStates', title: 'State schemes', items: (Array.isArray(items) ? items : []).filter(row => row.total > 0) };
+    return { kind: 'schemeStates', title: 'State schemes', items: rows(items).filter(row => row.state && Number(row.total) > 0) };
   }
   const state = /^\/schemes\/states?\/([^/]+)$/.exec(path);
   if (path === '/schemes' || path === '/schemes/central' || state) {
     let name = '';
     if (state) {
       const map = await read('/cms/regions/map');
-      name = (map?.regions || []).flatMap((region: any) => region.states || []).find((row: any) => row.slug === state[1])?.name || stateName(state[1]);
+      name = rows(map?.regions).flatMap((region: any) => rows(region.states)).find((row: any) => row.slug === state[1])?.name || stateName(state[1]);
     }
     return { kind: 'schemes', title: name ? name + ' schemes' : 'Central schemes', items: rows(await read('/cms/schemes', name ? { state: name } : { tier: 'national' })) };
   }

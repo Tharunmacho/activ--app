@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Image, Modal, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import Video from 'react-native-video';
-import { BRAND, PALETTE, SPACE, CardSkeletons, GlassIconButton, PressableScale, SiteArt, StateView, SurfaceCard } from '../../ui';
+import { BRAND, PALETTE, SPACE, CardSkeletons, GlassIconButton, PressableScale, StateView, SurfaceCard } from '../../ui';
 import { resolveMediaUrl } from '../../config/api.config';
 import { openPublicAttachment, openWebsitePage } from '../../services/websiteNavigation';
 import { isPublicDownloadUrl } from '../../services/publicDownload';
@@ -22,21 +23,30 @@ export function ContentLayout({ navigation, title, subtitle, art = 'news', resou
   resource: { loading: boolean; refreshing: boolean; error: string; reload: () => any; data: any }; children?: React.ReactNode;
 }) {
   const insets = useSafeAreaInsets();
-  return <View style={contentStyles.screen}>
-    <LinearGradient colors={[BRAND.navyDeep, BRAND.blue900]} style={[contentStyles.header, { paddingTop: insets.top + 12 }]}>
-      <View style={contentStyles.topbar}><GlassIconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => navigation.canGoBack?.() === false ? navigation.navigate('PublicExplore') : navigation.goBack()} />
-        <Text style={contentStyles.eyebrow}>EXPLORE ACTIV</Text><GlassIconButton icon="refresh" accessibilityLabel="Refresh content" onPress={resource.reload} /></View>
-      <View style={contentStyles.heroRow}><View style={contentStyles.flex}><Text accessibilityRole="header" style={contentStyles.heroTitle}>{title}</Text>{!!subtitle && <Text style={contentStyles.heroSubtitle}>{subtitle}</Text>}</View><SiteArt kind={art} size={58} /></View>
-    </LinearGradient>
-    <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={[contentStyles.content, { paddingBottom: insets.bottom + 24 }]}
+  return <KeyboardAvoidingView style={contentStyles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ paddingBottom: insets.bottom + 28 }}
       refreshControl={<RefreshControl refreshing={resource.refreshing} onRefresh={resource.reload} colors={[BRAND.blue]} />}>
+      <LinearGradient colors={[BRAND.navyDeep, BRAND.blue900]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[contentStyles.header, { paddingTop: insets.top + 8 }]}>
+        <View style={contentStyles.headerInner}>
+          <View style={contentStyles.topbar}>
+            <PressableScale accessibilityRole="button" accessibilityLabel="Back" onPress={() => navigation.canGoBack?.() === false ? navigation.navigate('PublicExplore') : navigation.goBack()} contentStyle={contentStyles.headerButton}><Icon name="arrow-back" size={22} color="#fff" /></PressableScale>
+            <Text style={contentStyles.eyebrow}>ACTIV{art === 'gallery' ? ' / GALLERY' : art === 'schemes' ? ' / OPPORTUNITIES' : art === 'zones' ? ' / COMMUNITY' : ''}</Text>
+            <PressableScale accessibilityRole="button" accessibilityLabel="Refresh content" onPress={resource.reload} contentStyle={contentStyles.headerButton}><Icon name="refresh" size={22} color="#fff" /></PressableScale>
+          </View>
+          <Text accessibilityRole="header" style={contentStyles.heroTitle}>{title}</Text>
+          {!!subtitle && <Text style={contentStyles.heroSubtitle}>{subtitle}</Text>}
+          <View style={contentStyles.headerAccent} />
+        </View>
+      </LinearGradient>
+      <View style={contentStyles.content}>
       {resource.loading && !resource.data ? <CardSkeletons rows={2} variant="media" /> : <>
         {!!resource.error && <StateView compact kind="error" title="Content unavailable" message={resource.error} onAction={resource.reload} />}
         {resource.data && children}
         {!resource.error && !resource.data && <StateView compact title="Not available" message="This content has not been published or is no longer available." />}
       </>}
+      </View>
     </ScrollView>
-  </View>;
+  </KeyboardAvoidingView>;
 }
 export function Heading({ children }: { children: React.ReactNode }) { return <Text accessibilityRole="header" style={contentStyles.heading}>{children}</Text>; }
 export function Body({ value, navigation }: { value: any; navigation?: any }) {
@@ -56,22 +66,36 @@ export function ActionLink({ navigation, href, label, download = false }: { navi
     {file && <Text style={contentStyles.linkHint}>Save to Downloads</Text>}
   </PressableScale>;
 }
-export function Photo({ url, alt = 'ACTIV photo', caption }: { url?: string; alt?: string; caption?: string }) {
-  const [ratio, setRatio] = useState(4 / 3), [failed, setFailed] = useState(false), [open, setOpen] = useState(false);
+export function Photo({ url, alt = 'ACTIV photo', caption, document = false, closeLabel = 'Close photo' }: { url?: string; alt?: string; caption?: string; document?: boolean; closeLabel?: string }) {
+  const [ratio, setRatio] = useState(4 / 3), [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading'), [open, setOpen] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const insets = useSafeAreaInsets();
   const uri = resolveMediaUrl(url || '');
-  useEffect(() => { setFailed(false); setOpen(false); setRatio(4 / 3); }, [uri]);
+  useEffect(() => { setStatus('loading'); setOpen(false); setRatio(4 / 3); }, [uri, attempt]);
+  useEffect(() => {
+    if (!uri || status !== 'loading') return;
+    const timer = setTimeout(() => setStatus('error'), 20000);
+    return () => clearTimeout(timer);
+  }, [uri, attempt, status]);
   if (!uri) return null;
   return <>
-    <SurfaceCard padded={false} style={contentStyles.photo}>
-      <PressableScale onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel={'Enlarge image: ' + alt}>
-        {failed ? <Text style={contentStyles.body}>Image unavailable. Tap to try the full image.</Text> : <Image source={{ uri }} accessibilityLabel={alt} resizeMode="contain" style={{ width: '100%', aspectRatio: ratio }} onError={() => setFailed(true)} onLoad={event => { const { width, height } = event.nativeEvent.source; if (width && height) setRatio(width / height); }} />}
-        <Text style={contentStyles.photoCaption}>{caption || 'Tap to enlarge · pinch to zoom'}</Text>
-      </PressableScale>
-    </SurfaceCard>
+    <View style={contentStyles.photo}>
+      {status === 'error' ? <View style={contentStyles.imageError}>
+        <Icon name="image-not-supported" size={24} color={PALETTE.textMuted} />
+        <View style={contentStyles.flex}><Text style={contentStyles.errorTitle}>Image couldn’t load</Text><Text style={contentStyles.meta}>Check your connection and try again.</Text></View>
+        <PressableScale accessibilityRole="button" accessibilityLabel="Retry image" onPress={() => setAttempt(value => value + 1)} contentStyle={contentStyles.retry}><Text style={contentStyles.linkText}>Retry</Text></PressableScale>
+      </View> : <PressableScale disabled={status !== 'ready'} onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel={'Enlarge image: ' + alt}>
+        <Image key={uri + ':' + attempt} source={{ uri }} accessibilityLabel={alt} resizeMode="contain"
+          style={{ width: '100%', ...(status === 'ready' ? { aspectRatio: document ? ratio : Math.max(0.65, Math.min(2.2, ratio)) } : { height: 144 }), opacity: status === 'ready' ? 1 : 0 }}
+          onError={() => setStatus('error')} onLoad={event => { const source = event.nativeEvent?.source; if (source?.width && source?.height) setRatio(source.width / source.height); setStatus('ready'); }} />
+        {status === 'loading' ? <View style={contentStyles.imageLoading}><ActivityIndicator color={BRAND.blue} /><Text style={contentStyles.meta}>Loading image…</Text></View>
+          : <View style={contentStyles.expand}><Icon name="fullscreen" size={22} color="#fff" /></View>}
+      </PressableScale>}
+      {!!caption && <Text style={contentStyles.photoCaption}>{contentText(caption)}</Text>}
+    </View>
     <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
       <View style={[contentStyles.screen, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-        <View style={contentStyles.viewerBar}><Text style={contentStyles.eyebrow}>PINCH TO ZOOM</Text><GlassIconButton icon="close" accessibilityLabel="Close photo" onPress={() => setOpen(false)} /></View>
+        <View style={contentStyles.viewerBar}><Text style={contentStyles.eyebrow}>PINCH TO ZOOM</Text><GlassIconButton icon="close" accessibilityLabel={closeLabel} onPress={() => setOpen(false)} /></View>
         {open && <WebView source={{ html: imageDocument(uri) }} javaScriptEnabled={false} domStorageEnabled={false} originWhitelist={['about:blank']} onShouldStartLoadWithRequest={req => req.url === 'about:blank' || req.url.startsWith('data:text/html')} style={contentStyles.flex} />}
       </View>
     </Modal>
@@ -100,19 +124,29 @@ export function ContentMedia({ media, title }: { media: any; title: string }) {
   return <Video key={uri} source={{ uri }} controls resizeMode="contain" paused style={contentStyles.video} onError={() => setFailed(true)} />;
 }
 export function ExtraFields({ fields, navigation }: { fields: any[]; navigation: any }) {
-  return <>{(Array.isArray(fields) ? fields : []).filter(field => field && field.value && !field.isHidden).map((field, i) => <SurfaceCard key={i} style={contentStyles.section}>
+  return <>{(Array.isArray(fields) ? fields : []).filter(field => field && field.value && !field.isHidden
+    && !/^(created\s*by|updated\s*by|seed|source\s*id|internal|database|imported\s*by)/i.test(String(field.label || field.key || '').trim())
+    && !/^seed[:\s-]/i.test(String(field.value).trim())).map((field, i) => <SurfaceCard key={i} style={contentStyles.section}>
     {!!field.label && <Heading>{field.label}</Heading>}<Body value={field.value} navigation={navigation} />
   </SurfaceCard>)}</>;
 }
 export const contentStyles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: PALETTE.canvas }, flex: { flex: 1, minWidth: 0 }, header: { paddingHorizontal: SPACE.lg, paddingBottom: 25 },
-  topbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }, eyebrow: { color: BRAND.onBrandSoft, fontSize: 11, fontWeight: '800', letterSpacing: 1.4 },
-  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 17 }, heroTitle: { fontSize: 27, lineHeight: 34, fontWeight: '800', color: PALETTE.white }, heroSubtitle: { color: BRAND.onBrandSoft, fontSize: 14, lineHeight: 22, marginTop: 8 },
-  content: { width: '100%', maxWidth: 760, alignSelf: 'center', padding: SPACE.lg, gap: SPACE.md }, section: { marginBottom: SPACE.sm },
-  heading: { color: BRAND.navyDeep, fontSize: 20, lineHeight: 27, fontWeight: '800', marginBottom: 10 }, body: { color: PALETTE.textSoft, fontSize: 16, lineHeight: 25, marginBottom: 12 },
-  meta: { color: PALETTE.textMuted, fontSize: 13, lineHeight: 20 }, title: { color: BRAND.navyDeep, fontSize: 19, lineHeight: 27, fontWeight: '800' },
-  photo: { marginBottom: 12, backgroundColor: PALETTE.white }, photoCaption: { color: BRAND.blue, fontSize: 13, fontWeight: '600', textAlign: 'center', padding: 12 },
-  link: { borderWidth: 1, borderColor: '#C7D9F5', borderRadius: 14, backgroundColor: PALETTE.blueSoft, minHeight: 46, padding: 12, marginVertical: 5 }, linkText: { color: BRAND.blue900, fontSize: 15, lineHeight: 22, fontWeight: '700' }, linkHint: { color: PALETTE.textMuted, fontSize: 11, marginTop: 4 },
+  screen: { flex: 1, backgroundColor: '#F5F7FB' }, flex: { flex: 1, minWidth: 0 }, header: { paddingHorizontal: SPACE.lg },
+  headerInner: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingBottom: 20 },
+  headerButton: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#FFFFFF12', alignItems: 'center', justifyContent: 'center' },
+  headerAccent: { width: 32, height: 3, borderRadius: 2, backgroundColor: '#71B1FF', marginTop: 18 },
+  topbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }, eyebrow: { color: '#CEDBF5', fontSize: 12, fontWeight: '600', letterSpacing: 1.4 },
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 17 }, heroTitle: { fontSize: 28, lineHeight: 35, fontWeight: '700', letterSpacing: -0.5, color: PALETTE.white }, heroSubtitle: { color: '#DAE4F7', fontSize: 15, lineHeight: 23, marginTop: 8 },
+  content: { width: '100%', maxWidth: 760, alignSelf: 'center', padding: SPACE.lg, paddingTop: 22, gap: SPACE.md }, section: { marginBottom: SPACE.sm },
+  heading: { color: BRAND.navyDeep, fontSize: 20, lineHeight: 28, fontWeight: '700', marginBottom: 10 }, body: { color: PALETTE.textSoft, fontSize: 16, lineHeight: 26, marginBottom: 12 },
+  meta: { color: PALETTE.textMuted, fontSize: 14, lineHeight: 21 }, title: { color: BRAND.navyDeep, fontSize: 20, lineHeight: 28, fontWeight: '700' },
+  photo: { marginBottom: 8, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: '#E0E6EF', backgroundColor: '#EDF2F8' },
+  photoCaption: { color: PALETTE.textSoft, fontSize: 14, lineHeight: 21, padding: 12, backgroundColor: '#fff' },
+  imageLoading: { ...StyleSheet.absoluteFillObject, gap: 10, alignItems: 'center', justifyContent: 'center' },
+  imageError: { padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#F0F4FA' },
+  errorTitle: { fontSize: 15, lineHeight: 22, color: BRAND.navy, fontWeight: '600' }, retry: { minWidth: 44, minHeight: 44, justifyContent: 'center' },
+  expand: { position: 'absolute', right: 10, bottom: 10, width: 34, height: 34, borderRadius: 10, backgroundColor: '#10234BBB', alignItems: 'center', justifyContent: 'center' },
+  link: { borderWidth: 1, borderColor: '#D5E0F0', borderRadius: 12, backgroundColor: PALETTE.white, minHeight: 48, padding: 14, marginVertical: 4 }, linkText: { color: BRAND.blue900, fontSize: 15, lineHeight: 22, fontWeight: '600' }, linkHint: { color: PALETTE.textMuted, fontSize: 12, marginTop: 4 },
   viewerBar: { padding: 14, backgroundColor: BRAND.navy, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, video: { width: '100%', aspectRatio: 16 / 9, backgroundColor: '#071332', marginBottom: 14 },
-  input: { backgroundColor: PALETTE.white, borderWidth: 1, borderColor: PALETTE.border, borderRadius: 14, minHeight: 48, paddingHorizontal: 14, color: PALETTE.text, fontSize: 15, marginBottom: 12 },
+  input: { backgroundColor: PALETTE.white, borderWidth: 1, borderColor: PALETTE.border, borderRadius: 14, minHeight: 48, paddingHorizontal: 14, color: PALETTE.text, fontSize: 16, marginBottom: 12 },
 });

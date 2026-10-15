@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { BRAND, PALETTE, SPACE, SiteArt, SurfaceCard } from '../../ui';
+import { BRAND, PALETTE, SPACE, PressableScale, SurfaceCard } from '../../ui';
 import { resolveMediaUrl } from '../../config/api.config';
 import { WEBSITE_PATHS } from '../../config/website.config';
 
@@ -46,15 +46,16 @@ export function PublicContentCard({ item, kind, openPage }: { item: any; kind: C
   const place = item.mode === 'online' ? (item.onlinePlatform || 'Online event') : (item.location || item.venue || item.state);
   const time = calendar(item.startAt, { hour: 'numeric', minute: '2-digit', hour12: true });
 
-  return <SurfaceCard stretch padded={false} style={s.card} accessibilityLabel={title} onPress={() => openPage(path, title)}>
+  return <SurfaceCard padded={false} style={s.card} accessibilityLabel={title} onPress={() => openPage(path, title)}>
     {hasImage && <View style={s.imageFrame}>
       <Image source={{ uri: image }} style={s.image}
         resizeMode="contain" onError={() => setFailedImage(image)} accessibilityLabel={title} />
       {kind === 'gallery' && item.media?.type === 'video' && <View style={s.play}><Icon name="play-arrow" size={28} color={PALETTE.white} /></View>}
     </View>}
-    {!hasImage && <LinearGradient colors={[BRAND.navy, BRAND.blue900]} style={[s.image, s.artCover]}>
-      <SiteArt kind={kind} size={70} /><View style={s.artCopy}><Text style={s.artEyebrow}>ACTIV</Text><Text style={s.artLabel}>{kind === 'events' ? 'Connect. Learn. Grow.' : kind === 'news' ? 'Stories that connect us' : 'Moments that matter'}</Text></View>
-    </LinearGradient>}
+    {!hasImage && <View style={s.artCover}>
+      <View style={s.placeholderIcon}><Icon name={kind === 'events' ? 'event' : kind === 'news' ? 'article' : 'photo-library'} size={25} color={BRAND.blue} /></View>
+      <Text style={s.placeholderText}>{kind === 'events' ? 'ACTIV event' : kind === 'news' ? 'Association news' : 'Community gallery'}</Text>
+    </View>}
     {kind === 'events' ? <LinearGradient colors={[PALETTE.blueSoft, PALETTE.white]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.eventHeader}>
       <EventDate value={item.startAt} />
       <View style={s.eventIntro}>
@@ -84,29 +85,27 @@ export function PublicContentCard({ item, kind, openPage }: { item: any; kind: C
 }
 
 export function PublicZoneCard({ item, openPage }: { item: any; openPage: PublicPageOpener }) {
-  const states = (item.states || []).filter((state: any) => state.hasPage !== false && (!state.status || state.status === 'published'));
+  const states = (Array.isArray(item.states) ? item.states : []).filter((state: any) => state.hasPage !== false && (!state.status || state.status === 'published'));
   const title = publicText(item.label || item.name || item.slug);
   return <SurfaceCard padded={false} style={s.card}>
-    <SurfaceCard padded={false} style={s.zoneHeadSurface} contentStyle={s.zoneHeadInner}
+    <PressableScale contentStyle={s.zoneHead} accessibilityRole="button"
       onPress={() => openPage(WEBSITE_PATHS.region(item.slug), title)} accessibilityLabel={'Explore ' + title}>
-      <LinearGradient colors={[BRAND.navy, BRAND.blue900]} style={s.zoneHead}>
-        <View style={s.zoneArt}><SiteArt kind="zones" size={48} /></View>
-        <View style={s.eventIntro}><Text style={s.zoneEyebrow}>ACTIV REGION</Text><Text style={s.zoneTitle}>{title}</Text></View>
-        <Icon name="arrow-forward" size={20} color={PALETTE.white} />
-      </LinearGradient>
-    </SurfaceCard>
+      <View style={s.zoneArt}><Icon name={/national/i.test(item.slug) ? 'public' : 'explore'} size={26} color={BRAND.blue} /></View>
+      <View style={s.eventIntro}><Text style={s.zoneEyebrow}>ACTIV COMMUNITY</Text><Text style={s.zoneTitle}>{title}</Text></View>
+      <Icon name="arrow-forward" size={21} color={BRAND.blue} />
+    </PressableScale>
     {states.length > 0 ? <View style={s.zoneBody}>
       <Text style={s.statesLabel}>Explore a state</Text>
       <View style={s.states}>{states.map((state: any) => <StateLink key={state.slug} state={state} openPage={openPage} />)}</View>
-    </View> : <Text style={s.zoneHint}>Updates, people and opportunities across the region.</Text>}
+    </View> : <Text style={s.zoneHint}>Explore leadership, news and events.</Text>}
   </SurfaceCard>;
 }
 
 function StateLink({ state, openPage }: { state: any; openPage: PublicPageOpener }) {
-  return <SurfaceCard onPress={() => openPage(WEBSITE_PATHS.state(state.slug), publicText(state.name))}
-    accessibilityLabel={'Explore ' + publicText(state.name)} padded={false} style={s.stateOuter} contentStyle={s.stateInner}>
-    <Text style={s.stateText}>{publicText(state.name)}</Text><Icon name="chevron-right" size={16} color={BRAND.blue} />
-  </SurfaceCard>;
+  return <PressableScale onPress={() => openPage(WEBSITE_PATHS.state(state.slug), publicText(state.name))}
+    accessibilityRole="button" accessibilityLabel={'Explore ' + publicText(state.name)} style={s.stateOuter} contentStyle={s.stateInner}>
+    <Text style={s.stateText}>{publicText(state.name)}</Text><Icon name="chevron-right" size={18} color={BRAND.blue} />
+  </PressableScale>;
 }
 
 const s = StyleSheet.create({
@@ -121,16 +120,24 @@ const s = StyleSheet.create({
   dateMonth: { color: PALETTE.white, fontSize: 11, fontWeight: '800', letterSpacing: 1 },
   dateBody: { alignItems: 'center', paddingVertical: 6 }, dateDay: { color: BRAND.navy, fontSize: 27, lineHeight: 32, fontWeight: '800' }, datePending: { fontSize: 17 }, dateYear: { color: PALETTE.textMuted, fontSize: 10, fontWeight: '600' },
   category: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 7 }, dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: BRAND.blue }, categoryText: { flex: 1, color: BRAND.blue900, fontSize: 11, fontWeight: '700' },
-  title: { color: BRAND.navyDeep, fontSize: 18, lineHeight: 25, fontWeight: '800', letterSpacing: -0.35 },
-  body: { padding: SPACE.lg, paddingTop: SPACE.md, flexGrow: 1 }, footerSpacer: { flexGrow: 1 }, kicker: { fontSize: 11, fontWeight: '700', color: BRAND.blue, marginBottom: 6 },
-  summary: { color: PALETTE.textMuted, fontSize: 14, lineHeight: 21, marginTop: 5 }, facts: { gap: 9, marginTop: SPACE.md },
-  fact: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 }, factText: { flex: 1, minWidth: 0, fontSize: 13, lineHeight: 19, color: PALETTE.textSoft },
+  title: { color: BRAND.navyDeep, fontSize: 19, lineHeight: 27, fontWeight: '700' },
+  body: { padding: SPACE.lg, paddingTop: SPACE.md, flexGrow: 1 }, footerSpacer: { flexGrow: 1 }, kicker: { fontSize: 12, fontWeight: '700', color: BRAND.blue, marginBottom: 6 },
+  summary: { color: PALETTE.textMuted, fontSize: 15, lineHeight: 23, marginTop: 7 }, facts: { gap: 9, marginTop: SPACE.md },
+  fact: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 }, factText: { flex: 1, minWidth: 0, fontSize: 14, lineHeight: 21, color: PALETTE.textSoft },
   cardFoot: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderTopWidth: 1, borderTopColor: PALETTE.divider, marginTop: SPACE.lg, paddingTop: SPACE.md },
   price: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 9, backgroundColor: PALETTE.greenSoft }, priceText: { color: PALETTE.greenDark, fontSize: 12, fontWeight: '800' },
   paidPrice: { backgroundColor: PALETTE.blueSoft }, paidPriceText: { color: BRAND.blue900 }, footNote: { color: PALETTE.textMuted, fontSize: 11, flexShrink: 1 },
   cardLink: { flexDirection: 'row', alignItems: 'center', gap: 8 }, cardLinkText: { color: BRAND.blue, fontSize: 13, fontWeight: '700' }, arrow: { width: 30, height: 30, borderRadius: 10, backgroundColor: PALETTE.blueSoft, alignItems: 'center', justifyContent: 'center' },
-  artCover: { padding: SPACE.lg, flexDirection: 'row', alignItems: 'center', gap: SPACE.md, overflow: 'hidden' }, artHalo: { position: 'absolute', width: 130, height: 130, borderRadius: 65, right: -35, top: -30, borderWidth: 20, borderColor: BRAND.glass }, artCopy: { flex: 1 }, artEyebrow: { color: BRAND.onBrandSoft, fontSize: 10, fontWeight: '700', letterSpacing: 1 }, artLabel: { color: PALETTE.white, fontSize: 18, lineHeight: 25, fontWeight: '700', marginTop: 7 },
-  zoneHeadSurface: { shadowOpacity: 0, elevation: 0 }, zoneHeadInner: { borderWidth: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }, zoneHead: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, padding: SPACE.lg }, zoneArt: { width: 58, height: 58, borderRadius: 18, backgroundColor: BRAND.glass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: BRAND.glassBorder }, zoneEyebrow: { fontSize: 9, letterSpacing: 1.4, fontWeight: '700', color: BRAND.onBrandSoft, marginBottom: 5 }, zoneTitle: { fontSize: 20, lineHeight: 26, fontWeight: '800', color: PALETTE.white },
-  zoneBody: { padding: SPACE.lg }, statesLabel: { fontSize: 12, fontWeight: '600', color: PALETTE.textMuted, marginBottom: SPACE.md }, states: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  stateOuter: { shadowOpacity: 0, elevation: 0, maxWidth: '100%' }, stateInner: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44, paddingVertical: 9, paddingHorizontal: 12, borderRadius: 12, backgroundColor: PALETTE.blueTint }, stateText: { flexShrink: 1, fontSize: 12, lineHeight: 18, fontWeight: '600', color: BRAND.navy }, zoneHint: { padding: SPACE.lg, color: PALETTE.textMuted, fontSize: 13, lineHeight: 20 },
+  artCover: { padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#F1F5FC' },
+  placeholderIcon: { width: 42, height: 42, borderRadius: 12, backgroundColor: '#E4EDFF', alignItems: 'center', justifyContent: 'center' },
+  placeholderText: { color: BRAND.navy, fontSize: 14, lineHeight: 21, fontWeight: '600' },
+  zoneHead: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18 },
+  zoneArt: { width: 48, height: 48, borderRadius: 15, backgroundColor: '#EDF2FF', alignItems: 'center', justifyContent: 'center' },
+  zoneEyebrow: { fontSize: 10, lineHeight: 16, letterSpacing: 1, fontWeight: '600', color: PALETTE.textMuted, marginBottom: 3 },
+  zoneTitle: { fontSize: 21, lineHeight: 28, fontWeight: '700', color: BRAND.navyDeep },
+  zoneBody: { padding: 18, paddingTop: 0 }, statesLabel: { fontSize: 13, lineHeight: 20, color: PALETTE.textMuted, marginBottom: 10 },
+  states: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, stateOuter: { maxWidth: '100%' },
+  stateInner: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, backgroundColor: '#F1F5FC' },
+  stateText: { flexShrink: 1, fontSize: 14, lineHeight: 21, fontWeight: '500', color: BRAND.navy },
+  zoneHint: { paddingHorizontal: 18, paddingBottom: 18, color: PALETTE.textMuted, fontSize: 14, lineHeight: 21 },
 });

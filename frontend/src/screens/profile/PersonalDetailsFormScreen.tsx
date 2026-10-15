@@ -133,7 +133,9 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
         religion: normalizeReligion(profile?.religion),
         gender: normalizeGender(profile?.gender),
       });
-      setIsLocked(profile?.isLocked === true);
+      setIsLocked(profile?.isLocked === true && profile?.personalDetailsComplete !== false
+        && !!normalizeReligion(profile?.religion) && !!normalizeSocialCategory(profile?.socialCategory)
+        && !!normalizeGender(profile?.gender));
       setIsAbroad(profile?.isInternational === true);
       setAbroadCountry(String(profile?.country || ''));
     } catch (err) {
@@ -248,13 +250,13 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
       if (blocks.length > 0 && !form.block) next.block = req;
       if (!(form.city || '').trim()) next.city = req;
     }
-    if (!form.socialCategory) next.socialCategory = req;
+    if (!normalizeSocialCategory(form.socialCategory)) next.socialCategory = req;
     if (!form.religion) next.religion = req;
     // A saved combination the form itself would not offer (website Profile.tsx).
     else if (form.socialCategory && !religionsFor(form.socialCategory).includes(form.religion)) {
       next.religion = `Please choose a religion recognised for ${form.socialCategory}`;
     }
-    if (!form.gender) next.gender = req;
+    if (!normalizeGender(form.gender)) next.gender = req;
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -355,7 +357,7 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
       <FormSection
         icon="location-on"
         title="Location"
-        subtitle={isAbroad ? 'Where you are based' : 'Where your business is located'}
+        subtitle="Where you are based"
       >
         {isAbroad ? (
           <Field
@@ -473,7 +475,7 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
         />
       </FormSection>
 
-      <FormSection icon="groups" title="Demographics" subtitle="Help us know you better">
+      <FormSection icon="groups" title="Personal background" subtitle="All three answers are required for your application">
         <SelectField
           label="Social category"
           required

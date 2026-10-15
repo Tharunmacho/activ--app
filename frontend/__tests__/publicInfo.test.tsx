@@ -1,6 +1,6 @@
 import React from 'react';
 import Renderer from 'react-test-renderer';
-import { TextInput } from 'react-native';
+import { Image, TextInput } from 'react-native';
 import PublicInfoScreen from '../src/screens/public/PublicInfoScreen';
 import { infoPage, loadPublicInfo, sendPublicEnquiry } from '../src/services/publicInfo';
 import { readPublicCms, submitPublicCms } from '../src/services/publicContent';
@@ -163,4 +163,23 @@ test('policy text stays hidden on refresh failure and during retries until curre
   expect(text()).not.toContain('Published policy wording');
   await Renderer.act(async () => finish({ ...policy, sections: [{ body: ['New published wording'] }] }));
   expect(text()).toContain('New published wording'); expect(text()).not.toContain('Published policy wording');
+});
+
+
+test('About uses authored mission, figures and leadership portrait without an empty media panel', async () => {
+  read.mockResolvedValue({ heading: 'About our community', body: 'Supporting entrepreneurs.', media: { url: '' }, bullets: [{ text: 'Build shared opportunities' }],
+    statsBar: [{ value: 12, label: 'Regional programmes' }, { label: 'Unpublished figure' }],
+    quote: { text: 'Together we grow.', author: 'ACTIV Chairperson', role: 'Founder & Chairperson', photo: { url: '/chair.jpg' } } });
+  await mount('/about');
+  expect(text()).toContain('Build shared opportunities');
+  expect(text()).toContain('Regional programmes');
+  expect(text()).not.toContain('Unpublished figure');
+  expect(text()).toContain('Together we grow.');
+  expect(text()).toContain('Founder & Chairperson');
+  expect(screen?.root.findAllByType(Image)).toHaveLength(1);
+  const portrait = screen?.root.findByType(Image);
+  await Renderer.act(async () => portrait?.props.onError());
+  expect(screen?.root.findAllByType(Image)).toHaveLength(0);
+  expect(text()).toContain('ACTIV Chairperson');
+  expect(button('Meet your regional community')).toBeDefined();
 });
