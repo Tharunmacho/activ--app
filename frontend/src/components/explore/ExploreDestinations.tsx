@@ -5,7 +5,8 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { BRAND, PALETTE, SPACE, PremiumSelect, PressableScale, SurfaceCard } from '../../ui';
 import { WEBSITE_PATHS } from '../../config/website.config';
 import { exploreStateChoices, publishedExploreZones } from '../../utils/exploreRegions';
-import { ExploreCardTone, exploreToneForZone } from './exploreCardTones';
+import { exploreToneForZone } from './exploreCardTones';
+import { ExploreGradientCard, exploreCardWidth } from './ExploreGradientCard';
 export { ExploreContact } from './ExploreContact';
 
 type OpenPage = (path: string, title: string) => void;
@@ -15,6 +16,20 @@ const LINKS = [
   { label: 'Schemes', icon: 'account-balance', path: WEBSITE_PATHS.schemes },
   { label: 'Contact us', icon: 'call', path: WEBSITE_PATHS.contact },
 ];
+const REGION_GRADIENTS: Record<string, string[]> = {
+  national: ['#0B1A45', '#2563EB'],
+  south: ['#0F766E', '#2DD4BF'],
+  north: ['#075985', '#38BDF8'],
+  east: ['#92400E', '#F59E0B'],
+  west: ['#9F1239', '#FB7185'],
+  'north-east': ['#5B21B6', '#A78BFA'],
+};
+const REGION_GRADIENT_ORDER = ['south', 'north', 'east', 'west', 'north-east'];
+const regionGradient = (slug: string, index = 0) => {
+  const key = slug.toLowerCase().replace(/[_\s]+/g, '-').replace(/^(?:region|zone)-|-region$|-zone$/g, '');
+  return REGION_GRADIENTS[key === 'northeast' ? 'north-east' : key]
+    || REGION_GRADIENTS[REGION_GRADIENT_ORDER[Math.abs(index) % REGION_GRADIENT_ORDER.length]];
+};
 
 export function ExploreQuickLinks({ openPage }: { openPage: OpenPage }) {
   return <View style={s.links}>
@@ -45,7 +60,7 @@ export function ExploreSchemes({ openPage }: { openPage: OpenPage }) {
 
 export function ExploreZones({ zones, openPage, onSeeAll }: { zones: any[]; openPage: OpenPage; onSeeAll?: () => void }) {
   const { width, fontScale } = useWindowDimensions();
-  const stacked = width < 340 || fontScale >= 1.5;
+  const cardWidth = exploreCardWidth(width, fontScale);
   const published = useMemo(() => publishedExploreZones(zones), [zones]);
   const national = published.find(zone => zone.national && zone.hasPage);
   const regions = useMemo(() => published.filter(zone => !zone.national), [published]);
@@ -64,6 +79,7 @@ export function ExploreZones({ zones, openPage, onSeeAll }: { zones: any[]; open
   const shownStates = selectedState ? [selectedState] : zone ? states : [];
   const filtered = !!(zone || selectedState);
   const toneFor = (slug: string) => exploreToneForZone(slug, regions.findIndex(item => item.slug === slug));
+  const colorsFor = (slug: string) => regionGradient(slug, regions.findIndex(item => item.slug === slug));
   return <View style={s.section}>
     <View style={s.sectionHeading}><Text style={s.heading} accessibilityRole="header">ACTIV near you</Text>
       {onSeeAll && <PressableScale onPress={onSeeAll} accessibilityRole="button" accessibilityLabel="See all Zones" contentStyle={s.seeAll}><Text style={s.seeAllText}>All zones</Text><Icon name="arrow-forward" size={16} color={BRAND.blue} /></PressableScale>}
@@ -92,44 +108,28 @@ export function ExploreZones({ zones, openPage, onSeeAll }: { zones: any[]; open
         </PressableScale>
       </View>}
     </>}
-    {!filtered && national && <PressableScale onPress={() => openPage(WEBSITE_PATHS.region(national.slug), national.label)}
-      accessibilityRole="button" accessibilityLabel={'Explore ' + national.label} style={s.national}>
-      <LinearGradient colors={[BRAND.navy, '#264C96']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.nationalInner}>
-        <View style={s.nationalIcon}><Icon name="public" size={28} color={PALETTE.white} /></View>
-        <View style={s.copy}><Text style={s.nationalTitle}>{national.label}</Text><Text style={s.nationalCopy}>The ACTIV community across India</Text></View>
-        <Icon name="arrow-forward" size={21} color={PALETTE.white} />
-      </LinearGradient>
-    </PressableScale>}
-    <View style={s.regionGrid}>
-      {shownStates.map(state => <CommunityCard key={'state-' + state.slug} title={state.name} detail={state.zoneLabel}
-        caption="Open state page" icon="place" tone={toneFor(state.zoneSlug)} stacked={stacked}
+    <ScrollView key={`${zone?.slug || 'all'}:${selectedState?.slug || ''}`} horizontal showsHorizontalScrollIndicator={false}
+      style={s.regionScroll} contentContainerStyle={s.regionRow} keyboardShouldPersistTaps="handled"
+      snapToInterval={cardWidth + 12} decelerationRate="fast">
+      {!filtered && national && <ExploreGradientCard title={national.label} description="The ACTIV community across India"
+        colors={REGION_GRADIENTS.national} icon="public" caption="Across India" width={cardWidth}
+        accessibilityLabel={'Explore ' + national.label} onPress={() => openPage(WEBSITE_PATHS.region(national.slug), national.label)} />}
+      {shownStates.map(state => <ExploreGradientCard key={'state-' + state.slug} title={state.name} description={state.zoneLabel}
+        caption="Open state page" icon="place" colors={colorsFor(state.zoneSlug)} width={cardWidth}
+        accessibilityLabel={'Explore ' + state.name}
         onPress={() => openPage(WEBSITE_PATHS.state(state.slug), state.name)} />)}
-      {shownRegions.map(item => <CommunityCard key={item.slug} title={item.label}
-        detail={item.states.slice(0, 2).map(state => state.name).join(' · ') || 'Regional news, events and leadership'}
+      {shownRegions.map(item => <ExploreGradientCard key={item.slug} title={item.label}
+        description={item.states.slice(0, 2).map(state => state.name).join(' · ') || 'Regional news, events and leadership'}
         caption={item.hasPage ? (item.states.length ? `${item.states.length} ${item.states.length === 1 ? 'state' : 'states'} · Open zone` : 'Open zone page') : 'Browse published states'}
-        icon="explore" tone={toneFor(item.slug)} stacked={stacked}
+        art="zones" colors={colorsFor(item.slug)} width={cardWidth}
         accessibilityLabel={item.hasPage ? 'Explore ' + item.label : 'Browse states in ' + item.label}
         onPress={() => {
           if (item.hasPage) openPage(WEBSITE_PATHS.region(item.slug), item.label);
           else { setZoneSlug(item.slug); setStateSlug(''); }
         }} />)}
-    </View>
+    </ScrollView>
     {!published.length && <SurfaceCard><Text style={s.bannerCopy}>Regional pages will appear here as they are published.</Text></SurfaceCard>}
   </View>;
-}
-
-function CommunityCard({ title, detail, caption, icon, tone, stacked, onPress, accessibilityLabel }: {
-  title: string; detail: string; caption: string; icon: string; tone: ExploreCardTone; stacked: boolean; onPress: () => void; accessibilityLabel?: string;
-}) {
-  return <PressableScale style={[s.regionCard, stacked && s.fullWidth]}
-    contentStyle={[s.regionInner, { backgroundColor: tone.background, borderColor: tone.border }]}
-    accessibilityRole="button" accessibilityLabel={accessibilityLabel || 'Explore ' + title} onPress={onPress}>
-    <View style={s.regionTop}><View style={[s.regionIcon, { backgroundColor: tone.iconBackground }]}>
-      <Icon name={icon} size={23} color={tone.accent} /></View><Icon name="north-east" size={18} color={tone.accent} /></View>
-    <Text style={[s.regionTitle, { color: tone.title }]}>{title}</Text>
-    <Text style={[s.regionCopy, { color: tone.body }]} numberOfLines={2}>{detail}</Text>
-    <Text style={[s.regionCount, { color: tone.accent }]}>{caption}</Text>
-  </PressableScale>;
 }
 
 const s = StyleSheet.create({
@@ -141,25 +141,14 @@ const s = StyleSheet.create({
   heading: { color: BRAND.navyDeep, fontSize: 20, lineHeight: 28, fontWeight: '700', marginBottom: SPACE.sm, flexShrink: 1 },
   sectionCopy: { color: PALETTE.textMuted, fontSize: 14, lineHeight: 21, marginBottom: 16 },
   schemeRow: { flexDirection: 'row', gap: SPACE.md }, schemeCard: { flex: 1, minWidth: 0 }, schemeInner: { padding: SPACE.md },
-  stacked: { flexDirection: 'column' }, fullWidth: { width: '100%', flexBasis: '100%', maxWidth: '100%' },
+  stacked: { flexDirection: 'column' },
   schemeTitle: { color: BRAND.navyDeep, fontSize: 16, lineHeight: 23, fontWeight: '700', marginTop: SPACE.sm }, schemeArrow: { alignSelf: 'flex-end', marginTop: SPACE.sm },
   bannerArt: { width: 44, height: 44, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  copy: { flex: 1, minWidth: 0 }, bannerCopy: { color: PALETTE.textMuted, fontSize: 14, lineHeight: 21, marginTop: 4 },
+  bannerCopy: { color: PALETTE.textMuted, fontSize: 14, lineHeight: 21, marginTop: 4 },
   sectionHeading: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: SPACE.sm },
   seeAll: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 5 }, seeAllText: { color: BRAND.blue, fontSize: 14, fontWeight: '600' },
-  national: { borderRadius: 18, overflow: 'hidden', marginBottom: 12 },
-  nationalInner: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 18 },
-  nationalIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#FFFFFF15', alignItems: 'center', justifyContent: 'center' },
-  nationalTitle: { color: PALETTE.white, fontSize: 19, lineHeight: 26, fontWeight: '700' },
-  nationalCopy: { color: '#DCE7FF', fontSize: 13, lineHeight: 19, marginTop: 3 },
-  regionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  regionCard: { width: '48%', flexBasis: '48%', maxWidth: '48%', minWidth: 0 },
-  regionInner: { flex: 1, padding: 16, borderRadius: 16, backgroundColor: PALETTE.white, borderWidth: 1, borderColor: '#DDE5F1' },
-  regionTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  regionIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  regionTitle: { color: BRAND.navyDeep, fontSize: 17, lineHeight: 24, fontWeight: '700' },
-  regionCopy: { color: PALETTE.textMuted, fontSize: 13, lineHeight: 20, marginTop: 5 },
-  regionCount: { color: BRAND.blue, fontSize: 12, lineHeight: 18, fontWeight: '600', marginTop: 10 },
+  regionScroll: { marginHorizontal: -SPACE.lg },
+  regionRow: { gap: 12, paddingHorizontal: SPACE.lg, paddingTop: 8, paddingBottom: 12, alignItems: 'stretch' },
   zoneFilters: { gap: 8, paddingBottom: 12 },
   zoneFilter: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 22, borderWidth: 1 },
   zoneFilterText: { fontSize: 13, lineHeight: 19, fontWeight: '600' },

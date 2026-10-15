@@ -15,7 +15,7 @@ import {
 import { WEBSITE_PATHS } from '../../../config/website.config';
 import { openWebsitePage } from '../../../services/websiteNavigation';
 import { ExploreContact, ExploreSchemes, ExploreZones } from '../../../components/explore/ExploreDestinations';
-import { exploreToneForPage } from '../../../components/explore/exploreCardTones';
+import { ExploreGradientCard, exploreCardWidth } from '../../../components/explore/ExploreGradientCard';
 import type { ExploreContent } from '../../../services/publicContent';
 
 /**
@@ -77,7 +77,7 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
   const sectionKey = (sections || ALL_SECTIONS).join('|');
   const shown = useMemo(() => new Set(sectionKey.split('|')), [sectionKey]);
   const { width, fontScale } = useWindowDimensions();
-  const stackedTiles = width < 360 || fontScale > 1.2;
+  const tileWidth = exploreCardWidth(width, fontScale);
   const [nav, setNav] = useState<SiteLink[]>(FALLBACK_NAV);
   const [legal, setLegal] = useState<SiteLink[]>(FALLBACK_LEGAL);
   const [zones, setZones] = useState<Zone[]>([]);
@@ -357,19 +357,12 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
       {/* ---- page directory */}
       {shown.has('nav') && <View style={x.directory}>
         <Text style={x.directoryTitle} accessibilityRole="header">Explore more</Text>
-        <View style={x.tileRow}>{tiles.map(t => {
-          const tone = exploreToneForPage(t.path);
-          return <PressableScale key={t.key}
-          onPress={() => open(t.path, t.label)} style={[x.tileOuter, stackedTiles && x.tileFull]}
-          contentStyle={[x.tile, { backgroundColor: tone.background, borderColor: tone.border }]}
-          accessibilityRole="button" accessibilityLabel={`${t.label}. ${t.meta.blurb}. Explore in ACTIV.`}>
-          <View style={x.tileHead}><View style={[x.tileIcon, { backgroundColor: tone.iconBackground }]}><Icon name={
-            ({ about: 'info-outline', membership: 'card-membership', events: 'event', news: 'article', schemes: 'account-balance', gallery: 'photo-library', contact: 'call', donate: 'favorite-border', zones: 'explore', home: 'home' } as Record<string, string>)[t.meta.art] || 'language'
-          } size={22} color={tone.accent} /></View><Icon name="arrow-forward" size={18} color={tone.accent} /></View>
-          <Text style={[x.tileLabel, { color: tone.title }]}>{t.label}</Text>
-          <Text style={[x.tileBlurb, { color: tone.body }]}>{t.meta.blurb}</Text>
-        </PressableScale>;
-        })}</View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={x.tileRow}
+          snapToInterval={tileWidth + 12} decelerationRate="fast" keyboardShouldPersistTaps="handled">
+          {tiles.map(t => <ExploreGradientCard key={t.key} title={t.label} description={t.meta.blurb}
+            colors={t.meta.colors} art={t.meta.art} width={tileWidth} onPress={() => open(t.path, t.label)}
+            accessibilityLabel={`${t.label}. ${t.meta.blurb}. Explore in ACTIV.`} />)}
+        </ScrollView>
       </View>}
 
       {/* ---- policies */}
@@ -406,16 +399,9 @@ const x = StyleSheet.create({
   },
   bannerCtaText: { fontSize: 13, fontWeight: '800', color: BRAND.navy },
 
-  directory: { paddingHorizontal: SPACE.lg, paddingTop: 24, paddingBottom: 8 },
-  directoryTitle: { color: BRAND.navyDeep, fontSize: 20, lineHeight: 28, fontWeight: '700', marginBottom: 14 },
-  tileRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  tileOuter: { flexBasis: '45%', flexGrow: 1, maxWidth: '49%', minWidth: 0 },
-  tileFull: { flexBasis: '100%', maxWidth: '100%' },
-  tile: { flex: 1, borderRadius: 18, padding: 16, minHeight: 142, backgroundColor: PALETTE.white, borderWidth: 1, borderColor: '#DDE5F1' },
-  tileHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  tileIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#EDF2FF', alignItems: 'center', justifyContent: 'center' },
-  tileLabel: { fontSize: 16, lineHeight: 23, fontWeight: '700', color: BRAND.navyDeep },
-  tileBlurb: { fontSize: 13, lineHeight: 20, color: PALETTE.textMuted, marginTop: 4 },
+  directory: { paddingTop: 24, paddingBottom: 8 },
+  directoryTitle: { color: BRAND.navyDeep, fontSize: 20, lineHeight: 28, fontWeight: '700', marginBottom: 6, marginHorizontal: SPACE.lg },
+  tileRow: { paddingHorizontal: SPACE.lg, paddingTop: 8, paddingBottom: 12, gap: 12, alignItems: 'stretch' },
 
   subHead: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.sm, marginHorizontal: SPACE.lg, marginTop: SPACE.xl, marginBottom: SPACE.md },
   subTitle: { color: BRAND.navyDeep, fontSize: 20, lineHeight: 28, fontWeight: '700', flexShrink: 1 },
