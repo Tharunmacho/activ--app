@@ -1,5 +1,6 @@
 import { readPublicCms } from './publicContent';
 import { publicWebsitePath } from '../utils/publicBrowse';
+import { publishedExploreZones } from '../utils/exploreRegions';
 
 export type PublicPageData = { kind: string; title: string; item?: any; items?: any[]; page?: any; section?: string; scope?: string; photo?: number; total?: number };
 const published = (value: any) => value && typeof value === 'object' && !Array.isArray(value) && value.visible !== false && !value.isHidden && (!value.status || value.status === 'published') ? value : null;
@@ -21,14 +22,16 @@ export async function loadNativePublicPage(value: string, signal: AbortSignal, o
   const gallery = /^\/gallery\/([^/]+)(?:\/photo\/(\d+))?$/.exec(path);
   if (gallery) {
     const item = published(await read('/cms/gallery/' + encodeURIComponent(gallery[1])));
-    return item ? { kind: 'album', title: item.title || item.caption || 'Community album', item, photo: gallery[2] === undefined ? undefined : Number(gallery[2]) } : null;
+    if (!item) return null;
+    const photo = gallery[2] === undefined ? undefined : Number(gallery[2]);
+    return { kind: 'album', title: item.title || item.caption || 'Community album', item, photo };
   }
   const article = /^\/news\/([^/]+)$/.exec(path);
   if (article) {
     const item = published(await read('/cms/news/' + encodeURIComponent(article[1])));
     return item ? { kind: 'article', title: item.title || 'ACTIV News', item } : null;
   }
-  if (['/zones', '/regions', '/states'].includes(path)) return { kind: 'zones', title: 'Zones & states', items: rows((await read('/cms/regions/map'))?.regions).filter(row => row.hasPage !== false) };
+  if (['/zones', '/regions', '/states'].includes(path)) return { kind: 'zones', title: 'Zones & states', items: publishedExploreZones((await read('/cms/regions/map'))?.regions) };
   const scheme = /^\/schemes\/view\/([^/]+)$/.exec(path);
   if (scheme) {
     const item = published(await read('/cms/schemes/' + encodeURIComponent(scheme[1])));

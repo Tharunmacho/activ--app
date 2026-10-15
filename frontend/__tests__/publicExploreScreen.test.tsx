@@ -4,6 +4,7 @@ import { Text, TextInput } from 'react-native';
 import PublicExplore from '../src/screens/public/PublicExploreScreen';
 import { loadExploreContent } from '../src/services/publicContent';
 import { clearPublicAction } from '../src/services/publicNavigation';
+import { PremiumSelect } from '../src/ui';
 jest.mock('../src/services/publicContent', () => ({ loadExploreContent: jest.fn(), getPublicContactInfo: jest.fn().mockResolvedValue({}) }));
 jest.mock('../src/services/publicNavigation', () => ({ clearPublicAction: jest.fn() }));
 
@@ -87,9 +88,11 @@ test('returning from event details opens the native Events tab and consumes its 
   expect(button('Events').props.accessibilityState.selected).toBe(true);
 });
 
-test('a state search finds its region and opens the public state page', async () => {
+test('the Zones tab selects a published state and opens its native state page', async () => {
   await Renderer.act(async () => { screen = Renderer.create(<PublicExplore navigation={navigation} route={{ params: { section: 'zones' } }} />); });
-  await Renderer.act(async () => screen.root.findByType(TextInput).props.onChangeText('tamil'));
+  const picker = screen.root.findAllByType(PremiumSelect).find(node => node.props.label === 'Find your state');
+  expect(picker?.props.options).toEqual(['Tamil Nadu']);
+  await Renderer.act(async () => picker?.props.onChange('Tamil Nadu'));
   await Renderer.act(async () => button('Explore Tamil Nadu').props.onPress());
   expect(navigation.navigate).toHaveBeenCalledWith('PublicContent', { path: '/states/tamil-nadu', title: 'Tamil Nadu' });
 });

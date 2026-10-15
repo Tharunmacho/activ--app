@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ContentImage } from '../../ui/ContentImage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -85,7 +86,7 @@ export function Photo({ url, alt = 'ACTIV photo', caption, document = false, clo
         <View style={contentStyles.flex}><Text style={contentStyles.errorTitle}>Image couldn’t load</Text><Text style={contentStyles.meta}>Check your connection and try again.</Text></View>
         <PressableScale accessibilityRole="button" accessibilityLabel="Retry image" onPress={() => setAttempt(value => value + 1)} contentStyle={contentStyles.retry}><Text style={contentStyles.linkText}>Retry</Text></PressableScale>
       </View> : <PressableScale disabled={status !== 'ready'} onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel={'Enlarge image: ' + alt}>
-        <Image key={uri + ':' + attempt} source={{ uri }} accessibilityLabel={alt} resizeMode="contain"
+        <ContentImage key={uri + ':' + attempt} uri={uri} width={document ? 1280 : 1024} accessibilityLabel={alt} resizeMode="contain"
           style={{ width: '100%', ...(status === 'ready' ? { aspectRatio: document ? ratio : Math.max(0.65, Math.min(2.2, ratio)) } : { height: 144 }), opacity: status === 'ready' ? 1 : 0 }}
           onError={() => setStatus('error')} onLoad={event => { const source = event.nativeEvent?.source; if (source?.width && source?.height) setRatio(source.width / source.height); setStatus('ready'); }} />
         {status === 'loading' ? <View style={contentStyles.imageLoading}><ActivityIndicator color={BRAND.blue} /><Text style={contentStyles.meta}>Loading image…</Text></View>

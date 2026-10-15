@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, View, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native';
+import { ContentImage } from './ContentImage';
+import { responsiveImageWidth } from '../utils/imageSizing';
 
 /**
  * ============================================================================
@@ -63,6 +65,9 @@ export function FitImage({
   children = null,
 }: FitImageProps) {
   const src = typeof uri === 'string' ? uri.trim() : '';
+  const { width: screenWidth } = useWindowDimensions();
+  const frameWidth = StyleSheet.flatten(style)?.width;
+  const imageWidth = responsiveImageWidth(typeof frameWidth === 'number' ? frameWidth : screenWidth);
   const [failed, setFailed] = useState(false);
   // The image's own width:height, once known. Until then a sensible banner shape.
   const [ratio, setRatio] = useState<number | null>(null);
@@ -70,20 +75,6 @@ export function FitImage({
   useEffect(() => {
     setFailed(false);
     setRatio(null);
-    if (!src || mode !== 'auto') return undefined;
-    let alive = true;
-    try {
-      if (typeof Image.getSize === 'function') {
-        Image.getSize(
-          src,
-          (w, h) => { if (alive && Number(w) > 0 && Number(h) > 0) setRatio(Number(w) / Number(h)); },
-          () => { /* the <Image> below reports the failure */ },
-        );
-      }
-    } catch (err) {
-      console.warn('Image size safely caught:', err);
-    }
-    return () => { alive = false; };
   }, [src, mode]);
 
   const frameStyle: StyleProp<ViewStyle> = [
@@ -105,15 +96,20 @@ export function FitImage({
         // The fill behind: the same picture, blurred and dimmed, so the space a
         // shape leaves reads as part of the image rather than as empty bars.
         <>
-          <Image source={{ uri: src }} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={18} accessibilityIgnoresInvertColors />
+          <ContentImage uri={src} width={imageWidth} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={18} accessibilityIgnoresInvertColors />
           <View style={[StyleSheet.absoluteFill, s.dim]} />
         </>
       ) : null}
-      <Image
-        source={{ uri: src }}
+      <ContentImage
+        uri={src}
+        width={imageWidth}
         style={StyleSheet.absoluteFill}
         resizeMode={fit === 'cover' ? 'cover' : 'contain'}
         onError={fail}
+        onLoad={event => {
+          const loaded = event.nativeEvent?.source;
+          if (mode === 'auto' && loaded?.width > 0 && loaded?.height > 0) setRatio(loaded.width / loaded.height);
+        }}
         accessibilityIgnoresInvertColors
       />
       {children}

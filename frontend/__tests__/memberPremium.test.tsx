@@ -183,11 +183,11 @@ describe.each([[false, false], [false, true], [true, false], [true, true]])('das
       .map((node: any) => String(node.props.children).toLowerCase())
       .filter((label: string) => expected.includes(label));
     expect(headings()).toEqual(expected);
-    for (const [title, path] of [['About ACTIV', '/about'], ['Membership', '/membership'], ['Schemes', '/schemes'], ['Contact us', '/contact']]) {
+    for (const [title, path] of [['About ACTIV', '/about'], ['Membership', '/membership'], ['Schemes', '/schemes'], ['Contact us', '/contact'], ['Zones & States', '/zones']]) {
       const destination = tree.root.findAll((node: any) => (node.props.accessibilityLabel === title || String(node.props.accessibilityLabel).startsWith(title + '.')) && typeof node.props.onPress === 'function')[0];
       expect(destination).toBeTruthy();
       await ReactTestRenderer.act(async () => destination.props.onPress());
-      expect(navigation.navigate).toHaveBeenLastCalledWith(path === '/schemes' ? 'PublicContent' : 'PublicInfo', { path, title });
+      expect(navigation.navigate).toHaveBeenLastCalledWith(['/schemes', '/zones'].includes(path) ? 'PublicContent' : 'PublicInfo', { path, title });
     }
     const refresh = tree.root.findAll((node: any) => typeof node.props.onRefresh === 'function')[0].props.onRefresh;
     await ReactTestRenderer.act(async () => { await refresh(); await flush(); await flush(); });

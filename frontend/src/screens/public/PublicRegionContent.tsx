@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { ContentImage } from '../../ui/ContentImage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BRAND, PALETTE, GradientButton, GlassIconButton, PremiumSelect, PressableScale, StateView, SurfaceCard } from '../../ui';
@@ -72,7 +73,7 @@ function Leader({ person, onPress }: { person: any; onPress: () => void }) {
   useEffect(() => setFailed(false), [uri]);
   return <SurfaceCard onPress={onPress} accessibilityLabel={'View profile: ' + person.name} style={x.leaderCard}>
     <View style={x.person}>
-      {uri && !failed ? <Image source={{ uri }} accessibilityLabel={person.name} onError={() => setFailed(true)} resizeMode="cover" style={x.portrait} /> : <View style={[x.portrait, x.initial]}><Text style={x.initialText}>{String(person.name || 'A').charAt(0)}</Text></View>}
+      {uri && !failed ? <ContentImage uri={uri} width={320} accessibilityLabel={person.name} onError={() => setFailed(true)} resizeMode="cover" style={x.portrait} /> : <View style={[x.portrait, x.initial]}><Text style={x.initialText}>{String(person.name || 'A').charAt(0)}</Text></View>}
       <View style={s.flex}><Text style={s.title}>{person.name}</Text><Text style={s.meta}>{[person.role, person.designation, person.organisation].filter(Boolean).join('\n')}</Text><Text style={x.profileLink}>View profile & contact →</Text></View>
     </View>
   </SurfaceCard>;

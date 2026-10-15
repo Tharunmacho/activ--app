@@ -27,6 +27,7 @@ export const WEBSITE_PATHS = {
   schemes: '/schemes',
   gallery: '/gallery',
   galleryItem: (slugOrId: string) => `/gallery/${encodeURIComponent(String(slugOrId || ''))}`,
+  zones: '/zones',
   region: (slug: string) => `/regions/${encodeURIComponent(String(slug || ''))}`,
   state: (slug: string) => `/states/${encodeURIComponent(String(slug || ''))}`,
   contact: '/contact',

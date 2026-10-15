@@ -17,7 +17,8 @@ import { useEventClock } from '../../utils/useEventClock';
 import { clearPublicAction } from '../../services/publicNavigation';
 import { openWebsitePage } from '../../services/websiteNavigation';
 import ExploreActiv from '../member/dashboard/ExploreActiv';
-import { PublicContentCard, PublicZoneCard, publicRecordKey } from './PublicExploreCards';
+import { PublicContentCard, publicRecordKey } from './PublicExploreCards';
+import { ExploreZones } from '../../components/explore/ExploreDestinations';
 
 const TABS: { key: ExploreSection; label: string; icon: string; title: string; subtitle: string }[] = [
   { key: 'home', label: 'Home', icon: 'home', title: 'Connect. Empower. Grow.', subtitle: 'Your community. Your next opportunity.' },
@@ -147,11 +148,9 @@ export default function PublicExploreScreen({ navigation, route }: any) {
   </View>;
 
   return <BrandFrame footer={tabs}>
-    <FlatList ref={list} data={section !== 'home' && ready ? records : []}
+    <FlatList ref={list} data={section !== 'home' && section !== 'zones' && ready ? records : []}
       keyExtractor={(item, index) => publicRecordKey(item) || String(index)}
-      renderItem={({ item }) => <View style={s.gutter}>{section === 'zones'
-        ? <PublicZoneCard item={item} openPage={openPage} />
-        : <PublicContentCard item={item} kind={section as 'events' | 'news' | 'gallery'} openPage={openPage} />}</View>}
+      renderItem={({ item }) => <View style={s.gutter}><PublicContentCard item={item} kind={section as 'events' | 'news' | 'gallery'} openPage={openPage} /></View>}
       contentContainerStyle={s.body} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
       initialNumToRender={10} maxToRenderPerBatch={10} windowSize={5}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setContactRefresh(value => value + 1); read(true); }} colors={[BRAND.blue]} tintColor={PALETTE.white} progressViewOffset={insets.top} />}
@@ -171,7 +170,7 @@ export default function PublicExploreScreen({ navigation, route }: any) {
             <Text style={s.heroSubtitle}>{tab.subtitle}</Text>
           </View>
         </BrandHeaderBlock>
-        {section === 'home' ? home : <View style={[s.gutter, s.searchWrap]}>
+        {section === 'home' ? home : section === 'zones' ? (ready && <View style={s.gutter}><ExploreZones zones={data.zones} openPage={openPage} /></View>) : <View style={[s.gutter, s.searchWrap]}>
           <SurfaceCard padded={false} contentStyle={s.searchInner}>
             <View style={s.searchIcon}><Icon name="search" size={23} color={BRAND.blue} /></View>
             <TextInput style={s.searchInput} value={query} onChangeText={setQuery} placeholder={'Search ' + tab.label.toLowerCase()}
@@ -180,7 +179,7 @@ export default function PublicExploreScreen({ navigation, route }: any) {
               <Icon name="close" size={20} color={PALETTE.textMuted} />
             </PressableScale>}
           </SurfaceCard>
-          {ready && <View style={s.resultHeading}><Text style={s.resultTitle}>{section === 'events' ? 'Upcoming events' : section === 'zones' ? 'Explore regions' : 'Discover ' + tab.label.toLowerCase()}</Text>
+          {ready && <View style={s.resultHeading}><Text style={s.resultTitle}>{section === 'events' ? 'Upcoming events' : 'Discover ' + tab.label.toLowerCase()}</Text>
             <View style={s.count}><Text style={s.countText} accessibilityLabel={records.length + ' results'}>{records.length}</Text></View>
           </View>}
         </View>}
@@ -188,7 +187,7 @@ export default function PublicExploreScreen({ navigation, route }: any) {
         {section !== 'home' && loading && <View style={s.gutter}><CardSkeletons rows={2} variant="media" /></View>}
         {section !== 'home' && !!error && <View style={s.gutter}><StateView kind="error" title="Unable to load content" message={error} onAction={() => read()} compact /></View>}
       </>}
-      ListEmptyComponent={ready && section !== 'home' && !records.length ? <View style={s.gutter}><StateView compact title={query.trim() ? 'No matching results' : section === 'events' ? 'More events on the way' : 'More to discover soon'}
+      ListEmptyComponent={ready && section !== 'home' && section !== 'zones' && !records.length ? <View style={s.gutter}><StateView compact title={query.trim() ? 'No matching results' : section === 'events' ? 'More events on the way' : 'More to discover soon'}
         message={query.trim() ? 'Try another name or clear your search.' : section === 'events' ? 'Upcoming programmes will appear here when announced.' : 'Check back for updates from the ACTIV community.'}
         action={query.trim() ? 'Clear search' : undefined} onAction={query.trim() ? () => setQuery('') : undefined} /></View> : null}
       ListFooterComponent={section === 'home' ? <View style={[s.gutter, s.footer]}>

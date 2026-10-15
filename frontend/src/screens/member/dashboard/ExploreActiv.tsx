@@ -15,6 +15,7 @@ import {
 import { WEBSITE_PATHS } from '../../../config/website.config';
 import { openWebsitePage } from '../../../services/websiteNavigation';
 import { ExploreContact, ExploreSchemes, ExploreZones } from '../../../components/explore/ExploreDestinations';
+import { exploreToneForPage } from '../../../components/explore/exploreCardTones';
 import type { ExploreContent } from '../../../services/publicContent';
 
 /**
@@ -55,6 +56,7 @@ const TILE_BY_PATH: Record<string, TileMeta> = {
   '/contact': { art: 'contact', colors: ['#334155', '#64748B'], blurb: 'Offices, phone and email' },
   '/donate': { art: 'donate', colors: ['#BE123C', '#F43F5E'], blurb: 'Support ACTIV · 80G receipt' },
   zones: { art: 'zones', colors: ['#0B1A45', '#2563EB'], blurb: 'ACTIV zone by zone' },
+  '/zones': { art: 'zones', colors: ['#0B1A45', '#2563EB'], blurb: 'ACTIV zone by zone' },
 };
 
 const metaFor = (path: string): TileMeta => {
@@ -112,7 +114,7 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
     };
     if (shown.has('nav')) safe(getSiteNav(force), (v) => setNav(Array.isArray(v) && v.length ? v : FALLBACK_NAV), FALLBACK_NAV);
     if (shown.has('legal')) safe(getLegalLinks(force), (v) => setLegal(Array.isArray(v) && v.length ? v : FALLBACK_LEGAL), FALLBACK_LEGAL);
-    if (shown.has('zones') || shown.has('nav')) safe(getZones(force), (v) => setZones(Array.isArray(v) ? v : []), []);
+    if (shown.has('zones')) safe(getZones(force), (v) => setZones(Array.isArray(v) ? v : []), []);
     if (shown.has('news')) safe(getLatestNews(3, force), (v) => setNews(Array.isArray(v) ? v : []), []);
     if (shown.has('gallery')) safe(getGalleryStrip(8, force), (v) => setGallery(Array.isArray(v) ? v : []), []);
     if (shown.has('events')) safe(getPublicEvents(3, force), (v) => setEvents(Array.isArray(v) ? v : []), []);
@@ -148,12 +150,11 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
     if (!list.some((t) => t.path === WEBSITE_PATHS.donate)) {
       list.push({ key: 'donate', label: 'Donate', path: WEBSITE_PATHS.donate, meta: TILE_BY_PATH['/donate'] });
     }
-    const firstZone = (zones || [])[0];
-    if (firstZone?.slug) {
-      list.push({ key: 'zones', label: 'Zones & States', path: WEBSITE_PATHS.region(firstZone.slug), meta: TILE_BY_PATH.zones });
+    if (!list.some(t => t.path === WEBSITE_PATHS.zones)) {
+      list.push({ key: 'zones', label: 'Zones & States', path: WEBSITE_PATHS.zones, meta: TILE_BY_PATH.zones });
     }
     return list;
-  }, [nav, zones, publicAccess]);
+  }, [nav, publicAccess]);
 
   const cardW = Math.round(Math.min(340, (width || 360) * 0.8));
 
@@ -356,15 +357,19 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
       {/* ---- page directory */}
       {shown.has('nav') && <View style={x.directory}>
         <Text style={x.directoryTitle} accessibilityRole="header">Explore more</Text>
-        <View style={x.tileRow}>{tiles.map(t => <PressableScale key={t.key}
-          onPress={() => open(t.path, t.label)} style={[x.tileOuter, stackedTiles && x.tileFull]} contentStyle={x.tile}
+        <View style={x.tileRow}>{tiles.map(t => {
+          const tone = exploreToneForPage(t.path);
+          return <PressableScale key={t.key}
+          onPress={() => open(t.path, t.label)} style={[x.tileOuter, stackedTiles && x.tileFull]}
+          contentStyle={[x.tile, { backgroundColor: tone.background, borderColor: tone.border }]}
           accessibilityRole="button" accessibilityLabel={`${t.label}. ${t.meta.blurb}. Explore in ACTIV.`}>
-          <View style={x.tileHead}><View style={x.tileIcon}><Icon name={
+          <View style={x.tileHead}><View style={[x.tileIcon, { backgroundColor: tone.iconBackground }]}><Icon name={
             ({ about: 'info-outline', membership: 'card-membership', events: 'event', news: 'article', schemes: 'account-balance', gallery: 'photo-library', contact: 'call', donate: 'favorite-border', zones: 'explore', home: 'home' } as Record<string, string>)[t.meta.art] || 'language'
-          } size={22} color={BRAND.blue} /></View><Icon name="arrow-forward" size={17} color={PALETTE.textMuted} /></View>
-          <Text style={x.tileLabel}>{t.label}</Text>
-          <Text style={x.tileBlurb} numberOfLines={2}>{t.meta.blurb}</Text>
-        </PressableScale>)}</View>
+          } size={22} color={tone.accent} /></View><Icon name="arrow-forward" size={18} color={tone.accent} /></View>
+          <Text style={[x.tileLabel, { color: tone.title }]}>{t.label}</Text>
+          <Text style={[x.tileBlurb, { color: tone.body }]}>{t.meta.blurb}</Text>
+        </PressableScale>;
+        })}</View>
       </View>}
 
       {/* ---- policies */}
@@ -404,11 +409,11 @@ const x = StyleSheet.create({
   directory: { paddingHorizontal: SPACE.lg, paddingTop: 24, paddingBottom: 8 },
   directoryTitle: { color: BRAND.navyDeep, fontSize: 20, lineHeight: 28, fontWeight: '700', marginBottom: 14 },
   tileRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  tileOuter: { flexBasis: '45%', flexGrow: 1 },
-  tileFull: { flexBasis: '100%' },
-  tile: { flex: 1, borderRadius: 16, padding: 14, backgroundColor: PALETTE.white, borderWidth: 1, borderColor: '#DDE5F1' },
+  tileOuter: { flexBasis: '45%', flexGrow: 1, maxWidth: '49%', minWidth: 0 },
+  tileFull: { flexBasis: '100%', maxWidth: '100%' },
+  tile: { flex: 1, borderRadius: 18, padding: 16, minHeight: 142, backgroundColor: PALETTE.white, borderWidth: 1, borderColor: '#DDE5F1' },
   tileHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  tileIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#EDF2FF', alignItems: 'center', justifyContent: 'center' },
+  tileIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#EDF2FF', alignItems: 'center', justifyContent: 'center' },
   tileLabel: { fontSize: 16, lineHeight: 23, fontWeight: '700', color: BRAND.navyDeep },
   tileBlurb: { fontSize: 13, lineHeight: 20, color: PALETTE.textMuted, marginTop: 4 },
 

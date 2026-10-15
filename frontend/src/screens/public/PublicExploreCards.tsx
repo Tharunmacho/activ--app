@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { ContentImage } from '../../ui/ContentImage';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { BRAND, PALETTE, SPACE, PressableScale, SurfaceCard } from '../../ui';
@@ -48,7 +49,7 @@ export function PublicContentCard({ item, kind, openPage }: { item: any; kind: C
 
   return <SurfaceCard padded={false} style={s.card} accessibilityLabel={title} onPress={() => openPage(path, title)}>
     {hasImage && <View style={s.imageFrame}>
-      <Image source={{ uri: image }} style={s.image}
+      <ContentImage uri={image} width={800} style={s.image}
         resizeMode="contain" onError={() => setFailedImage(image)} accessibilityLabel={title} />
       {kind === 'gallery' && item.media?.type === 'video' && <View style={s.play}><Icon name="play-arrow" size={28} color={PALETTE.white} /></View>}
     </View>}

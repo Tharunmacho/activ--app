@@ -1,6 +1,7 @@
 import visitorApi from './publicApi';
 import { isUpcomingEvent } from '../utils/eventLifecycle';
 import { withEventAgenda } from '../utils/eventAgenda';
+import { publishedExploreZones } from '../utils/exploreRegions';
 
 // Public browsing never reads a saved token or calls a member/admin endpoint.
 export type ExploreSection = 'home' | 'events' | 'news' | 'gallery' | 'zones';
@@ -21,7 +22,7 @@ export async function loadExploreContent(section: ExploreSection, signal?: Abort
   if (section === 'home' || section === 'events') jobs.push(read('/cms/events', signal, { period: 'upcoming' }).then(data => { result.events = rows(data).filter(e => isUpcomingEvent(e) && !e.deletedAt && (!e.status || e.status === 'published')); }));
   if (section === 'home' || section === 'news') jobs.push(read('/cms/news', signal).then(data => { result.news = rows(data).filter(n => !n.status || n.status === 'published'); }));
   if (section === 'home' || section === 'gallery') jobs.push(read('/cms/gallery', signal, { limit: section === 'home' ? 6 : 60 }).then(data => { result.gallery = rows(data).filter(g => g.visible !== false && (!g.status || g.status === 'published')); }));
-  if (section === 'home' || section === 'zones') jobs.push(read('/cms/regions/map', signal).then(data => { result.zones = rows(data?.regions).filter(z => z.hasPage !== false && (!z.status || z.status === 'published')); }));
+  if (section === 'home' || section === 'zones') jobs.push(read('/cms/regions/map', signal).then(data => { result.zones = publishedExploreZones(data?.regions); }));
   await Promise.all(jobs);
   return result;
 }

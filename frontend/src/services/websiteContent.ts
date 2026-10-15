@@ -2,6 +2,7 @@ import { isUpcomingEvent } from '../utils/eventLifecycle';
 import api from './api';
 import { resolveMediaUrl } from '../config/api.config';
 import { WEBSITE_PATHS } from '../config/website.config';
+import { publishedExploreZones } from '../utils/exploreRegions';
 
 /**
  * ============================================================================
@@ -32,7 +33,7 @@ import { WEBSITE_PATHS } from '../config/website.config';
  */
 
 export interface SiteLink { label: string; path: string }
-export interface Zone { slug: string; label: string; national: boolean; states: { name: string; slug: string }[] }
+export interface Zone { slug: string; label: string; national: boolean; hasPage?: boolean; states: { name: string; slug: string }[] }
 export interface NewsTeaser { key: string; title: string; summary: string; image: string; category: string; date: string; path: string; external: string }
 export interface GalleryThumb { key: string; title: string; image: string; path: string }
 export interface EventTeaser { id: string; endAt?: string; days?: { date?: string }[]; key: string; title: string; startAt: string; mode: string; category: string; place: string; image: string; path: string }
@@ -128,17 +129,7 @@ export const getLegalLinks = (force = false) => cached<SiteLink[]>('legal', FALL
 
 /* ------------------------------------------------------------------ zones */
 
-export const toExploreZones = (regions: any[]): Zone[] => arr(regions)
-    .filter((r) => str(r?.slug) && r?.hasPage !== false && (!r?.status || r?.status === 'published'))
-    .sort((a, b) => Number(a?.order || 0) - Number(b?.order || 0))
-    .map((r) => ({
-      slug: str(r?.slug),
-      label: str(r?.label) || str(r?.slug),
-      national: r?.national === true,
-      states: arr(r?.states)
-        .filter((s) => str(s?.slug) && s?.hasPage !== false && (!s?.status || s?.status === 'published'))
-        .map((s) => ({ name: str(s?.name) || str(s?.slug), slug: str(s?.slug) })),
-    }));
+export const toExploreZones = (regions: any[]): Zone[] => publishedExploreZones(regions);
 export const getZones = (force = false) => cached<Zone[]>('zones', [], async () =>
   toExploreZones((payloadOf(await api.get('/cms/regions/map')) || {}).regions), force);
 

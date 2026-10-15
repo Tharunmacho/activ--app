@@ -1,12 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { PALETTE, BRAND, PressableScale, StateView } from '../../ui';
 import { resolveMediaUrl } from '../../config/api.config';
 import { usePublicResource } from '../../services/usePublicResource';
 import { loadNativePublicPage, PublicPageData } from '../../services/nativePublicContent';
+import { readPublicCms } from '../../services/publicContent';
 import { openWebsitePage } from '../../services/websiteNavigation';
-import { PublicContentCard, PublicZoneCard } from './PublicExploreCards';
+import { PublicContentCard } from './PublicExploreCards';
+import { ExploreZones } from '../../components/explore/ExploreDestinations';
+import { galleryMediaUrl, galleryPath, galleryPhotos, relatedGalleryAlbums } from '../../utils/galleryContent';
+import { ContentImage } from '../../ui/ContentImage';
 import { ContentLayout, Body, Photo, ContentMedia, ActionLink, ExtraFields, Heading, contentStyles as s, contentText } from './PublicContentKit';
 import PublicRegionContent from './PublicRegionContent';
 import { NewsArticleContent } from './PublicNewsArticleScreen';
@@ -21,7 +25,7 @@ export default function PublicContentScreen({ navigation, route }: any) {
   const categories = useMemo(() => Array.from(new Set<string>((page?.items || []).map(item => item.category).filter(value => typeof value === 'string' && value.trim()))).sort(), [page?.items]);
   const districts = useMemo(() => Array.from(new Set<string>((page?.items || []).map(item => item.district).filter(value => typeof value === 'string' && value.trim()))).sort(), [page?.items]);
   const records = useMemo(() => (page?.items || []).filter(item => (!category || item.category === category) && (!district || item.district === district) && (!query.trim() || [item.title, item.caption, item.summary, item.category, item.sector, item.state, item.district, item.location, item.label, item.name, ...(Array.isArray(item.states) ? item.states : []).map((state: any) => state?.name)].join(' ').toLowerCase().includes(query.trim().toLowerCase()))), [page?.items, category, district, query]);
-  const list = page && ['news', 'gallery', 'zones', 'schemeStates', 'schemes'].includes(page.kind);
+  const list = page && ['news', 'gallery', 'schemeStates', 'schemes'].includes(page.kind);
   return <ContentLayout navigation={navigation} title={page?.title || route?.params?.title || 'ACTIV'} art={page?.kind === 'gallery' || page?.kind === 'album' ? 'gallery' : page?.kind?.startsWith('scheme') ? 'schemes' : page?.kind === 'region' || page?.kind === 'zones' ? 'zones' : 'news'} resource={resource}>
     {list && <>
       {page.kind.startsWith('scheme') && <View style={x.schemeTabs}>{[['/schemes/central', 'Central schemes'], ['/schemes/state', 'State schemes']].map(([href, label]) => {
@@ -34,11 +38,12 @@ export default function PublicContentScreen({ navigation, route }: any) {
       {districts.length > 0 && <FilterChips label="District" allLabel="All districts" values={districts} value={district} onChange={setDistrict} />}
       <View style={x.results}><Text style={s.meta}>{records.length} {page.kind === 'gallery' ? records.length === 1 ? 'album' : 'albums' : records.length === 1 ? 'result' : 'results'}</Text>{!!(query || category || district) && <PressableScale accessibilityRole="button" accessibilityLabel="Clear all filters" onPress={() => { setQuery(''); setCategory(''); setDistrict(''); }} contentStyle={x.reset}><Text style={x.more}>Clear filters</Text></PressableScale>}</View>
       {records.length === 0 && <StateView compact title={query || category || district ? 'No matching results' : 'More to discover soon'} message={query || category || district ? 'Try another search or clear the filters.' : 'Published updates will appear here.'} />}
-      {records.map((item, index) => page.kind === 'zones' ? <PublicZoneCard key={item.slug || index} item={item} openPage={open} /> : page.kind === 'schemeStates' ?
+      {records.map((item, index) => page.kind === 'schemeStates' ?
         <PressableScale key={item.state} accessibilityRole="link" accessibilityLabel={`${item.state}, ${item.total} schemes`} onPress={() => open('/schemes/state/' + String(item.state).trim().toLowerCase().replace(/\s+/g, '-'), item.state + ' schemes')} contentStyle={x.stateRow}><View style={x.stateIcon}><Icon name="account-balance" size={22} color={BRAND.blue} /></View><View style={s.flex}><Text style={x.stateName}>{item.state}</Text><Text style={s.meta}>{item.total} {Number(item.total) === 1 ? 'scheme' : 'schemes'}</Text></View><Icon name="chevron-right" size={22} color={BRAND.blue} /></PressableScale> : page.kind === 'schemes' ?
           <SchemePreview key={item.id || item.slug || index} item={item} onPress={() => open('/schemes/view/' + encodeURIComponent(item.slug || item.id), item.title)} /> : <PublicContentCard key={item.id || item._id || item.slug || index} item={item} kind={page.kind as 'news' | 'gallery'} openPage={open} />)}
     </>}
-    {page?.kind === 'album' && <Album key={path} page={page} navigation={navigation} />}
+    {page?.kind === 'zones' && <ExploreZones zones={page.items || []} openPage={open} />}
+    {page?.kind === 'album' && <Album key={path} page={page} navigation={navigation} overview={!/\/photo\//.test(path)} />}
     {page?.kind === 'article' && <Article item={page.item} navigation={navigation} />}
     {page?.kind === 'scheme' && <Scheme item={page.item} navigation={navigation} />}
     {page?.kind === 'region' && <PublicRegionContent page={page} path={path} navigation={navigation} offset={offset} onOffset={setOffset} />}
@@ -50,7 +55,7 @@ function SchemePreview({ item, onPress }: { item: any; onPress: () => void }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [uri]);
   return <PressableScale accessibilityRole="button" accessibilityLabel={'View scheme: ' + item.title} onPress={onPress} contentStyle={x.schemeCard}>
-    {!!uri && !failed && <Image source={{ uri }} accessibilityLabel={item.image?.alt || item.title} onError={() => setFailed(true)} resizeMode="contain" style={x.schemeImage} />}
+    {!!uri && !failed && <ContentImage uri={uri} width={800} accessibilityLabel={item.image?.alt || item.title} onError={() => setFailed(true)} resizeMode="contain" style={x.schemeImage} />}
     <View style={x.schemeCopy}><Text style={x.filterLabel}>{[item.tier === 'national' ? 'Central' : item.state, item.district, item.category].filter(Boolean).join(' · ')}</Text><Heading>{item.title}</Heading>
       {!!contentText(item.summary) && <Text numberOfLines={3} style={x.intro}>{contentText(item.summary)}</Text>}
       <View style={x.schemeFooter}><Text style={x.more}>Benefits & eligibility</Text><Icon name="arrow-forward" size={20} color={BRAND.blue} /></View>
@@ -67,49 +72,70 @@ function FilterChips({ label, allLabel, values, value, onChange }: { label: stri
 }
 
 const dateLabel = (value: any) => value && Number.isFinite(new Date(value).getTime()) ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-function AlbumThumbnail({ photo, index, singleColumn, onPress }: { photo: any; index: number; singleColumn: boolean; onPress: () => void }) {
-  const uri = resolveMediaUrl(photo.thumbnailUrl || photo.posterUrl || photo.url || '');
+function AlbumThumbnail({ photo, index, singleColumn, onPress, cover = false, album = false }: { photo: any; index: number; singleColumn: boolean; onPress: () => void; cover?: boolean; album?: boolean }) {
+  const poster = galleryMediaUrl(photo.thumbnailUrl) || galleryMediaUrl(photo.posterUrl);
+  const uri = resolveMediaUrl(poster || (photo.type !== 'video' ? galleryMediaUrl(photo.url) : ''));
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [uri]);
   const label = contentText(photo.title || photo.caption) || `Photo ${index + 1}`;
-  return <PressableScale accessibilityRole="button" accessibilityLabel={'Open: ' + label} onPress={onPress} style={[x.thumbnailWrap, singleColumn && x.singleColumn]} contentStyle={x.thumbnail}>
-    {uri && !failed && photo.type !== 'video' ? <Image source={{ uri }} resizeMode="contain" accessibilityLabel={label} style={x.thumbnailImage} onError={() => setFailed(true)} /> : <View style={[x.thumbnailImage, x.thumbnailFallback]}><Icon name={photo.type === 'video' ? 'play-circle-outline' : 'photo-library'} size={28} color={BRAND.blue} /><Text style={s.meta}>{photo.type === 'video' ? 'Watch video' : 'View photo'}</Text></View>}
+  return <PressableScale accessibilityRole="button" accessibilityLabel={(album ? 'Open album: ' : cover ? 'Open cover: ' : 'Open: ') + label} onPress={onPress} style={[x.thumbnailWrap, (singleColumn || cover) && x.singleColumn]} contentStyle={x.thumbnail}>
+    {uri && !failed ? <ContentImage uri={uri} width={cover ? 1024 : 480} resizeMode="contain" accessibilityLabel={label} style={x.thumbnailImage} onError={() => setFailed(true)} /> : <View style={[x.thumbnailImage, x.thumbnailFallback]}><Icon name={photo.type === 'video' ? 'play-circle-outline' : 'photo-library'} size={28} color={BRAND.blue} /><Text style={s.meta}>{photo.type === 'video' ? 'Watch video' : album ? 'View album' : 'View photo'}</Text></View>}
     <View style={x.thumbnailCaption}><Text numberOfLines={2} style={x.thumbnailText}>{label}</Text><Icon name="north-east" size={16} color={BRAND.blue} /></View>
   </PressableScale>;
 }
 
-function Album({ page, navigation }: { page: PublicPageData; navigation: any }) {
+function Album({ page, navigation, overview }: { page: PublicPageData; navigation: any; overview: boolean }) {
   const { width, fontScale } = useWindowDimensions();
-  const singleColumn = width < 360 || fontScale >= 1.4;
+  const singleColumn = width < 320 || fontScale >= 1.4;
   const item = page.item || {};
-  const extraPhotos = (Array.isArray(item.photos) ? item.photos : []).filter((photo: any) => photo?.url && !photo.isHidden);
-  const photos = [...(item.media?.url ? [{ ...item.media, caption: item.caption, description: item.description }] : []), ...extraPhotos];
+  const photos = galleryPhotos(item);
+  const cover = photos.find(entry => entry.cover);
+  const extraPhotos = photos.filter(entry => !entry.cover);
   const photoIndex = page.photo;
-  const selected = photoIndex === undefined ? null : photos[photoIndex];
+  const [related, setRelated] = useState<{ item: any; items: any[] } | null>(null);
+  useEffect(() => {
+    if (!page.item || !overview || photoIndex !== undefined) return;
+    const controller = new AbortController();
+    const currentItem = page.item;
+    // Optional recommendations never delay the album's own photographs.
+    readPublicCms('/cms/gallery', controller.signal).then(value => {
+      if (!controller.signal.aborted) setRelated({ item: currentItem, items: relatedGalleryAlbums(currentItem, value) });
+    }).catch(() => {
+      if (!controller.signal.aborted) setRelated({ item: currentItem, items: [] });
+    });
+    return () => controller.abort();
+  }, [page.item, photoIndex, overview]);
+  const recommendations = related && related.item === item ? related.items : [];
+  const position = photoIndex === undefined ? -1 : photos.findIndex(entry => entry.index === photoIndex);
+  const selected = photos[position]?.photo;
   const metadata = selected || item;
-  const albumUrl = '/gallery/' + (item.slug || item._id || item.id);
+  const albumUrl = galleryPath(item);
+  const openPhoto = (entry: typeof photos[number]) => albumUrl && openWebsitePage(navigation, albumUrl + '/photo/' + entry.index, entry.photo.title || entry.photo.caption || item.title);
   const meta = [metadata.category || item.category, metadata.location || item.location, dateLabel(metadata.eventDate || item.eventDate)].filter(Boolean).join(' · ');
   return <>
     <PressableScale accessibilityRole="link" accessibilityLabel="All albums" onPress={() => openWebsitePage(navigation, '/gallery', 'All albums')} contentStyle={x.backLink}><Icon name="arrow-back" color={BRAND.blue} size={18} /><Text style={x.backText}>All albums</Text></PressableScale>
     {!!meta && <Text style={s.meta}>{meta}</Text>}
     {photoIndex !== undefined ? selected ? <>
-      <View style={x.albumHeading}><Text style={x.filterLabel}>PHOTO {photoIndex + 1} OF {photos.length}</Text></View>
+      <View style={x.albumHeading}><Text style={x.filterLabel}>PHOTO {position + 1} OF {photos.length}</Text></View>
       {!!(selected.title || selected.caption) && <Heading>{selected.title || selected.caption}</Heading>}
       <ContentMedia media={selected} title={selected.title || item.title} />
       {!!selected.caption && selected.caption !== selected.title && <Body value={selected.caption} navigation={navigation} />}
       <Body value={selected.description} navigation={navigation} /><ExtraFields fields={selected.customFields || []} navigation={navigation} />
       <View style={x.photoPager}>
-        {photoIndex > 0 && <View style={s.flex}><ActionLink navigation={navigation} href={albumUrl + '/photo/' + (photoIndex - 1)} label="Previous photo" /></View>}
-        {photoIndex + 1 < photos.length && <View style={s.flex}><ActionLink navigation={navigation} href={albumUrl + '/photo/' + (photoIndex + 1)} label="Next photo" /></View>}
+        {!!albumUrl && position > 0 && <View style={s.flex}><ActionLink navigation={navigation} href={albumUrl + '/photo/' + photos[position - 1].index} label="Previous photo" /></View>}
+        {!!albumUrl && position + 1 < photos.length && <View style={s.flex}><ActionLink navigation={navigation} href={albumUrl + '/photo/' + photos[position + 1].index} label="Next photo" /></View>}
       </View>
-      <ActionLink navigation={navigation} href={albumUrl} label="View complete album" />
-    </> : <><StateView compact title="Photo unavailable" message="This photo may have been removed from the album." /><ActionLink navigation={navigation} href={albumUrl} label="View complete album" /></> : <>
-      <ContentMedia media={item.media} title={item.title} />
+      <ActionLink navigation={navigation} href={albumUrl || '/gallery'} label="View complete album" />
+    </> : <><StateView compact title="Photo unavailable" message="This photo may have been removed from the album." /><ActionLink navigation={navigation} href={albumUrl || '/gallery'} label="View complete album" /></> : <>
+      {!!cover && <AlbumThumbnail photo={cover.photo} index={cover.index} singleColumn cover onPress={() => openPhoto(cover)} />}
       <Body value={item.description || item.caption} navigation={navigation} />
       {Array.isArray(item.highlights) && item.highlights.length > 0 && <View style={x.highlightPanel}><Heading>Highlights</Heading>{item.highlights.filter(Boolean).map((value: string, i: number) => <View key={i} style={x.highlightRow}><Icon name="check-circle-outline" size={19} color={BRAND.blue} /><View style={s.flex}><Body value={value} navigation={navigation} /></View></View>)}</View>}
       <ExtraFields fields={item.customFields || []} navigation={navigation} />
-      {extraPhotos.length > 0 && <><View style={x.albumHeading}><Heading>In this album</Heading><Text style={s.meta}>{photos.length} {photos.length === 1 ? 'photo' : 'photos'}</Text></View><View style={x.photoGrid}>
-        {extraPhotos.map((photo: any, index: number) => <AlbumThumbnail key={photo.url + index} photo={photo} index={index + (item.media?.url ? 1 : 0)} singleColumn={singleColumn} onPress={() => openWebsitePage(navigation, albumUrl + '/photo/' + (index + (item.media?.url ? 1 : 0)), photo.title || photo.caption || item.title)} />)}
+      {extraPhotos.length > 0 && <><View style={x.albumHeading}><Heading>More photographs</Heading><Text style={s.meta}>{photos.length} {photos.length === 1 ? 'photo' : 'photos'}</Text></View><View style={x.photoGrid}>
+        {extraPhotos.map(entry => <AlbumThumbnail key={entry.index} photo={entry.photo} index={entry.index} singleColumn={singleColumn} onPress={() => openPhoto(entry)} />)}
+      </View></>}
+      {!!recommendations.length && <><Heading>More from the gallery</Heading><View style={x.photoGrid}>
+        {recommendations.map((other, index) => <AlbumThumbnail key={galleryPath(other) || index} photo={{ ...other.media, title: other.title || other.caption || 'Community album', thumbnailUrl: other.thumbnailUrl || other.media?.thumbnailUrl, posterUrl: other.posterUrl || other.media?.posterUrl }} index={index} singleColumn={singleColumn} album onPress={() => { const href = galleryPath(other); if (href) openWebsitePage(navigation, href, other.title || other.caption || 'Community album'); }} />)}
       </View></>}
     </>}
   </>;

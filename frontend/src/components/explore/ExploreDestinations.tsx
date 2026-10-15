@@ -1,9 +1,11 @@
-import React from 'react';
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { BRAND, PALETTE, SPACE, PressableScale, SurfaceCard } from '../../ui';
+import { BRAND, PALETTE, SPACE, PremiumSelect, PressableScale, SurfaceCard } from '../../ui';
 import { WEBSITE_PATHS } from '../../config/website.config';
+import { exploreStateChoices, publishedExploreZones } from '../../utils/exploreRegions';
+import { ExploreCardTone, exploreToneForZone } from './exploreCardTones';
 export { ExploreContact } from './ExploreContact';
 
 type OpenPage = (path: string, title: string) => void;
@@ -41,20 +43,56 @@ export function ExploreSchemes({ openPage }: { openPage: OpenPage }) {
   </View>;
 }
 
-const publishedStates = (zone: any): any[] => (Array.isArray(zone.states) ? zone.states : [])
-  .filter((state: any) => state.hasPage !== false && (!state.status || state.status === 'published'));
-
 export function ExploreZones({ zones, openPage, onSeeAll }: { zones: any[]; openPage: OpenPage; onSeeAll?: () => void }) {
   const { width, fontScale } = useWindowDimensions();
-  const stacked = width < 360 || fontScale > 1.2;
-  const national = zones.find(zone => zone.national || /national/i.test(String(zone.slug || zone.label || '')));
-  const regions = zones.filter(zone => zone !== national);
+  const stacked = width < 340 || fontScale >= 1.5;
+  const published = useMemo(() => publishedExploreZones(zones), [zones]);
+  const national = published.find(zone => zone.national && zone.hasPage);
+  const regions = useMemo(() => published.filter(zone => !zone.national), [published]);
+  const [zoneSlug, setZoneSlug] = useState('');
+  const [stateSlug, setStateSlug] = useState('');
+  const zone = regions.find(item => item.slug === zoneSlug);
+  const states = useMemo(() => exploreStateChoices(regions, zone?.slug), [regions, zone?.slug]);
+  const selectedState = states.find(item => item.slug === stateSlug);
+  useEffect(() => {
+    if (zoneSlug && !regions.some(item => item.slug === zoneSlug)) { setZoneSlug(''); setStateSlug(''); }
+    else if (stateSlug && !states.some(item => item.slug === stateSlug)) setStateSlug('');
+  }, [regions, states, zoneSlug, stateSlug]);
+  const reset = () => { setZoneSlug(''); setStateSlug(''); };
+  const shownRegions = selectedState ? regions.filter(item => item.slug === selectedState.zoneSlug)
+    : zone ? [zone] : regions;
+  const shownStates = selectedState ? [selectedState] : zone ? states : [];
+  const filtered = !!(zone || selectedState);
+  const toneFor = (slug: string) => exploreToneForZone(slug, regions.findIndex(item => item.slug === slug));
   return <View style={s.section}>
     <View style={s.sectionHeading}><Text style={s.heading} accessibilityRole="header">ACTIV near you</Text>
       {onSeeAll && <PressableScale onPress={onSeeAll} accessibilityRole="button" accessibilityLabel="See all Zones" contentStyle={s.seeAll}><Text style={s.seeAllText}>All zones</Text><Icon name="arrow-forward" size={16} color={BRAND.blue} /></PressableScale>}
     </View>
     <Text style={s.sectionCopy}>Explore our regions and state communities.</Text>
-    {national && <PressableScale onPress={() => openPage(WEBSITE_PATHS.region(national.slug), national.label)}
+    {!!regions.length && <>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.zoneFilters} keyboardShouldPersistTaps="handled">
+        {[{ slug: '', label: 'All zones' }, ...regions].map(item => {
+          const active = item.slug === (zone?.slug || '');
+          const tone = toneFor(item.slug);
+          return <PressableScale key={item.slug || 'all'} onPress={() => { setZoneSlug(item.slug); setStateSlug(''); }}
+            accessibilityRole="button" accessibilityLabel={'Filter by ' + item.label} accessibilityState={{ selected: active }}
+            contentStyle={[s.zoneFilter, { backgroundColor: active ? tone.accent : tone.background, borderColor: tone.border }]}>
+            <Text style={[s.zoneFilterText, { color: active ? PALETTE.white : tone.title }]}>{item.label}</Text>
+          </PressableScale>;
+        })}
+      </ScrollView>
+      <PremiumSelect key={zone?.slug || 'all-zones'} label="Find your state" icon="place" strong
+        value={selectedState?.name || ''} placeholder={states.length ? 'Choose a state' : 'State pages coming soon'}
+        options={states.map(item => item.name)} disabled={!states.length}
+        onChange={name => setStateSlug(states.find(item => item.name === name)?.slug || '')} />
+      {filtered && <View style={s.filterSummary}>
+        <Text style={s.filterSummaryText} accessibilityLiveRegion="polite">{selectedState?.name || zone?.label}</Text>
+        <PressableScale onPress={reset} accessibilityRole="button" accessibilityLabel="Clear zone and state filters" contentStyle={s.resetFilters}>
+          <Icon name="close" size={16} color={BRAND.blue} /><Text style={s.seeAllText}>Reset</Text>
+        </PressableScale>
+      </View>}
+    </>}
+    {!filtered && national && <PressableScale onPress={() => openPage(WEBSITE_PATHS.region(national.slug), national.label)}
       accessibilityRole="button" accessibilityLabel={'Explore ' + national.label} style={s.national}>
       <LinearGradient colors={[BRAND.navy, '#264C96']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.nationalInner}>
         <View style={s.nationalIcon}><Icon name="public" size={28} color={PALETTE.white} /></View>
@@ -62,22 +100,36 @@ export function ExploreZones({ zones, openPage, onSeeAll }: { zones: any[]; open
         <Icon name="arrow-forward" size={21} color={PALETTE.white} />
       </LinearGradient>
     </PressableScale>}
-    <View style={s.regionGrid}>{regions.map((zone, index) => {
-      const states = publishedStates(zone);
-      const preview = states.slice(0, 2).map(state => state.name).join(' · ');
-      return <PressableScale key={zone.slug} style={[s.regionCard, stacked && s.fullWidth]} contentStyle={s.regionInner}
-        accessibilityRole="button" accessibilityLabel={'Explore ' + zone.label}
-        onPress={() => openPage(WEBSITE_PATHS.region(zone.slug), zone.label)}>
-        <View style={s.regionTop}><View style={[s.regionIcon, { backgroundColor: index % 2 ? '#EAF5F1' : '#EDF2FF' }]}>
-          <Icon name="explore" size={23} color={index % 2 ? '#187464' : BRAND.blue} /></View>
-          <Icon name="north-east" size={18} color={PALETTE.textMuted} /></View>
-        <Text style={s.regionTitle}>{zone.label}</Text>
-        <Text style={s.regionCopy} numberOfLines={2}>{preview || 'Regional news, events and leadership'}</Text>
-        {states.length > 0 && <Text style={s.regionCount}>{states.length} {states.length === 1 ? 'state' : 'states'}</Text>}
-      </PressableScale>;
-    })}</View>
-    {!zones.length && <SurfaceCard><Text style={s.bannerCopy}>Regional pages will appear here as they are published.</Text></SurfaceCard>}
+    <View style={s.regionGrid}>
+      {shownStates.map(state => <CommunityCard key={'state-' + state.slug} title={state.name} detail={state.zoneLabel}
+        caption="Open state page" icon="place" tone={toneFor(state.zoneSlug)} stacked={stacked}
+        onPress={() => openPage(WEBSITE_PATHS.state(state.slug), state.name)} />)}
+      {shownRegions.map(item => <CommunityCard key={item.slug} title={item.label}
+        detail={item.states.slice(0, 2).map(state => state.name).join(' · ') || 'Regional news, events and leadership'}
+        caption={item.hasPage ? (item.states.length ? `${item.states.length} ${item.states.length === 1 ? 'state' : 'states'} · Open zone` : 'Open zone page') : 'Browse published states'}
+        icon="explore" tone={toneFor(item.slug)} stacked={stacked}
+        accessibilityLabel={item.hasPage ? 'Explore ' + item.label : 'Browse states in ' + item.label}
+        onPress={() => {
+          if (item.hasPage) openPage(WEBSITE_PATHS.region(item.slug), item.label);
+          else { setZoneSlug(item.slug); setStateSlug(''); }
+        }} />)}
+    </View>
+    {!published.length && <SurfaceCard><Text style={s.bannerCopy}>Regional pages will appear here as they are published.</Text></SurfaceCard>}
   </View>;
+}
+
+function CommunityCard({ title, detail, caption, icon, tone, stacked, onPress, accessibilityLabel }: {
+  title: string; detail: string; caption: string; icon: string; tone: ExploreCardTone; stacked: boolean; onPress: () => void; accessibilityLabel?: string;
+}) {
+  return <PressableScale style={[s.regionCard, stacked && s.fullWidth]}
+    contentStyle={[s.regionInner, { backgroundColor: tone.background, borderColor: tone.border }]}
+    accessibilityRole="button" accessibilityLabel={accessibilityLabel || 'Explore ' + title} onPress={onPress}>
+    <View style={s.regionTop}><View style={[s.regionIcon, { backgroundColor: tone.iconBackground }]}>
+      <Icon name={icon} size={23} color={tone.accent} /></View><Icon name="north-east" size={18} color={tone.accent} /></View>
+    <Text style={[s.regionTitle, { color: tone.title }]}>{title}</Text>
+    <Text style={[s.regionCopy, { color: tone.body }]} numberOfLines={2}>{detail}</Text>
+    <Text style={[s.regionCount, { color: tone.accent }]}>{caption}</Text>
+  </PressableScale>;
 }
 
 const s = StyleSheet.create({
@@ -89,7 +141,7 @@ const s = StyleSheet.create({
   heading: { color: BRAND.navyDeep, fontSize: 20, lineHeight: 28, fontWeight: '700', marginBottom: SPACE.sm, flexShrink: 1 },
   sectionCopy: { color: PALETTE.textMuted, fontSize: 14, lineHeight: 21, marginBottom: 16 },
   schemeRow: { flexDirection: 'row', gap: SPACE.md }, schemeCard: { flex: 1, minWidth: 0 }, schemeInner: { padding: SPACE.md },
-  stacked: { flexDirection: 'column' }, fullWidth: { width: '100%', flexBasis: '100%' },
+  stacked: { flexDirection: 'column' }, fullWidth: { width: '100%', flexBasis: '100%', maxWidth: '100%' },
   schemeTitle: { color: BRAND.navyDeep, fontSize: 16, lineHeight: 23, fontWeight: '700', marginTop: SPACE.sm }, schemeArrow: { alignSelf: 'flex-end', marginTop: SPACE.sm },
   bannerArt: { width: 44, height: 44, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   copy: { flex: 1, minWidth: 0 }, bannerCopy: { color: PALETTE.textMuted, fontSize: 14, lineHeight: 21, marginTop: 4 },
@@ -101,11 +153,17 @@ const s = StyleSheet.create({
   nationalTitle: { color: PALETTE.white, fontSize: 19, lineHeight: 26, fontWeight: '700' },
   nationalCopy: { color: '#DCE7FF', fontSize: 13, lineHeight: 19, marginTop: 3 },
   regionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  regionCard: { width: '47.8%', flexGrow: 1, flexBasis: '45%', maxWidth: '100%' },
+  regionCard: { width: '48%', flexBasis: '48%', maxWidth: '48%', minWidth: 0 },
   regionInner: { flex: 1, padding: 16, borderRadius: 16, backgroundColor: PALETTE.white, borderWidth: 1, borderColor: '#DDE5F1' },
   regionTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   regionIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   regionTitle: { color: BRAND.navyDeep, fontSize: 17, lineHeight: 24, fontWeight: '700' },
   regionCopy: { color: PALETTE.textMuted, fontSize: 13, lineHeight: 20, marginTop: 5 },
   regionCount: { color: BRAND.blue, fontSize: 12, lineHeight: 18, fontWeight: '600', marginTop: 10 },
+  zoneFilters: { gap: 8, paddingBottom: 12 },
+  zoneFilter: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 22, borderWidth: 1 },
+  zoneFilterText: { fontSize: 13, lineHeight: 19, fontWeight: '600' },
+  filterSummary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
+  filterSummaryText: { flex: 1, color: BRAND.navyDeep, fontSize: 14, lineHeight: 21, fontWeight: '600' },
+  resetFilters: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 4 },
 });

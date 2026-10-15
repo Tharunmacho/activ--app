@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Image, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { ContentImage } from '../../ui/ContentImage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { WebView } from 'react-native-webview';
 import { BRAND, PALETTE, GradientButton, PremiumSelect, PressableScale, SurfaceCard } from '../../ui';
@@ -24,7 +25,7 @@ function Portrait({ photo, name }: { photo: any; name: string }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [uri]);
   if (!uri || failed) return null;
-  return <Image source={{ uri }} accessibilityLabel={name} onError={() => setFailed(true)} resizeMode="cover" style={s.portrait} />;
+  return <ContentImage uri={uri} width={480} accessibilityLabel={name} onError={() => setFailed(true)} resizeMode="cover" style={s.portrait} />;
 }
 function About({ doc, navigation }: any) {
   const points = list(doc.bullets).length ? list(doc.bullets) : list(doc.bulletPoints);
