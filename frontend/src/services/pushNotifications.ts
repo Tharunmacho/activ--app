@@ -6,6 +6,7 @@ import { getMessaging, getToken, deleteToken, requestPermission, hasPermission, 
   onMessage, onTokenRefresh, onNotificationOpenedApp, getInitialNotification, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
 import api, { getAuthToken, getUserData } from './api';
 import { navigationRef } from '../navigation/navigationRef';
+import { nativeContentRoute } from './nativeContentRoute';
 
 const TOKEN_KEY = '@activ_push_token';
 const ASKED_KEY = '@activ_push_permission_asked';
@@ -16,12 +17,18 @@ let syncAgain = false;
 let detaching = false;
 export const firebaseReady = () => getApps().length > 0;
 
-export function notificationDestination(data: Record<string, any> = {}): { route: string; params?: any } {
+export function notificationDestination(data: Record<string, any> | null = {}): { route: string; params?: any } {
+  data = data || {};
   if (data.kind === 'message' && data.conversationId) return { route: 'MessageThread', params: { conversationId: data.conversationId } };
   if (data.announcementId || data.kind === 'announcement') return { route: 'UpdateDetail', params: { id: data.announcementId || data.sourceId } };
   if (data.eventId) return { route: data.bookingRef ? 'EventBooking' : 'MemberEventDetail', params: { eventId: data.eventId, id: data.eventId, ...(data.bookingRef ? { ref: data.bookingRef } : {}) } };
-  if (data.kind === 'news' && data.slug) return { route: 'PublicInfo', params: { path: `/news/${encodeURIComponent(data.slug)}`, title: 'ACTIV news' } };
-  if (data.kind === 'gallery' || data.kind === 'scheme') return { route: 'PublicInfo', params: { path: data.kind === 'gallery' ? '/gallery' : '/schemes', title: data.kind === 'gallery' ? 'Gallery' : 'Government schemes' } };
+  if (['news', 'gallery', 'scheme'].includes(data.kind)) {
+    const path = data.kind === 'news' ? (data.slug ? `/news/${encodeURIComponent(data.slug)}` : '/news')
+      : data.kind === 'gallery' ? '/gallery' : '/schemes';
+    const title = data.kind === 'news' ? 'ACTIV news' : data.kind === 'gallery' ? 'Gallery' : 'Government schemes';
+    const destination = nativeContentRoute(path, title);
+    if (destination) return { route: destination.name, params: destination.params };
+  }
   if (data.orderId) return { route: 'PaymentSuccess', params: { orderId: data.orderId } };
   return { route: 'MemberNotifications' };
 }
