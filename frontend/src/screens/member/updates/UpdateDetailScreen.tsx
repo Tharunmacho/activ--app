@@ -11,6 +11,7 @@ import { useLoad } from '../useLoad';
 import { categoryStyle, categoryGlyph, htmlToText } from './updateFormat';
 import { openWebsitePage } from '../../../services/websiteNavigation';
 import { Body } from '../../public/PublicContentKit';
+import { updateAudienceLabel } from '../../../utils/memberAudience';
 
 /**
  * One Association Update — website `features/member/pages/AnnouncementDetail.tsx`.
@@ -47,7 +48,7 @@ const UpdateDetailScreen = ({ navigation, route }: any) => {
     <PremiumPageHeader
       eyebrow="Association Updates"
       title={style ? style.label : 'Update'}
-      subtitle={update ? [ago ? `Published ${ago}` : '', update?.targetLabel ? `For ${update.targetLabel}` : 'For all members'].filter(Boolean).join(' · ') : loading ? 'Opening the notice…' : undefined}
+      subtitle={update ? [ago ? `Published ${ago}` : '', update?.targetLabel ? `For ${update.targetLabel}` : updateAudienceLabel(update?.audience)].filter(Boolean).join(' · ') : loading ? 'Opening the notice…' : undefined}
       onBack={() => navigation.goBack()}
       right={update ? <GlassIconButton icon="share" onPress={share} accessibilityLabel="Share update" /> : undefined}
       art={<Megaphone3D size={84} />}
@@ -107,7 +108,7 @@ const UpdateDetailScreen = ({ navigation, route }: any) => {
               <Text style={styles.title} selectable maxFontSizeMultiplier={1.3}>{update?.title || 'Update'}</Text>
               <View style={styles.target}>
                 <Icon name="place" size={SIZE.iconSm} color={PALETTE.textMuted} />
-                <Text style={styles.targetText}>{update?.targetLabel ? `For ${update.targetLabel}` : 'For all members'}</Text>
+                <Text style={styles.targetText}>{update?.targetLabel ? `For ${update.targetLabel}` : updateAudienceLabel(update?.audience)}</Text>
               </View>
               {update?.summary ? (
                 <View style={styles.summaryBox}>

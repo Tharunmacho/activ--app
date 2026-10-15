@@ -61,7 +61,7 @@ function UpdateCard({ a, onEdit, onToggle, onDelete }: { a: any; onEdit: () => v
         {published ? `Published ${shortDate(a?.publishedAt) || ''}` : `Created ${shortDate(a?.createdAt) || ''}`}{a?.expiresAt ? ` · until ${shortDate(a.expiresAt)}` : ''}
       </Text>
       <View style={s.actions}>
-        <MiniAction icon={published ? 'unpublished' : 'publish'} label={published ? 'Unpublish' : 'Publish'} color={published ? PALETTE.amberDark : PALETTE.greenDark} onPress={onToggle} />
+        <MiniAction icon={published ? 'unpublished' : 'publish'} label={published ? 'Unpublish' : 'Review & publish'} color={published ? PALETTE.amberDark : PALETTE.greenDark} onPress={onToggle} />
         <MiniAction icon="edit" label="Edit" onPress={onEdit} />
         <View style={s.flex} />
         <MiniAction icon="delete-outline" label="Delete" color={PALETTE.red} onPress={onDelete} />
@@ -101,13 +101,16 @@ const SuperUpdatesScreen: React.FC = () => {
   }, [all, tab, query]);
 
   const toggle = useCallback(async (a: any) => {
-    const next = String(a?.status) === 'published' ? 'draft' : 'published';
+    if (String(a?.status) !== 'published') {
+      navigation.navigate('SuperUpdateEditor', { announcement: a });
+      return;
+    }
     try {
-      await setAnnouncementStatus(String(a?.id || ''), next);
-      Alert.alert(next === 'draft' ? 'Withdrawn from members' : 'Published to members');
+      await setAnnouncementStatus(String(a?.id || ''), 'draft');
+      Alert.alert('Withdrawn from members');
       load('quiet');
     } catch (err) { Alert.alert('Could not change the status', errorText(err)); }
-  }, [load]);
+  }, [load, navigation]);
   const remove = useCallback(async (a: any) => {
     if (!(await confirm(`Delete "${a?.title || 'Untitled'}"?`, 'Members who have already read it will no longer see it.', 'Delete', true))) return;
     try { await deleteAnnouncement(String(a?.id || '')); load('quiet'); } catch (err) { Alert.alert('Could not delete the update', errorText(err)); }
@@ -184,11 +187,11 @@ const s = StyleSheet.create({
   icon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center' },
   pin: { marginRight: 4 },
-  title: { ...TYPE.subheading, fontWeight: '800', flexShrink: 1 },
+  title: { ...TYPE.subheading, fontWeight: '600', flexShrink: 1 },
   sub: { ...TYPE.caption, marginTop: 3, textTransform: 'capitalize' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.xs, marginTop: SPACE.md },
-  summary: { fontSize: 13, color: PALETTE.textSoft, marginTop: SPACE.md, lineHeight: 19 },
-  date: { fontSize: 11, color: PALETTE.textFaint, marginTop: SPACE.sm },
+  summary: { fontSize: 16, color: PALETTE.textSoft, marginTop: SPACE.md, lineHeight: 24 },
+  date: { fontSize: 14, color: PALETTE.textFaint, marginTop: SPACE.sm, lineHeight: 20 },
   actions: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: SPACE.md, paddingTop: SPACE.md, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: PALETTE.divider },
 });
 
