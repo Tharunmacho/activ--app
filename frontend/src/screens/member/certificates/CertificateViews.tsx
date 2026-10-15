@@ -445,11 +445,11 @@ export function MembershipCertificateView({ cert, pdfRef, width, onPress, hint =
           <View style={[m.rules, { marginTop: 9 }]}><View style={m.rule} /><T style={m.motto}>TOGETHER  ·  TRADE  ·  GROW</T><View style={m.rule} /></View>
         </View>
         <View style={m.signatures}>
-          <View style={m.signColumn}>
+          <View style={m.signerColumn} testID="membership-signature-block">
+            <T style={m.signerRole}>Founder and Chairperson</T>
             <Image source={SIGNATURE} style={m.signature} resizeMode="contain" accessibilityLabel="Signature of Thamizhazhagan Nallaiyan, Founder and Chairperson" />
-            <View style={m.signRule} />
-            <T style={{ fontSize: 12, lineHeight: 19, fontWeight: '800', color: NAVY }}>THAMIZHAZHAGAN NALLAIYAN</T>
-            <T style={{ fontSize: 15, lineHeight: 22, fontWeight: '700', color: NAVY }}>Founder and Chairperson</T>
+            <View style={[m.signRule, { width: 250 }]} />
+            <T style={m.signerName}>THAMIZHAZHAGAN NALLAIYAN</T>
           </View>
           <View style={m.seal}><Seal line="Membership" size={112} /><T style={m.sealCaption}>Official Seal</T></View>
           <View style={m.signColumn}>
@@ -700,10 +700,13 @@ const m = StyleSheet.create({
   label: { width: 126, fontSize: 13.5, lineHeight: 19, color: MUTED, fontWeight: '500' },
   value: { flex: 1, fontSize: 15, lineHeight: 20, color: INK, fontWeight: '700' },
   motto: { fontSize: 14, lineHeight: 22, letterSpacing: 3, color: NAVY_MID, fontWeight: '700' },
-  signatures: { position: 'absolute', top: 608, left: 210, right: 210, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  signatures: { position: 'absolute', top: 598, left: 180, right: 210, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   signColumn: { width: 220, alignItems: 'center', paddingTop: 10 },
+  signerColumn: { width: 250, alignItems: 'center' },
+  signerRole: { fontSize: 14, lineHeight: 20, fontWeight: '700', color: NAVY },
+  signerName: { fontSize: 12, lineHeight: 18, marginTop: 3, fontWeight: '800', color: NAVY },
   signLabel: { fontSize: 16, lineHeight: 23, fontWeight: '700', color: NAVY },
-  signature: { width: 210, height: 60, tintColor: NAVY_MID },
+  signature: { width: 240, height: 86, tintColor: NAVY_MID },
   signRule: { width: 220, height: 1, backgroundColor: NAVY_MID },
   seal: { alignItems: 'center' },
   sealCaption: { fontSize: 12, color: NAVY_MID },

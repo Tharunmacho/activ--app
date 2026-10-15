@@ -1,6 +1,6 @@
 import React from 'react';
 import Renderer, { act } from 'react-test-renderer';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { MembershipCertificateView } from '../src/screens/member/certificates/CertificateViews';
 
 const certificate = {
@@ -25,6 +25,12 @@ test.each([320, 390, 768, 1170])('membership stays A4 landscape with all facts a
   expect(text).toContain(certificate.reference);
   expect(text).toContain('THAMIZHAZHAGAN NALLAIYAN');
   expect(text).toContain('Founder and Chairperson');
+  const signatureBlock = tree.root.findByProps({ testID: 'membership-signature-block' });
+  const signText = signatureBlock.findAllByType(Text).map(node => node.props.children);
+  expect(signText).toEqual(['Founder and Chairperson', 'THAMIZHAZHAGAN NALLAIYAN']);
+  const ink = signatureBlock.findByType(Image);
+  expect(ink.props.resizeMode).toBe('contain');
+  expect(StyleSheet.flatten(ink.props.style).height).toBe(86);
   tree.root.findAllByType(Text).filter(node => node.props.children === 'MEMBERSHIP CERTIFICATE')
     .forEach(node => expect(node.props.allowFontScaling).toBe(false));
   const tap = tree.root.findAll(node => node.props.accessibilityRole === 'imagebutton' && node.props.onPress)[0];
