@@ -446,9 +446,10 @@ export function MembershipCertificateView({ cert, pdfRef, width, onPress, hint =
         </View>
         <View style={m.signatures}>
           <View style={m.signColumn}>
-            <T style={m.signLabel}>Founder President</T>
-            <Image source={SIGNATURE} style={m.signature} resizeMode="contain" accessibilityLabel="Signature of the Founder President" />
+            <Image source={SIGNATURE} style={m.signature} resizeMode="contain" accessibilityLabel="Signature of Thamizhazhagan Nallaiyan, Founder and Chairperson" />
             <View style={m.signRule} />
+            <T style={{ fontSize: 12, lineHeight: 19, fontWeight: '800', color: NAVY }}>THAMIZHAZHAGAN NALLAIYAN</T>
+            <T style={{ fontSize: 15, lineHeight: 22, fontWeight: '700', color: NAVY }}>Founder and Chairperson</T>
           </View>
           <View style={m.seal}><Seal line="Membership" size={112} /><T style={m.sealCaption}>Official Seal</T></View>
           <View style={m.signColumn}>

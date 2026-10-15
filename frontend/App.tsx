@@ -5,7 +5,9 @@
  * @format
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { initAnalytics, trackScreen } from './src/services/analytics';
+import { usePushNotifications, flushPushNavigation } from './src/services/pushNotifications';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { LogBox, StatusBar, useColorScheme } from 'react-native';
@@ -109,11 +111,13 @@ function App() {
   const isDarkMode = useColorScheme() === 'dark';
   // activ:// links: social sign-in hand-off and password-reset tokens.
   useDeepLinks();
+  usePushNotifications();
+  useEffect(() => { void initAnalytics(); }, []);
 
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <NavigationContainer ref={navigationRef} onReady={flushPendingDeepLink}>
+        <NavigationContainer ref={navigationRef} onReady={() => { flushPendingDeepLink(); void flushPushNavigation(); }} onStateChange={() => { void flushPushNavigation(); void trackScreen(navigationRef.getCurrentRoute()?.name); }}>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
         <Stack.Navigator initialRouteName="Onboarding">
           <Stack.Screen name="PublicExplore" component={PublicExploreScreen} options={{ headerShown: false }} />

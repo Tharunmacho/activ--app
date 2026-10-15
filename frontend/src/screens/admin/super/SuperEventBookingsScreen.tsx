@@ -274,7 +274,7 @@ const SuperEventBookingsScreen: React.FC = () => {
   );
 
   const eventLine = (e: { startAt: string | null; registrationFee: number; bookingHistoryOnly?: boolean; archivedAt?: string | null; historyCategory?: string } | null) =>
-    e ? [e.startAt ? shortDate(e.startAt) : '', e.historyCategory === 'deleted' ? 'Deleted event · bookings retained' : e.historyCategory === 'past' ? 'Past event' : 'Current event',
+    e ? [e.startAt ? shortDate(e.startAt) : '', e.historyCategory === 'deleted' ? 'Old event · bookings retained' : e.historyCategory === 'past' ? 'Past event' : 'Current event',
       e.bookingHistoryOnly ? '' : Number(e.registrationFee || 0) > 0 ? money(Number(e.registrationFee || 0)) : 'Free'].filter(Boolean).join(' — ') : '';
 
   const header = (

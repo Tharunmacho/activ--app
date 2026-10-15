@@ -23,6 +23,8 @@ test.each([320, 390, 768, 1170])('membership stays A4 landscape with all facts a
   const text = JSON.stringify(tree.toJSON());
   Object.values(certificate.member).forEach(value => expect(text).toContain(value));
   expect(text).toContain(certificate.reference);
+  expect(text).toContain('THAMIZHAZHAGAN NALLAIYAN');
+  expect(text).toContain('Founder and Chairperson');
   tree.root.findAllByType(Text).filter(node => node.props.children === 'MEMBERSHIP CERTIFICATE')
     .forEach(node => expect(node.props.allowFontScaling).toBe(false));
   const tap = tree.root.findAll(node => node.props.accessibilityRole === 'imagebutton' && node.props.onPress)[0];

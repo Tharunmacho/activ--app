@@ -24,6 +24,12 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+      val channel = android.app.NotificationChannel("activ_updates", "ACTIV updates", android.app.NotificationManager.IMPORTANCE_DEFAULT)
+      channel.description = "Events, association updates, membership and messages"
+      channel.lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
+      getSystemService(android.app.NotificationManager::class.java).createNotificationChannel(channel)
+    }
     loadReactNative(this)
   }
 }

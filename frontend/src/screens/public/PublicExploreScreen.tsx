@@ -1,3 +1,5 @@
+import EventFilters from '../../components/EventFilters';
+import { EMPTY_EVENT_FILTERS, matchesEventFilters } from '../../utils/eventFilters';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, FlatList, Keyboard, RefreshControl, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,6 +41,7 @@ export default function PublicExploreScreen({ navigation, route }: any) {
   const { width, fontScale } = useWindowDimensions();
   const [section, setSection] = useState<ExploreSection>(() => TABS.find(tab => tab.key === route?.params?.section)?.key || 'home');
   const [query, setQuery] = useState('');
+  const [eventFilters, setEventFilters] = useState({ ...EMPTY_EVENT_FILTERS });
   const [data, setData] = useState<ExploreContent>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -99,13 +102,14 @@ export default function PublicExploreScreen({ navigation, route }: any) {
   const join = () => { clearPublicAction(); navigation.navigate('RegistrationStep1'); };
   const records = useMemo(() => {
     let items = section === 'home' ? [] : data[section];
-    if (section === 'events') items = items.filter(e => isUpcomingEvent(e, now))
+    if (section === 'events') items = items.filter(e => isUpcomingEvent(e, now) && matchesEventFilters(e, { ...eventFilters, q: query }))
       .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+    if (section === 'events') return items;
     const needle = query.trim().toLocaleLowerCase();
     return needle ? items.filter(item => [item.title, item.caption, item.label, item.name, item.category, item.summary,
       item.location, item.venue, item.state, ...(item.states || []).map((state: any) => state.name)]
       .join(' ').toLocaleLowerCase().includes(needle)) : items;
-  }, [section, data, query, now]);
+  }, [section, data, query, now, eventFilters]);
   const tab = TABS.find(item => item.key === section)!;
   const compact = width < 360;
   const artSize = compact || fontScale > 1.2 ? 80 : 108;
@@ -191,6 +195,7 @@ export default function PublicExploreScreen({ navigation, route }: any) {
             <View style={s.count}><Text style={s.countText} accessibilityLabel={records.length + ' results'}>{records.length}</Text></View>
           </View>}
         </View>}
+        {section === 'events' && <View style={s.gutter}><EventFilters events={data.events} value={eventFilters} onChange={setEventFilters} search={false} /></View>}
         {section !== 'home' && loading && <View style={s.gutter}><CardSkeletons rows={2} variant="media" /></View>}
         {section !== 'home' && !!error && <View style={s.gutter}><StateView kind="error" title="Unable to load content" message={error} onAction={() => read()} compact /></View>}
         {section !== 'home' && ready && records.length > 0 && <FlatList key={section} horizontal data={records}
@@ -204,14 +209,14 @@ export default function PublicExploreScreen({ navigation, route }: any) {
       ListEmptyComponent={ready && section !== 'home' && !records.length ? <View style={s.gutter}><StateView compact title={query.trim() ? 'No matching results' : section === 'events' ? 'More events on the way' : 'More to discover soon'}
         message={query.trim() ? 'Try another name or clear your search.' : section === 'events' ? 'Upcoming programmes will appear here when announced.' : 'Check back for updates from the ACTIV community.'}
         action={query.trim() ? 'Clear search' : undefined} onAction={query.trim() ? () => setQuery('') : undefined} /></View> : null}
-      ListFooterComponent={<View style={[s.gutter, s.footer]}>
+      ListFooterComponent={section === 'home' ? <View style={[s.gutter, s.footer]}>
         <View style={s.legal}>{[
           ['Privacy policy', '/privacy-policy', 'shield'], ['Terms of use', '/terms-and-conditions', 'description'], ['Delete account', WEBSITE_PATHS.deleteAccount, 'manage-accounts'],
         ].map(([label, path, icon]) => <PressableScale key={path} accessibilityRole="link" accessibilityLabel={label} onPress={() => openPage(path, label)} style={s.legalItem} contentStyle={s.legalLink}>
           <Icon name={icon} size={19} color="#9AC7FF" /><Text style={s.legalText} maxFontSizeMultiplier={1.2}>{label}</Text>
         </PressableScale>)}</View>
         <Text style={s.footerText}>ACTIV · Connect. Empower. Grow.</Text>
-      </View>}
+      </View> : null}
     />
   </BrandFrame>;
 }

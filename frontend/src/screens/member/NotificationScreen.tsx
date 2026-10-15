@@ -14,6 +14,7 @@ import {
   listNotifications, markNotificationRead, markAllNotificationsRead, listAnnouncements, listMemberEvents,
 } from '../../services/memberApi';
 import { getUserData } from '../../services/api';
+import { notificationDestination } from '../../services/pushNotifications';
 
 /**
  * ============================================================================
@@ -136,6 +137,7 @@ const notificationLook = (row: any): { icon: string; tone: GlyphTone } => {
 /** Where a stored notification opens: its thread, its receipt, else the application. */
 const notificationTarget = (row: any): { route: string; params?: any } => {
   const data = row?.data || {};
+  if (data.sourceId || data.eventId || data.announcementId) return notificationDestination(data);
   if (data?.kind === 'message' && data?.conversationId) {
     return { route: 'MessageThread', params: { conversationId: String(data.conversationId), name: data?.from } };
   }

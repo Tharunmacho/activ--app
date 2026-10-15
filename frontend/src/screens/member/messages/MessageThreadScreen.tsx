@@ -12,6 +12,9 @@ import {
 import { getThread, sendMessage, markConversationRead, uploadMessageImage } from '../../../services/memberApi';
 import { resolveMediaUrl } from '../../../config/api.config';
 import { memberFacing, OPENERS, EMOJI, timeOf } from './messageCopy';
+import { useMemberAccess } from '../useMemberAccess';
+import StudentNetworkingGate from '../StudentNetworkingGate';
+import { isStudentMembership } from '../../../utils/memberAudience';
 
 /**
  * One conversation — website `MemberInbox` thread pane.
@@ -116,6 +119,7 @@ function Bubble({ m, tail }: { m: any; tail: boolean }) {
 type Picture = { uri: string; type: string; name: string };
 
 const MessageThreadScreen = ({ navigation, route }: any) => {
+  const { profile } = useMemberAccess();
   const conversationId = String(route?.params?.conversationId || '');
   const [messages, setMessages] = useState<any[]>([]);
   const [other, setOther] = useState<any>(null);
@@ -430,6 +434,7 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
     </>
   );
 
+  if (isStudentMembership(profile)) return <StudentNetworkingGate navigation={navigation} />;
   return (
     <View style={styles.screen}>
       {Platform.OS === 'ios' ? (

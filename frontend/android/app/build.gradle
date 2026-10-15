@@ -1,6 +1,8 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+// Development builds still work before a Firebase project is supplied.
+if (file("google-services.json").exists()) { apply plugin: "com.google.gms.google-services" }
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -100,8 +102,8 @@ android {
         applicationId "in.activ.membership"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 17
-        versionName "1.0.16"
+        versionCode 18
+        versionName "1.0.17"
     }
     signingConfigs {
         debug {

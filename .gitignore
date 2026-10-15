@@ -7,6 +7,8 @@ node_modules/
 .env.local
 .env.*.local
 **/.env
+client_secret*.json
+**/client_secret*.json
 
 # Android Build Outputs & Caches
 **/android/app/build/
@@ -67,3 +69,9 @@ backend/backups/
 
 # .env backups carry live credentials
 backend/.env.bak*
+
+# Firebase deployment credentials and project-specific client configuration
+**/google-services.json
+**/GoogleService-Info.plist
+**/*firebase-adminsdk*.json
+**/firebase-service-account*.json

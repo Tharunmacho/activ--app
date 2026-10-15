@@ -589,7 +589,7 @@ const SuperEventEditorScreen: React.FC = () => {
             <>
               <PremiumInput tone="admin" label="Platform" value={d.onlinePlatform} onChangeText={(onlinePlatform) => setDetail({ onlinePlatform })} placeholder="Zoom"
                 hint="Zoom, Google Meet, Microsoft Teams — whatever people will need open." />
-              <PremiumInput tone="admin" label="Registration link" value={d.onlineUrl} onChangeText={(onlineUrl) => setDetail({ onlineUrl })} autoCapitalize="none"
+              <PremiumInput tone="admin" label="Registration or meeting link" value={d.onlineUrl} onChangeText={(onlineUrl) => setDetail({ onlineUrl })} autoCapitalize="none"
                 keyboardType="url" placeholder="https://zoom.us/meeting/register/…" style={{ marginBottom: 0 }}
                 hint="Not shown publicly — it is sent to the people who book." />
             </>

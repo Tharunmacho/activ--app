@@ -14,6 +14,7 @@ import { ChipRow, MiniAction, useRegionTreeAll, useRegionNames } from './superKi
 import { InlineSelect } from './events/eventKit';
 import RegionInput from './components/RegionInput';
 import { AutomationPane } from './delivery/AutomationPane';
+import PushDeliveryStatus from './delivery/PushDeliveryStatus';
 import { canResend, channelColor, channelIcon } from './delivery/deliveryKit';
 
 /**
@@ -368,7 +369,7 @@ const SuperNotificationsScreen: React.FC = () => {
           refreshControl={view === 'delivery' ? <RefreshControl refreshing={false} onRefresh={loadDelivery} tintColor={PALETTE.indigo} /> : undefined}
         >
           {top}
-          {view === 'delivery' ? <DeliveryView st={delivery} error={deliveryError} onReload={loadDelivery} /> : <RoutingView />}
+          {view === 'delivery' ? <><PushDeliveryStatus /><DeliveryView st={delivery} error={deliveryError} onReload={loadDelivery} /></> : <RoutingView />}
         </ScrollView>
       </ConsoleFrame>
     );

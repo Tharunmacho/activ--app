@@ -1,3 +1,5 @@
+import StudentNetworkingGate from '../StudentNetworkingGate';
+import { isStudentMembership } from '../../../utils/memberAudience';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -286,6 +288,8 @@ const MemberDirectoryScreen = ({ navigation }: any) => {
       </PremiumPage>
     );
   }
+  if (isStudentMembership(profile)) return <StudentNetworkingGate navigation={navigation} />;
+
   if (!paid) {
     return (
       <PremiumPage header={pageHeader(false)}>

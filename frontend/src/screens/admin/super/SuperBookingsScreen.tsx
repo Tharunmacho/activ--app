@@ -69,7 +69,7 @@ function EventCard({ e, index, onOpen }: { e: any; index: number; onOpen: () => 
           <View style={s.chips}>
             <ConsoleChip label={`#${index + 1}`} kind="neutral" dot={false} />
             {e?.category ? <ConsoleChip label={String(e.category)} kind="info" dot={false} /> : null}
-            {e?.historyCategory === 'deleted' ? <ConsoleChip label="Deleted event · bookings retained" kind="neutral" />
+            {e?.historyCategory === 'deleted' ? <ConsoleChip label="Old event · bookings retained" kind="neutral" />
               : e?.historyCategory === 'past' ? <ConsoleChip label="Completed" kind="neutral" />
               : e?.status !== 'published' ? <ConsoleChip label="Draft" kind="neutral" /> : null}
             {!e?.registrationEnabled ? <ConsoleChip label="Bookings off" kind="warning" icon="block" /> : null}
@@ -204,8 +204,8 @@ const SuperBookingsScreen: React.FC = () => {
       />
       <ConsoleTabs<BookingHistoryCategory> value={history} onChange={setHistory} style={s.tabs}
         options={(['current', 'past', 'deleted'] as const).map(value => ({ value,
-          label: `${value === 'current' ? 'Current' : value === 'past' ? 'Past' : 'Deleted'} (${data?.historyTotals?.[value]?.events || 0})` }))} />
-      <ConsoleNote style={s.note} text="Completed events move to Past. Manually removed events move to Deleted. Booking and contact details stay in every view." />
+          label: `${value === 'current' ? 'Current' : value === 'past' ? 'Past' : 'Old'} (${data?.historyTotals?.[value]?.events || 0})` }))} />
+      <ConsoleNote style={s.note} text="Completed events move to Past. Manually removed events move to Old. Booking and contact details stay in every view." />
       <BookingFilters value={filters} options={data?.filterOptions} onChange={setFilters} />
       <View style={s.export}><GradientButton label={exporting ? 'Preparing report…' : 'Download filtered Excel'} icon="download" onPress={exportRows} disabled={exporting || loading} /></View>
       {!!error && tab === 'people' && <ConsoleNote kind="red" text={error} style={s.note} />}
@@ -226,7 +226,7 @@ const SuperBookingsScreen: React.FC = () => {
       <ConsoleNote style={s.note} text="Event totals include all bookings for matching events. People and Excel use the selected registration filters." />
       <ConsoleCard style={s.toggleCard} padded={false}>
         <View style={s.togglePad}>
-          <ToggleRow label="Include empty drafts" hint="Past and deleted events with booking history are always included." value={drafts} onChange={setDrafts} last />
+          <ToggleRow label="Include empty drafts" hint="Past and old events with booking history are always included." value={drafts} onChange={setDrafts} last />
         </View>
       </ConsoleCard>
       {error && data ? <ConsoleNote kind="red" icon="error-outline" text={error} style={s.note} action="Try again" onAction={() => load('load')} /> : null}

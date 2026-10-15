@@ -1,3 +1,5 @@
+import StudentNetworkingGate from '../StudentNetworkingGate';
+import { isStudentMembership } from '../../../utils/memberAudience';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -202,6 +204,8 @@ const MemberMessagesScreen = ({ navigation }: any) => {
       </PremiumPage>
     );
   }
+  if (isStudentMembership(profile)) return <StudentNetworkingGate navigation={navigation} />;
+
   if (!paid) {
     return (
       <PremiumPage header={header(false)}>

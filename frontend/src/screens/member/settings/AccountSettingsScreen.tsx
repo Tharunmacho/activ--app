@@ -1,3 +1,4 @@
+import NotificationPreferences from '../../../components/NotificationPreferences';
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -294,6 +295,7 @@ const AccountSettingsScreen = ({ navigation }: any) => {
         </SurfaceCard>
       </FadeInUp>
 
+      <NotificationPreferences />
       <GroupTitle title="Account" />
       <FadeInUp delay={340}>
         <SurfaceCard style={styles.gutter} padded={false}>

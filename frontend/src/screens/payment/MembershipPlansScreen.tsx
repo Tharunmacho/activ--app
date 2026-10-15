@@ -52,7 +52,7 @@ const KIND_BENEFITS: Record<'student' | 'aspirant' | 'business', { icon: string;
   student: [
     { icon: 'handshake', title: 'Mentorship', text: 'Guidance from established ACTIV entrepreneurs while you study.' },
     { icon: 'event', title: 'Events & workshops', text: 'Invitations to conclaves, seminars and skill workshops.' },
-    { icon: 'groups', title: 'Member network', text: 'The ACTIV Network — reach business owners across the association.' },
+    { icon: 'groups', title: 'Learn and participate', text: 'Attend events and learning programmes. Upgrade to connect and chat with business members.' },
     { icon: 'account-balance', title: 'Schemes & funding', text: 'Updates on government schemes for first-generation entrepreneurs.' },
     { icon: 'workspace-premium', title: 'Membership certificate', text: 'An official ACTIV certificate for your résumé and portfolio.' },
     { icon: 'trending-up', title: 'Grow into business', text: 'Move to a Business membership the day you start trading.' },

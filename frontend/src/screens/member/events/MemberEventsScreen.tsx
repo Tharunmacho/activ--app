@@ -1,3 +1,5 @@
+import EventFilters from '../../../components/EventFilters';
+import { EMPTY_EVENT_FILTERS, matchesEventFilters } from '../../../utils/eventFilters';
 import { useEventClock } from '../../../utils/useEventClock';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -144,6 +146,7 @@ const MemberEventsScreen = ({ navigation }: any) => {
   const cardWidth = Math.min(340, width - 64);
   const now = useEventClock();
   const [tab, setTab] = useState<Tab>('upcoming');
+  const [filters, setFilters] = useState({ ...EMPTY_EVENT_FILTERS });
   const { data, loading, error, reload, refreshing, refresh } = useLoad<any>(() => listMemberEvents(), [], { events: [] });
   const events = asArray<any>(data?.events);
   // Real seat numbers per capped, open event — `registeredCount` misses every booking.
@@ -166,7 +169,7 @@ const MemberEventsScreen = ({ navigation }: any) => {
       return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
     }).length;
   }, [upcoming]);
-  const rows = tab === 'upcoming' ? upcoming : tab === 'past' ? past : mine;
+  const rows = (tab === 'upcoming' ? upcoming : tab === 'past' ? past : mine).filter(e => matchesEventFilters(e, filters));
   const n = (v: number) => (loading ? '–' : String(v));
 
   return (
@@ -199,6 +202,7 @@ const MemberEventsScreen = ({ navigation }: any) => {
             { value: 'past', label: 'Past', count: past.length },
           ]}
         />
+        <EventFilters events={events} value={filters} onChange={setFilters} />
         {!loading && !error && !!rows.length && <FlatList key={tab} horizontal data={rows}
           keyExtractor={(e, i) => String(e?.id || e?._id || i)} extraData={seats}
           showsHorizontalScrollIndicator={false} snapToInterval={cardWidth + SPACE.md} decelerationRate="fast"
@@ -216,8 +220,8 @@ const MemberEventsScreen = ({ navigation }: any) => {
       ) : rows.length ? null : (
         <StateView
           art={tab === 'mine' ? <EventTicket3D size={84} /> : <EventCalendar3D size={84} />}
-          title={EMPTY[tab].title}
-          message={EMPTY[tab].detail}
+          title={Object.values(filters).some(Boolean) ? 'No matching events' : EMPTY[tab].title}
+          message={Object.values(filters).some(Boolean) ? 'Try a wider date range or clear your filters.' : EMPTY[tab].detail}
           action={tab === 'mine' && upcoming.length > 0 ? 'See all events' : undefined}
           onAction={tab === 'mine' && upcoming.length > 0 ? () => setTab('upcoming') : undefined}
         />

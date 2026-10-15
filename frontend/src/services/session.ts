@@ -92,6 +92,8 @@ export const homeForRole = async (role?: string | null, memberDetails?: any): Pr
 
 /** Forget everything about the current session on this device. */
 export const clearSession = async (): Promise<void> => {
+  await require('./pushNotifications').detachPushDevice();
+  await require('./analytics').analyticsLogout();
   try {
     await AsyncStorage.multiRemove([
       STORAGE_KEYS.AUTH_TOKEN,

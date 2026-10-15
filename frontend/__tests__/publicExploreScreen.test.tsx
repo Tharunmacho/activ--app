@@ -59,6 +59,9 @@ test('public tabs and search remain usable with only current events and no Past 
   for (const name of ['News', 'Gallery', 'Zones', 'Events']) {
     await Renderer.act(async () => button(name).props.onPress());
     expect(load.mock.calls.at(-1)?.[0]).toBe(name.toLowerCase());
+    expect(button('Privacy policy')).toBeUndefined();
+    expect(button('Terms of use')).toBeUndefined();
+    expect(button('Delete account')).toBeUndefined();
   }
   const periods = screen.root.findAll(node => node.props.accessibilityRole === 'tab' && !node.props.accessibilityLabel && typeof node.props.onPress === 'function');
   expect(periods).toHaveLength(0);

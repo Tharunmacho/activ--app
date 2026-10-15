@@ -1,3 +1,4 @@
+import { UPDATE_AUDIENCES, type UpdateAudience } from '../../../utils/memberAudience';
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -53,7 +54,7 @@ const SuperUpdateEditorScreen: React.FC = () => {
   const [state, setState] = useState(a?.state || '');
   const [district, setDistrict] = useState(a?.district || '');
   const [block, setBlock] = useState(a?.block || '');
-  const [paidOnly, setPaidOnly] = useState(String(a?.audience || 'all') === 'paid');
+  const [audience, setAudience] = useState<UpdateAudience>(a?.audience || 'all');
   const [pinned, setPinned] = useState(!!a?.pinned);
   const [expiresAt, setExpiresAt] = useState(isoDay(a?.expiresAt));
   const [bannerUrl, setBannerUrl] = useState(String(a?.bannerUrl || ''));
@@ -85,7 +86,7 @@ const SuperUpdateEditorScreen: React.FC = () => {
       state: (state || '').trim(),
       district: state ? (district || '').trim() : '',
       block: state && district ? (block || '').trim() : '',
-      audience: paidOnly ? 'paid' : 'all',
+      audience,
       pinned,
       status,
       bannerUrl: (bannerUrl || '').trim(),
@@ -128,7 +129,7 @@ const SuperUpdateEditorScreen: React.FC = () => {
         <PremiumInput tone="admin" label="Headline" value={title} onChangeText={setTitle} placeholder="What is it about?" />
         <PremiumInput tone="admin" label="Standfirst" value={summary} onChangeText={setSummary} placeholder="One line, shown on the dashboard card"
           hint="Left blank, the opening of the body is used." />
-        <PremiumInput tone="admin" label="The update" value={body} onChangeText={setBody} multiline placeholder="The whole update" inputStyle={{ minHeight: 140 }} />
+        <PremiumInput tone="admin" label="The update" value={body} onChangeText={setBody} multiline placeholder={"Dear members,\n\nShare your update here.\n\nThank you for being part of ACTIV."} inputStyle={{ minHeight: 140 }} />
       </ConsoleCard>
 
       <ConsoleCard style={s.card}>
@@ -153,10 +154,7 @@ const SuperUpdateEditorScreen: React.FC = () => {
         <InlineSelect label="Block" value={block} options={names.blocks} disabled={!district}
           placeholder={district ? 'All blocks' : 'Pick a district first'} emptyLabel="All blocks"
           onChange={setBlock} />
-        <Choice<'all' | 'paid'> value={paidOnly ? 'paid' : 'all'} onChange={(v) => setPaidOnly(v === 'paid')} options={[
-          { value: 'all', icon: 'public', title: 'All members', detail: 'Everyone signed in, whether or not they have paid.' },
-          { value: 'paid', icon: 'lock', title: 'Paid members only', detail: 'Only members with an active membership can open it.' },
-        ]} />
+        <Choice<UpdateAudience> value={audience} onChange={setAudience} options={UPDATE_AUDIENCES} />
         <View style={s.gap} />
         <ToggleRow label="Pin to the top of every feed" value={pinned} onChange={setPinned} last />
       </ConsoleCard>

@@ -1,3 +1,4 @@
+import { onlineRegistrationLink } from '../../../utils/onlineEvent';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, Share, ScrollView, BackHandler } from 'react-native';
@@ -165,18 +166,18 @@ function Ticket({ b, event, fallbackEmail, onPay, onRebook, open }: { b: any; ev
             which is the proof of booking; without it the copy says it is coming. */}
         {online && settled ? (
           <View style={styles.online}>
-            <Text style={styles.onlineHead}>REGISTER FOR THIS WEBINAR</Text>
+            <Text style={styles.onlineHead}>YOUR ONLINE EVENT</Text>
             {b?.onlineUrl ? (
               <>
                 <Text style={styles.small}>{merged.onlinePlatform ? `This event runs on ${merged.onlinePlatform}.` : 'This event is online.'}</Text>
-                <GradientButton label="Complete your registration" icon="videocam" onPress={() => open(String(b.onlineUrl))} style={{ marginTop: SPACE.sm }} />
+                <GradientButton label={onlineRegistrationLink(b.onlineUrl) ? 'Complete platform registration' : 'Join online event'} icon="videocam" onPress={() => open(String(b.onlineUrl))} style={{ marginTop: SPACE.sm }} />
                 <Text style={[styles.small, { marginTop: SPACE.sm }]} selectable numberOfLines={2}>{b.onlineUrl}</Text>
-                <Text style={styles.small}>Once you register, your personal joining link is emailed to you.</Text>
+                <Text style={styles.small}>{onlineRegistrationLink(b.onlineUrl) ? 'Complete the platform form and follow its instructions to receive your personal joining link.' : 'Open this link at the event start time. Please keep it private.'}</Text>
               </>
             ) : (
               <Text style={styles.small}>
                 {merged.onlinePlatform ? `This event runs on ${merged.onlinePlatform}. ` : 'This event is online. '}
-                The registration link will be shared with you soon.
+                The organiser has not added the joining details yet. Check this booking again or contact the event team.
               </Text>
             )}
           </View>

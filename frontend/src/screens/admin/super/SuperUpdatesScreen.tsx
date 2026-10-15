@@ -1,3 +1,4 @@
+import { updateAudienceLabel } from '../../../utils/memberAudience';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Alert, RefreshControl } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -53,7 +54,7 @@ function UpdateCard({ a, onEdit, onToggle, onDelete }: { a: any; onEdit: () => v
       </View>
       <View style={s.chips}>
         <ConsoleChip icon={a?.targetLabel ? 'my-location' : 'public'} label={a?.targetLabel || 'All regions'} kind={a?.targetLabel ? 'info' : 'neutral'} />
-        <ConsoleChip icon={String(a?.audience) === 'paid' ? 'lock' : 'groups'} label={String(a?.audience) === 'paid' ? 'Paid members only' : 'All members'} kind="neutral" />
+        <ConsoleChip icon={String(a?.audience) === 'paid' ? 'lock' : 'groups'} label={updateAudienceLabel(a?.audience)} kind="neutral" />
       </View>
       {a?.summary ? <Text style={s.summary} numberOfLines={3} maxFontSizeMultiplier={1.3}>{a.summary}</Text> : null}
       <Text style={s.date} maxFontSizeMultiplier={1.3}>

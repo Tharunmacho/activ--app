@@ -1,3 +1,5 @@
+import StudentNetworkingGate from '../StudentNetworkingGate';
+import { isStudentMembership } from '../../../utils/memberAudience';
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -87,6 +89,8 @@ const DirectoryProfileScreen = ({ navigation, route }: any) => {
     <GlassIconButton icon="groups" onPress={() => navigation.navigate('MemberDirectory')} accessibilityLabel="All members" />
   );
   const fallbackName = String(route?.params?.name || 'Member');
+
+  if (isStudentMembership(profile)) return <StudentNetworkingGate navigation={navigation} />;
 
   if (loading) {
     return (

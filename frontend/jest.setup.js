@@ -1,5 +1,17 @@
 /* Native modules have no implementation under Jest: use their official mocks,
    or a minimal stand-in, so the whole app can be rendered as a smoke test. */
+jest.mock('@react-native-firebase/app', () => ({ getApps: jest.fn(() => []) }));
+jest.mock('@react-native-firebase/messaging', () => ({
+  getMessaging: jest.fn(), AuthorizationStatus: { AUTHORIZED: 1, PROVISIONAL: 2 },
+  getToken: jest.fn(), deleteToken: jest.fn(), hasPermission: jest.fn(), requestPermission: jest.fn(),
+  onMessage: jest.fn(() => () => {}), onTokenRefresh: jest.fn(() => () => {}),
+  onNotificationOpenedApp: jest.fn(() => () => {}), getInitialNotification: jest.fn(async () => null),
+  setBackgroundMessageHandler: jest.fn(),
+}));
+jest.mock('@react-native-firebase/analytics', () => ({
+  getAnalytics: jest.fn(), logEvent: jest.fn(async () => {}), setConsent: jest.fn(async () => {}),
+  setAnalyticsCollectionEnabled: jest.fn(async () => {}), setUserId: jest.fn(async () => {}),
+}));
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('react-native-safe-area-context', () =>
