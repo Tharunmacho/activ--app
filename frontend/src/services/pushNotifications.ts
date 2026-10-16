@@ -7,6 +7,7 @@ import { getMessaging, getToken, deleteToken, requestPermission, hasPermission, 
 import api, { getAuthToken, getUserData } from './api';
 import { navigationRef } from '../navigation/navigationRef';
 import { nativeContentRoute } from './nativeContentRoute';
+import { visitorPushEnabled, setVisitorPushEnabled, visitorIdentity, registerVisitorToken, detachVisitorToken, retryVisitorDetach, recordVisitorOpen } from './visitorNotifications';
 
 const TOKEN_KEY = '@activ_push_token';
 const ASKED_KEY = '@activ_push_permission_asked';
@@ -83,6 +84,17 @@ export async function flushPushNavigation() {
   const latestUser = await getUserData();
   if (await getAuthToken() !== token || accountId(latestUser) !== accountId(user)) return;
   if (pending !== data || version !== sessionVersion || detaching) return;
+  if (data.audience === 'visitor' && /^[a-f\d]{24}$/i.test(data.publicNotificationId || '')) {
+    if (token) { pending = null; return; }
+    const visitor = await visitorIdentity();
+    const enabled = await visitorPushEnabled();
+    if (await getAuthToken() || version !== sessionVersion || detaching || pending !== data) return;
+    if (!enabled || visitor?.id !== data.visitorId) { pending = null; return; }
+    pending = null;
+    void recordVisitorOpen(data.publicNotificationId, 'push');
+    (navigationRef.navigate as any)('PublicNotifications', { id: data.publicNotificationId });
+    return;
+  }
   if (!token || !user) return;
   if (!data.userId || data.userId !== accountId(user)) { pending = null; return; }
   // Session restoration chooses a landing screen before a push opens its target.
@@ -90,6 +102,7 @@ export async function flushPushNavigation() {
   const target = data.kind === 'test' && user.role === 'super_admin'
     ? { route: 'SuperNotifications', params: { view: 'delivery' } } : notificationDestination(data);
   pending = null;
+  if (/^[a-f\d]{24}$/i.test(data.notificationId || '')) void api.patch('/notifications/' + data.notificationId + '/open', { channel: 'push' }, { timeout: 5000 }).catch(() => undefined);
   (navigationRef.navigate as any)(target.route, target.params);
 }
 async function receiveOpen(message: any) {
@@ -105,7 +118,9 @@ export async function pushPermission() {
 }
 async function allowNotifications(explicit: boolean, attempt: RegistrationAttempt) {
   if (await waitForSdk(pushPermission(), attempt) === 'enabled') return true;
-  if (!explicit && await AsyncStorage.getItem(ASKED_KEY)) return false;
+  // Permission dialogs follow the user's Allow action on the shared welcome
+  // prompt/settings. A foreground sync must never surprise them with a prompt.
+  if (!explicit) return false;
   if (detaching || attempt.version !== sessionVersion) throw CANCELLED;
   await AsyncStorage.setItem(ASKED_KEY, 'true');
   if (detaching || attempt.version !== sessionVersion) throw CANCELLED;
@@ -120,7 +135,7 @@ async function registerDevice(explicit: boolean, attempt: RegistrationAttempt): 
   try {
     const auth = await getAuthToken();
     const user = await getUserData();
-    if (!auth || !accountId(user)) return 'signed-out';
+    if (!auth || !accountId(user)) return await registerVisitor(explicit, attempt);
     const allowed = await allowNotifications(explicit, attempt);
     if (detaching || version !== sessionVersion || await getAuthToken() !== auth) return 'signed-out';
     if (!allowed) {
@@ -144,13 +159,57 @@ async function registerDevice(explicit: boolean, attempt: RegistrationAttempt): 
     return error === CANCELLED ? 'signed-out' : 'failed';
   }
 }
+async function registerVisitor(explicit: boolean, attempt: RegistrationAttempt): Promise<RegistrationResult> {
+  if (!explicit && !await visitorPushEnabled()) return 'signed-out';
+  const current = async () => !detaching && attempt.version === sessionVersion && !await getAuthToken();
+  const allowed = await allowNotifications(explicit, attempt);
+  if (!await current()) return 'signed-out';
+  if (!allowed) {
+    await setVisitorPushEnabled(false);
+    await detachVisitorToken().catch(() => undefined);
+    await invalidateFirebaseToken();
+    return 'disabled';
+  }
+  // Consent is intent, independent of network success. Foreground retries can
+  // complete an explicit opt-in even when the first registration was offline.
+  await setVisitorPushEnabled(true);
+  if (!await current()) return 'signed-out';
+  if (deletingToken && !await waitForSdk(withinCleanupDeadline(deletingToken), attempt)) return 'failed';
+  const token = await waitForSdk(getToken(getMessaging()), attempt);
+  if (!await current()) return 'signed-out';
+  await registerVisitorToken(token, Platform.OS);
+  if (!await current()) { await detachVisitorToken().catch(() => undefined); return 'signed-out'; }
+  return 'enabled';
+}
+export async function enableVisitorNotifications() {
+  const result = await syncPushRegistration(true);
+  if (result === 'disabled') await Linking.openSettings();
+  else if (result === 'unconfigured') Alert.alert('Notifications are being prepared', 'Install the latest ACTIV app when notification setup is complete.');
+  else if (result === 'failed') throw new Error('Visitor notification registration failed');
+}
+export async function disableVisitorNotifications() {
+  sessionVersion += 1;
+  pending = null;
+  const registration = syncing;
+  registration?.cancel();
+  await setVisitorPushEnabled(false);
+  if (registration) await registration.promise;
+  // A consent write already in progress may have completed during cancellation.
+  await setVisitorPushEnabled(false);
+  await detachVisitorToken().catch(() => undefined);
+  if (!await getAuthToken()) await invalidateFirebaseToken();
+}
+
 export async function syncPushRegistration(explicit = false): Promise<RegistrationResult> {
+  const requestedVersion = sessionVersion;
+  await retryVisitorDetach().catch(() => undefined);
+  if (requestedVersion !== sessionVersion) return 'signed-out';
   if (detaching) return 'signed-out';
   if (!firebaseReady()) return 'unconfigured';
   if (syncing) {
     // An explicit settings action must wait for registration and preserve its
     // permission request, even if a passive foreground sync is already running.
-    if (explicit) { await syncing.promise; return syncPushRegistration(true); }
+    if (explicit) { await syncing.promise; return requestedVersion === sessionVersion ? syncPushRegistration(true) : 'signed-out'; }
     syncAgain = true;
     return syncing.promise;
   }
@@ -204,6 +263,13 @@ export function usePushNotifications() {
       const version = sessionVersion;
       const auth = await getAuthToken();
       const user = await getUserData();
+      if (message.data?.audience === 'visitor') {
+        const visitor = await visitorIdentity();
+        const enabled = await visitorPushEnabled();
+        if (auth || await getAuthToken() || detaching || version !== sessionVersion || !enabled || visitor?.id !== message.data.visitorId) return;
+        Alert.alert('ACTIV update', 'Dear ACTIVian, there is a new public update for you.', [{ text: 'Later', style: 'cancel' }, { text: 'View', onPress: () => void receiveOpen(message) }]);
+        return;
+      }
       if (!auth || detaching || version !== sessionVersion || !accountId(user) || !message.data?.userId || message.data.userId !== accountId(user)) return;
       const latestUser = await getUserData();
       if (await getAuthToken() !== auth || accountId(latestUser) !== accountId(user) || detaching || version !== sessionVersion) return;

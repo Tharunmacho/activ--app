@@ -14,7 +14,7 @@ import { ChipRow, MiniAction, useRegionTreeAll, useRegionNames } from './superKi
 import { InlineSelect } from './events/eventKit';
 import RegionInput from './components/RegionInput';
 import { AutomationPane } from './delivery/AutomationPane';
-import PushDeliveryStatus from './delivery/PushDeliveryStatus';
+import { ReportsPane } from './delivery/ReportsPane';
 import { canResend, channelColor, channelIcon } from './delivery/deliveryKit';
 
 /**
@@ -43,7 +43,7 @@ import { canResend, channelColor, channelIcon } from './delivery/deliveryKit';
  * "sent" because nothing failed, but nothing left the server — "Not sent".
  */
 
-type View4 = 'automation' | 'log' | 'delivery' | 'routing';
+type View4 = 'reports' | 'automation' | 'log' | 'delivery' | 'routing';
 
 /** The events a filter can name, in the order they happen to a member (website EVENTS). */
 const EVENTS = [
@@ -75,7 +75,7 @@ const when = (value?: string) => {
 
 /** The raw log's words (website StatePill): `sent` reads "Delivered" there. */
 const PILL: Record<string, { label: string; kind: 'approved' | 'rejected' | 'neutral' | 'warning' }> = {
-  sent: { label: 'Delivered', kind: 'approved' },
+  sent: { label: 'Provider accepted', kind: 'approved' },
   failed: { label: 'Failed', kind: 'rejected' },
   queued: { label: 'Queued', kind: 'neutral' },
   mock: { label: 'Not sent', kind: 'warning' },
@@ -259,7 +259,7 @@ const SuperNotificationsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const initial = String(route?.params?.view || '') as View4;
-  const [view, setView] = useState<View4>(['automation', 'log', 'delivery', 'routing'].includes(initial) ? initial : 'automation');
+  const [view, setView] = useState<View4>(['reports', 'automation', 'log', 'delivery', 'routing'].includes(initial) ? initial : 'reports');
   const [automationNonce, setAutomationNonce] = useState(0);
 
   const [status, setStatus] = useState('');
@@ -313,7 +313,7 @@ const SuperNotificationsScreen: React.FC = () => {
 
   const refreshAll = () => {
     loadDelivery();
-    if (view === 'automation') setAutomationNonce((n) => n + 1);
+    if (view === 'automation' || view === 'reports') setAutomationNonce((n) => n + 1);
     else if (view === 'log') { setRefreshing(true); load(1); }
   };
 
@@ -334,7 +334,7 @@ const SuperNotificationsScreen: React.FC = () => {
         compact
         eyebrow="Super Admin · messages"
         title="Notifications"
-        subtitle="Every email and WhatsApp message the platform has attempted, and whether it arrived"
+        subtitle="Reports and automations across email, WhatsApp, push and member inboxes"
         left={<GlassIconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => navigation?.goBack?.()} />}
         right={<GlassIconButton icon="refresh" accessibilityLabel="Refresh" onPress={refreshAll} />}
       />
@@ -343,6 +343,7 @@ const SuperNotificationsScreen: React.FC = () => {
         onChange={setView}
         style={s.tabs}
         options={[
+          { value: 'reports', label: 'Reports' },
           { value: 'automation', label: 'Automation' }, { value: 'log', label: 'Log' },
           { value: 'delivery', label: 'Setup' }, { value: 'routing', label: 'Routing' },
         ]}
@@ -350,6 +351,8 @@ const SuperNotificationsScreen: React.FC = () => {
       <ConfigBanner st={delivery} />
     </>
   );
+
+  if (view === 'reports') return <ConsoleFrame><ReportsPane header={top} refreshKey={automationNonce} /></ConsoleFrame>;
 
   if (view === 'automation') {
     return (
@@ -369,7 +372,7 @@ const SuperNotificationsScreen: React.FC = () => {
           refreshControl={view === 'delivery' ? <RefreshControl refreshing={false} onRefresh={loadDelivery} tintColor={PALETTE.indigo} /> : undefined}
         >
           {top}
-          {view === 'delivery' ? <><PushDeliveryStatus /><DeliveryView st={delivery} error={deliveryError} onReload={loadDelivery} /></> : <RoutingView />}
+          {view === 'delivery' ? <DeliveryView st={delivery} error={deliveryError} onReload={loadDelivery} /> : <RoutingView />}
         </ScrollView>
       </ConsoleFrame>
     );
@@ -382,7 +385,7 @@ const SuperNotificationsScreen: React.FC = () => {
     <>
       {top}
       <ConsoleGrid style={s.grid}>
-        <ConsoleStatTile label="Delivered" hint="reached the recipient" value={Number(h?.sent || 0)} icon="check-circle" accent="green"
+        <ConsoleStatTile label="Accepted" hint="accepted by the provider" value={Number(h?.sent || 0)} icon="check-circle" accent="green"
           selected={status === 'sent'} onPress={() => setStatus(status === 'sent' ? '' : 'sent')} />
         <ConsoleStatTile label="Failed" hint="the provider refused it" value={Number(h?.failed || 0)} icon="cancel" accent="red"
           selected={status === 'failed'} onPress={() => setStatus(status === 'failed' ? '' : 'failed')} delay={60} />
@@ -392,7 +395,7 @@ const SuperNotificationsScreen: React.FC = () => {
       </ConsoleGrid>
       <ConsoleSectionTitle title="Filters" icon="tune" />
       <ConsoleSearch value={search} onChangeText={setSearch} placeholder="Filter by email or phone number" />
-      <ChipRow<string> options={[{ value: '', label: 'Every status' }, { value: 'sent', label: 'Delivered' }, { value: 'failed', label: 'Failed' }, { value: 'queued', label: 'Queued' }]} value={status} onChange={setStatus} />
+      <ChipRow<string> options={[{ value: '', label: 'Every status' }, { value: 'sent', label: 'Accepted' }, { value: 'failed', label: 'Failed' }, { value: 'queued', label: 'Queued' }]} value={status} onChange={setStatus} />
       <ChipRow<string> options={[{ value: '', label: 'Every channel' }, { value: 'email', label: 'Email' }, { value: 'whatsapp', label: 'WhatsApp' }, { value: 'in_app', label: 'In-app' }]} value={channel} onChange={setChannel} />
       <View style={s.select}>
         <InlineSelect value={event ? humanEvent(event) : ''} options={EVENT_LABELS} placeholder="Every event" emptyLabel="Every event"

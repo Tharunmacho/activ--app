@@ -18,7 +18,7 @@ export type MemberRoutes = {
   MemberEvents: undefined;
   MemberEventDetail: { id: string };
   /** Book seats: free → confirmed; priced → PaymentCheckout. `ref` shows an existing ticket. */
-  EventBooking: { eventId: string; ref?: string };
+  EventBooking: { eventId: string; ref?: string; forOthers?: boolean };
   AssociationUpdates: undefined;
   UpdateDetail: { id: string };
   MemberCertificate: { kind: 'membership' | 'tax-exemption' };

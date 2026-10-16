@@ -9,7 +9,7 @@ import {
   Notice, PALETTE, SPACE, SIZE, TYPE, asArray,
   PremiumTopBar, GradientAvatar, GradientGlyph, CardSkeletons, StateView, ArtBadge, ChatBubbles3D, PressableScale,
   PREMIUM_GRADIENTS, BRAND, FitImage } from '../../../ui';
-import { getThread, sendMessage, markConversationRead, uploadMessageAttachment } from '../../../services/memberApi';
+import { getThread, sendMessage, markConversationRead, uploadMessageAttachment, deleteMessage, getMessageStatuses } from '../../../services/memberApi';
 import { ChatDraftAttachment, ChatAttachment, pickChatDocument, validateChatFile, fileSizeLabel, downloadChatAttachment } from '../../../services/messageAttachments';
 import { useThreadKeyboard } from './useThreadKeyboard';
 import { resolveMediaUrl } from '../../../config/api.config';
@@ -17,6 +17,7 @@ import { memberFacing, OPENERS, EMOJI, timeOf } from './messageCopy';
 import { useMemberAccess } from '../useMemberAccess';
 import StudentNetworkingGate from '../StudentNetworkingGate';
 import { isStudentMembership } from '../../../utils/memberAudience';
+import ChatAudio from './ChatAudio';
 
 /**
  * One conversation — website `MemberInbox` thread pane.
@@ -73,11 +74,12 @@ function DaySeparator({ label }: { label: string }) {
   );
 }
 
-function Bubble({ m, tail }: { m: any; tail: boolean }) {
+function Bubble({ m, tail, onOptions }: { m: any; tail: boolean; onOptions: (message: any) => void }) {
   const mine = !!m?.mine;
   const [downloading, setDownloading] = useState(false);
-  const document = m?.attachment?.kind === 'file' ? m.attachment as ChatAttachment : null;
-  const img = !document && m?.attachmentUrl ? resolveMediaUrl(m.attachmentUrl) : '';
+  const document = !m.deleted && m?.attachment?.kind === 'file' ? m.attachment as ChatAttachment : null;
+  const audio = !m.deleted && m?.attachment?.kind === 'audio' ? m.attachment as ChatAttachment : null;
+  const img = !m.deleted && !document && !audio && m?.attachmentUrl ? resolveMediaUrl(m.attachmentUrl) : '';
   const openDocument = async () => {
     if (!document || downloading) return;
     setDownloading(true);
@@ -92,6 +94,8 @@ function Bubble({ m, tail }: { m: any; tail: boolean }) {
   };
   const content = (
     <>
+      {m.deleted && <Text style={[styles.body, { fontStyle: 'italic', opacity: 0.8 }, mine && styles.white]}>Message deleted</Text>}
+      {audio && <ChatAudio attachment={audio} mine={mine} />}
       {document ? (
         <TouchableOpacity onPress={openDocument} disabled={downloading} accessibilityRole="button" accessibilityLabel={`Download ${document.name}`} style={styles.document}>
           {downloading ? <ActivityIndicator color={mine ? PALETTE.white : PALETTE.blue} /> : <Icon name="description" size={28} color={mine ? PALETTE.white : PALETTE.blue} />}
@@ -107,10 +111,10 @@ function Bubble({ m, tail }: { m: any; tail: boolean }) {
           <FitImage uri={img} style={[styles.img, !m?.body && { marginBottom: SPACE.xs }]} />
         </TouchableOpacity>
       ) : null}
-      {m?.body ? <Text style={[styles.body, mine && { color: PALETTE.white }]} selectable>{m.body}</Text> : null}
+      {!m.deleted && m?.body ? <Text style={[styles.body, mine && { color: PALETTE.white }]} selectable>{m.body}</Text> : null}
       <View style={styles.metaRow}>
         <Text style={[styles.meta, mine && { color: 'rgba(255,255,255,0.78)' }]}>{timeOf(m?.at)}</Text>
-        {mine ? (
+        {mine && !m.deleted ? (
           <Icon
             name={m?.readAt ? 'done-all' : 'done'}
             size={14}
@@ -118,6 +122,7 @@ function Bubble({ m, tail }: { m: any; tail: boolean }) {
             accessibilityLabel={m?.readAt ? 'Read' : 'Sent'}
           />
         ) : null}
+        <TouchableOpacity onPress={() => onOptions(m)} accessibilityRole="button" accessibilityLabel={`Message options ${m.id}`} style={styles.messageOptions}><Icon name="more-horiz" size={18} color={mine ? PALETTE.white : PALETTE.textMuted} /></TouchableOpacity>
       </View>
     </>
   );
@@ -161,6 +166,11 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
   const followLatest = useRef(true);
   const dragging = useRef(false);
   const loadingOlder = useRef(false);
+  const messagesRef = useRef<any[]>([]);
+  messagesRef.current = messages;
+  const requestVersion = useRef(0);
+  const deletedLocally = useRef(new Map<string, 'me' | 'everyone'>());
+  const deleting = useRef(false);
   const keyboard = useThreadKeyboard();
   // The composer is the screen's bottom edge — pad it past the home indicator.
   const insets = useSafeAreaInsets();
@@ -171,16 +181,21 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
 
   const load = useCallback(async (quiet = false) => {
     if (!conversationId) return;
+    const request = ++requestVersion.current;
     if (!quiet) { setLoading(true); setError(''); }
     try {
-      const res = await getThread(conversationId);
+      const [res, statuses] = await Promise.all([getThread(conversationId), quiet && messagesRef.current.length ? getMessageStatuses(conversationId, messagesRef.current.map(message => String(message.id))) : Promise.resolve([])]);
+      if (request !== requestVersion.current) return;
       const list = asArray<any>(res?.messages);
+      const stateById = new Map(statuses.map(status => [status.id, status]));
+      const reconcile = (rows: any[]) => rows.filter(message => deletedLocally.current.get(message.id) !== 'me' && !stateById.get(message.id)?.hidden)
+        .map(message => deletedLocally.current.get(message.id) === 'everyone' || stateById.get(message.id)?.deleted ? { ...message, deleted: true, body: '', attachmentUrl: '', attachment: null } : { ...message, ...(stateById.has(message.id) ? { readAt: stateById.get(message.id)?.readAt } : {}) });
       // A quiet poll only ever grows the thread — it never drops "load earlier" pages.
       setMessages((prev) => {
-        if (!quiet) return list;
+        if (!quiet) return reconcile(list);
         const merged = new Map(prev.map(message => [String(message.id || message._id), message]));
         list.forEach(message => merged.set(String(message.id || message._id), message));
-        return [...merged.values()].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+        return reconcile([...merged.values()]).sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
       });
       if (!quiet) setHasMore(!!res?.hasMore);
       setOther(res?.conversation?.withMember || null);
@@ -212,7 +227,7 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
     setOlder(true);
     try {
       const res = await getThread(conversationId, String(messages[0]?.at || ''));
-      setMessages((prev) => [...asArray<any>(res?.messages), ...prev]);
+      setMessages((prev) => [...new Map([...prev, ...asArray<any>(res?.messages)].map(message => [message.id, message])).values()].filter(message => deletedLocally.current.get(message.id) !== 'me').map(message => deletedLocally.current.get(message.id) === 'everyone' ? { ...message, deleted: true, body: '', attachmentUrl: '', attachment: null } : message).sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime()));
       setHasMore(!!res?.hasMore);
     } catch { /* keep what is shown */ } finally {
       loadingOlder.current = false;
@@ -296,12 +311,33 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
     }
   };
 
-  const pickDocument = async () => {
+  const pickDocument = async (audio = false) => {
     Keyboard.dismiss(); setEmojiOpen(false);
     try {
-      const document = await pickChatDocument();
+      const document = await pickChatDocument(audio);
       if (document) { setPicture(document); uploaded.current = null; setSendError(''); }
     } catch (error) { setSendError(memberFacing(error, 'The document could not be opened.')); }
+  };
+
+  const remove = async (message: any, scope: 'me' | 'everyone') => {
+    if (deleting.current) return;
+    deleting.current = true;
+    try {
+      await deleteMessage(conversationId, String(message.id), scope);
+      ++requestVersion.current;
+      deletedLocally.current.set(String(message.id), scope);
+      setMessages(rows => scope === 'me' ? rows.filter(row => row.id !== message.id) : rows.map(row => row.id === message.id ? { ...row, deleted: true, body: '', attachmentUrl: '', attachment: null } : row));
+    } catch (err) { setSendError(memberFacing(err, 'The message could not be deleted. Please try again.')); }
+    finally { deleting.current = false; }
+  };
+
+  const messageOptions = (message: any) => {
+    Keyboard.dismiss();
+    Alert.alert('Delete message', 'Delete for me removes this message from your account. Delete for everyone removes your message from both sides.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete for me', onPress: () => { void remove(message, 'me'); } },
+      ...(message.mine && !message.deleted ? [{ text: 'Delete for everyone', style: 'destructive' as const, onPress: () => { void remove(message, 'everyone'); } }] : []),
+    ]);
   };
 
   const insertEmoji = (mark: string) => {
@@ -324,7 +360,7 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
   const draftEmpty = !(text || '').trim();
   const cannotSend = sending || (draftEmpty && !picture);
   const placeholder = picture
-    ? picture.kind === 'image' ? 'Add a caption, or send the picture on its own…' : 'Add a caption, or send the document on its own…'
+    ? picture.kind === 'image' ? 'Add a caption, or send the picture on its own…' : picture.kind === 'audio' ? 'Add a caption, or send the audio…' : 'Add a caption, or send the document on its own…'
     : messages.length === 0
       ? 'Write about your business — what you make, what you need…'
       : `Message ${firstName === 'there' ? 'member' : firstName}…`;
@@ -361,7 +397,7 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
         keyExtractor={(r, i) => String(r?.key || i)}
         renderItem={({ item }) => (item.kind === 'day'
           ? <DaySeparator label={item.label} />
-          : <Bubble m={item.m} tail={item.tail} />)}
+          : <Bubble m={item.m} tail={item.tail} onOptions={messageOptions} />)}
         onContentSizeChange={() => scrollLatest()}
         onLayout={() => scrollLatest()}
         onScrollBeginDrag={() => { dragging.current = true; }}
@@ -442,7 +478,7 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
       {/* The chosen picture, before it goes. */}
       {picture ? (
         <View style={styles.preview}>
-          {picture.kind === 'image' ? <FitImage uri={picture.uri} style={styles.previewImg} /> : <Icon name="description" size={36} color={PALETTE.blue} />}
+          {picture.kind === 'image' ? <FitImage uri={picture.uri} style={styles.previewImg} /> : <Icon name={picture.kind === 'audio' ? 'audiotrack' : 'description'} size={36} color={PALETTE.blue} />}
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={styles.previewName} numberOfLines={1}>{picture.name}</Text>
             <Text style={styles.previewHint}>{picture.kind === 'image' ? 'Ready to send — a caption is optional.' : sending ? uploadProgress === null ? 'Sending…' : `Uploading ${uploadProgress}%…` : [fileSizeLabel(picture.size), 'Caption optional'].filter(Boolean).join(' · ')}</Text>
@@ -464,10 +500,12 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
       ) : null}
 
       {sendError ? <Notice kind="warning" text={sendError} style={styles.sendError} /> : null}
+      <View style={styles.attachmentTools}>
+        <TouchableOpacity onPress={pickPicture} disabled={sending} style={styles.attachmentTool} accessibilityRole="button" accessibilityLabel="Send a picture"><Icon name="add-photo-alternate" size={22} color={PALETTE.blueDark} /><Text style={styles.toolLabel}>Photo</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => void pickDocument()} disabled={sending} style={styles.attachmentTool} accessibilityRole="button" accessibilityLabel="Attach a document"><Icon name="description" size={22} color={PALETTE.blueDark} /><Text style={styles.toolLabel}>Document</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => void pickDocument(true)} disabled={sending} style={styles.attachmentTool} accessibilityRole="button" accessibilityLabel="Attach audio"><Icon name="audiotrack" size={22} color={PALETTE.blueDark} /><Text style={styles.toolLabel}>Audio</Text></TouchableOpacity>
+      </View>
       <View style={[styles.composer, { paddingBottom: composerBottom }]}>
-        <TouchableOpacity onPress={pickPicture} disabled={sending} style={styles.iconBtn} accessibilityRole="button" accessibilityLabel="Send a picture">
-          <Icon name="add-photo-alternate" size={SIZE.iconLg - 2} color={PALETTE.blueDark} />
-        </TouchableOpacity>
         <View style={styles.inputWrap}>
           <TextInput
             style={styles.input}
@@ -483,9 +521,6 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
             maxLength={4000}
             accessibilityLabel="Message"
           />
-          <TouchableOpacity onPress={pickDocument} disabled={sending} style={styles.emojiBtn} accessibilityRole="button" accessibilityLabel="Attach a document">
-            <Icon name="attach-file" size={SIZE.iconLg - 2} color={PALETTE.textMuted} />
-          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setEmojiOpen((v) => !v)}
             style={styles.emojiBtn}
@@ -534,6 +569,10 @@ const MessageThreadScreen = ({ navigation, route }: any) => {
 };
 
 const styles = StyleSheet.create({
+  attachmentTools: { flexDirection: 'row', gap: 8, paddingHorizontal: SPACE.md, backgroundColor: PALETTE.white, borderTopWidth: 1, borderTopColor: PALETTE.border },
+  attachmentTool: { flex: 1, minHeight: 44, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center' },
+  toolLabel: { fontSize: 12, fontWeight: '700', color: PALETTE.blueDark },
+  messageOptions: { minWidth: 32, minHeight: 32, alignItems: 'center', justifyContent: 'center' },
   screen: { flex: 1, backgroundColor: PALETTE.canvas },
   flex: { flex: 1 },
   document: { flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 170, maxWidth: 250, paddingVertical: 6 },

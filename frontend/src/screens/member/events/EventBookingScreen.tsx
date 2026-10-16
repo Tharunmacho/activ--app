@@ -79,8 +79,10 @@ function TicketAction({ icon, label, onPress }: { icon: string; label: string; o
 /** The confirmation, drawn as a real ticket: gradient stub, perforation, details, torn foot. */
 function Ticket({ b, event, fallbackEmail, onPay, onRebook, open }: { b: any; event: any; fallbackEmail: string; onPay: () => void; onRebook: () => void; open: (url: string) => void }) {
   const now = useEventClock();
-  const { status, payment: payStatus, payable, settled, headline, paymentLabel, expired } = bookingState(b, now);
-  const copy = settled
+  const { status, payment: payStatus, payable, settled, needsReview, headline, paymentLabel, expired } = bookingState(b, now);
+  const copy = needsReview
+    ? 'Your payment has been received, but your seats are not confirmed. Contact the organiser with this booking reference so they can review it. Please do not pay again.'
+    : settled
     ? 'Your seats are confirmed. Keep your booking reference and show your entry pass at the venue.'
     : status === 'cancelled' ? 'This booking was cancelled. Contact the organiser if you have a question.'
       : status === 'waitlist' ? 'The event is full. No seat is held and no payment is due. The organiser will contact you if places become available.'
@@ -268,7 +270,7 @@ const EventBookingScreen = ({ navigation, route }: any) => {
   const [me, setMe] = useState<Person>({ name: '', email: '', phone: '' });
   const [count, setCount] = useState(1);
   const [participantDetails, setParticipants] = useState<Person[]>([{ name: '', email: '', phone: '' }]);
-  const [firstUsesBooker, setFirstUsesBooker] = useState(true);
+  const [firstUsesBooker, setFirstUsesBooker] = useState(!route?.params?.forOthers);
   const participants = Array.from({ length: count }, (_, index) => index === 0 && firstUsesBooker
     ? me : participantDetails[index] || { name: '', email: '', phone: '' });
   const [note, setNote] = useState('');
@@ -296,7 +298,8 @@ const EventBookingScreen = ({ navigation, route }: any) => {
       setBooking(existing);
       setSignedIn(memberSession);
       setStep(memberSession || existing ? 'form' : 'choice');
-      setMe({ name: String(prof?.fullName || ''), email: String(prof?.email || ''), phone: String(prof?.phoneNumber || '') });
+      if (memberSession) setMe({ name: String(prof?.fullName || ''), email: String(prof?.email || ''), phone: String(prof?.phoneNumber || '') });
+      else if (byRef?.bookedBy) setMe({ name: String(byRef.bookedBy.name || ''), email: String(byRef.bookedBy.email || ''), phone: String(byRef.bookedBy.phone || '') });
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -339,7 +342,7 @@ const EventBookingScreen = ({ navigation, route }: any) => {
   const total = unit * count;
   const closed = !!event && bookingClosed(event, now);
   const fields = asArray<RegistrationField>(event?.registrationFields);
-  const attendees = bookingParticipants(me, participants, count);
+  const attendees = bookingParticipants(me, participants, count, firstUsesBooker);
   useEffect(() => { setParticipants(prev => Array.from({ length: count }, (_, i) => prev[i] || { name: '', email: '', phone: '' })); }, [count]);
   useEffect(() => {
     const listener = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -362,7 +365,7 @@ const EventBookingScreen = ({ navigation, route }: any) => {
   };
   const validate = (current: any = event) => {
     const currentMax = Math.max(1, Number(current?.maxPerBooking || 50));
-    const found = validateBookingForm(me, participants, count, currentMax, asArray(current?.registrationFields), answers);
+    const found = validateBookingForm(me, participants, count, currentMax, asArray(current?.registrationFields), answers, firstUsesBooker);
     setErrors(found);
     if (Object.keys(found).length) { setFormError('Please check the highlighted fields.'); setStep('form'); scroll.current?.scrollTo({ y: 0, animated: true }); return false; }
     return true;
@@ -390,12 +393,12 @@ const EventBookingScreen = ({ navigation, route }: any) => {
       checkAvailability(fresh); if (!validate(fresh)) return;
       if (Number(fresh.amount ?? fresh.price ?? 0) !== unit) { setFormError('The event price has changed. Review the updated total before continuing.'); return; }
       const b = await createEventBooking(effectiveId, {
-        name: me.name.trim(), email: me.email.trim().toLowerCase(), phone: nationalMobile(me.phone), noOfPersons: count, participants: attendees, responses: answers, note: note.trim() || undefined,
+        name: me.name.trim(), email: me.email.trim().toLowerCase(), phone: nationalMobile(me.phone), noOfPersons: count, participants: attendees, useBookerForFirstParticipant: firstUsesBooker, responses: answers, note: note.trim() || undefined,
       }, !signedIn);
       if (!b?.bookingRef) throw new Error('The booking response was incomplete. Check your confirmation email or contact the organiser before retrying.');
       setBooking(b); scroll.current?.scrollTo({ y: 0, animated: false });
       if (String(b.payment?.status) === 'pending' && String(b.status || 'active') === 'active') pay(b);
-      else getEventBooking(String(b.bookingRef)).then(freshBooking => { if (freshBooking?.bookingRef) setBooking(freshBooking); }).catch(() => setStatusError('Your booking was saved. Refresh to load the latest ticket details.'));
+      else await getEventBooking(String(b.bookingRef)).then(freshBooking => { if (freshBooking?.bookingRef) setBooking(freshBooking); }).catch(() => setStatusError('Your booking was saved. Refresh to load the latest ticket details.'));
     } catch (err) { formFailure(err); }
     finally { busy.current = false; setSubmitting(false); }
   };
@@ -415,6 +418,21 @@ const EventBookingScreen = ({ navigation, route }: any) => {
       if (state.settled || state.payable || state.status === 'waitlist') { setStatusError('Your booking status has changed. Review this ticket before taking another action.'); return; }
       const fresh = await getBookableEvent(effectiveId, !signedIn); setEvent(fresh); checkAvailability(fresh);
       setBooking(null); setStep('form'); setErrors({}); setFormError(''); navigation.setParams({ ref: undefined });
+    } catch (err) { setStatusError(errorText(err)); }
+    finally { busy.current = false; setChecking(false); }
+  };
+
+  const bookForSomeoneElse = async () => {
+    if (busy.current) return;
+    busy.current = true; setChecking(true); setStatusError('');
+    try {
+      const fresh = await getBookableEvent(effectiveId, !signedIn);
+      if (bookingClosed(fresh)) throw new Error('Bookings for this event have closed.');
+      if (Number(fresh.capacity) > 0 && Number(fresh.seatsLeft) <= 0) throw new Error('This event is fully booked. Please contact the organiser.');
+      setEvent(fresh); setBooking(null); setCount(1); setParticipants([{ name: '', email: '', phone: '' }]); setFirstUsesBooker(false);
+      setAnswers({}); setNote(''); setErrors({}); setFormError(''); setStep('form');
+      navigation.setParams({ ref: undefined, forOthers: true });
+      scroll.current?.scrollTo({ y: 0, animated: false });
     } catch (err) { setStatusError(errorText(err)); }
     finally { busy.current = false; setChecking(false); }
   };
@@ -532,6 +550,7 @@ const EventBookingScreen = ({ navigation, route }: any) => {
                 onPay={() => pay(booking)}
                 onRebook={rebook}
               />
+              {bookingState(booking, now).settled && !closed ? <GradientButton label="Book for someone else" variant="outline" icon="person-add" loading={checking} onPress={bookForSomeoneElse} style={{ marginTop: SPACE.md }} /> : null}
               <GradientButton label="Refresh booking status" variant="outline" icon="refresh" loading={checking} onPress={refreshTicket} style={{ marginTop: SPACE.md }} />
             </FadeInUp>
           ) : closed || full ? (
@@ -601,7 +620,9 @@ const EventBookingScreen = ({ navigation, route }: any) => {
                   </View>
                   {errors.count ? <Text style={styles.err}>{errors.count}</Text> : null}
                   <Text style={[styles.qtyLabel, { marginTop: SPACE.lg }]}>Participants</Text>
-                  <Text style={[styles.small, { marginTop: SPACE.xs }]}>Name, email and mobile are required for every participant. Participant 1 is filled from your booking details; edit it if someone else is attending.</Text>
+                  <Text style={[styles.small, { marginTop: SPACE.xs }]}>Enter each attendee’s name, email and mobile. Each email can be booked once for this event; your booking contact can stay the same.</Text>
+                  {!!event?.memberRateApplied && <Text style={[styles.small, { marginTop: SPACE.xs }]}>Your member rate applies to each seat, including the friends you book for.</Text>}
+                  {!firstUsesBooker && <Text style={[styles.small, { marginTop: SPACE.xs }]}>You are booking for someone else. Enter their details in Participant 1.</Text>}
                   {participants.map((p, i) => (
                     <View key={i} style={styles.other}>
                       <View style={styles.otherHead}>

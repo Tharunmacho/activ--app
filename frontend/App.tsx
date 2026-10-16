@@ -5,7 +5,7 @@
  * @format
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { initAnalytics, trackScreen } from './src/services/analytics';
 import { usePushNotifications, flushPushNavigation } from './src/services/pushNotifications';
 import { NavigationContainer } from '@react-navigation/native';
@@ -31,6 +31,7 @@ import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
 import ResetPasswordScreen from './src/screens/auth/ResetPasswordScreen';
 import WelcomeScreen from './src/screens/auth/WelcomeScreen';
 import PublicExploreScreen from './src/screens/public/PublicExploreScreen';
+import PublicNotificationsScreen from './src/screens/public/PublicNotificationsScreen';
 import PublicEventDetailScreen from './src/screens/public/PublicEventDetailScreen';
 import SocialSignInScreen from './src/screens/auth/SocialSignInScreen';
 import { useDeepLinks, flushPendingDeepLink } from './src/navigation/deepLinks';
@@ -91,6 +92,7 @@ import {
 } from './src/screens/payment';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
+import NotificationPermissionPrompt from './src/components/NotificationPermissionPrompt';
 import { RootStackParamList } from './src/types';
 
 // Global JavaScript Error Handler to prevent app crashes on uncaught errors
@@ -109,6 +111,12 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
+  const [notificationEntryReady, setNotificationEntryReady] = useState(false);
+  const updateNotificationEntry = () => {
+    const state = navigationRef.getRootState();
+    const home = state?.routes[state.index || 0]?.name;
+    setNotificationEntryReady(!!home && ['PublicExplore', 'MemberMain', 'PaidDashboard', 'BlockDashboard', 'DistrictDashboard', 'StateDashboard', 'SuperAdminDashboard', 'EventsAdminHome'].includes(home));
+  };
   // activ:// links: social sign-in hand-off and password-reset tokens.
   useDeepLinks();
   usePushNotifications();
@@ -117,10 +125,11 @@ function App() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <NavigationContainer ref={navigationRef} onReady={() => { flushPendingDeepLink(); void flushPushNavigation(); }} onStateChange={() => { void flushPushNavigation(); void trackScreen(navigationRef.getCurrentRoute()?.name); }}>
+        <NavigationContainer ref={navigationRef} onReady={() => { flushPendingDeepLink(); void flushPushNavigation(); updateNotificationEntry(); }} onStateChange={() => { void flushPushNavigation(); void trackScreen(navigationRef.getCurrentRoute()?.name); updateNotificationEntry(); }}>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
         <Stack.Navigator initialRouteName="Onboarding">
           <Stack.Screen name="PublicExplore" component={PublicExploreScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="PublicNotifications" component={PublicNotificationsScreen} options={{ headerShown: false }} />
           <Stack.Screen name="PublicEventDetail" component={PublicEventDetailScreen} options={{ headerShown: false }} />
           {/* Auth Stack */}
           <Stack.Screen 
@@ -350,6 +359,7 @@ function App() {
           />
         </Stack.Navigator>
       </NavigationContainer>
+      <NotificationPermissionPrompt ready={notificationEntryReady} />
     </SafeAreaProvider>
   </ErrorBoundary>
   );

@@ -26,6 +26,7 @@ type BaseStackParamList = {
   // Auth Stack
   Onboarding: undefined;
   PublicExplore: { section?: 'home' | 'events' | 'news' | 'gallery' | 'zones' } | undefined;
+  PublicNotifications: { id?: string } | undefined;
   PublicEventDetail: { id: string };
   Welcome: undefined;
   Login: undefined;

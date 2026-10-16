@@ -6,6 +6,7 @@ import SuperUpdateEditorScreen from '../src/screens/admin/super/SuperUpdateEdito
 import { ConsoleButton, PremiumInput, PremiumSelect, FitImage } from '../src/ui';
 import { createAnnouncement, updateAnnouncement, listMembershipPlans, uploadCmsMedia, uploadEventAttachment } from '../src/services/superApi';
 import { pickEventDocument } from '../src/services/eventDocuments';
+import { ToggleRow } from '../src/screens/admin/super/superKit';
 
 let mockParams: any = {};
 const mockGoBack = jest.fn();
@@ -20,7 +21,8 @@ jest.mock('../src/services/superApi', () => ({
 jest.mock('../src/services/eventDocuments', () => ({ pickEventDocument: jest.fn() }));
 jest.mock('../src/screens/admin/super/superKit', () => ({
   ...jest.requireActual('../src/screens/admin/super/superKit'),
-  useRegionTreeAll: () => [], useRegionNames: () => ({ states: ['Tamil Nadu'], districts: ['Chennai'], blocks: ['Central'] }),
+  useRegionTreeAll: () => [{ name: 'Tamil Nadu', districts: [{ name: 'Chennai', blocks: [{ name: 'Central' }, { name: 'North' }] }, { name: 'Coimbatore', blocks: [{ name: 'West' }] }] }, { name: 'Kerala', districts: [] }],
+  useRegionNames: () => ({ states: ['Tamil Nadu'], districts: ['Chennai'], blocks: ['Central'] }),
 }));
 
 let screen: Renderer.ReactTestRenderer;
@@ -111,4 +113,31 @@ it('preserves existing files on a failed replacement and explicitly clears remov
   expect(field('Document name').props.value).toBe('Membership guide.pdf');
   await press('Remove image'); await press('Remove document'); await press('Save & publish');
   expect(updateAnnouncement).toHaveBeenCalledWith('existing', expect.objectContaining({ bannerUrl: '', bannerAlt: '', attachmentUrl: '', attachmentLabel: '' }));
+});
+
+it('saves multiple independent regions and authored name tokens without a preview name', async () => {
+  mockParams = { announcement: { id: 'existing', title: 'Dear {Name}', body: 'Welcome {name}', audience: 'all', targets: [{ state: 'Tamil Nadu', district: 'Chennai', block: 'Central' }], status: 'draft' } };
+  await mount();
+  await act(async () => { screen.root.findAllByType(TouchableOpacity).find(node => node.props.accessibilityRole === 'checkbox' && node.props.accessibilityLabel === 'Kerala')!.props.onPress(); });
+  await press('Preview update');
+  await fill('Example recipient name', 'A different recipient');
+  expect(JSON.stringify(screen.toJSON())).toContain('Dear A different recipient');
+  await press('Publish update');
+  expect(updateAnnouncement).toHaveBeenCalledWith('existing', expect.objectContaining({ title: 'Dear {Name}', body: 'Welcome {name}', includeVisitors: false,
+    targets: [{ state: 'Tamil Nadu', district: 'Chennai', block: 'Central' }, { state: 'Kerala', district: '', block: '' }] }));
+});
+
+it('requires a region in restricted mode and only enables visitors for unrestricted updates', async () => {
+  await mount(); await fill('Title', 'Join ACTIV'); await press('Insert member name');
+  expect(field('Message').props.value).toBe('Dear {Name},\n\n');
+  const toggle = async (label: string, value: boolean) => act(async () => { screen.root.findAllByType(ToggleRow).find(node => node.props.label === label)!.props.onChange(value); });
+  await toggle('Also show to visitors', true);
+  await toggle('Limit to selected regions', true);
+  await press('Publish update');
+  expect(createAnnouncement).not.toHaveBeenCalled();
+  expect(Alert.alert).toHaveBeenCalledWith('Check your update', expect.stringContaining('Choose at least one region'));
+  await toggle('Limit to selected regions', false);
+  await chooseAudience('Paid members excluding students');
+  await press('Publish update');
+  expect(createAnnouncement).toHaveBeenCalledWith(expect.objectContaining({ includeVisitors: false, targets: [], body: 'Dear {Name},' }));
 });

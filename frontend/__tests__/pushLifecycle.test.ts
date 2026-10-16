@@ -78,6 +78,14 @@ test('Android permission approval registers the token under the authenticated ac
   expect(await AsyncStorage.getItem(TOKEN_KEY)).toBe('firebase-token-for-account-a');
 });
 
+test('passive signed-in sync does not request permission before the explanatory Allow action', async () => {
+  mock(PermissionsAndroid.check).mockResolvedValue(false);
+  expect(await syncPushRegistration()).toBe('disabled');
+  expect(PermissionsAndroid.request).not.toHaveBeenCalled();
+  expect(await AsyncStorage.getItem('@activ_push_permission_asked')).toBeNull();
+  expect(api.post).not.toHaveBeenCalled();
+});
+
 test('iOS provisional authorization registers without asking permission again', async () => {
   Platform.OS = 'ios';
   mock(hasPermission).mockResolvedValue(2);
@@ -144,7 +152,7 @@ test.each(['permission', 'token'])('logout cancels hung SDK %s acquisition witho
     mock(PermissionsAndroid.check).mockResolvedValue(false);
     mock(PermissionsAndroid.request).mockReturnValueOnce(sdk.promise);
   } else mock(getToken).mockReturnValueOnce(sdk.promise);
-  const registration = syncPushRegistration();
+  const registration = syncPushRegistration(true);
   await until(() => mock(stage === 'permission' ? PermissionsAndroid.request : getToken).mock.calls.length === 1);
   // The SDK promise deliberately stays unresolved while logout completes.
   await detachPushDevice();

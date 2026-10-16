@@ -158,6 +158,9 @@ export default function PublicExploreScreen({ navigation, route }: any) {
         <BrandHeaderBlock waveHeight={52}>
           <View style={s.heroContent}>
             <View style={s.topbar}><BrandLogo size="sm" />
+              <PressableScale accessibilityRole="button" accessibilityLabel="Notifications" onPress={() => navigation.navigate('PublicNotifications')} contentStyle={s.signIn}>
+                <Icon name="notifications-none" size={23} color={PALETTE.white} />
+              </PressableScale>
               <PressableScale accessibilityRole="button" accessibilityLabel="Sign in" onPress={signIn} contentStyle={s.signIn}>
                 <Icon name="login" size={17} color={PALETTE.white} /><Text style={s.signInText}>Sign in</Text>
               </PressableScale>

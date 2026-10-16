@@ -137,6 +137,17 @@ export const getThread = async (conversationId: string, before?: string) =>
 export const sendMessage = async (conversationId: string, body: string, attachmentUrl = '', attachment?: { token?: string }) =>
   unwrap<any>(await api.post(`/messages/${encodeURIComponent(conversationId)}`, { body, attachmentUrl, ...(attachment?.token ? { attachment: { token: attachment.token } } : {}) }), {});
 
+export const deleteMessage = async (conversationId: string, messageId: string, scope: 'me' | 'everyone') =>
+  unwrap<any>(await api.delete(`/messages/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}`, { data: { scope } }), {});
+
+export const getMessageStatuses = async (conversationId: string, ids: string[]) => {
+  const result: Array<{ id: string; hidden: boolean; deleted: boolean; readAt: string | null }> = [];
+  for (let offset = 0; offset < ids.length; offset += 500) {
+    result.push(...unwrap<any[]>(await api.post(`/messages/${encodeURIComponent(conversationId)}/message-status`, { ids: ids.slice(offset, offset + 500) }), []));
+  }
+  return result;
+};
+
 export const markConversationRead = async (conversationId: string) => {
   try { await api.post(`/messages/${encodeURIComponent(conversationId)}/read`); } catch { /* best effort */ }
 };
@@ -203,7 +214,7 @@ export const checkEventBooking = async (eventId: string, body: Record<string, an
 /** Take a booking. Sends NO amount — the server prices it. */
 export const createEventBooking = async (eventId: string, body: {
   name: string; email: string; phone: string; noOfPersons: number;
-  participants: { name: string; email: string; phone: string }[]; note?: string;
+  participants: { name: string; email: string; phone: string }[]; note?: string; useBookerForFirstParticipant?: boolean;
   responses?: Record<string, string | boolean>;
 }, guest = false) => unwrap<any>(await (guest ? publicApi : api).post(`/event-bookings/event/${encodeURIComponent(eventId)}`, body), {});
 

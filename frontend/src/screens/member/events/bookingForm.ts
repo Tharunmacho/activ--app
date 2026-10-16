@@ -11,10 +11,10 @@ export const nationalMobile = (value: string): string => {
   if (digits.length > 10 && digits.startsWith('0')) digits = digits.slice(1);
   return digits;
 };
-export const bookingParticipants = (booker: BookingPerson, rows: BookingPerson[], count: number): BookingPerson[] =>
+export const bookingParticipants = (booker: BookingPerson, rows: BookingPerson[], count: number, useBookerForFirstParticipant = true): BookingPerson[] =>
   Array.from({ length: count }, (_, index) => {
     const row = rows[index] || { name: '', email: '', phone: '' };
-    const person = index === 0 && ![row.name, row.email, row.phone].some(value => value.trim()) ? booker : row;
+    const person = useBookerForFirstParticipant && index === 0 && ![row.name, row.email, row.phone].some(value => value.trim()) ? booker : row;
     return { name: person.name.trim(), email: person.email.trim().toLowerCase(), phone: nationalMobile(person.phone) };
   });
 
@@ -37,7 +37,7 @@ export function validateRegistrationAnswers(fields: RegistrationField[] = [], an
   return errors;
 }
 
-export function validateBookingForm(booker: BookingPerson, rows: BookingPerson[], count: number, max: number, fields: RegistrationField[] = [], answers: RegistrationAnswers = {}) {
+export function validateBookingForm(booker: BookingPerson, rows: BookingPerson[], count: number, max: number, fields: RegistrationField[] = [], answers: RegistrationAnswers = {}, useBookerForFirstParticipant = true) {
   const errors = validateRegistrationAnswers(fields, answers);
   if (!booker.name.trim()) errors.name = 'Please enter your name';
   if (!booker.email.trim()) errors.email = 'Please enter your email address';
@@ -48,17 +48,14 @@ export function validateBookingForm(booker: BookingPerson, rows: BookingPerson[]
   if (!Number.isInteger(count) || count < 1) errors.count = 'Enter how many people are attending';
   else if (count > max) errors.count = `At most ${max} per booking`;
   const seenEmail = new Set<string>();
-  const seenPhone = new Set<string>();
-  bookingParticipants(booker, rows, count).forEach((row, i) => {
+  bookingParticipants(booker, rows, count, useBookerForFirstParticipant).forEach((row, i) => {
     if (!row.name) errors[`p${i}.name`] = 'Please enter the participant’s name';
     if (!row.email) errors[`p${i}.email`] = 'Please enter the participant’s email address';
     else if (!EMAIL_RE.test(row.email)) errors[`p${i}.email`] = 'Enter a valid email address';
     if (!row.phone) errors[`p${i}.phone`] = 'Please enter the participant’s mobile number';
     else if (!MOBILE_RE.test(row.phone)) errors[`p${i}.phone`] = 'Enter a valid 10-digit mobile number';
     if (row.email && seenEmail.has(row.email)) errors[`p${i}.email`] = 'Use another email';
-    if (row.phone && seenPhone.has(row.phone)) errors[`p${i}.phone`] = 'Use another mobile number';
     if (row.email) seenEmail.add(row.email);
-    if (row.phone) seenPhone.add(row.phone);
   });
   return errors;
 }
@@ -78,11 +75,12 @@ export const bookingClosed = (event: any, now = Date.now()): boolean => !!(event
 export function bookingState(booking: any, now = Date.now()) {
   const status = String(booking?.status || 'active');
   const payment = String(booking?.payment?.status || 'pending');
+  const needsReview = !!booking?.payment?.reconciliationRequired || (status === 'waitlist' && payment === 'paid');
   const expired = status === 'expired' || (payment === 'pending' && booking?.expiresAt && Date.parse(booking.expiresAt) <= now);
-  const settled = (status === 'active' || (status === 'expired' && payment === 'paid')) && ['paid', 'not_required'].includes(payment);
+  const settled = !needsReview && (status === 'active' || (status === 'expired' && payment === 'paid')) && ['paid', 'not_required'].includes(payment);
   const payable = status === 'active' && payment === 'pending' && !expired && !booking?.eventArchived;
-  const headline = settled ? 'Booking confirmed' : status === 'cancelled' ? 'Booking cancelled' : status === 'waitlist' ? 'You are on the waitlist'
+  const headline = needsReview ? 'Payment received — organiser review needed' : settled ? 'Booking confirmed' : status === 'cancelled' ? 'Booking cancelled' : status === 'waitlist' ? 'You are on the waitlist'
     : payment === 'failed' ? 'Payment failed' : expired ? 'Payment hold expired' : 'Payment not completed';
-  return { status, payment, settled, payable, expired: !!expired, headline,
+  return { status, payment, settled, payable, needsReview, expired: !!expired, headline,
     paymentLabel: payment === 'paid' ? 'Paid' : payment === 'not_required' ? 'Not required' : payment === 'failed' ? 'Failed' : 'Pending' };
 }

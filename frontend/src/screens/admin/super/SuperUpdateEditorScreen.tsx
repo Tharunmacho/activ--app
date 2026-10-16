@@ -14,8 +14,9 @@ import {
   createAnnouncement, updateAnnouncement, listMembershipPlans, uploadCmsMedia, uploadEventAttachment,
   errorText, type UpdateCategory, type MembershipPlanRow,
 } from '../../../services/superApi';
-import { ToggleRow, useRegionTreeAll, useRegionNames, openUrl } from './superKit';
-import { InlineSelect, DateField, toDateInput } from './events/eventKit';
+import { ToggleRow, openUrl } from './superKit';
+import { DateField, toDateInput } from './events/eventKit';
+import UpdateRegionPicker, { updateRegionLabel, type UpdateRegion } from './UpdateRegionPicker';
 
 const CATEGORIES: { value: UpdateCategory; label: string }[] = [
   { value: 'general', label: 'General update' }, { value: 'notice', label: 'Notice' },
@@ -35,10 +36,10 @@ const SuperUpdateEditorScreen: React.FC = () => {
   const [summary, setSummary] = useState(String(a?.summary || ''));
   const [body, setBody] = useState(String(a?.body || ''));
   const [category, setCategory] = useState<UpdateCategory>(a?.category || 'general');
-  const [state, setState] = useState(String(a?.state || ''));
-  const [district, setDistrict] = useState(String(a?.district || ''));
-  const [block, setBlock] = useState(String(a?.block || ''));
-  const [regional, setRegional] = useState(!!a?.state);
+  const [targets, setTargets] = useState<UpdateRegion[]>(a?.targets?.length ? a.targets : a?.state ? [{ state: a.state, district: a.district || '', block: a.block || '' }] : []);
+  const [regional, setRegional] = useState(!!(a?.targets?.length || a?.state));
+  const [includeVisitors, setIncludeVisitors] = useState(!!a?.includeVisitors);
+  const [previewName, setPreviewName] = useState('Tharun');
   const [audience, setAudience] = useState<UpdateAudience>(a?.audience || 'all');
   const [planKeys, setPlanKeys] = useState<string[]>(Array.isArray(a?.planKeys) ? [...a.planKeys] : []);
   const [plans, setPlans] = useState<MembershipPlanRow[]>([]);
@@ -57,8 +58,6 @@ const SuperUpdateEditorScreen: React.FC = () => {
   const [preview, setPreview] = useState(false);
   const pending = useRef(false);
   const mounted = useRef(true);
-  const tree = useRegionTreeAll();
-  const names = useRegionNames(tree, state, district);
   const busy = !!(saving || uploading);
   const chosenAudience = UPDATE_AUDIENCES.find(row => row.value === audience) || UPDATE_AUDIENCES[0];
 
@@ -83,7 +82,8 @@ const SuperUpdateEditorScreen: React.FC = () => {
   const reach = audience === 'plans'
     ? planKeys.map(key => planOptions.find(plan => plan.key === key)?.name || key).join(', ') || 'Choose membership plans'
     : chosenAudience.title;
-  const region = regional ? [state, district, block].filter(Boolean).join(' / ') || 'All regions' : 'All regions';
+  const region = regional ? targets.map(updateRegionLabel).join(', ') || 'Choose at least one region' : 'All regions';
+  const previewText = (value: string) => value.replace(/(?<!\{)\{\s*name\s*\}(?!\})/gi, () => previewName.trim() || 'ACTIVian');
 
   const uploadImage = async () => {
     if (pending.current) return;
@@ -119,14 +119,14 @@ const SuperUpdateEditorScreen: React.FC = () => {
     if (!title.trim()) return fail('Add a title so members know what this update is about.');
     if (status === 'published' && ![body, summary, bannerUrl, attachmentUrl].some(value => value.trim())) return fail('Add a message, an image or a document before publishing.');
     if (audience === 'plans' && !planKeys.length) return fail('Choose at least one membership plan.');
-    if (regional && !state) return fail('Choose a state, or turn off the region restriction.');
+    if (regional && !targets.length) return fail('Choose at least one region, or turn off the region restriction.');
     const day = expiresAt.trim();
     const expiry = day ? new Date(`${day}T23:59:59`) : null;
     if (day && (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !expiry || Number.isNaN(expiry.getTime()) || toDateInput(expiry.toISOString()) !== day)) return fail('Choose a valid expiry date, or leave it blank.');
     if (status === 'published' && expiry && expiry.getTime() < Date.now()) return fail('Choose today or a future expiry date to publish this update.');
     const payload = {
       title: title.trim(), summary: summary.trim(), body: body.trim(), category,
-      state: regional ? state.trim() : '', district: regional && state ? district.trim() : '', block: regional && state && district ? block.trim() : '',
+      targets: regional ? targets : [], includeVisitors: includeVisitors && audience === 'all' && !regional,
       audience, planKeys: audience === 'plans' ? planKeys : [], pinned, status,
       bannerUrl: bannerUrl.trim(), bannerAlt: bannerUrl ? bannerAlt.trim() : '',
       attachmentUrl: attachmentUrl.trim(), attachmentLabel: attachmentUrl ? attachmentLabel.trim() : '', expiresAt: expiry ? expiry.toISOString() : '',
@@ -154,8 +154,10 @@ const SuperUpdateEditorScreen: React.FC = () => {
       <PremiumInput tone="admin" label="Title" value={title} onChangeText={setTitle} required maxLength={200}
         placeholder="e.g. Membership renewal for this year" inputStyle={s.input} editable={!busy} />
       <PremiumInput tone="admin" label="Message" value={body} onChangeText={setBody} multiline editable={!busy}
-        placeholder={'Dear members,\n\nShare the details and what members should do next.\n\nThank you,\nTeam ACTIV'}
+        placeholder={'Dear {Name},\n\nShare the details and what members should do next.\n\nThank you,\nTeam ACTIV'}
         hint="A text update is enough. Add a poster or document only if it helps." inputStyle={{ ...s.input, minHeight: 170 }} />
+      <ConsoleButton kind="soft" icon="person" label="Insert member name" disabled={busy} onPress={() => setBody(value => value ? `${value}{Name}` : 'Dear {Name},\n\n')} />
+      <Text style={s.hint}>Use {'{Name}'} in the title, message or summary. Each member sees their profile name. Visitors and members without a name see ACTIVian.</Text>
     </ConsoleCard>
     <ConsoleCard style={s.card}>
       <Text style={s.title}>Add an image or document</Text>
@@ -201,15 +203,9 @@ const SuperUpdateEditorScreen: React.FC = () => {
           <View style={s.action}><Text style={s.planName}>{plan.name}</Text>{plan.retired ? <Text style={s.small}>Retired plan · existing holders</Text> : null}</View>
         </TouchableOpacity>)}
       </View> : null}
-      <ToggleRow label="Limit to a region" value={regional} onChange={setRegional} last />
-      {regional ? <View style={s.regionFields}>
-        <InlineSelect label="State" value={state} options={names.states} placeholder="Choose state" disabled={busy}
-          onChange={value => { setState(value); setDistrict(''); setBlock(''); }} />
-        <InlineSelect label="District (optional)" value={district} options={names.districts} disabled={busy || !state}
-          placeholder={state ? 'All districts' : 'Choose a state first'} emptyLabel="All districts" onChange={value => { setDistrict(value); setBlock(''); }} />
-        <InlineSelect label="Block (optional)" value={block} options={names.blocks} disabled={busy || !district}
-          placeholder={district ? 'All blocks' : 'Choose a district first'} emptyLabel="All blocks" onChange={setBlock} />
-      </View> : <Text style={s.small}>Reaches the selected members in every region.</Text>}
+      <ToggleRow label="Limit to selected regions" value={regional} onChange={setRegional} last />
+      {regional ? <UpdateRegionPicker value={targets} onChange={setTargets} disabled={busy} /> : <Text style={s.small}>Reaches the selected members in every region.</Text>}
+      {audience === 'all' && !regional ? <><ToggleRow label="Also show to visitors" value={includeVisitors} onChange={setIncludeVisitors} last /><Text style={s.small}>Makes this update public and notifies visitors who enabled app notifications.</Text></> : <Text style={s.small}>Visitor updates are available only for all members in all regions.</Text>}
     </ConsoleCard>
     <ConsoleCard style={s.card}>
       <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: more }} onPress={() => setMore(value => !value)} style={s.disclosure}>
@@ -231,10 +227,11 @@ const SuperUpdateEditorScreen: React.FC = () => {
       {wasPublished ? <Text style={s.hint}>Moving to draft removes this update from members’ feeds.</Text> : null}
       <ConsoleButton kind="soft" icon="visibility" label={preview ? 'Hide preview' : 'Preview update'} onPress={() => setPreview(value => !value)} />
       {preview ? <View style={s.preview}>
+        <PremiumInput tone="admin" label="Example recipient name" value={previewName} onChangeText={setPreviewName} placeholder="ACTIVian (visitor)" hint="Preview only; each member receives their own profile name." />
         {bannerUrl ? <FitImage uri={resolveMediaUrl(bannerUrl)} mode="auto" minRatio={0.7} maxRatio={2.5} style={s.poster} borderRadius={10} accessibilityLabel={bannerAlt || 'Update poster'} /> : null}
-        <Text style={s.previewTitle}>{title.trim() || 'Your update title'}</Text>
-        {summary.trim() ? <Text style={s.previewSummary}>{summary.trim()}</Text> : null}
-        {body.trim() ? <Text style={s.previewBody}>{body.trim()}</Text> : null}
+        <Text style={s.previewTitle}>{previewText(title).trim() || 'Your update title'}</Text>
+        {summary.trim() ? <Text style={s.previewSummary}>{previewText(summary).trim()}</Text> : null}
+        {body.trim() ? <Text style={s.previewBody}>{previewText(body).trim()}</Text> : null}
         {attachmentUrl ? <Text style={s.documentText}>Document: {attachmentLabel || 'Attached document'}</Text> : null}
       </View> : null}
       {error ? <Text accessibilityRole="alert" style={s.error}>{error}</Text> : null}

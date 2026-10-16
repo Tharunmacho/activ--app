@@ -41,7 +41,7 @@ const press = async (label: string) => {
   if (!button) throw new Error(`Button missing: ${label}. Available: ${tree.root.findAll(b => typeof b.props.onPress === 'function').map(b => b.props.accessibilityLabel || b.props.label).join(', ')}`);
   await act(async () => button.props.onPress());
 };
-const render = async () => { await act(async () => { tree = Renderer.create(<EventBookingScreen navigation={navigation} route={{ params: { eventId: 'conference' } }} />); }); };
+const render = async (params = {}) => { await act(async () => { tree = Renderer.create(<EventBookingScreen navigation={navigation} route={{ params: { eventId: 'conference', ...params } }} />); }); };
 const confirm = async () => { await press('Review booking'); expect(createEventBooking).not.toHaveBeenCalled(); await press('Confirm booking'); };
 
 beforeEach(() => {
@@ -72,6 +72,39 @@ test('one seat visibly fills Participant 1 and follows changes to the booking co
   expect(createEventBooking).toHaveBeenCalledWith('conference', expect.objectContaining({
     noOfPersons: 1, participants: [{ name: 'Booker', email: 'booker@example.test', phone: '9000000001' }],
   }), false);
+});
+
+test('book for someone else requires the friend and never substitutes the booker for an empty row', async () => {
+  await render({ forOthers: true });
+  expect(inputs()[3].props.value).toBe(''); expect(inputs()[4].props.value).toBe('');
+  await edit(0, 'Updated Booker'); expect(inputs()[3].props.value).toBe('');
+  await press('Review booking');
+  expect(checkEventBooking).not.toHaveBeenCalled(); expect(createEventBooking).not.toHaveBeenCalled();
+  expect(inputs()[3].props.error).toBeTruthy(); expect(inputs()[4].props.error).toBeTruthy(); expect(inputs()[5].props.error).toBeTruthy();
+  await edit(3, 'Friend'); await edit(4, 'friend@example.test'); await edit(5, '9000000001');
+  await confirm();
+  expect(createEventBooking).toHaveBeenCalledWith('conference', expect.objectContaining({ useBookerForFirstParticipant: false, participants: [{ name: 'Friend', email: 'friend@example.test', phone: '9000000001' }] }), false);
+});
+
+test('confirmed receipt starts another booking with fresh availability and an empty attendee', async () => {
+  (getEventBooking as jest.Mock).mockResolvedValueOnce({ bookingRef: 'EXISTING', eventId: 'conference', status: 'active', payment: { status: 'paid' }, totalAmount: 600 });
+  await render({ ref: 'EXISTING' });
+  expect(screenText()).toContain('Booking confirmed');
+  await press('Book for someone else');
+  expect(getBookableEvent).toHaveBeenLastCalledWith('conference', false);
+  expect(inputs()[0].props.value).toBe('Booker'); expect(inputs()[3].props.value).toBe('');
+  expect(navigation.setParams).toHaveBeenCalledWith({ ref: undefined, forOthers: true });
+  await press('Review booking'); expect(createEventBooking).not.toHaveBeenCalled(); expect(inputs()[4].props.error).toBeTruthy();
+});
+
+test('late paid booking awaiting organiser review never displays a confirmed ticket or another payment action', async () => {
+  (getEventBooking as jest.Mock).mockResolvedValueOnce({ bookingRef: 'REVIEW', eventId: 'conference', status: 'waitlist', payment: { status: 'paid', reconciliationRequired: true }, totalAmount: 600 });
+  await render({ ref: 'REVIEW' });
+  expect(screenText()).toContain('Payment received — organiser review needed');
+  expect(screenText()).toContain('Please do not pay again');
+  expect(screenText()).not.toContain('Booking confirmed');
+  expect(screenText()).not.toContain('no payment is due');
+  expect(createEventBooking).not.toHaveBeenCalled();
 });
 
 test('a single guest can differ from the booking contact, and the same data reaches check and create', async () => {

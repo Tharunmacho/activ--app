@@ -428,6 +428,7 @@ const MemberEventDetailScreen = ({ navigation, route, publicAccess = false }: an
                 ) : null}
               </View>
               {fromBooking ? <GradientButton label="View your ticket" icon="confirmation-number" onPress={ticket} style={{ marginTop: SPACE.md }} /> : null}
+              {!past && gate.open ? <GradientButton label="Book for someone else" variant="outline" icon="person-add" onPress={() => navigation.navigate('EventBooking', { eventId: String(e.id || e._id), forOthers: true })} style={{ marginTop: SPACE.md }} /> : null}
               {asArray<any>(registration?.responses).length ? <View style={styles.receipt}><Text style={styles.receiptHead}>REGISTRATION DETAILS</Text>{asArray<any>(registration.responses).map((answer, index) => <ReceiptLine key={answer.key || index} label={answer.label || answer.key} value={answer.value || '—'} />)}</View> : null}
               {registration?.payment?.status === 'paid' ? (
                 <View style={styles.receipt}>

@@ -13,7 +13,7 @@ import type { GlyphTone } from '../../ui';
 import {
   listNotifications, markNotificationRead, markAllNotificationsRead, listAnnouncements, listMemberEvents,
 } from '../../services/memberApi';
-import { getUserData } from '../../services/api';
+import api, { getUserData } from '../../services/api';
 import { notificationDestination } from '../../services/pushNotifications';
 
 /**
@@ -335,6 +335,7 @@ const NotificationScreen = () => {
 
   const open = (item: FeedItem) => {
     if (item.unread) markOne(item);
+    if (item.kind === 'notification') void api.patch(`/notifications/${encodeURIComponent(item.id.replace(/^n:/, ''))}/open`, { channel: 'in_app' }).catch(() => undefined);
     try {
       navigation.navigate(item.go.route, item.go.params);
     } catch (err) {
