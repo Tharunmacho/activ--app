@@ -12,16 +12,49 @@ const TOKEN_KEY = '@activ_push_token';
 const ASKED_KEY = '@activ_push_permission_asked';
 export const SESSION_CHANGED = 'activ:session-changed';
 let pending: Record<string, string> | null = null;
-let syncing = false;
+type RegistrationResult = 'enabled' | 'disabled' | 'signed-out' | 'unconfigured' | 'failed';
+const CANCELLED = Symbol('push-registration-cancelled');
+type RegistrationAttempt = { version: number; promise: Promise<RegistrationResult>; cancelled: Promise<typeof CANCELLED>; cancel: () => void };
+let syncing: RegistrationAttempt | null = null;
+let deletingToken: Promise<void> | null = null;
 let syncAgain = false;
-let detaching = false;
+let detaching = 0;
+let sessionVersion = 0;
 export const firebaseReady = () => getApps().length > 0;
+const accountId = (user: any) => String(user?.memberId || user?.id || user?._id || user?.userId || '');
+
+async function waitForSdk<T>(operation: Promise<T>, attempt: RegistrationAttempt): Promise<T> {
+  const result = await Promise.race([operation, attempt.cancelled]);
+  if (result === CANCELLED) throw CANCELLED;
+  return result as T;
+}
+async function withinCleanupDeadline(operation: Promise<unknown>): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([operation.then(() => true), new Promise<boolean>(resolve => {
+      timer = setTimeout(() => resolve(false), 5000);
+    })]);
+  } finally { if (timer) clearTimeout(timer); }
+}
+async function invalidateFirebaseToken() {
+  if (!firebaseReady()) return;
+  if (!deletingToken) {
+    const deletion = Promise.resolve().then(() => deleteToken(getMessaging())).catch(() => undefined);
+    deletingToken = deletion;
+    void deletion.then(() => { if (deletingToken === deletion) deletingToken = null; });
+  }
+  // The native SDK has no timeout. Do not trap logout, but retain this promise
+  // so a late deletion cannot race a new account's getToken/registration.
+  await withinCleanupDeadline(deletingToken);
+}
 
 export function notificationDestination(data: Record<string, any> | null = {}): { route: string; params?: any } {
   data = data || {};
-  if (data.kind === 'message' && data.conversationId) return { route: 'MessageThread', params: { conversationId: data.conversationId } };
+  const event = String(data.event || '').toUpperCase();
+  if (data.kind === 'message' && data.conversationId) return { route: 'MessageThread', params: { conversationId: data.conversationId, ...(data.from ? { name: String(data.from) } : {}) } };
   if (data.announcementId || data.kind === 'announcement') return { route: 'UpdateDetail', params: { id: data.announcementId || data.sourceId } };
-  if (data.eventId) return { route: data.bookingRef ? 'EventBooking' : 'MemberEventDetail', params: { eventId: data.eventId, id: data.eventId, ...(data.bookingRef ? { ref: data.bookingRef } : {}) } };
+  if (data.bookingRef) return { route: 'EventBooking', params: { eventId: data.eventId || '', ...(data.eventId ? { id: data.eventId } : {}), ref: data.bookingRef } };
+  if (data.eventId) return { route: 'MemberEventDetail', params: { eventId: data.eventId, id: data.eventId } };
   if (['news', 'gallery', 'scheme'].includes(data.kind)) {
     const path = data.kind === 'news' ? (data.slug ? `/news/${encodeURIComponent(data.slug)}` : '/news')
       : data.kind === 'gallery' ? '/gallery' : '/schemes';
@@ -29,20 +62,33 @@ export function notificationDestination(data: Record<string, any> | null = {}): 
     const destination = nativeContentRoute(path, title);
     if (destination) return { route: destination.name, params: destination.params };
   }
+  if (event.startsWith('DONATION_')) return { route: 'MemberDonations' };
+  // Failed, outstanding and business payments are not membership receipts.
+  // PaymentResult fetches the current server state and offers the valid action.
+  if (['PAYMENT_REQUIRED', 'PAYMENT_FAILED', 'COMPANY_PAYMENT_CONFIRMED'].includes(event)) {
+    if (data.orderId) return { route: 'PaymentResult', params: { orderId: data.orderId } };
+    return { route: event === 'COMPANY_PAYMENT_CONFIRMED' ? 'ManageCompanies' : 'MembershipPlans' };
+  }
+  if (['MEMBERSHIP_RENEWAL_DUE', 'MEMBERSHIP_PLAN_ADVANCED'].includes(event)) return { route: 'MembershipPlanDetails' };
   if (data.orderId) return { route: 'PaymentSuccess', params: { orderId: data.orderId } };
+  if (/^(MEMBERSHIP_|APPLICATION_|PLATINUM_)/.test(event) || ['ACCOUNT_REGISTERED', 'CORRECTION_REQUESTED'].includes(event)) return { route: 'ApplicationStatus' };
   return { route: 'MemberNotifications' };
 }
 export async function flushPushNavigation() {
   if (!pending || !navigationRef.isReady()) return;
-  const user = await getUserData();
+  const data = pending;
+  const version = sessionVersion;
   const token = await getAuthToken();
+  const user = await getUserData();
+  const latestUser = await getUserData();
+  if (await getAuthToken() !== token || accountId(latestUser) !== accountId(user)) return;
+  if (pending !== data || version !== sessionVersion || detaching) return;
   if (!token || !user) return;
-  const userId = String(user.memberId || user.id || user._id || user.userId || '');
-  if (pending.userId && pending.userId !== userId) { pending = null; return; }
+  if (!data.userId || data.userId !== accountId(user)) { pending = null; return; }
   // Session restoration chooses a landing screen before a push opens its target.
-  if (['Onboarding', 'Login', 'Welcome', 'SocialSignIn'].includes(navigationRef.getCurrentRoute()?.name || '')) return;
-  const target = pending.kind === 'test' && user.role === 'super_admin'
-    ? { route: 'SuperNotifications', params: { view: 'delivery' } } : notificationDestination(pending);
+  if (['Onboarding', 'Login', 'AdminLogin', 'Welcome', 'SocialSignIn'].includes(navigationRef.getCurrentRoute()?.name || '')) return;
+  const target = data.kind === 'test' && user.role === 'super_admin'
+    ? { route: 'SuperNotifications', params: { view: 'delivery' } } : notificationDestination(data);
   pending = null;
   (navigationRef.navigate as any)(target.route, target.params);
 }
@@ -57,52 +103,92 @@ export async function pushPermission() {
   const status = await hasPermission(getMessaging());
   return (status === AuthorizationStatus.AUTHORIZED || status === AuthorizationStatus.PROVISIONAL) ? 'enabled' : 'disabled';
 }
-async function allowNotifications(explicit = false) {
-  if (await pushPermission() === 'enabled') return true;
+async function allowNotifications(explicit: boolean, attempt: RegistrationAttempt) {
+  if (await waitForSdk(pushPermission(), attempt) === 'enabled') return true;
   if (!explicit && await AsyncStorage.getItem(ASKED_KEY)) return false;
+  if (detaching || attempt.version !== sessionVersion) throw CANCELLED;
   await AsyncStorage.setItem(ASKED_KEY, 'true');
+  if (detaching || attempt.version !== sessionVersion) throw CANCELLED;
   if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
-    return (await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS)) === PermissionsAndroid.RESULTS.GRANTED;
+    return (await waitForSdk(PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS), attempt)) === PermissionsAndroid.RESULTS.GRANTED;
   }
-  const permission = await requestPermission(getMessaging());
+  const permission = await waitForSdk(requestPermission(getMessaging()), attempt);
   return (permission === AuthorizationStatus.AUTHORIZED || permission === AuthorizationStatus.PROVISIONAL);
 }
-export async function syncPushRegistration(explicit = false) {
-  if (detaching || !firebaseReady()) return;
-  if (syncing) { syncAgain = true; return; }
-  syncing = true;
+async function registerDevice(explicit: boolean, attempt: RegistrationAttempt): Promise<RegistrationResult> {
+  const version = attempt.version;
   try {
     const auth = await getAuthToken();
-    if (!auth) return;
-    if (!(await allowNotifications(explicit))) {
+    const user = await getUserData();
+    if (!auth || !accountId(user)) return 'signed-out';
+    const allowed = await allowNotifications(explicit, attempt);
+    if (detaching || version !== sessionVersion || await getAuthToken() !== auth) return 'signed-out';
+    if (!allowed) {
       const saved = await AsyncStorage.getItem(TOKEN_KEY);
-      if (saved) await api.delete('/notifications/push/devices', { data: { token: saved } });
-      return;
+      if (saved) await api.delete('/notifications/push/devices', { data: { token: saved }, timeout: 5000 });
+      await AsyncStorage.removeItem(TOKEN_KEY);
+      return 'disabled';
     }
-    const token = await getToken(getMessaging());
-    if (detaching || await getAuthToken() !== auth) return;
-    await api.post('/notifications/push/devices', { token, platform: Platform.OS, enabled: true });
+    if (deletingToken && !await waitForSdk(withinCleanupDeadline(deletingToken), attempt)) return 'failed';
+    if (detaching || version !== sessionVersion) return 'signed-out';
+    const token = await waitForSdk(getToken(getMessaging()), attempt);
+    if (detaching || version !== sessionVersion || await getAuthToken() !== auth) return 'signed-out';
+    // Save before the request so logout can revoke a token even when the server
+    // accepted registration but the response was lost or arrived during logout.
     await AsyncStorage.setItem(TOKEN_KEY, token);
-  } catch { /* Connectivity/configuration must never block login. Retry on next foreground. */ }
+    if (detaching || version !== sessionVersion || await getAuthToken() !== auth) return 'signed-out';
+    await api.post('/notifications/push/devices', { token, platform: Platform.OS, enabled: true }, { timeout: 5000 });
+    return !detaching && version === sessionVersion && await getAuthToken() === auth ? 'enabled' : 'signed-out';
+  } catch (error) {
+    // Connectivity/configuration must never block login. Retry on foreground.
+    return error === CANCELLED ? 'signed-out' : 'failed';
+  }
+}
+export async function syncPushRegistration(explicit = false): Promise<RegistrationResult> {
+  if (detaching) return 'signed-out';
+  if (!firebaseReady()) return 'unconfigured';
+  if (syncing) {
+    // An explicit settings action must wait for registration and preserve its
+    // permission request, even if a passive foreground sync is already running.
+    if (explicit) { await syncing.promise; return syncPushRegistration(true); }
+    syncAgain = true;
+    return syncing.promise;
+  }
+  let cancel!: () => void;
+  const cancelled = new Promise<typeof CANCELLED>(resolve => { cancel = () => resolve(CANCELLED); });
+  const attempt: RegistrationAttempt = { version: sessionVersion, cancelled, cancel, promise: Promise.resolve('signed-out') };
+  syncing = attempt;
+  attempt.promise = registerDevice(explicit, attempt);
+  try { return await attempt.promise; }
   finally {
-    syncing = false;
-    if (syncAgain) { syncAgain = false; void syncPushRegistration(); }
+    if (syncing === attempt) syncing = null;
+    if (syncAgain) { syncAgain = false; if (!detaching) void syncPushRegistration(); }
   }
 }
 export async function detachPushDevice(server = true) {
-  detaching = true;
+  detaching += 1;
+  sessionVersion += 1;
   pending = null;
+  const registration = syncing;
+  registration?.cancel();
   try {
+    // Finish an in-flight registration before removing it. A 401 handler calls
+    // this with server=false from inside that request, so it must never wait on
+    // the same request; deleting the FCM token still invalidates its delivery.
+    if (server && registration) await registration.promise;
     const token = await AsyncStorage.getItem(TOKEN_KEY);
     if (server && token && await getAuthToken()) await api.delete('/notifications/push/devices', { data: { token }, timeout: 5000 }).catch(() => undefined);
-    if (firebaseReady()) await deleteToken(getMessaging()).catch(() => undefined);
+    await invalidateFirebaseToken();
     await AsyncStorage.removeItem(TOKEN_KEY);
-  } finally { detaching = false; }
+  } finally { detaching -= 1; }
 }
 export async function enablePushFromSettings() {
   if (!firebaseReady()) { Alert.alert('Notifications are being prepared', 'Push notifications will be available after ACTIV finishes notification setup and publishes the updated app.'); return; }
-  await syncPushRegistration(true);
-  if (await pushPermission() !== 'enabled') await Linking.openSettings();
+  const result = await syncPushRegistration(true);
+  if (result === 'disabled') await Linking.openSettings();
+  else if (result === 'failed') Alert.alert('Could not enable notifications', 'Please check your connection and try again. If this continues, contact ACTIV support.');
+  else if (result === 'signed-out') Alert.alert('Sign in to enable notifications', 'Sign in to your ACTIV account, then try again.');
+  else if (result === 'enabled') Alert.alert('Notifications enabled', 'This phone is registered for updates available to your ACTIV account.');
 }
 export function registerBackgroundPush() {
   if (firebaseReady()) setBackgroundMessageHandler(getMessaging(), async () => {
@@ -115,8 +201,12 @@ export function usePushNotifications() {
     const messaging = getMessaging();
     void syncPushRegistration();
     const foreground = onMessage(messaging, async message => {
+      const version = sessionVersion;
+      const auth = await getAuthToken();
       const user = await getUserData();
-      if (!await getAuthToken() || String(message.data?.userId || '') !== String(user?.memberId || user?.id || user?._id || user?.userId || '')) return;
+      if (!auth || detaching || version !== sessionVersion || !accountId(user) || !message.data?.userId || message.data.userId !== accountId(user)) return;
+      const latestUser = await getUserData();
+      if (await getAuthToken() !== auth || accountId(latestUser) !== accountId(user) || detaching || version !== sessionVersion) return;
       DeviceEventEmitter.emit('activ:notification');
       Alert.alert('ACTIV update', 'Dear member, you have a new notification.', [{ text: 'Later', style: 'cancel' }, { text: 'View', onPress: () => void receiveOpen(message) }]);
     });

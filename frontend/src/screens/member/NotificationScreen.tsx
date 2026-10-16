@@ -136,15 +136,8 @@ const notificationLook = (row: any): { icon: string; tone: GlyphTone } => {
 
 /** Where a stored notification opens: its thread, its receipt, else the application. */
 const notificationTarget = (row: any): { route: string; params?: any } => {
-  const data = row?.data || {};
-  if (data.sourceId || data.eventId || data.announcementId) return notificationDestination(data);
-  if (data?.kind === 'message' && data?.conversationId) {
-    return { route: 'MessageThread', params: { conversationId: String(data.conversationId), name: data?.from } };
-  }
-  if (data?.orderId && String(data?.event || '').toUpperCase().includes('MEMBERSHIP')) {
-    return { route: 'PaymentSuccess', params: { orderId: String(data.orderId) } };
-  }
-  return { route: 'ApplicationStatus' };
+  const target = notificationDestination(row?.data || {});
+  return target.route === 'MemberNotifications' ? { route: 'ApplicationStatus' } : target;
 };
 
 async function buildFeed(acct: string): Promise<FeedItem[]> {
