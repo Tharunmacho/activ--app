@@ -3,8 +3,10 @@ import { StyleSheet, View } from 'react-native';
 import { getPublicNewsArticle } from '../../services/publicContent';
 import { usePublicResource } from '../../services/usePublicResource';
 import { BRAND } from '../../ui';
-import { ActionLink, Body, ContentLayout, ExtraFields, Photo } from './PublicContentKit';
+import { ActionLink, Body, ContentLayout, ExtraFields, Heading, Photo } from './PublicContentKit';
 import { WEBSITE_PATHS } from '../../config/website.config';
+import { PublicShareButton } from '../../components/PublicShareButton';
+import { newsArticlePath, newsAttachments, newsLinks, newsMedia, NewsMedia, newsWebUrl } from '../../utils/newsContent';
 
 const escape = (value: string) => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 // Only image markup is loaded here. The browser's viewport supports native pinch
@@ -16,7 +18,7 @@ export default function PublicNewsArticleScreen({ slug, navigation }: { slug: st
   const resource = usePublicResource(navigation, 'news:' + slug, signal => getPublicNewsArticle(slug, signal));
   const article = resource.data;
   return <ContentLayout navigation={navigation} title={article?.title || 'ACTIV News'} subtitle={newsMetadata(article)} art="news" resource={resource} sharePath={WEBSITE_PATHS.article(article?.slug || slug)}>
-    {!!article && <NewsArticleContent article={article} navigation={navigation} />}
+    {!!article && <NewsArticleContent article={article} navigation={navigation} path={WEBSITE_PATHS.article(article?.slug || slug)} />}
   </ContentLayout>;
 }
 
@@ -25,16 +27,35 @@ export function newsMetadata(article: any): string {
   const published = article?.publishedAt ? new Date(article.publishedAt) : null;
   return [article?.category, published && Number.isFinite(published.getTime()) ? published.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '', article?.location].filter(Boolean).join(' · ');
 }
-export function NewsArticleContent({ article, navigation }: { article: any; navigation: any }) {
-  if (!article) return null;
+export function NewsMediaItem({ media, navigation }: { media: NewsMedia; navigation: any }) {
+  // Videos and external services are opened only after an explicit tap. Images
+  // use the existing resized source; the full original opens in PhotoViewer.
+  return media.type === 'video' ? <ActionLink navigation={navigation} href={media.url} label={media.alt || 'Open video'} />
+    : <Photo url={media.url} alt={media.alt} caption={media.caption} document closeLabel="Close image" />;
+}
+
+export function NewsResourceLinks({ article, navigation }: { article: any; navigation: any }) {
+  const documents = newsAttachments(article), links = newsLinks(article);
   return <>
-    <Photo url={article.image?.url || article.imageUrl} alt={article.image?.alt || article.title} document closeLabel="Close image" />
+    {documents.length > 0 && <View><Heading>Documents</Heading>{documents.map(document => <ActionLink key={document.url} navigation={navigation} href={document.url} label={document.label} filename={document.filename} download />)}</View>}
+    {links.length > 0 && <View><Heading>Related links</Heading>{links.map(link => <ActionLink key={link.url} navigation={navigation} href={link.url} label={link.label} />)}</View>}
+  </>;
+}
+
+export function NewsArticleContent({ article, navigation, path }: { article: any; navigation: any; path?: string }) {
+  if (!article) return null;
+  const [cover, ...photos] = newsMedia(article);
+  return <>
+    <PublicShareButton path={newsArticlePath(article) || path || ''} title={article.title || 'ACTIV news'} label="Share this news" style={s.share} />
+    {!!cover && <NewsMediaItem media={cover} navigation={navigation} />}
     {!!article.summary && <View style={s.summary}><Body value={article.summary} navigation={navigation} /></View>}
     <Body value={article.body} navigation={navigation} />
-    {(Array.isArray(article.photos) ? article.photos : []).filter((photo: any) => photo?.url && !photo.isHidden).map((photo: any, i: number) => <Photo key={`${photo.url}-${i}`} url={photo.url} alt={photo.alt || article.title} caption={photo.caption} document closeLabel="Close image" />)}
+    {photos.length > 0 && <Heading>More photos & media</Heading>}
+    {photos.map(photo => <NewsMediaItem key={photo.url} media={photo} navigation={navigation} />)}
+    <NewsResourceLinks article={article} navigation={navigation} />
     <ExtraFields fields={article.extraFields} navigation={navigation} />
-    <ActionLink navigation={navigation} href={article.externalUrl} label="Read the original source" />
+    <ActionLink navigation={navigation} href={newsWebUrl(article.externalUrl)} label="Read the original source" />
     <ActionLink navigation={navigation} href="/news" label="All news" />
   </>;
 }
-const s = StyleSheet.create({ summary: { paddingLeft: 16, borderLeftWidth: 3, borderLeftColor: BRAND.blue } });
+const s = StyleSheet.create({ summary: { paddingLeft: 16, borderLeftWidth: 3, borderLeftColor: BRAND.blue }, share: { alignSelf: 'stretch', minHeight: 48 } });

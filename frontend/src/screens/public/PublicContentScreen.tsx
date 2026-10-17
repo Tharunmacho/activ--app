@@ -46,7 +46,7 @@ export default function PublicContentScreen({ navigation, route }: any) {
     </>}
     {page?.kind === 'zones' && <ExploreZones zones={page.items || []} openPage={open} />}
     {page?.kind === 'album' && <Album key={path} page={page} navigation={navigation} overview={!/\/photo\//.test(path)} />}
-    {page?.kind === 'article' && <Article item={page.item} navigation={navigation} />}
+    {page?.kind === 'article' && <Article item={page.item} navigation={navigation} path={path} />}
     {page?.kind === 'scheme' && <Scheme item={page.item} navigation={navigation} />}
     {page?.kind === 'region' && <PublicRegionContent page={page} path={path} navigation={navigation} offset={offset} onOffset={setOffset} />}
   </ContentLayout>;
@@ -147,8 +147,8 @@ function Album({ page, navigation, overview }: { page: PublicPageData; navigatio
     </>}
   </>;
 }
-function Article({ item, navigation }: { item: any; navigation: any }) {
-  return <NewsArticleContent article={item} navigation={navigation} />;
+function Article({ item, navigation, path }: { item: any; navigation: any; path: string }) {
+  return <NewsArticleContent article={item} navigation={navigation} path={path} />;
 }
 function Scheme({ item, navigation }: { item: any; navigation: any }) {
   return <>

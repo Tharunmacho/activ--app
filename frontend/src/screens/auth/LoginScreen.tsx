@@ -303,6 +303,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             </Pressable>
           ))}
         </View>
+        <Text style={{ color: PALETTE.textMuted, fontSize: 14, lineHeight: 21, textAlign: 'center', marginBottom: SPACE.lg }}>Signed up with Google, LinkedIn or Facebook? Use the same sign-in option. No ACTIV password is needed.</Text>
 
         {/* The way to the admin sign-in, below everything a member needs.
             Pads itself clear of the Android navigation bar. */}

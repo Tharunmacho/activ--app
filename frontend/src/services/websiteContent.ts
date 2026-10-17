@@ -3,6 +3,7 @@ import api from './api';
 import { resolveMediaUrl } from '../config/api.config';
 import { WEBSITE_PATHS } from '../config/website.config';
 import { publishedExploreZones } from '../utils/exploreRegions';
+import { newsArticlePath, newsMedia } from '../utils/newsContent';
 
 /**
  * ============================================================================
@@ -151,10 +152,10 @@ export const toExploreNews = (rows: any[], count = 3): NewsTeaser[] => arr(rows)
         key: slug || str(n?.id) || String(i),
         title: str(n?.title),
         summary: str(n?.summary),
-        image: resolveMediaUrl(n?.image?.url || n?.imageUrl || ''),
+        image: newsMedia(n).find(media => media.type === 'image')?.url || '',
         category: str(n?.category),
         date: str(n?.displayDate) || str(n?.publishedAt),
-        path: slug ? WEBSITE_PATHS.article(slug) : WEBSITE_PATHS.news,
+        path: newsArticlePath(n) || WEBSITE_PATHS.news,
         external,
       };
     });

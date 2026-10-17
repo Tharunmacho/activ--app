@@ -1,11 +1,16 @@
-import { Alert, Linking } from 'react-native';
+import { Alert, Linking, Platform } from 'react-native';
 import { nativeContentRoute } from './nativeContentRoute';
 import { publicActionFor } from '../utils/publicBrowse';
 import { openPublicAction } from './publicNavigation';
-import { downloadPublicFile, isPublicDownloadUrl } from './publicDownload';
+import { downloadPublicFile, isPublicDownloadUrl, publicDownloadUrl } from './publicDownload';
 
-export function openPublicAttachment(path: string) {
-  void downloadPublicFile(path).then(result => Alert.alert('Download started', `${result.filename}\nCheck Android Downloads for progress and completion.`))
+export function openPublicAttachment(path: string, filename?: string) {
+  if (Platform.OS === 'ios') {
+    try { void Linking.openURL(publicDownloadUrl(path)).catch(() => Alert.alert('Could not open document', 'Please try again.')); }
+    catch (error: any) { Alert.alert('Could not open document', error?.message || 'Please choose a public HTTPS file.'); }
+    return;
+  }
+  void downloadPublicFile(path, filename).then(result => Alert.alert('Download started', `${result.filename}\nCheck Android Downloads for progress and completion.`))
     .catch(error => Alert.alert('Download could not start', error?.message || 'Please try again.'));
 }
 /** Shared link boundary for guests, members, CMS links and legacy saved routes. */

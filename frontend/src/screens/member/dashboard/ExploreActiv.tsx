@@ -255,7 +255,7 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
                       {n.date ? <Text style={x.newsDate} maxFontSizeMultiplier={1.2}>{shortDate(n.date) || n.date}</Text> : null}
                     </View>
                   </PressableScale>
-                  <PublicShareButton path={n.path} title={n.title || 'ACTIV news'} style={{ marginHorizontal: SPACE.md, marginBottom: SPACE.md }} />
+                  <PublicShareButton path={n.path} title={n.title || 'ACTIV news'} label="Share news" style={{ marginHorizontal: SPACE.md, marginBottom: SPACE.md }} />
                   </View>
                 ))}
               </ScrollView>

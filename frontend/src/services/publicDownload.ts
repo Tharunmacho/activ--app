@@ -7,7 +7,7 @@ const fileExtension = /\.(pdf|docx?|xlsx?|pptx?|csv|txt|rtf|odt|ods|odp|zip|rar|
 const pending = new Map<string, Promise<PublicDownloadReceipt>>();
 const recent = new Map<string, { receipt: PublicDownloadReceipt; at: number }>();
 
-function publicFileUrl(value: string): string {
+export function publicDownloadUrl(value: string): string {
   const raw = String(value || '').trim();
   if (!raw || /[\u0000-\u0020\u007f\\]/.test(raw)) throw new Error('Choose a valid public HTTPS file link.');
   // Only genuine relative uploads are re-anchored. Never rewrite an external
@@ -24,7 +24,7 @@ function publicFileUrl(value: string): string {
 /** Route known CMS documents/media to Downloads instead of opening a browser. */
 export function isPublicDownloadUrl(value: string): boolean {
   try {
-    const url = publicFileUrl(value);
+    const url = publicDownloadUrl(value);
     const path = decodeURIComponent(url.replace(/^https:\/\/[^/]+/i, '').split('?')[0]);
     return fileExtension.test(path) || /^\/uploads\/[^?]+/i.test(path);
   } catch { return false; }
@@ -41,7 +41,7 @@ function downloadName(url: string, preferred?: string): string {
 
 /** Acknowledges Android's queue, never claims the download has completed. */
 export async function downloadPublicFile(value: string, filename?: string): Promise<PublicDownloadReceipt> {
-  const url = publicFileUrl(value);
+  const url = publicDownloadUrl(value);
   if (Platform.OS !== 'android') throw new Error('Direct Downloads are available in the ACTIV Android app.');
   const exporter = NativeModules.ReportExport;
   if (!exporter?.downloadPublicFile) throw new Error('Install the latest ACTIV app to download attachments.');

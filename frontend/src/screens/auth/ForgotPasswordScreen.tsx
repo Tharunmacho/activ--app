@@ -134,7 +134,7 @@ const ForgotPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
       tone={tone}
       onBack={() => navigation.goBack()}
       eyebrow={eyebrow}
-      title="Reset your password"
+      title={forAdmins ? 'Reset your password' : 'Set or reset your ACTIV password'}
       subtitle={forAdmins
         ? 'Enter the email of your administrator account. Only admin accounts created by the ACTIV Super Admin can be reset here.'
         : 'Enter the email address you registered with and we will send you a link to set a new password.'}
@@ -142,6 +142,7 @@ const ForgotPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
       badge={forAdmins ? 'Admin account' : undefined}
       below={(
         <>
+          {!forAdmins && <Text style={styles.footNote}>Signed up with Google, LinkedIn or Facebook? Keep using that sign-in option. An ACTIV password is optional; use this email verification flow only if you want to set or reset one.</Text>}
           <TextLink tone={tone} label="I already have a reset code" onPress={() => navigation.navigate('ResetPassword', { portal })} />
           <TextLink tone={tone} muted label="Back to sign in" onPress={() => navigation.navigate(signIn)} />
           {forAdmins ? <Text style={styles.footNote}>Member accounts cannot be reset here.</Text> : null}

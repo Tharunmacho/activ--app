@@ -19,6 +19,7 @@ import { clearSession } from '../../../services/session';
 import { useAuthStore } from '../../../stores/exampleStore';
 import { pickMostAdvancedApplication } from '../dashboard/memberRules';
 import { sharePublicPage } from '../../../services/contentShare';
+import { accountPasswordStatus, linkedProviderNames } from '../../../utils/authCapabilities';
 
 /**
  * ============================================================================
@@ -81,10 +82,12 @@ const AccountSettingsScreen = ({ navigation }: any) => {
   const [pw, setPw] = useState({ old: '', next: '', confirm: '' });
   const [pwBusy, setPwBusy] = useState(false);
   const [pwMsg, setPwMsg] = useState<{ kind: 'success' | 'danger'; text: string } | null>(null);
+  const [useExistingPassword, setUseExistingPassword] = useState(false);
 
   const load = useCallback(async () => {
     const [p, a] = await Promise.allSettled([getMyProfile(), getMyApplications()]);
     setProfile(p.status === 'fulfilled' ? (p.value || {}) : {});
+    setUseExistingPassword(false);
     const app = a.status === 'fulfilled' ? pickMostAdvancedApplication(a.value) : null;
     setAppStatus(String(app?.status || ''));
     setLoading(false);
@@ -96,6 +99,9 @@ const AccountSettingsScreen = ({ navigation }: any) => {
   const name = String(profile?.fullName || profile?.name || '');
   const memberId = String(profile?.membershipNumber || profile?.memberCode || '');
   const photo = resolveMediaUrl(profile?.profilePhoto);
+  const passwordStatus = accountPasswordStatus(profile);
+  const showPasswordForm = passwordStatus === 'set' || passwordStatus === 'legacy_unknown' && useExistingPassword;
+  const providers = linkedProviderNames(profile).join(', ') || 'your linked provider';
   const status = (() => {
     if (paid) return memberId ? `Active member · ${memberId}` : 'Active member';
     const st = appStatus.toLowerCase();
@@ -141,6 +147,7 @@ const AccountSettingsScreen = ({ navigation }: any) => {
   };
 
   const savePassword = async () => {
+    if (!showPasswordForm) return;
     setPwMsg(null);
     if (!pw.old) { setPwMsg({ kind: 'danger', text: 'Enter your current password' }); return; }
     if ((pw.next || '').length < 6) { setPwMsg({ kind: 'danger', text: 'The new password needs at least 6 characters' }); return; }
@@ -149,6 +156,7 @@ const AccountSettingsScreen = ({ navigation }: any) => {
     setPwBusy(true);
     try {
       await changePassword(pw.old, pw.next);
+      setProfile((previous: any) => ({ ...previous, hasPassword: true, passwordStatus: 'set' }));
       setPw({ old: '', next: '', confirm: '' });
       setPwMsg({ kind: 'success', text: 'Your password has been changed' });
     } catch (err) {
@@ -257,7 +265,14 @@ const AccountSettingsScreen = ({ navigation }: any) => {
       </FadeInUp>
 
       <FadeInUp delay={260} style={{ marginTop: SPACE.lg }}>
-        <PremiumSection icon="lock-outline" title="Password" subtitle="Use at least 6 characters.">
+        <PremiumSection icon="lock-outline" title={passwordStatus === 'set' ? 'Password' : 'Sign-in methods'} subtitle={passwordStatus === 'set' ? 'Use at least 6 characters.' : undefined}>
+          {passwordStatus !== 'set' && <>
+            <Text style={TYPE.body}>You sign in with {providers}. No ACTIV password is needed to continue using that sign-in option.</Text>
+            <Text style={[TYPE.body, { marginVertical: SPACE.md }]}>{passwordStatus === 'not_set' ? 'This account does not have an ACTIV password.' : 'If you want to use email and password, you can set or reset your ACTIV password securely by email.'}</Text>
+            <GradientButton label={passwordStatus === 'not_set' ? 'Set an ACTIV password (optional)' : 'Set or reset an ACTIV password (optional)'} variant="outline" onPress={() => navigation.navigate('ForgotPassword', { portal: 'member' })} />
+            {passwordStatus === 'legacy_unknown' && !useExistingPassword && <GradientButton label="I know my ACTIV password" variant="outline" onPress={() => setUseExistingPassword(true)} style={{ marginTop: SPACE.md }} />}
+          </>}
+          {showPasswordForm && <>
           <PasswordField label="Current password" value={pw.old} onChange={(v) => setPw((p) => ({ ...p, old: v }))} />
           <PasswordField label="New password" value={pw.next} onChange={(v) => setPw((p) => ({ ...p, next: v }))} />
           {pw.next ? (
@@ -277,6 +292,7 @@ const AccountSettingsScreen = ({ navigation }: any) => {
           <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword', { portal: 'member' })} style={styles.forgot} accessibilityRole="link">
             <Text style={styles.forgotText}>Forgot your password?</Text>
           </TouchableOpacity>
+          </>}
         </PremiumSection>
       </FadeInUp>
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { ContentImage } from '../../ui/ContentImage';
 import { PhotoViewer } from '../../ui/PhotoViewer';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -44,8 +44,8 @@ export function Body({ value, navigation }: { value: any; navigation?: any }) {
       style={[contentStyles.body, block.kind === 'heading' && contentStyles.richHeading, block.kind === 'quote' && contentStyles.quote, block.kind === 'code' && contentStyles.code]}>
       {block.spans.map((span, i) => {
         const link = navigation && span.href && /^(\/[^/]|https?:\/\/|mailto:|tel:)/i.test(span.href);
-        return span.bold || span.italic || span.code || link ? <Text key={i}
-          style={[span.bold && contentStyles.bold, span.italic && contentStyles.italic, span.code && contentStyles.codeText, link && contentStyles.inlineLink]}
+        return span.bold || span.italic || span.underline || span.fontSize || span.code || link ? <Text key={i}
+          style={[span.bold && contentStyles.bold, span.italic && contentStyles.italic, span.underline && { textDecorationLine: 'underline' }, span.fontSize && { fontSize: span.fontSize, lineHeight: Math.ceil(span.fontSize * 1.55) }, span.code && contentStyles.codeText, link && contentStyles.inlineLink]}
           accessibilityRole={link ? 'link' : undefined} accessibilityLabel={link ? span.text : undefined}
           onPress={link ? () => openWebsitePage(navigation, span.href!, span.text) : undefined}>{span.text}</Text> : span.text;
       })}
@@ -53,15 +53,16 @@ export function Body({ value, navigation }: { value: any; navigation?: any }) {
     return block.kind === 'list' ? <View key={index} style={contentStyles.listRow}><Text style={contentStyles.listMarker}>{block.marker}</Text><View style={contentStyles.flex}>{text}</View></View> : <View key={index}>{text}</View>;
   })}</>;
 }
-export function ActionLink({ navigation, href, label, download = false }: { navigation: any; href?: string; label: string; download?: boolean }) {
+export function ActionLink({ navigation, href, label, download = false, filename }: { navigation: any; href?: string; label: string; download?: boolean; filename?: string }) {
   if (!href) return null;
   const file = download || isPublicDownloadUrl(href);
   if (!file && !/^(\/[^/]|https?:\/\/|mailto:|tel:)/i.test(href)) return null;
   const external = !file && /^https?:\/\//i.test(href) && !publicWebsitePath(href);
-  return <PressableScale accessibilityRole="link" accessibilityLabel={label + (external ? ', opens external service' : file ? ', save to Downloads' : '')} onPress={() => file ? openPublicAttachment(href) : openWebsitePage(navigation, href, label)} contentStyle={contentStyles.link}>
+  const fileHint = Platform.OS === 'ios' ? 'Open document' : 'Save to Downloads';
+  return <PressableScale accessibilityRole="link" accessibilityLabel={label + (external ? ', opens external service' : file ? ', ' + (Platform.OS === 'ios' ? 'open document' : 'save to Downloads') : '')} onPress={() => file ? openPublicAttachment(href, filename) : openWebsitePage(navigation, href, label)} contentStyle={contentStyles.link}>
     <Text style={contentStyles.linkText}>{label}{external ? ' ↗' : ' →'}</Text>
     {external && <Text style={contentStyles.linkHint}>External service</Text>}
-    {file && <Text style={contentStyles.linkHint}>Save to Downloads</Text>}
+    {file && <Text style={contentStyles.linkHint}>{fileHint}</Text>}
   </PressableScale>;
 }
 export function Photo({ url, alt = 'ACTIV photo', caption, document = false, closeLabel = 'Close photo' }: { url?: string; alt?: string; caption?: string; document?: boolean; closeLabel?: string }) {

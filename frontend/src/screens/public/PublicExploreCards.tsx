@@ -8,6 +8,7 @@ import { resolveMediaUrl } from '../../config/api.config';
 import { WEBSITE_PATHS } from '../../config/website.config';
 import { publicPlainText } from '../../utils/publicRichText';
 import { PublicShareButton } from '../../components/PublicShareButton';
+import { newsMedia } from '../../utils/newsContent';
 
 export const publicText = (value: any) => String(value || '').trim();
 export const publicRecordKey = (item: any) => publicText(item.slug || item.id || item._id);
@@ -37,7 +38,7 @@ function Fact({ icon, children }: { icon: string; children: React.ReactNode }) {
 export function PublicContentCard({ item, kind, openPage }: { item: any; kind: ContentKind; openPage: PublicPageOpener }) {
   const title = cleanText(item.title || item.caption) || (kind === 'gallery' ? 'From our community' : 'ACTIV update');
   const image = resolveMediaUrl(kind === 'events' ? item.imageUrl || item.bannerUrl || item.media?.url
-    : kind === 'news' ? item.image?.url || (typeof item.image === 'string' ? item.image : item.imageUrl)
+    : kind === 'news' ? newsMedia(item).find(media => media.type === 'image')?.url
       : item.media?.type === 'video' ? item.thumbnailUrl || item.posterUrl : item.media?.url);
   const hasImage = !!image;
   const key = publicRecordKey(item);
@@ -84,7 +85,7 @@ export function PublicContentCard({ item, kind, openPage }: { item: any; kind: C
       </View>
     </View>
     </PressableScale>
-    {!!key && <PublicShareButton path={path} title={title} style={{ marginHorizontal: SPACE.lg, marginBottom: SPACE.lg }} />}
+    {!!key && <PublicShareButton path={path} title={title} label={kind === 'news' ? 'Share news' : 'Share'} style={{ marginHorizontal: SPACE.lg, marginBottom: SPACE.lg }} />}
   </SurfaceCard>;
 }
 
