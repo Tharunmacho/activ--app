@@ -1,6 +1,6 @@
 import React from 'react';
 import Renderer, { act } from 'react-test-renderer';
-import { Alert, Share } from 'react-native';
+import { Share } from 'react-native';
 import { companyShareContent, productShareContent } from '../src/services/businessShareContent';
 import { PublicShareButton } from '../src/components/PublicShareButton';
 import CompanyPublicScreen from '../src/screens/business/CompanyPublicScreen';
@@ -119,11 +119,11 @@ const pressShare = async (title: string) => {
   expect(payload).not.toMatch(/PRIVATE|private@example|9999999999|9999|stock|sku|gstin/i);
 };
 
-test('company public page shares its company and products without private metadata', async () => {
+test('company public detail has one compact header share and no product-card sharing', async () => {
   await mount(CompanyPublicScreen);
-  expect(buttons().map(button => button.props.title)).toEqual(['Public Tools', 'Workbench at Public Tools']);
+  expect(buttons().map(button => button.props.title)).toEqual(['Public Tools']);
+  expect(buttons()[0].props.compact).toBe(true);
   await pressShare('Public Tools');
-  await pressShare('Workbench at Public Tools');
 });
 
 test('unpublished owner previews show neither company nor product sharing', async () => {
@@ -133,24 +133,31 @@ test('unpublished owner previews show neither company nor product sharing', asyn
   expect(buttons()).toHaveLength(0);
 });
 
-test.each([ManageCompaniesScreen, ViewCompanyScreen])('owner company screens expose only published public links', async Screen => {
-  await mount(Screen);
+test('owner company detail preserves the compact public share action', async () => {
+  await mount(ViewCompanyScreen);
   expect(buttons()).toHaveLength(1);
+  expect(buttons()[0].props.compact).toBe(true);
   await pressShare('Public Tools');
 });
 
-test('owner catalogue shares published products but not hidden products', async () => {
+test('Manage Companies has no share controls on company cards', async () => {
+  await mount(ManageCompaniesScreen);
+  expect(buttons()).toHaveLength(0);
+  expect(share).not.toHaveBeenCalled();
+});
+
+test('owner catalogue has no header or product-card sharing and still opens the editor', async () => {
   mockProducts.push({ ...product, _id: 'draft-product', name: 'Secret prototype', isActive: false });
   await mount(ProductsServicesScreen);
-  expect(buttons().map(button => button.props.title)).toEqual(['Public Tools', 'Workbench at Public Tools']);
-  await pressShare('Workbench at Public Tools');
+  expect(buttons()).toHaveLength(0);
+  expect(share).not.toHaveBeenCalled();
   expect(navigation.navigate).not.toHaveBeenCalled();
   const edit = tree!.root.findAll(node => node.props.accessibilityLabel === 'Edit Workbench' && typeof node.props.onPress === 'function')[0];
   await act(async () => edit.props.onPress());
   expect(navigation.navigate).toHaveBeenCalledWith('EditProduct', { productId: 'product-one' });
 });
 
-test('late catalogue responses cannot share an old product with the newly selected company', async () => {
+test('catalogue sharing remains absent after the active company changes and requests finish', async () => {
   let resolveOld: (value: any) => void = () => {};
   const oldResponse = new Promise(resolve => { resolveOld = resolve; });
   (api.get as jest.Mock).mockImplementation((_path, config) => config?.params?.companyId === '1234567890abcdef12345678'
@@ -159,19 +166,23 @@ test('late catalogue responses cannot share an old product with the newly select
   mockCompany = { ...publicCompany, _id: 'abcdef1234567890abcdef12', businessName: 'Second Company' };
   await act(async () => tree!.update(<ProductsServicesScreen navigation={navigation as any} />));
   await act(async () => resolveOld({ data: { data: [{ _id: 'old-product', name: 'Old private prototype', isActive: true }] } }));
-  expect(buttons().map(button => button.props.title)).toEqual(['Second Company']);
+  expect(buttons()).toHaveLength(0);
+  expect(share).not.toHaveBeenCalled();
 });
 
-test('Trust List shares the public company without copying the private note', async () => {
+test('Trust List cards have no share and still open company details', async () => {
   await mount(TrustListScreen);
-  expect(buttons()).toHaveLength(1);
-  await pressShare('Public Tools');
+  expect(buttons()).toHaveLength(0);
+  const open = tree!.root.findAll(node => node.props.accessibilityLabel === 'Open Public Tools' && typeof node.props.onPress === 'function')[0];
+  await act(async () => open.props.onPress());
+  expect(navigation.navigate).toHaveBeenCalledWith('CompanyPublic', { companyId: '1234567890abcdef12345678' });
+  expect(share).not.toHaveBeenCalled();
 });
 
-test('Discover exposes company and product sharing from published results', async () => {
+test('Discover cards have no company or product share and retain product view tracking', async () => {
   await mount(DiscoverScreen);
-  expect(buttons().map(button => button.props.title)).toEqual(expect.arrayContaining(['Public Tools', 'Workbench at Public Tools']));
-  await pressShare('Workbench at Public Tools');
+  expect(buttons()).toHaveLength(0);
+  expect(share).not.toHaveBeenCalled();
   expect(navigation.navigate).not.toHaveBeenCalled();
   expect(recordProductView).not.toHaveBeenCalled();
   const productAction = tree!.root.findAll(node => node.props.accessibilityLabel === 'Workbench' && typeof node.props.onPress === 'function')[0];
@@ -179,35 +190,24 @@ test('Discover exposes company and product sharing from published results', asyn
   expect(recordProductView).toHaveBeenCalledWith('product-one');
 });
 
-test('Discover list navigation and sharing remain separate accessible controls', async () => {
+test('Discover list has no sharing and still opens company details', async () => {
   await mount(DiscoverScreen);
   const listMode = tree!.root.findAll(node => node.props.accessibilityLabel === 'List view' && typeof node.props.onPress === 'function')[0];
   await act(async () => listMode.props.onPress());
-  expect(buttons().map(button => button.props.title)).toEqual(['Public Tools']);
-  await pressShare('Public Tools');
+  expect(buttons()).toHaveLength(0);
+  expect(share).not.toHaveBeenCalled();
   expect(navigation.navigate).not.toHaveBeenCalled();
   const open = tree!.root.findAll(node => node.props.accessibilityLabel === 'Open Public Tools' && typeof node.props.onPress === 'function')[0];
   await act(async () => open.props.onPress());
   expect(navigation.navigate).toHaveBeenCalledWith('CompanyPublic', { companyId: '1234567890abcdef12345678' });
 });
 
-test('business settings shares a production company link without contacts or private details', async () => {
+test('business settings directs to the public detail page without a separate share row', async () => {
   await mount(SettingsScreen);
-  const row = tree!.root.findAll(node => node.props.title === 'Share company profile' && typeof node.props.onPress === 'function')[0];
+  expect(buttons()).toHaveLength(0);
+  expect(tree!.root.findAll(node => node.props.title === 'Share company profile')).toHaveLength(0);
+  const row = tree!.root.findAll(node => node.props.title === 'View public page' && typeof node.props.onPress === 'function')[0];
   await act(async () => row.props.onPress());
-  const payload = JSON.stringify(share.mock.calls[0]?.[0]);
-  expect(payload).toContain('https://activ.org.in/network/company/1234567890abcdef12345678');
-  expect(payload).not.toMatch(/localhost|PRIVATE|private@example|9999999999/);
-});
-
-test('business settings explains unpublished company links and does not open the share sheet', async () => {
-  mockCompany.publication = { published: false };
-  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-  try {
-    await mount(SettingsScreen);
-    const row = tree!.root.findAll(node => node.props.title === 'Share company profile' && typeof node.props.onPress === 'function')[0];
-    await act(async () => row.props.onPress());
-    expect(share).not.toHaveBeenCalled();
-    expect(alert).toHaveBeenCalledWith('Publish your company first', expect.any(String));
-  } finally { alert.mockRestore(); }
+  expect(navigation.navigate).toHaveBeenCalledWith('CompanyPublic', { companyId: '1234567890abcdef12345678' });
+  expect(share).not.toHaveBeenCalled();
 });

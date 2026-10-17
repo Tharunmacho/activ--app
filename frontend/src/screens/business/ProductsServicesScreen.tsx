@@ -14,7 +14,6 @@ import {
   BrandFrame, BrandHeaderBlock, BrandTopBar, BrandHero, GlassIconButton, GlassFigure, PREMIUM_OVERLAP, FadeInUp,
   LiftCard, LiftSearchBar, ArtEmptyState, ProductCrate3D, SearchLens3D, PressableScale, premiumTone, FitImage } from '../../ui';
 import { BUSINESS_TAB_ROUTES, CardSkeletons, CHIP } from './businessKit';
-import { CompanyShareButton, ProductShareButton } from '../../components/BusinessShareButton';
 
 type ProductsServicesScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -48,7 +47,6 @@ const ProductsServicesScreen: React.FC<Props> = ({ navigation }) => {
   const loadCompanies = useActiveCompanyStore((state) => state.loadCompanies);
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [productsCompanyId, setProductsCompanyId] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   // Website Products.tsx: a search over name + description, and a load failure
   // that SAYS so rather than rendering as an empty catalogue.
@@ -94,7 +92,6 @@ const ProductsServicesScreen: React.FC<Props> = ({ navigation }) => {
 
       const payload = response.data?.data || [];
       setLoadError('');
-      setProductsCompanyId(targetCompanyId);
       // Belt and braces: the server already scopes by companyId, but never let
       // a stale/mismatched row from another company render here.
       setProducts(
@@ -162,10 +159,7 @@ const ProductsServicesScreen: React.FC<Props> = ({ navigation }) => {
         <BrandTopBar
           onBack={() => navigation.goBack()}
           title="Products & Services"
-          right={<View style={{ flexDirection: 'row', gap: SPACE.sm }}>
-            <CompanyShareButton company={selectedCompany} compact />
-            <GlassIconButton icon="add" onPress={goAdd} accessibilityLabel="Add product" />
-          </View>}
+          right={<GlassIconButton icon="add" onPress={goAdd} accessibilityLabel="Add product" />}
         />
         <BrandHero
           eyebrow="Active catalogue"
@@ -268,7 +262,6 @@ const ProductsServicesScreen: React.FC<Props> = ({ navigation }) => {
           <FadeInUp delay={Math.min(index, 6) * 60} distance={12}>
             <ProductCard
               product={item}
-              company={productsCompanyId === selectedCompany?._id ? selectedCompany : null}
               onOpen={() => navigation.navigate('EditProduct', { productId: item?._id })}
               onDelete={() => handleDeleteProduct(item)}
             />
@@ -291,7 +284,7 @@ function stockTone(stock: number, min: number) {
 }
 
 /** One catalogue line: photo, name + category, status, then price and stock chips. */
-function ProductCard({ product, company, onOpen, onDelete }: { product: Product; company: ReturnType<typeof useActiveCompany>; onOpen: () => void; onDelete: () => void }) {
+function ProductCard({ product, onOpen, onDelete }: { product: Product; onOpen: () => void; onDelete: () => void }) {
   const p = premiumTone('business');
   const hidden = (product as any)?.isActive === false;
   const img = product?.imageUrl ? resolveMediaUrl(product.imageUrl) : '';
@@ -333,7 +326,6 @@ function ProductCard({ product, company, onOpen, onDelete }: { product: Product;
           <Icon name={st.icon} size={14} color={st.fg} />
           <Text style={[styles.stockText, { color: st.fg }]} numberOfLines={1} maxFontSizeMultiplier={1.2}>{st.label}</Text>
         </View>
-        <ProductShareButton product={product} company={company} compact />
       </View>
     </LiftCard>
   );

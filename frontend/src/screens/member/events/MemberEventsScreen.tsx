@@ -14,8 +14,7 @@ import { listMemberEvents } from '../../../services/memberApi';
 import { useEventSeats, seatsLeftOf, wantsSeats, SeatInfo } from './eventSeats';
 import { resolveMediaUrl } from '../../../config/api.config';
 import { useLoad } from '../useLoad';
-import { isPastEvent, eventTime, dateParts, priceLabel, myActiveRegistration, seatState, openEventOrTicket, eventPhase, feeFor, eventShareContent } from './eventFormat';
-import { PublicShareButton } from '../../../components/PublicShareButton';
+import { isPastEvent, eventTime, dateParts, priceLabel, myActiveRegistration, seatState, openEventOrTicket, eventPhase, feeFor } from './eventFormat';
 
 /**
  * Member events — website MemberEvents: Upcoming · My registrations · Past.
@@ -124,7 +123,6 @@ function EventCard({ e, seat, onPress }: { e: any; seat?: SeatInfo | null; onPre
       </PressableScale>
 
       <View style={styles.footer}>
-        <PublicShareButton {...eventShareContent(e)} label="Share event" />
         {!banner ? (
           <Text style={[styles.price, free && { color: PALETTE.greenDark }]} numberOfLines={1}>{priceLabel(e)}</Text>
         ) : <View style={{ flex: 1 }} />}

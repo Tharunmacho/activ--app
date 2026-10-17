@@ -15,8 +15,6 @@ import {
   useActiveCompanyStore,
 } from '../../stores/activeCompanyStore';
 import api from '../../services/api';
-import { sharePublicPage } from '../../services/contentShare';
-import { companyShareContent } from '../../services/businessShareContent';
 import { ENDPOINTS, resolveMediaUrl } from '../../config/api.config';
 import {
   ListRow, ToggleRow, PALETTE, SPACE, TYPE,
@@ -163,20 +161,6 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const handleShareCompany = async () => {
-    if (!activeCompany) {
-      requireCompany(() => {});
-      return;
-    }
-
-    const content = companyShareContent(activeCompany);
-    if (!content || !isListed || isSavingListing) {
-      Alert.alert('Publish your company first', 'Turn on listing in ACTIV Network to share a public company preview.');
-      return;
-    }
-    await sharePublicPage(content);
-  };
-
   const handleDeleteCompany = () => {
     requireCompany(() => {
       Alert.alert(
@@ -314,9 +298,7 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           <ListRow iconColor={PALETTE.violet} iconBg={PALETTE.violetSoft} icon="swap-horiz" title="Manage companies" subtitle="Switch between or review your business accounts"
             onPress={() => navigation.navigate('ManageCompanies')} />
           <ListRow iconColor={PALETTE.violet} iconBg={PALETTE.violetSoft} icon="add-business" title="Add new company" subtitle="Register another business under your membership"
-            onPress={() => navigation.navigate('AddCompany')} />
-          <ListRow iconColor={PALETTE.violet} iconBg={PALETTE.violetSoft} icon="ios-share" title="Share company profile" subtitle="Share your public company profile link"
-            onPress={handleShareCompany} last />
+            onPress={() => navigation.navigate('AddCompany')} last />
         </PremiumSection>
       </FadeInUp>
 

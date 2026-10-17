@@ -10,7 +10,6 @@ import { listAnnouncements } from '../../../services/memberApi';
 import { resolveMediaUrl } from '../../../config/api.config';
 import { useLoad } from '../useLoad';
 import { CATEGORIES, categoryStyle, categoryGlyph } from './updateFormat';
-import { PublicShareButton } from '../../../components/PublicShareButton';
 
 /**
  * Association Updates — website `features/member/pages/AssociationUpdates.tsx`.
@@ -87,7 +86,6 @@ function UpdateCard({ u, index, onPress }: { u: any; index: number; onPress: () 
           </View>
         </View>
         </PressableScale>
-        {!!(u?.id || u?._id) && <PublicShareButton path={'/member/updates/' + encodeURIComponent(u.id || u._id)} title="ACTIV member update" label="Share update" style={{ marginHorizontal: SPACE.lg, marginBottom: SPACE.lg }} />}
       </SurfaceCard>
     </FadeInUp>
   );

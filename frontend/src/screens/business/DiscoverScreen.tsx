@@ -20,7 +20,6 @@ import {
 import { useMembershipPaid } from './MembershipGate';
 import { BusinessTabBar } from './BusinessTabBar';
 import { CardSkeletons, SoftAction } from './businessKit';
-import { CompanyShareButton, ProductShareButton } from '../../components/BusinessShareButton';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Discover'>;
 
@@ -260,7 +259,6 @@ function CompanyCard({ item, ordered, highlightIds, matchedOnly, own, trusted, b
                   <View style={s.priceCol}>
                     <Text style={s.productPrice} numberOfLines={1} maxFontSizeMultiplier={1.2}>{money(pr?.price)}</Text>
                     {Number(pr?.stock || 0) > 0 ? <Text style={s.stock} numberOfLines={1} maxFontSizeMultiplier={1.2}>Stock {Number(pr?.stock || 0)}</Text> : null}
-                    <ProductShareButton product={pr} company={item} source="public" compact style={{ alignSelf: 'flex-end', marginTop: SPACE.xs }} />
                   </View>
                 </View>
               );
@@ -284,7 +282,6 @@ function CompanyCard({ item, ordered, highlightIds, matchedOnly, own, trusted, b
             />
           )}
           <SoftAction icon="arrow-forward" label="View company" primary onPress={onOpen} />
-          <CompanyShareButton company={item} source="public" compact />
         </View>
       </LiftCard>
     </FadeInUp>
@@ -328,7 +325,6 @@ function CompanyRow({ item, onOpen }: { item: CompanyItem; onOpen: () => void })
           <Icon name="call" size={18} color={PALETTE.white} />
         </PressableScale>
       ) : null}
-      <CompanyShareButton company={item} source="public" compact />
     </View>
   );
 }

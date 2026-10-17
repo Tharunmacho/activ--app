@@ -17,7 +17,6 @@ import { openWebsitePage } from '../../../services/websiteNavigation';
 import { ExploreContact, ExploreSchemes, ExploreZones } from '../../../components/explore/ExploreDestinations';
 import { ExploreGradientCard, exploreCardWidth } from '../../../components/explore/ExploreGradientCard';
 import type { ExploreContent } from '../../../services/publicContent';
-import { PublicShareButton } from '../../../components/PublicShareButton';
 
 /**
  * ============================================================================
@@ -255,7 +254,6 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
                       {n.date ? <Text style={x.newsDate} maxFontSizeMultiplier={1.2}>{shortDate(n.date) || n.date}</Text> : null}
                     </View>
                   </PressableScale>
-                  <PublicShareButton path={n.path} title={n.title || 'ACTIV news'} label="Share news" style={{ marginHorizontal: SPACE.md, marginBottom: SPACE.md }} />
                   </View>
                 ))}
               </ScrollView>
@@ -313,7 +311,6 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
                   <Icon name="chevron-right" size={20} color={PALETTE.textFaint} />
                   </View>
                 </PressableScale>
-                <PublicShareButton path={e.path} title={e.title || 'ACTIV event'} style={{ marginHorizontal: SPACE.md, marginBottom: SPACE.md }} />
                 </View></View>
               );
             })}
@@ -349,7 +346,6 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
                       </LinearGradient>
                     ) : null}
                   </PressableScale>
-                  <PublicShareButton path={g.path} title={g.title || 'ACTIV gallery'} style={{ marginTop: SPACE.sm }} />
                 </FadeInUp>
               ))}
           </ScrollView>}

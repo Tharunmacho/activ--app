@@ -7,7 +7,6 @@ import { BRAND, PALETTE, SPACE, PressableScale, SurfaceCard } from '../../ui';
 import { resolveMediaUrl } from '../../config/api.config';
 import { WEBSITE_PATHS } from '../../config/website.config';
 import { publicPlainText } from '../../utils/publicRichText';
-import { PublicShareButton } from '../../components/PublicShareButton';
 import { newsMedia } from '../../utils/newsContent';
 
 export const publicText = (value: any) => String(value || '').trim();
@@ -85,7 +84,6 @@ export function PublicContentCard({ item, kind, openPage }: { item: any; kind: C
       </View>
     </View>
     </PressableScale>
-    {!!key && <PublicShareButton path={path} title={title} label={kind === 'news' ? 'Share news' : 'Share'} style={{ marginHorizontal: SPACE.lg, marginBottom: SPACE.lg }} />}
   </SurfaceCard>;
 }
 

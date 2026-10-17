@@ -10,7 +10,6 @@ import { RootStackParamList } from '../../types';
 import api from '../../services/api';
 import { ENDPOINTS, resolveMediaUrl } from '../../config/api.config';
 import { useActiveCompanyStore } from '../../stores/activeCompanyStore';
-import { CompanyShareButton } from '../../components/BusinessShareButton';
 import {
   Badge, PALETTE, SPACE, TYPE, BrandFrame, BrandHeaderBlock, BrandTopBar, BrandHero, GlassIconButton,
   PREMIUM_OVERLAP, FadeInUp, LiftCard, CompanyLogoTile, ArtEmptyState, Briefcase3D, PressableScale,
@@ -235,7 +234,6 @@ function CompanyCard({ company, active, onUse, onPreview, onView, onEdit, onProd
 
       <View style={styles.tags}>
         <Badge size="sm" dot label={listed ? 'Listed in ACTIV Network' : 'Hidden from ACTIV Network'} color={listed ? PALETTE.successText : PALETTE.warningText} bg={listed ? PALETTE.successSoft : PALETTE.warningSoft} />
-        <CompanyShareButton company={company} />
       </View>
 
       {/* Active / switch control — the single company-switch point */}

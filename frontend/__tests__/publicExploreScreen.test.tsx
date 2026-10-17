@@ -32,6 +32,8 @@ afterEach(async () => { await Renderer.act(async () => screen?.unmount()); });
 
 test('public bell opens and closes its card without navigating away from the home screen', async () => {
   await Renderer.act(async () => { screen = Renderer.create(<PublicExplore navigation={navigation} route={{ params: {} }} />); });
+  expect(button('Share ACTIV')).toBeUndefined();
+  expect(button('Sign in')).toBeDefined();
   await Renderer.act(async () => button('Notifications').props.onPress());
   expect(button('Close notifications')).toBeDefined();
   expect(screen.root.findAllByType(Modal).some(node => node.props.visible)).toBe(true);

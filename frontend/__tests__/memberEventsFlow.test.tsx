@@ -110,19 +110,14 @@ test('Upcoming, Registered and Past retain chronological order and exclude cance
   expect(listMemberEvents).toHaveBeenCalledTimes(1);
 });
 
-test('event share is independently focusable and preserves the separate details action', async () => {
+test('event listing has no outside share action and still opens event details', async () => {
   const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
   try {
     await render();
     await edit('Search events', 'Business summit');
     const target = root().findAll(node => node.props.accessibilityLabel === 'Share ACTIV member event' && typeof node.props.onPress === 'function')[0];
-    expect(target).toBeDefined();
-    for (let parent = target.parent; parent; parent = parent.parent) {
-      expect(parent.props.accessible).not.toBe(true);
-      expect(parent.props.accessibilityRole === 'button' && typeof parent.props.onPress === 'function').toBe(false);
-    }
-    await act(async () => target.props.onPress());
-    expect(JSON.stringify(share.mock.calls[0][0])).toContain('https://activ.org.in/member/events/summit');
+    expect(target).toBeUndefined();
+    expect(share).not.toHaveBeenCalled();
     expect(navigation.navigate).not.toHaveBeenCalled();
     await pressLabel('View details: Business summit');
     expect(navigation.navigate).toHaveBeenCalledWith('MemberEventDetail', { id: 'summit' });

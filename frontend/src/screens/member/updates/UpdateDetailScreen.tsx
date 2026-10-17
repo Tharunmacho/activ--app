@@ -53,16 +53,9 @@ const UpdateDetailScreen = ({ navigation, route }: any) => {
     />
   );
 
-  const footer = update && !loading ? (
+  const footer = update && !loading && attachment ? (
     <BottomActionBar>
-      {attachment ? (
-        <>
-          <GradientButton label="Share" icon="share" variant="outline" onPress={share} style={styles.footSecondary} />
-          <GradientButton label="Open attachment" icon="file-download" onPress={openAttachment} style={styles.flex} />
-        </>
-      ) : (
-        <GradientButton label="Share this update" icon="share" onPress={share} style={styles.flex} />
-      )}
+      <GradientButton label="Open attachment" icon="file-download" onPress={openAttachment} style={styles.flex} />
     </BottomActionBar>
   ) : undefined;
 
@@ -135,7 +128,6 @@ const UpdateDetailScreen = ({ navigation, route }: any) => {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   flexMin: { flex: 1, minWidth: 0 },
-  footSecondary: { minWidth: 112 },
   overlap: { marginTop: -PREMIUM_OVERLAP },
   gutter: { marginHorizontal: SPACE.lg },
   banner: { width: '100%', aspectRatio: 16 / 10, backgroundColor: PALETTE.field },

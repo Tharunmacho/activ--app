@@ -5,7 +5,6 @@ import { usePublicResource } from '../../services/usePublicResource';
 import { BRAND } from '../../ui';
 import { ActionLink, Body, ContentLayout, ExtraFields, Heading, Photo } from './PublicContentKit';
 import { WEBSITE_PATHS } from '../../config/website.config';
-import { PublicShareButton } from '../../components/PublicShareButton';
 import { newsArticlePath, newsAttachments, newsLinks, newsMedia, NewsMedia, newsWebUrl } from '../../utils/newsContent';
 
 const escape = (value: string) => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -17,8 +16,8 @@ export const newsImageDocument = (url: string) => `<!doctype html><html><head><m
 export default function PublicNewsArticleScreen({ slug, navigation }: { slug: string; navigation: any }) {
   const resource = usePublicResource(navigation, 'news:' + slug, signal => getPublicNewsArticle(slug, signal));
   const article = resource.data;
-  return <ContentLayout navigation={navigation} title={article?.title || 'ACTIV News'} subtitle={newsMetadata(article)} art="news" resource={resource} sharePath={WEBSITE_PATHS.article(article?.slug || slug)}>
-    {!!article && <NewsArticleContent article={article} navigation={navigation} path={WEBSITE_PATHS.article(article?.slug || slug)} />}
+  return <ContentLayout navigation={navigation} title={article?.title || 'ACTIV News'} subtitle={newsMetadata(article)} art="news" resource={resource} sharePath={newsArticlePath(article) || WEBSITE_PATHS.article(slug)}>
+    {!!article && <NewsArticleContent article={article} navigation={navigation} />}
   </ContentLayout>;
 }
 
@@ -42,11 +41,10 @@ export function NewsResourceLinks({ article, navigation }: { article: any; navig
   </>;
 }
 
-export function NewsArticleContent({ article, navigation, path }: { article: any; navigation: any; path?: string }) {
+export function NewsArticleContent({ article, navigation }: { article: any; navigation: any }) {
   if (!article) return null;
   const [cover, ...photos] = newsMedia(article);
   return <>
-    <PublicShareButton path={newsArticlePath(article) || path || ''} title={article.title || 'ACTIV news'} label="Share this news" style={s.share} />
     {!!cover && <NewsMediaItem media={cover} navigation={navigation} />}
     {!!article.summary && <View style={s.summary}><Body value={article.summary} navigation={navigation} /></View>}
     <Body value={article.body} navigation={navigation} />
@@ -58,4 +56,4 @@ export function NewsArticleContent({ article, navigation, path }: { article: any
     <ActionLink navigation={navigation} href="/news" label="All news" />
   </>;
 }
-const s = StyleSheet.create({ summary: { paddingLeft: 16, borderLeftWidth: 3, borderLeftColor: BRAND.blue }, share: { alignSelf: 'stretch', minHeight: 48 } });
+const s = StyleSheet.create({ summary: { paddingLeft: 16, borderLeftWidth: 3, borderLeftColor: BRAND.blue } });

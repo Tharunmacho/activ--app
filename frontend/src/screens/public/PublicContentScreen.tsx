@@ -14,7 +14,6 @@ import { ContentImage } from '../../ui/ContentImage';
 import { ContentLayout, Body, Photo, ContentMedia, ActionLink, ExtraFields, Heading, contentStyles as s, contentText } from './PublicContentKit';
 import PublicRegionContent from './PublicRegionContent';
 import { NewsArticleContent, newsMetadata } from './PublicNewsArticleScreen';
-import { PublicShareButton } from '../../components/PublicShareButton';
 
 export default function PublicContentScreen({ navigation, route }: any) {
   const path = String(route?.params?.path || '');
@@ -27,7 +26,7 @@ export default function PublicContentScreen({ navigation, route }: any) {
   const districts = useMemo(() => Array.from(new Set<string>((page?.items || []).map(item => item.district).filter(value => typeof value === 'string' && value.trim()))).sort(), [page?.items]);
   const records = useMemo(() => (page?.items || []).filter(item => (!category || item.category === category) && (!district || item.district === district) && (!query.trim() || [item.title, item.caption, item.summary, item.category, item.sector, item.state, item.district, item.location, item.label, item.name, ...(Array.isArray(item.states) ? item.states : []).map((state: any) => state?.name)].join(' ').toLowerCase().includes(query.trim().toLowerCase()))), [page?.items, category, district, query]);
   const list = page && ['news', 'gallery', 'schemeStates', 'schemes'].includes(page.kind);
-  return <ContentLayout navigation={navigation} title={page?.title || route?.params?.title || 'ACTIV'} subtitle={page?.kind === 'article' ? newsMetadata(page.item) : undefined} sharePath={path}
+  return <ContentLayout navigation={navigation} title={page?.title || route?.params?.title || 'ACTIV'} subtitle={page?.kind === 'article' ? newsMetadata(page.item) : undefined} sharePath={['article', 'album', 'scheme', 'region'].includes(page?.kind || '') ? path : undefined}
     readingPanel={!list} art={page?.kind === 'gallery' || page?.kind === 'album' ? 'gallery' : page?.kind?.startsWith('scheme') ? 'schemes' : page?.kind === 'region' || page?.kind === 'zones' ? 'zones' : 'news'} resource={resource}>
     {list && <>
       {page.kind.startsWith('scheme') && <View style={x.schemeTabs}>{[['/schemes/central', 'Central schemes'], ['/schemes/state', 'State schemes']].map(([href, label]) => {
@@ -66,7 +65,6 @@ function SchemePreview({ item, onPress }: { item: any; onPress: () => void }) {
       </View>
     </View>
     </PressableScale>
-    {!!(item.slug || item.id || item._id) && <PublicShareButton path={'/schemes/view/' + encodeURIComponent(item.slug || item.id || item._id)} title={item.title || 'ACTIV scheme'} style={{ marginHorizontal: 18, marginBottom: 18 }} />}
   </View>;
 }
 
@@ -148,7 +146,7 @@ function Album({ page, navigation, overview }: { page: PublicPageData; navigatio
   </>;
 }
 function Article({ item, navigation, path }: { item: any; navigation: any; path: string }) {
-  return <NewsArticleContent article={item} navigation={navigation} path={path} />;
+  return <NewsArticleContent article={item} navigation={navigation} />;
 }
 function Scheme({ item, navigation }: { item: any; navigation: any }) {
   return <>

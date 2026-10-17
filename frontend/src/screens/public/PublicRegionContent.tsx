@@ -10,8 +10,6 @@ import { PublicPageData, REGION_SECTIONS } from '../../services/nativePublicCont
 import { ActionLink, Body, ContentMedia, ExtraFields, Heading, Photo, contentStyles as s } from './PublicContentKit';
 import { NewsMediaItem, NewsResourceLinks } from './PublicNewsArticleScreen';
 import { newsMedia } from '../../utils/newsContent';
-import { PublicShareButton } from '../../components/PublicShareButton';
-import { publicShareUrl } from '../../services/contentShare';
 
 const visible = (items: any) => (Array.isArray(items) ? items : []).filter(item => item && !item.isHidden && item.visible !== false);
 const hasContact = (contact: any) => !!(contact && (contact.email || contact.phone || contact.address || contact.addressLines?.length));
@@ -45,7 +43,7 @@ export default function PublicRegionContent({ page, path, navigation, offset, on
           {offset > 0 && <GradientButton label="Previous photos" onPress={() => onOffset(Math.max(0, offset - 24))} />}
           {offset + (page.items || []).length < (page.total || 0) && <GradientButton label="More photos" onPress={() => onOffset(offset + 24)} />}
         </View>
-      </> : <><Body value={custom?.intro || custom?.text} navigation={navigation} /><TextInput value={filter} onChangeText={setFilter} placeholder="Search this section" accessibilityLabel="Search this section" style={s.input} />{feed.map((item: any, index: number) => <FeedCard key={item.id || index} item={item} navigation={navigation} sharePath={path} shareLabel={section === 'newsUpdates' ? 'Share news' : 'Share update'} />)}{!feed.length && <Text style={s.body}>{filter ? 'No matching results.' : 'No items have been published in this section yet.'}</Text>}</>}
+      </> : <><Body value={custom?.intro || custom?.text} navigation={navigation} /><TextInput value={filter} onChangeText={setFilter} placeholder="Search this section" accessibilityLabel="Search this section" style={s.input} />{feed.map((item: any, index: number) => <FeedCard key={item.id || index} item={item} navigation={navigation} />)}{!feed.length && <Text style={s.body}>{filter ? 'No matching results.' : 'No items have been published in this section yet.'}</Text>}</>}
     </> : <>
       <Body value={record.shortDescription || record.hero?.blurb} navigation={navigation} />
       {!!record.hero?.sideImageUrl && <Photo url={record.hero.sideImageUrl} alt={page.title} />}
@@ -91,10 +89,9 @@ function Contact({ contact, navigation }: { contact: any; navigation: any }) {
     <ActionLink navigation={navigation} href={contact.mapUrl} label="Get directions" />
   </View>;
 }
-function FeedCard({ item, navigation, sharePath, shareLabel }: { item: any; navigation: any; sharePath: string; shareLabel: string }) {
+function FeedCard({ item, navigation }: { item: any; navigation: any }) {
   const [cover, ...photos] = newsMedia(item);
   return <SurfaceCard style={x.leaderCard}>{!!cover && <NewsMediaItem media={cover} navigation={navigation} />}<Text style={s.meta}>{[item.date, item.location, item.category].filter(Boolean).join(' · ')}</Text><Heading>{item.title}</Heading>
-    <PublicShareButton path={publicShareUrl(item.href) || sharePath} title={item.title || 'ACTIV update'} label={shareLabel} style={{ marginBottom: 12 }} />
     <Body value={item.summary} navigation={navigation} /><Body value={item.body} navigation={navigation} />
     {photos.map(photo => <NewsMediaItem key={photo.url} media={photo} navigation={navigation} />)}<NewsResourceLinks article={item} navigation={navigation} />
     <ActionLink navigation={navigation} href={item.href} label="View details" /><ActionLink navigation={navigation} href={item.fileUrl} label="Download document" download />

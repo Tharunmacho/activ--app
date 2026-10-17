@@ -41,15 +41,14 @@ afterEach(async () => {
   jest.restoreAllMocks();
 });
 
-test.each(['events', 'news', 'gallery'] as const)('%s card shares its public detail without opening the card', async kind => {
-  const open = jest.fn(), stopPropagation = jest.fn();
+test.each(['events', 'news', 'gallery'] as const)('%s listing opens its detail and does not show an outside share action', async kind => {
+  const open = jest.fn();
   await act(async () => { screen = Renderer.create(<PublicContentCard kind={kind} item={{ slug: 'community-story', title: 'Community story' }} openPage={open} />); });
   expect(Share.share).not.toHaveBeenCalled();
-  expectIndependentShare('Share Community story');
-  await act(async () => button('Share Community story')?.props.onPress({ stopPropagation }));
-  expect(Share.share).toHaveBeenCalledTimes(1);
-  expect(sharePayload()).toContain('https://activ.org.in/' + kind + '/community-story');
-  expect(stopPropagation).toHaveBeenCalled(); expect(open).not.toHaveBeenCalled();
+  expect(button('Share Community story')).toBeUndefined();
+  await act(async () => button('Community story')?.props.onPress());
+  expect(open).toHaveBeenCalledWith('/' + kind + '/community-story', 'Community story');
+  expect(Share.share).not.toHaveBeenCalled();
 });
 
 test.each([
@@ -66,14 +65,17 @@ test.each([
   expect(navigation.navigate).not.toHaveBeenCalled();
 });
 
-test('scheme card and native article header expose their specific public links', async () => {
+test('scheme listing opens details while the native article keeps its header share action', async () => {
   resource({ kind: 'schemes', title: 'Central schemes', items: [{ slug: 'enterprise-grant', title: 'Enterprise grant' }] });
   await act(async () => { screen = Renderer.create(<PublicContentScreen navigation={navigation} route={{ params: { path: '/schemes/central' } }} />); });
-  expectIndependentShare('Share Enterprise grant');
-  await act(async () => button('Share Enterprise grant')?.props.onPress());
-  expect(sharePayload()).toContain('https://activ.org.in/schemes/view/enterprise-grant');
+  expect(button('Share Enterprise grant')).toBeUndefined();
+  expect(button('Share Central schemes')).toBeUndefined();
+  await act(async () => button('View scheme: Enterprise grant')?.props.onPress());
+  expect(navigation.push).toHaveBeenCalledWith('PublicContent', { path: '/schemes/view/enterprise-grant', title: 'Enterprise grant' });
+  expect(Share.share).not.toHaveBeenCalled();
   resource({ title: 'Industry news', slug: 'industry-news' });
   await act(async () => { screen?.update(<PublicNewsArticleScreen navigation={navigation} slug="legacy-id" />); });
+  expectIndependentShare('Share Industry news');
   await act(async () => button('Share Industry news')?.props.onPress());
   expect(sharePayload()).toContain('https://activ.org.in/news/industry-news');
 });
@@ -86,13 +88,11 @@ test('personalized member update shares only a neutral gated address', async () 
   expect(sharePayload()).not.toMatch(/Jane|1234|Private membership/);
 });
 
-test('association update cards expose separate open and share focus targets', async () => {
+test('association update cards open details without an outside share control', async () => {
   (useLoad as jest.Mock).mockReturnValue({ data: { announcements: [{ id: 'private-update', title: 'Regional circular', summary: 'Member account 1234' }] }, loading: false, error: '', reload: jest.fn() });
   await act(async () => { screen = Renderer.create(<AssociationUpdatesScreen navigation={navigation} />); });
-  expectIndependentShare('Share ACTIV member update');
-  await act(async () => button('Share ACTIV member update')?.props.onPress());
-  expect(sharePayload()).toContain('/member/updates/private-update');
-  expect(sharePayload()).not.toContain('1234');
+  expect(button('Share ACTIV member update')).toBeUndefined();
+  expect(Share.share).not.toHaveBeenCalled();
   expect(navigation.navigate).not.toHaveBeenCalled();
   const open = screen?.root.findAll(node => typeof node.props.onPress === 'function' && String(node.props.accessibilityLabel || '').endsWith(': Regional circular'))[0];
   expect(open).toBeDefined();
@@ -117,14 +117,17 @@ test('past public events from member history share a working gated event link', 
     .toEqual({ path: '/events/past-public-event', title: 'Previous public programme' });
 });
 
-test('home dashboard previews share their event, news and gallery records', async () => {
+test('home dashboard previews open their event, news and gallery details without share controls', async () => {
   const content = { events: [{ id: 'preview-event', title: 'Preview event', startAt: '2099-01-01T10:00:00Z' }],
     news: [{ slug: 'preview-news', title: 'Preview news' }], gallery: [{ slug: 'preview-album', title: 'Preview album', media: { url: '/cover.jpg' } }], zones: [] };
   await act(async () => { screen = Renderer.create(<ExploreActiv navigation={navigation} content={content} publicAccess sections={['events', 'news', 'gallery']} />); });
-  for (const [title, path] of [['Preview event', '/events/preview-event'], ['Preview news', '/news/preview-news'], ['Preview album', '/gallery/preview-album']]) {
-    expectIndependentShare('Share ' + title);
-    await act(async () => button('Share ' + title)?.props.onPress());
-    expect(sharePayload()).toContain('https://activ.org.in' + path);
+  for (const title of ['Preview event', 'Preview news', 'Preview album']) {
+    expect(button('Share ' + title)).toBeUndefined();
+    const open = screen?.root.findAll(node => typeof node.props.onPress === 'function' && String(node.props.accessibilityLabel || '').startsWith(title + '.'))[0];
+    expect(open).toBeDefined();
+    await act(async () => open?.props.onPress());
   }
-  expect(navigation.navigate).not.toHaveBeenCalled();
+  expect(Share.share).not.toHaveBeenCalled();
+  expect(navigation.navigate).toHaveBeenCalledWith('PublicEventDetail', { id: 'preview-event' });
+  expect(navigation.push).toHaveBeenCalledTimes(2);
 });

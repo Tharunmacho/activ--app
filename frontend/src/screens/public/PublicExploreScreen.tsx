@@ -20,7 +20,6 @@ import ExploreActiv from '../member/dashboard/ExploreActiv';
 import { PublicContentCard, publicRecordKey } from './PublicExploreCards';
 import { ExploreZones } from '../../components/explore/ExploreDestinations';
 import PublicNotificationsCard from '../../components/PublicNotificationsCard';
-import { PublicShareButton } from '../../components/PublicShareButton';
 
 const TABS: { key: ExploreSection; label: string; icon: string; title: string; subtitle: string }[] = [
   { key: 'home', label: 'Home', icon: 'home', title: 'Connect. Empower. Grow.', subtitle: 'Your community. Your next opportunity.' },
@@ -168,12 +167,14 @@ export default function PublicExploreScreen({ navigation, route }: any) {
         <BrandHeaderBlock waveHeight={52}>
           <View style={s.heroContent}>
             <View style={s.topbar}><BrandLogo size="sm" />
-              <PressableScale accessibilityRole="button" accessibilityLabel="Notifications" onPress={() => { setNoticeId(undefined); setNotificationsOpen(true); }} contentStyle={s.signIn}>
+              <View style={s.headerActions}>
+              <PressableScale accessibilityRole="button" accessibilityLabel="Notifications" onPress={() => { setNoticeId(undefined); setNotificationsOpen(true); }} contentStyle={[s.signIn, s.notificationButton]}>
                 <Icon name="notifications-none" size={23} color={PALETTE.white} />
               </PressableScale>
               <PressableScale accessibilityRole="button" accessibilityLabel="Sign in" onPress={signIn} contentStyle={s.signIn}>
                 <Icon name="login" size={17} color={PALETTE.white} /><Text style={s.signInText}>Sign in</Text>
               </PressableScale>
+              </View>
             </View>
             <View style={s.heroRow}>
               <View style={s.heroText}><Text style={s.eyebrow}>{section === 'home' ? 'WELCOME TO ACTIV' : 'EXPLORE / ' + tab.label.toUpperCase()}</Text>
@@ -181,9 +182,6 @@ export default function PublicExploreScreen({ navigation, route }: any) {
               </View>
             </View>
             <Text style={s.heroSubtitle}>{tab.subtitle}</Text>
-            <PublicShareButton path={section === 'home' || section === 'zones' ? '/' : '/' + section}
-              title={section === 'home' || section === 'zones' ? 'ACTIV' : 'ACTIV ' + tab.label}
-              label={section === 'home' || section === 'zones' ? 'Share ACTIV' : 'Share ' + tab.label} style={s.sharePage} />
           </View>
         </BrandHeaderBlock>
         {section === 'home' ? home : section === 'zones' ? (ready && <View style={[s.gutter, s.directoryOverlap]}><SurfaceCard><ExploreZones zones={data.zones} openPage={openPage} /></SurfaceCard></View>) : <View style={[s.gutter, s.searchWrap]}>
@@ -220,7 +218,8 @@ export default function PublicExploreScreen({ navigation, route }: any) {
 }
 
 const s = StyleSheet.create({
-  sharePage: { marginTop: SPACE.md },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  notificationButton: { width: 44, height: 44, paddingHorizontal: 0, justifyContent: 'center', borderRadius: 22 },
   flex: { flex: 1, minWidth: 0 }, body: { flexGrow: 1, backgroundColor: PALETTE.canvas, paddingBottom: SPACE.sm },
   contentRow: { paddingHorizontal: SPACE.lg, gap: SPACE.md, paddingBottom: SPACE.md, alignItems: 'stretch' },
   gutter: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: SPACE.lg },

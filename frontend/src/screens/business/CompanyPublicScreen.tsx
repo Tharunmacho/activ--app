@@ -15,7 +15,7 @@ import {
 } from '../../services/businessApi';
 import { recordProductView } from '../../services/memberApi';
 import { governmentSchemes } from '../../utils/governmentSchemes';
-import { CompanyShareButton, ProductShareButton } from '../../components/BusinessShareButton';
+import { CompanyShareButton } from '../../components/BusinessShareButton';
 import { BizSectionTitle, BizStatePage, CoverHero, GlassTag } from './businessKit';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CompanyPublic'>;
@@ -48,7 +48,7 @@ const monthYear = (value?: string | null) => {
   }
 };
 
-function ProductCard({ item, company }: { item: PublicProduct; company: Company }) {
+function ProductCard({ item }: { item: PublicProduct }) {
   const p = premiumTone('business');
   const img = item?.imageUrl ? resolveMediaUrl(item.imageUrl) : '';
   const stock = Number(item?.stock || 0);
@@ -73,7 +73,6 @@ function ProductCard({ item, company }: { item: PublicProduct; company: Company 
           <LinearGradient colors={p.button} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.priceChip}>
             <Text style={styles.priceText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} maxFontSizeMultiplier={1.2}>{money(item?.price)}</Text>
           </LinearGradient>
-          <ProductShareButton product={item} company={company} source="public" compact />
         </View>
       </View>
     </View>
@@ -354,7 +353,7 @@ const CompanyPublicScreen: React.FC<Props> = ({ navigation, route }) => {
             />
           </LiftCard>
         }
-        renderItem={({ item }) => <ProductCard item={item} company={company} />}
+        renderItem={({ item }) => <ProductCard item={item} />}
       />
     </BrandFrame>
   );

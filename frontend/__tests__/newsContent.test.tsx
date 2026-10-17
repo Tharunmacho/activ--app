@@ -43,19 +43,21 @@ beforeEach(() => {
 });
 afterEach(async () => { await act(async () => screen?.unmount()); screen = undefined; delete NativeModules.ReportExport; jest.restoreAllMocks(); });
 
-test.each(['article', 'native content', 'saved website'] as const)('%s route renders all news resources and a visible labeled Share action', async entry => {
+test.each(['article', 'native content', 'saved website'] as const)('%s route renders all news resources and one compact header share action', async entry => {
   resource(entry === 'article' ? article : { kind: 'article', title: article.title, item: article });
   await act(async () => { screen = Renderer.create(entry === 'article'
     ? <PublicNewsArticleScreen navigation={navigation} slug={article.slug} />
     : entry === 'native content' ? <PublicContentScreen navigation={navigation} route={{ params: { path: '/news/' + article.slug } }} />
       : <WebsiteViewer navigation={navigation} route={{ params: { path: '/news/' + article.slug } }} />); });
   expect(screen!.root.findAllByType(Photo).map(node => node.props.alt)).toEqual(['Cover photograph', 'Second photograph', 'Third photograph']);
-  expect(text()).toContain('Share this news');
+  expect(text()).not.toContain('Share this news');
   expect(text()).toContain('Second caption');
   expect(text()).toContain('Documents');
   expect(text()).toContain('Related links');
-  const labeledShare = screen!.root.findAllByType(PublicShareButton).find(node => node.props.label === 'Share this news');
-  expect(labeledShare?.props.style).toMatchObject({ alignSelf: 'stretch', minHeight: 48 });
+  const shares = screen!.root.findAllByType(PublicShareButton);
+  expect(shares).toHaveLength(1);
+  const labeledShare = shares[0];
+  expect(labeledShare.props.compact).toBe(true);
   await act(async () => { labeledShare!.findAll(node => node.props.accessibilityRole === 'button' && typeof node.props.onPress === 'function')[0].props.onPress({ stopPropagation: jest.fn() }); });
   expect(JSON.stringify((Share.share as jest.Mock).mock.calls[0][0])).toContain('https://activ.org.in/news/community-news');
   expect(navigation.navigate).not.toHaveBeenCalled();
@@ -79,15 +81,14 @@ test('document taps use Android Downloads with a filename, while WhatsApp and Yo
   expect(Linking.openURL).toHaveBeenNthCalledWith(2, 'https://youtu.be/meeting123');
 });
 
-test('region news cards reuse attachments/photos and share their real published section instead of inventing an article', async () => {
+test('region news cards reuse attachments/photos without outside share actions', async () => {
   const item = { ...article, image: undefined, imageUrl: article.image.url, href: undefined };
   await act(async () => { screen = Renderer.create(<PublicRegionContent navigation={navigation} path="/states/tamil-nadu/newsUpdates" offset={0} onOffset={jest.fn()}
     page={{ kind: 'region', title: 'Tamil Nadu', scope: 'states', section: 'newsUpdates', page: { slug: 'tamil-nadu', newsUpdates: [item] } }} />); });
   expect(screen!.root.findAllByType(Photo)).toHaveLength(3);
-  expect(text()).toContain('Share news');
+  expect(screen!.root.findAllByType(PublicShareButton)).toHaveLength(0);
   expect(button('Meeting papers, save to Downloads')).toBeDefined();
-  await act(async () => button('Share Community news').props.onPress());
-  expect(JSON.stringify((Share.share as jest.Mock).mock.calls[0][0])).toContain('/states/tamil-nadu/newsUpdates');
+  expect(Share.share).not.toHaveBeenCalled();
 });
 
 test('iOS opens the validated public document without invoking the Android download bridge', async () => {
@@ -102,9 +103,9 @@ test('iOS opens the validated public document without invoking the Android downl
 test('public cards and member teasers use the first available photo and preserve ID-based article links', async () => {
   const record = { ...article, slug: undefined, image: undefined, photos: [{ url: '/uploads/news/second.jpg' }] };
   await act(async () => { screen = Renderer.create(<PublicContentCard kind="news" item={record} openPage={navigation.push} />); });
-  expect(text()).toContain('Share news');
-  await act(async () => button('Share Community news').props.onPress());
-  expect(JSON.stringify((Share.share as jest.Mock).mock.calls[0][0])).toContain('/news/' + article._id);
+  expect(screen!.root.findAllByType(PublicShareButton)).toHaveLength(0);
+  await act(async () => button('Community news').props.onPress());
+  expect(navigation.push).toHaveBeenCalledWith('/news/' + article._id, article.title);
   expect(toExploreNews([record])[0]).toMatchObject({ path: '/news/' + article._id, image: 'https://api.activ.org.in/uploads/news/second.jpg' });
   expect(newsArticlePath({})).toBe('');
 });
