@@ -1,7 +1,7 @@
 import { useEventClock } from '../../../utils/useEventClock';
 import React, { useState, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Share } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
@@ -17,13 +17,13 @@ import { getPublicEventDetail } from '../../../services/publicContent';
 import { openPublicAction } from '../../../services/publicNavigation';
 import { openWebsitePage } from '../../../services/websiteNavigation';
 import type { PublicAction } from '../../../utils/publicBrowse';
-import { WEBSITE_PATHS, websiteUrl } from '../../../config/website.config';
+import { publicShareUrl, sharePublicPage } from '../../../services/contentShare';
 import { QrCode } from '../../admin/super/events/qr';
 import { useLoad } from '../useLoad';
 import { useEventSeat, seatsLeftOf, isFillingFast, toSeatInfo } from './eventSeats';
 import {
   feeFor, myActiveRegistration, isPastEvent, formatWhen, longDate, eventPhase, countdownLabel,
-  formatReminders, googleCalendarUrl, directionsUrl, shareLine, programmeTime,
+  formatReminders, googleCalendarUrl, directionsUrl, eventShareContent, programmeTime,
 } from './eventFormat';
 
 /**
@@ -198,23 +198,17 @@ const MemberEventDetailScreen = ({ navigation, route, publicAccess = false }: an
   const agenda = asArray<any>(e?.agenda).filter((r) => r && (r.title || r.startTime));
   const speakers = asArray<any>(e?.speakers).filter((s) => s && s.name);
   const reminders = formatReminders(e?.reminderOffsetsHours);
-  // The public WEBSITE page — never the API host, which has no such page (404).
-  const pageUrl = websiteUrl(WEBSITE_PATHS.event(String(e?.slug || e?.id || '')));
+  const shareContent = eventShareContent(e, publicAccess);
+  const pageUrl = publicShareUrl(shareContent.path);
   const calendar = googleCalendarUrl(e, pageUrl);
   const directions = directionsUrl(e);
   const due = Number(registration?.payment?.amount || 0);
   const bookable = !awaitingPayment && !registration && gate.open;
-  const showQr = e?.showQrOnPage !== false && !!(e?.slug || e?.id);
+  const showQr = e?.showQrOnPage !== false && !!pageUrl;
   const online = String(e?.mode || '') === 'online';
   const ticket = () => navigation.navigate('EventBooking', { eventId: String(e.id), ref: String(registration?.bookingRef || '') });
 
-  const share = async () => {
-    try {
-      await Share.share({ title: e?.title || 'ACTIV event', message: `${shareLine(e)}\n\n${pageUrl}` });
-    } catch (err) {
-      console.warn('Share safely caught:', err);
-    }
-  };
+  const share = () => sharePublicPage(shareContent);
 
   const cancel = (giveUp = false) => {
     Alert.alert(giveUp ? 'Give up this seat' : 'Cancel registration', 'Give up your seat for this event?', [

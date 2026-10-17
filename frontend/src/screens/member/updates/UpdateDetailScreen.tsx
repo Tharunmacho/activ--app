@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Share } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
   Skeleton, Badge, BottomActionBar, PALETTE, SPACE, SIZE, TYPE, shortDate, timeAgo, BRAND,
@@ -12,6 +12,7 @@ import { categoryStyle, categoryGlyph, htmlToText } from './updateFormat';
 import { openWebsitePage } from '../../../services/websiteNavigation';
 import { Body } from '../../public/PublicContentKit';
 import { updateAudienceLabel } from '../../../utils/memberAudience';
+import { sharePublicPage } from '../../../services/contentShare';
 
 /**
  * One Association Update — website `features/member/pages/AnnouncementDetail.tsx`.
@@ -36,13 +37,9 @@ const UpdateDetailScreen = ({ navigation, route }: any) => {
     openWebsitePage(navigation, attachment, update?.attachmentLabel || 'Attachment');
   };
 
-  const share = async () => {
-    try {
-      await Share.share({ message: [update?.title || 'ACTIV update', update?.summary || ''].filter(Boolean).join('\n\n') });
-    } catch (err) {
-      console.warn('Share safely caught:', err);
-    }
-  };
+  // The server personalizes this content for the signed-in recipient. Share
+  // only its gated address; the receiving member must pass the same checks.
+  const share = () => sharePublicPage({ path: '/member/updates/' + encodeURIComponent(id), title: 'ACTIV member update' });
 
   const header = (
     <PremiumPageHeader

@@ -14,14 +14,15 @@ import { getBookableEvent, createEventBooking, getEventBooking, getMyProfile, ch
 import { getAuthToken, getUserRole } from '../../../services/api';
 import { clearPublicAction, openPublicAction } from '../../../services/publicNavigation';
 import EventBookingChoice from './EventBookingChoice';
-import { WEBSITE_PATHS, websiteUrl } from '../../../config/website.config';
+import { publicShareUrl, sharePublicPage } from '../../../services/contentShare';
+import { websiteUrl } from '../../../config/website.config';
 import { openPublicAttachment, openWebsitePage } from '../../../services/websiteNavigation';
 import { QrCode } from '../../admin/super/events/qr';
 import { useEventClock } from '../../../utils/useEventClock';
 import { resolveMediaUrl } from '../../../config/api.config';
 import { bookingClosed, bookingParticipants, bookingState, mapBookingErrors, nationalMobile, validateBookingForm, type RegistrationAnswers, type RegistrationField } from './bookingForm';
 import { RegistrationFields } from './RegistrationFields';
-import { whereOf, googleCalendarUrl, directionsUrl, shareLine, formatWhen } from './eventFormat';
+import { whereOf, googleCalendarUrl, directionsUrl, eventShareContent, formatWhen } from './eventFormat';
 
 /**
  * Book seats through the website's shared guest/member booking system.
@@ -106,19 +107,13 @@ function Ticket({ b, event, fallbackEmail, onPay, onRebook, open }: { b: any; ev
     mode,
     onlinePlatform: b?.onlinePlatform ?? event?.onlinePlatform,
   };
-  // The public WEBSITE page — never the API host, which has no such page (404).
-  const pageUrl = websiteUrl(WEBSITE_PATHS.event(String(merged.slug || merged.id || '')));
+  const shareContent = eventShareContent(event);
+  const pageUrl = publicShareUrl(shareContent.path);
   // Website EventActions sit under every confirmation; a cancelled booking has nothing to diary.
   const actionable = status !== 'cancelled';
   const calendar = actionable ? googleCalendarUrl(merged, pageUrl) : '';
   const directions = actionable ? directionsUrl(merged) : '';
-  const share = async () => {
-    try {
-      await Share.share({ title: merged.title || 'ACTIV event', message: `${shareLine(merged)}\n\n${pageUrl}` });
-    } catch (err) {
-      console.warn('Share safely caught:', err);
-    }
-  };
+  const share = () => sharePublicPage(shareContent);
   const unit = Number(b?.unitAmount || 0);
   const total = Number(b?.totalAmount || 0);
   const seats = Number(b?.noOfPersons || people.length || 1);
@@ -188,7 +183,7 @@ function Ticket({ b, event, fallbackEmail, onPay, onRebook, open }: { b: any; ev
         {actionable ? (
           <View style={styles.tActions}>
             {calendar ? <TicketAction icon="event" label="Calendar" onPress={() => open(calendar)} /> : null}
-            <TicketAction icon="share" label="Share" onPress={share} />
+            {!!shareContent.path && <TicketAction icon="share" label="Share" onPress={share} />}
             {directions ? <TicketAction icon="directions" label="Directions" onPress={() => open(directions)} /> : null}
           </View>
         ) : null}

@@ -12,6 +12,7 @@ import {
 } from '../../ui';
 import { resolveMediaUrl } from '../../config/api.config';
 import { getTrustList, addToTrustList, removeFromTrustList, errorMessage, Company } from '../../services/businessApi';
+import { CompanyShareButton } from '../../components/BusinessShareButton';
 import { useMembershipPaid, MembershipLocked } from './MembershipGate';
 import { BizStatePage } from './businessKit';
 
@@ -70,6 +71,7 @@ function TrustRow({ item, onOpen, onRemove, removing, onSaveNote }: {
             </View>
           </View>
         </PressableScale>
+        <CompanyShareButton company={item} source="public" compact />
         <PressableScale
           onPress={onRemove}
           disabled={removing}

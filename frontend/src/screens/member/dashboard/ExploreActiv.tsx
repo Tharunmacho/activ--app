@@ -17,6 +17,7 @@ import { openWebsitePage } from '../../../services/websiteNavigation';
 import { ExploreContact, ExploreSchemes, ExploreZones } from '../../../components/explore/ExploreDestinations';
 import { ExploreGradientCard, exploreCardWidth } from '../../../components/explore/ExploreGradientCard';
 import type { ExploreContent } from '../../../services/publicContent';
+import { PublicShareButton } from '../../../components/PublicShareButton';
 
 /**
  * ============================================================================
@@ -229,12 +230,12 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
                 scrollEventThrottle={32}
               >
                 {news.map((n) => (
+                  <View key={n.key} style={[x.newsCard, { width: cardW }]}>
                   <PressableScale
-                    key={n.key}
                     onPress={() => open(n.path, 'News')}
                     scaleTo={0.98}
-                    style={{ width: cardW }}
-                    contentStyle={[x.newsCard, { flex: 1 }]}
+                    style={{ flex: 1 }}
+                    contentStyle={{ flex: 1 }}
                     accessibilityRole="button"
                     accessibilityLabel={`${n.title}. ${n.category}. Read story.`}
                   >
@@ -254,6 +255,8 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
                       {n.date ? <Text style={x.newsDate} maxFontSizeMultiplier={1.2}>{shortDate(n.date) || n.date}</Text> : null}
                     </View>
                   </PressableScale>
+                  <PublicShareButton path={n.path} title={n.title || 'ACTIV news'} style={{ marginHorizontal: SPACE.md, marginBottom: SPACE.md }} />
+                  </View>
                 ))}
               </ScrollView>
               {news.length > 1 ? (
@@ -282,13 +285,13 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
               const d = e.startAt ? new Date(e.startAt) : null;
               const ok = !!d && !Number.isNaN(d.getTime());
               return (
+                <View key={e.key} style={[x.eventCard, { width: cardW }]}><View style={x.eventSurface}>
                 <PressableScale
-                  key={e.key}
                   onPress={() => publicAccess ? navigation.navigate('PublicEventDetail', { id: e.id || e.key }) : e.id
                     ? navigation.navigate('MemberEventDetail', { id: e.id }) : navigation.navigate('MemberEvents')}
                   scaleTo={0.985}
-                  style={[x.eventCard, { width: cardW }]}
-                  contentStyle={x.eventSurface}
+                  style={{ flex: 1 }}
+                  contentStyle={{ flex: 1 }}
                   accessibilityRole="button"
                   accessibilityLabel={`${e.title}. ${ok && d ? shortDate(e.startAt) : 'Date to be confirmed'}. View event details.`}
                 >
@@ -310,6 +313,8 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
                   <Icon name="chevron-right" size={20} color={PALETTE.textFaint} />
                   </View>
                 </PressableScale>
+                <PublicShareButton path={e.path} title={e.title || 'ACTIV event'} style={{ marginHorizontal: SPACE.md, marginBottom: SPACE.md }} />
+                </View></View>
               );
             })}
           </ScrollView>}
@@ -344,6 +349,7 @@ export default function ExploreActiv({ navigation, refreshKey = 0, sections, sho
                       </LinearGradient>
                     ) : null}
                   </PressableScale>
+                  <PublicShareButton path={g.path} title={g.title || 'ACTIV gallery'} style={{ marginTop: SPACE.sm }} />
                 </FadeInUp>
               ))}
           </ScrollView>}

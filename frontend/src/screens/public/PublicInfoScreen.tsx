@@ -144,7 +144,7 @@ export default function PublicInfoScreen({ navigation, route }: any) {
   const title = page.kind === 'policy' ? doc.title || route?.params?.title || 'Policy'
     : page.kind === 'membership' ? doc.title || 'Membership' : page.kind === 'delete-account' ? 'Account & privacy'
       : page.kind === 'contact' ? (shown(doc, 'contact.header') ? [doc.heading, doc.headingHighlight].filter(Boolean).join(' ') : '') || 'Contact ACTIV' : 'About ACTIV';
-  return <ContentLayout navigation={navigation} title={title} subtitle={page.kind === 'membership' ? doc.tagline : undefined} art={page.kind} resource={visible}>
+  return <ContentLayout navigation={navigation} title={title} subtitle={page.kind === 'membership' ? doc.tagline : undefined} art={page.kind} resource={visible} sharePath={path}>
     {page.kind === 'about' && <About doc={doc} navigation={navigation} />}
     {page.kind === 'membership' && <Membership doc={doc} navigation={navigation} />}
     {page.kind === 'contact' && <Contact doc={doc} wantedState={page.state} navigation={navigation} />}

@@ -1,6 +1,6 @@
 import React from 'react';
 import Renderer from 'react-test-renderer';
-import { Alert, Text } from 'react-native';
+import { Alert, Share, Text } from 'react-native';
 import PublicEventDetail from '../src/screens/public/PublicEventDetailScreen';
 import { getPublicEvent, getPublicEventDetail } from '../src/services/publicContent';
 import { getBookableEvent, getMemberEvent } from '../src/services/memberApi';
@@ -35,6 +35,17 @@ test('guest can read the native programme and open the guest/member booking flow
   expect(navigation.navigate).toHaveBeenLastCalledWith('EventBooking', { eventId: event.id });
   expect(takePublicAction()).toBeNull();
   expect(navigation.navigate.mock.calls.some(call => call[0] === 'WebsiteViewer')).toBe(false);
+});
+
+test('public programme shares the canonical event page without booking details', async () => {
+  const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
+  try {
+    await render();
+    await Renderer.act(async () => button('Share this event').props.onPress());
+    const payload = JSON.stringify(share.mock.calls[0][0]);
+    expect(payload).toContain('https://activ.org.in/events/native-event');
+    expect(payload).not.toMatch(/localhost|registrationFee|publicAvailability|bookingRef/);
+  } finally { share.mockRestore(); }
 });
 
 test.each(['closed', 'full', 'deleted'])('guest cannot start booking when the event is %s', async state => {

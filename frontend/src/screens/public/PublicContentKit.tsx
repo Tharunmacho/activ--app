@@ -11,18 +11,22 @@ import { openPublicAttachment, openWebsitePage } from '../../services/websiteNav
 import { isPublicDownloadUrl } from '../../services/publicDownload';
 import { publicWebsitePath } from '../../utils/publicBrowse';
 import { publicPlainText, publicTextBlocks } from '../../utils/publicRichText';
+import { PublicShareButton } from '../../components/PublicShareButton';
 
 export const contentText = publicPlainText;
 
-export function ContentLayout({ navigation, title, subtitle, art = 'news', resource, children, readingPanel = true }: {
-  navigation: any; title: string; subtitle?: string; art?: string; readingPanel?: boolean;
+export function ContentLayout({ navigation, title, subtitle, art = 'news', resource, children, readingPanel = true, sharePath }: {
+  navigation: any; title: string; subtitle?: string; art?: string; readingPanel?: boolean; sharePath?: string;
   resource: { loading: boolean; refreshing: boolean; error: string; reload: () => any; data: any }; children?: React.ReactNode;
 }) {
   const section = ({ gallery: 'Gallery', schemes: 'Opportunities', zones: 'Community', news: 'News', about: 'About us', membership: 'Membership', contact: 'Contact', policy: 'Information' } as Record<string, string>)[art] || 'ACTIV';
   return <PremiumPage safeBottom refreshing={resource.refreshing} onRefresh={resource.reload} header={
     <View style={contentStyles.headerInner}><PremiumPageHeader title={contentText(title)} subtitle={contentText(subtitle)} eyebrow={'ACTIV / ' + section.toUpperCase()}
       onBack={() => navigation.canGoBack?.() === false ? navigation.navigate('PublicExplore') : navigation.goBack()}
-      right={<GlassIconButton icon="refresh" accessibilityLabel="Refresh content" onPress={resource.reload} />} /></View>
+      right={<View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        {!!sharePath && !!resource.data && <PublicShareButton path={sharePath} title={contentText(title)} compact />}
+        <GlassIconButton icon="refresh" accessibilityLabel="Refresh content" onPress={resource.reload} />
+      </View>} /></View>
   }>
     <View style={[contentStyles.content, !readingPanel && contentStyles.listContent]}>
       {resource.loading && !resource.data ? <CardSkeletons rows={2} variant="media" /> : <>

@@ -1,6 +1,6 @@
 import React from 'react';
 import Renderer, { act } from 'react-test-renderer';
-import { Linking, Modal, Text } from 'react-native';
+import { Linking, Modal, Share, Text } from 'react-native';
 import PublicNotificationsCard from '../src/components/PublicNotificationsCard';
 import PublicNotificationsScreen from '../src/screens/public/PublicNotificationsScreen';
 import { getAuthToken } from '../src/services/api';
@@ -65,6 +65,17 @@ test('an existing push link opens its detail without also counting an in-app ope
   expect(text()).toContain(announcement.body);
   expect(recordVisitorOpen).not.toHaveBeenCalled();
   expect(button('Back to notifications')).toBeDefined();
+});
+
+test('public update detail shares a canonical notice link without device or session data', async () => {
+  const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
+  await render(true, announcement.id);
+  expect(share).not.toHaveBeenCalled();
+  await act(async () => button('Share ' + announcement.title).props.onPress());
+  const payload = JSON.stringify(share.mock.calls[0][0]);
+  expect(payload).toContain('https://activ.org.in/notifications?notice=' + announcement.id);
+  expect(payload).not.toMatch(/visitor|secret|token|localhost|activApp/);
+  expect(recordVisitorOpen).not.toHaveBeenCalled();
 });
 
 test('explicit Enable requests native permission once; denial does not open phone settings automatically', async () => {

@@ -7,6 +7,7 @@ import { BRAND, PALETTE, SPACE, PressableScale, SurfaceCard } from '../../ui';
 import { resolveMediaUrl } from '../../config/api.config';
 import { WEBSITE_PATHS } from '../../config/website.config';
 import { publicPlainText } from '../../utils/publicRichText';
+import { PublicShareButton } from '../../components/PublicShareButton';
 
 export const publicText = (value: any) => String(value || '').trim();
 export const publicRecordKey = (item: any) => publicText(item.slug || item.id || item._id);
@@ -47,7 +48,8 @@ export function PublicContentCard({ item, kind, openPage }: { item: any; kind: C
   const place = item.mode === 'online' ? (item.onlinePlatform || 'Online event') : (item.location || item.venue || item.state);
   const time = calendar(item.startAt, { hour: 'numeric', minute: '2-digit', hour12: true });
 
-  return <SurfaceCard padded={false} style={s.card} accessibilityLabel={title} onPress={() => openPage(path, title)}>
+  return <SurfaceCard padded={false} style={s.card}>
+    <PressableScale accessibilityRole="button" accessibilityLabel={title} onPress={() => openPage(path, title)}>
     {hasImage && <View style={s.imageFrame}>
       <FitImage uri={image} style={s.image} accessibilityLabel={title} />
       {kind === 'gallery' && item.media?.type === 'video' && <View style={s.play}><Icon name="play-arrow" size={28} color={PALETTE.white} /></View>}
@@ -81,6 +83,8 @@ export function PublicContentCard({ item, kind, openPage }: { item: any; kind: C
         <View style={s.cardLink}><Text style={s.cardLinkText}>{kind === 'gallery' ? 'View gallery' : kind === 'news' ? 'Read story' : 'View details'}</Text><View style={s.arrow}><Icon name="arrow-forward" size={17} color={BRAND.blue} /></View></View>
       </View>
     </View>
+    </PressableScale>
+    {!!key && <PublicShareButton path={path} title={title} style={{ marginHorizontal: SPACE.lg, marginBottom: SPACE.lg }} />}
   </SurfaceCard>;
 }
 

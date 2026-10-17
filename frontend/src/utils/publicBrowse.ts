@@ -1,4 +1,4 @@
-export type PublicAction = { kind: 'event'; id: string } | { kind: 'register' | 'login' | 'membership' | 'account' | 'donate' };
+export type PublicAction = { kind: 'event' | 'member-event' | 'member-update'; id: string } | { kind: 'register' | 'login' | 'membership' | 'account' | 'donate' };
 
 /** Strictly local website paths; never accept another origin as an app command. */
 export function publicWebsitePath(value: string): string | null {
@@ -25,6 +25,8 @@ export function publicActionFor(value: string): PublicAction | null {
   if (!path) return null;
   const booking = /^\/events\/([a-z0-9_-]+)\/book\/?$/i.exec(path);
   if (booking) return { kind: 'event', id: booking[1] };
+  const sharedMemberContent = /^\/member\/(events|updates)\/([a-z0-9_-]+)$/i.exec(path);
+  if (sharedMemberContent) return { kind: sharedMemberContent[1].toLowerCase() === 'events' ? 'member-event' : 'member-update', id: sharedMemberContent[2] };
   if (/^\/register(?:\/|$)/i.test(path)) return { kind: 'register' };
   if (/^\/login(?:\/|$)/i.test(path)) return { kind: 'login' };
   if (/^\/(?:donate|donations)(?:\/|$)/i.test(path)) return { kind: 'donate' };

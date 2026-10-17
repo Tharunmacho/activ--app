@@ -4,6 +4,7 @@ import { getPublicNewsArticle } from '../../services/publicContent';
 import { usePublicResource } from '../../services/usePublicResource';
 import { BRAND } from '../../ui';
 import { ActionLink, Body, ContentLayout, ExtraFields, Photo } from './PublicContentKit';
+import { WEBSITE_PATHS } from '../../config/website.config';
 
 const escape = (value: string) => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 // Only image markup is loaded here. The browser's viewport supports native pinch
@@ -14,7 +15,7 @@ export const newsImageDocument = (url: string) => `<!doctype html><html><head><m
 export default function PublicNewsArticleScreen({ slug, navigation }: { slug: string; navigation: any }) {
   const resource = usePublicResource(navigation, 'news:' + slug, signal => getPublicNewsArticle(slug, signal));
   const article = resource.data;
-  return <ContentLayout navigation={navigation} title={article?.title || 'ACTIV News'} subtitle={newsMetadata(article)} art="news" resource={resource}>
+  return <ContentLayout navigation={navigation} title={article?.title || 'ACTIV News'} subtitle={newsMetadata(article)} art="news" resource={resource} sharePath={WEBSITE_PATHS.article(article?.slug || slug)}>
     {!!article && <NewsArticleContent article={article} navigation={navigation} />}
   </ContentLayout>;
 }

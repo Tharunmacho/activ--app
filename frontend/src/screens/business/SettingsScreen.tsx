@@ -4,7 +4,7 @@
 // the company record itself, its public listing, its catalog, and the session.
 // No placeholder rows - a row exists only if tapping it does something.
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Alert, Share } from 'react-native';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -15,7 +15,8 @@ import {
   useActiveCompanyStore,
 } from '../../stores/activeCompanyStore';
 import api from '../../services/api';
-import { websiteUrl } from '../../config/website.config';
+import { sharePublicPage } from '../../services/contentShare';
+import { companyShareContent } from '../../services/businessShareContent';
 import { ENDPOINTS, resolveMediaUrl } from '../../config/api.config';
 import {
   ListRow, ToggleRow, PALETTE, SPACE, TYPE,
@@ -168,29 +169,12 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
-    if (activeCompany.isActive === false) {
+    const content = companyShareContent(activeCompany);
+    if (!content || !isListed || isSavingListing) {
       Alert.alert('Publish your company first', 'Turn on listing in ACTIV Network to share a public company preview.');
       return;
     }
-    const url = websiteUrl(`/network/company/${encodeURIComponent(companyId)}`);
-    const lines = [
-      activeCompany.businessName || '',
-      activeCompany.businessType || '',
-      activeCompany.mobileNumber ? `Phone: ${activeCompany.mobileNumber}` : '',
-      activeCompany.email ? `Email: ${activeCompany.email}` : '',
-      [activeCompany.area, activeCompany.location].filter(Boolean).join(', '),
-      activeCompany.description || '',
-      url,
-    ].filter(Boolean);
-
-    try {
-      await Share.share({
-        title: activeCompany.businessName || 'Business Details',
-        message: lines.join('\n'),
-      });
-    } catch (err) {
-      console.warn('Share safely caught:', err);
-    }
+    await sharePublicPage(content);
   };
 
   const handleDeleteCompany = () => {
@@ -331,7 +315,7 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             onPress={() => navigation.navigate('ManageCompanies')} />
           <ListRow iconColor={PALETTE.violet} iconBg={PALETTE.violetSoft} icon="add-business" title="Add new company" subtitle="Register another business under your membership"
             onPress={() => navigation.navigate('AddCompany')} />
-          <ListRow iconColor={PALETTE.violet} iconBg={PALETTE.violetSoft} icon="ios-share" title="Share business details" subtitle="Share your banner, company profile and contact details"
+          <ListRow iconColor={PALETTE.violet} iconBg={PALETTE.violetSoft} icon="ios-share" title="Share company profile" subtitle="Share your public company profile link"
             onPress={handleShareCompany} last />
         </PremiumSection>
       </FadeInUp>

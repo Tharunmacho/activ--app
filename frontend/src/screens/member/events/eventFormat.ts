@@ -158,6 +158,22 @@ export const shareLine = (e: any): string => {
   return [e?.title || 'ACTIV event', when, eventPlace(e)].filter(Boolean).join(' · ');
 };
 
+/** Member responses can include a private programme. Only explicitly public
+ * events use public titles/URLs; other shares stay behind the member gate. */
+export const eventShareContent = (event: any, publicAccess = false): { path: string; title: string } => {
+  const id = String(event?.id || event?._id || '').trim();
+  const slug = String(event?.slug || id).trim();
+  const untargeted = event?.reachEveryone === true || (
+    ![event?.state, event?.district, event?.block].some(value => String(value || '').trim())
+    && (!Array.isArray(event?.targets) || event.targets.length === 0)
+  );
+  const publishedPublic = event?.status === 'published' && event?.audience !== 'paid' && !isPastEvent(event)
+    && (event?.showOnOnboarding === true || (event?.channel === 'public' && untargeted));
+  return publicAccess || publishedPublic
+    ? { path: slug ? '/events/' + encodeURIComponent(slug) : '', title: String(event?.title || 'ACTIV event') }
+    : { path: id ? '/member/events/' + encodeURIComponent(id) : '', title: 'ACTIV member event' };
+};
+
 /** The member's seat state, as the website EventRow labels it. */
 export const seatState = (e: any) => {
   const reg = myActiveRegistration(e);

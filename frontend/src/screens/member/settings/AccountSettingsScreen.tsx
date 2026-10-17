@@ -18,6 +18,7 @@ import { WEBSITE_PATHS } from '../../../config/website.config';
 import { clearSession } from '../../../services/session';
 import { useAuthStore } from '../../../stores/exampleStore';
 import { pickMostAdvancedApplication } from '../dashboard/memberRules';
+import { sharePublicPage } from '../../../services/contentShare';
 
 /**
  * ============================================================================
@@ -289,6 +290,7 @@ const AccountSettingsScreen = ({ navigation }: any) => {
           <LinkRow icon="person-outline" tone="blue" title="My Profile" subtitle="Your application details" onPress={profileRoute} />
           <LinkRow icon="storefront" tone="teal" title="Business Account" subtitle="Companies, catalogue and reach" onPress={() => navigation.navigate('BusinessDashboard')} />
           <LinkRow icon="support-agent" tone="green" title="Help & Support" subtitle="Contact your regional office" onPress={() => navigation.navigate('MemberHelp')} />
+          <LinkRow icon="share" tone="blue" title="Share ACTIV" subtitle="Invite others to explore the community" onPress={() => { void sharePublicPage({ path: '/', title: 'ACTIV' }); }} />
           <LinkRow icon="person-remove" title="Delete account" subtitle="Request account and data deletion" danger onPress={() => navigation.navigate('PublicInfo', { path: WEBSITE_PATHS.deleteAccount, title: 'Delete account' })} />
           <LinkRow icon="logout" title="Sign out" subtitle="You can sign back in any time" danger onPress={signOut} last />
         </SurfaceCard>

@@ -6,6 +6,7 @@ import { BRAND, PALETTE, SPACE, TYPE, FitImage, PressableScale } from '../ui';
 import { getAuthToken } from '../services/api';
 import { getPublicNotice, getPublicNotices, PublicNotice, recordVisitorOpen, visitorPushEnabled } from '../services/visitorNotifications';
 import { disableVisitorNotifications, firebaseReady, pushPermission, syncPushRegistration } from '../services/pushNotifications';
+import { PublicShareButton } from './PublicShareButton';
 
 const date = (value: string) => {
   const at = new Date(value);
@@ -110,6 +111,7 @@ export default function PublicNotificationsCard({ visible, noticeId, onClose, na
                 <Text style={s.date}>{date(selected.createdAt)}</Text><Text style={s.detailTitle}>{selected.title}</Text>
                 {!!selected.imageUrl && <FitImage uri={selected.imageUrl} mode="auto" minRatio={0.9} maxRatio={2.6} borderRadius={12} accessibilityLabel={selected.title} />}
                 <Text style={s.body}>{selected.body || selected.summary}</Text>
+                <PublicShareButton path={'/notifications?notice=' + encodeURIComponent(selected.id)} title={selected.title || 'ACTIV update'} label="Share update" />
                 {selected.kind === 'event' && <PressableScale accessibilityRole="button" accessibilityLabel="View event" onPress={() => { close(); navigation.navigate('PublicEventDetail', { id: selected.sourceId }); }} contentStyle={s.action}><Text style={s.actionText}>View event</Text><Icon name="chevron-right" size={20} color={BRAND.blue} /></PressableScale>}
               </View>
                 : items.length ? items.map(item => <PressableScale key={item.id} accessibilityRole="button" accessibilityLabel={item.title} onPress={() => void open(item)} contentStyle={s.row}>

@@ -12,6 +12,7 @@ import {
 import { resolveMediaUrl } from '../../config/api.config';
 import { useActiveCompanyStore } from '../../stores/activeCompanyStore';
 import { getCompany, getProductStats, errorMessage, Company } from '../../services/businessApi';
+import { CompanyShareButton } from '../../components/BusinessShareButton';
 import api from '../../services/api';
 import { BizSectionTitle, BizStatePage, CoverHero, GlassStatus, GlassTag, CHIP } from './businessKit';
 
@@ -103,7 +104,10 @@ const ViewCompanyScreen: React.FC<Props> = ({ navigation, route }) => {
       <BrandTopBar
         onBack={() => navigation.goBack()}
         title={isActiveCompany ? 'Active company' : 'Company'}
-        right={<GlassIconButton icon="edit" onPress={() => navigation.navigate('EditCompany', { companyId })} accessibilityLabel="Edit company" />}
+        right={<View style={{ flexDirection: 'row', gap: SPACE.sm }}>
+          <CompanyShareButton company={company} compact />
+          <GlassIconButton icon="edit" onPress={() => navigation.navigate('EditCompany', { companyId })} accessibilityLabel="Edit company" />
+        </View>}
       />
       <FadeInUp delay={80} distance={12} style={{ marginTop: SPACE.md }}>
         <CoverHero

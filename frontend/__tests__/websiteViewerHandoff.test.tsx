@@ -2,13 +2,17 @@ import React from 'react';
 import Renderer from 'react-test-renderer';
 import { Linking } from 'react-native';
 import WebsiteViewer from '../src/screens/member/website/WebsiteViewerScreen';
+import MemberEventDetail from '../src/screens/member/events/MemberEventDetailScreen';
 import { nativeContentRoute } from '../src/services/nativeContentRoute';
 import { openWebsitePage } from '../src/services/websiteNavigation';
 import { getAuthToken, getUserRole } from '../src/services/api';
 import { clearPublicAction, takePublicAction } from '../src/services/publicNavigation';
 import { readPublicCms, submitPublicCms } from '../src/services/publicContent';
+import { getMemberEvent } from '../src/services/memberApi';
 
+jest.mock('@react-navigation/native', () => ({ ...jest.requireActual('@react-navigation/native'), useFocusEffect: jest.fn() }));
 jest.mock('../src/services/api', () => ({ __esModule: true, default: { get: jest.fn(), post: jest.fn() }, getAuthToken: jest.fn(), getUserRole: jest.fn() }));
+jest.mock('../src/services/memberApi', () => ({ ...jest.requireActual('../src/services/memberApi'), getMemberEvent: jest.fn().mockResolvedValue(null) }));
 jest.mock('../src/services/session', () => ({ homeForRole: jest.fn().mockResolvedValue('PaidDashboard') }));
 jest.mock('../src/services/publicContent', () => ({
   readPublicCms: jest.fn().mockResolvedValue([]), submitPublicCms: jest.fn(), getPublicEvent: jest.fn().mockResolvedValue({ id: 'event-123' }),
@@ -26,6 +30,35 @@ test.each(['/gallery', '/gallery/album/photo/2', '/news', '/news/story', '/zones
 });
 test.each(['/about', '/membership', '/contact', '/privacy-policy', '/legal/privacy-policy', '/delete-account'])('information %s resolves to native content', path => {
   expect(nativeContentRoute(path, 'Information')).toEqual({ name: 'PublicInfo', params: { path, title: 'Information' } });
+});
+const noticeId = '607f1f77bcf86cd799439011';
+test.each([
+  '/notifications?notice=' + noticeId,
+  '/notifications/?activApp=1&notice=' + noticeId + '&auth=private#other',
+  '/?notifications=open&notice=' + noticeId,
+  '/onboarding?notice=' + noticeId + '&notifications=open',
+  'https://activ.org.in/notifications?notice=' + noticeId,
+  'https://www.activ.org.in/?notifications=open&notice=' + noticeId,
+])('shared notification %s opens the selected native header card', path => {
+  const params = { notifications: 'open', noticeId };
+  expect(nativeContentRoute(path, 'Update')).toEqual({ name: 'PublicExplore', params });
+  openWebsitePage(navigation, path, 'Update');
+  expect(navigation.navigate).toHaveBeenCalledWith('PublicExplore', params);
+  expect(navigation.push).not.toHaveBeenCalled();
+  expect(getAuthToken).not.toHaveBeenCalled();
+});
+test.each([
+  '/notifications', '/notifications?notice=invalid', '/notifications?notice=%zz',
+  '/notifications?notice=' + noticeId + '%0A', '/notifications#notice=' + noticeId,
+  '/?notifications=open#notice=' + noticeId,
+])('notification list links never forward an invalid or fragment identifier: %s', path => {
+  expect(nativeContentRoute(path)).toEqual({ name: 'PublicExplore', params: { notifications: 'open' } });
+});
+test('home links require the explicit card-open flag and external links never become native notification commands', () => {
+  expect(nativeContentRoute('/?notice=' + noticeId)).toEqual({ name: 'PublicExplore' });
+  expect(nativeContentRoute('/?notifications=closed&notice=' + noticeId)).toEqual({ name: 'PublicExplore' });
+  expect(nativeContentRoute('/#notifications=open&notice=' + noticeId)).toEqual({ name: 'PublicExplore' });
+  expect(nativeContentRoute('https://evil.example/notifications?notice=' + noticeId)).toBeNull();
 });
 test('existing saved WebsiteViewer links show native content without loading an ACTIV website', async () => {
   await Renderer.act(async () => { screen = Renderer.create(<WebsiteViewer navigation={navigation} route={{ params: { path: '/news', title: 'News' } }} />); });
@@ -55,4 +88,34 @@ test('membership and booking actions continue native authentication and resume o
   await Renderer.act(async () => openWebsitePage(navigation, '/membership/join', 'Join'));
   expect(navigation.navigate).toHaveBeenLastCalledWith('Login');
   expect(takePublicAction()).toEqual({ name: 'MembershipPlans' }); expect(takePublicAction()).toBeNull();
+});
+test.each([
+  ['/member/updates/' + noticeId, 'UpdateDetail', { id: noticeId }],
+  ['/member/events/' + noticeId, 'MemberEventDetail', { id: noticeId }],
+] as const)('member share %s preserves the selected native detail before and after sign-in', async (path, name, params) => {
+  await Renderer.act(async () => openWebsitePage(navigation, 'https://activ.org.in' + path + '?auth=discarded', 'Private title'));
+  expect(navigation.navigate).toHaveBeenCalledWith(name, params);
+  expect(takePublicAction()).toBeNull();
+  expect(navigation.push).not.toHaveBeenCalled();
+
+  navigation.navigate.mockClear();
+  (getAuthToken as jest.Mock).mockResolvedValue(null); (getUserRole as jest.Mock).mockResolvedValue(null);
+  await Renderer.act(async () => openWebsitePage(navigation, path, 'Private title'));
+  expect(navigation.navigate).toHaveBeenCalledWith('Login');
+  expect(navigation.navigate).not.toHaveBeenCalledWith(name, expect.anything());
+  // Password, social sign-in and registration already consume this one-time
+  // destination to append the detail after the appropriate member home.
+  expect(takePublicAction()).toEqual({ name, params });
+  expect(takePublicAction()).toBeNull();
+  expect(readPublicCms).not.toHaveBeenCalled();
+});
+test('the resumed member event params reach the real screen and its authenticated detail request', async () => {
+  (getAuthToken as jest.Mock).mockResolvedValue(null); (getUserRole as jest.Mock).mockResolvedValue(null);
+  await Renderer.act(async () => openWebsitePage(navigation, '/member/events/' + noticeId));
+  const destination = takePublicAction();
+  expect(destination?.name).toBe('MemberEventDetail');
+  await Renderer.act(async () => {
+    screen = Renderer.create(<MemberEventDetail navigation={navigation} route={{ params: destination && 'params' in destination ? destination.params : undefined }} />);
+  });
+  expect(getMemberEvent).toHaveBeenCalledWith(noticeId);
 });

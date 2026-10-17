@@ -14,6 +14,7 @@ import { ContentImage } from '../../ui/ContentImage';
 import { ContentLayout, Body, Photo, ContentMedia, ActionLink, ExtraFields, Heading, contentStyles as s, contentText } from './PublicContentKit';
 import PublicRegionContent from './PublicRegionContent';
 import { NewsArticleContent, newsMetadata } from './PublicNewsArticleScreen';
+import { PublicShareButton } from '../../components/PublicShareButton';
 
 export default function PublicContentScreen({ navigation, route }: any) {
   const path = String(route?.params?.path || '');
@@ -26,7 +27,7 @@ export default function PublicContentScreen({ navigation, route }: any) {
   const districts = useMemo(() => Array.from(new Set<string>((page?.items || []).map(item => item.district).filter(value => typeof value === 'string' && value.trim()))).sort(), [page?.items]);
   const records = useMemo(() => (page?.items || []).filter(item => (!category || item.category === category) && (!district || item.district === district) && (!query.trim() || [item.title, item.caption, item.summary, item.category, item.sector, item.state, item.district, item.location, item.label, item.name, ...(Array.isArray(item.states) ? item.states : []).map((state: any) => state?.name)].join(' ').toLowerCase().includes(query.trim().toLowerCase()))), [page?.items, category, district, query]);
   const list = page && ['news', 'gallery', 'schemeStates', 'schemes'].includes(page.kind);
-  return <ContentLayout navigation={navigation} title={page?.title || route?.params?.title || 'ACTIV'} subtitle={page?.kind === 'article' ? newsMetadata(page.item) : undefined}
+  return <ContentLayout navigation={navigation} title={page?.title || route?.params?.title || 'ACTIV'} subtitle={page?.kind === 'article' ? newsMetadata(page.item) : undefined} sharePath={path}
     readingPanel={!list} art={page?.kind === 'gallery' || page?.kind === 'album' ? 'gallery' : page?.kind?.startsWith('scheme') ? 'schemes' : page?.kind === 'region' || page?.kind === 'zones' ? 'zones' : 'news'} resource={resource}>
     {list && <>
       {page.kind.startsWith('scheme') && <View style={x.schemeTabs}>{[['/schemes/central', 'Central schemes'], ['/schemes/state', 'State schemes']].map(([href, label]) => {
@@ -55,13 +56,18 @@ function SchemePreview({ item, onPress }: { item: any; onPress: () => void }) {
   const uri = resolveMediaUrl(item.image?.url || '');
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [uri]);
-  return <PressableScale accessibilityRole="button" accessibilityLabel={'View scheme: ' + item.title} onPress={onPress} contentStyle={x.schemeCard}>
+  return <View style={x.schemeCard}>
+    <PressableScale accessibilityRole="button" accessibilityLabel={'View scheme: ' + item.title} onPress={onPress}>
     {!!uri && !failed && <ContentImage uri={uri} width={800} accessibilityLabel={item.image?.alt || item.title} onError={() => setFailed(true)} resizeMode="contain" style={x.schemeImage} />}
     <View style={x.schemeCopy}><Text style={x.filterLabel}>{[item.tier === 'national' ? 'Central' : item.state, item.district, item.category].filter(Boolean).join(' · ')}</Text><Heading>{item.title}</Heading>
       {!!contentText(item.summary) && <Text numberOfLines={3} style={x.intro}>{contentText(item.summary)}</Text>}
-      <View style={x.schemeFooter}><Text style={x.more}>Benefits & eligibility</Text><Icon name="arrow-forward" size={20} color={BRAND.blue} /></View>
+      <View style={[x.schemeFooter, { flexWrap: 'wrap', gap: 10 }]}>
+        <Text style={x.more}>Benefits & eligibility</Text><Icon name="arrow-forward" size={20} color={BRAND.blue} />
+      </View>
     </View>
-  </PressableScale>;
+    </PressableScale>
+    {!!(item.slug || item.id || item._id) && <PublicShareButton path={'/schemes/view/' + encodeURIComponent(item.slug || item.id || item._id)} title={item.title || 'ACTIV scheme'} style={{ marginHorizontal: 18, marginBottom: 18 }} />}
+  </View>;
 }
 
 function FilterChips({ label, allLabel, values, value, onChange }: { label: string; allLabel: string; values: string[]; value: string; onChange: (value: string) => void }) {

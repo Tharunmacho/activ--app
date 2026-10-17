@@ -9,12 +9,13 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
   Badge, PALETTE, SPACE, SIZE, TYPE, asArray, BRAND,
   PremiumListPage, PremiumPageHeader, HeaderStat, HeaderStatRow, PillTabs, SurfaceCard, DateTile, SeatMeter,
-  StateView, CardSkeletons, EventTicket3D, EventCalendar3D, PREMIUM_OVERLAP, untilLabel, FitImage } from '../../../ui';
+  StateView, CardSkeletons, EventTicket3D, EventCalendar3D, PREMIUM_OVERLAP, untilLabel, FitImage, PressableScale } from '../../../ui';
 import { listMemberEvents } from '../../../services/memberApi';
 import { useEventSeats, seatsLeftOf, wantsSeats, SeatInfo } from './eventSeats';
 import { resolveMediaUrl } from '../../../config/api.config';
 import { useLoad } from '../useLoad';
-import { isPastEvent, eventTime, dateParts, priceLabel, myActiveRegistration, seatState, openEventOrTicket, eventPhase, feeFor } from './eventFormat';
+import { isPastEvent, eventTime, dateParts, priceLabel, myActiveRegistration, seatState, openEventOrTicket, eventPhase, feeFor, eventShareContent } from './eventFormat';
+import { PublicShareButton } from '../../../components/PublicShareButton';
 
 /**
  * Member events — website MemberEvents: Upcoming · My registrations · Past.
@@ -60,11 +61,10 @@ function EventCard({ e, seat, onPress }: { e: any; seat?: SeatInfo | null; onPre
     <SurfaceCard
       padded={false}
       stretch
-      onPress={onPress}
       accent={reg ? (awaitingPayment ? '#FCD34D' : '#A7F3D0') : undefined}
-      accessibilityLabel={`${e?.title || 'Untitled event'}, ${action}`}
       contentStyle={past ? { opacity: 0.94 } : undefined}
     >
+      <PressableScale onPress={onPress} accessibilityRole="button" accessibilityLabel={`${e?.title || 'Untitled event'}, ${action}`} style={{ flex: 1 }} contentStyle={{ flex: 1 }}>
       {banner ? (
         <View style={styles.bannerWrap}>
           <FitImage uri={banner} style={styles.banner} fit={e?.media?.fit === 'cover' ? 'cover' : 'contain'} accessibilityLabel={e?.bannerAlt || ''} />
@@ -121,11 +121,14 @@ function EventCard({ e, seat, onPress }: { e: any; seat?: SeatInfo | null; onPre
       {!past && !reg && left !== null && capacity > 0 ? (
         <SeatMeter capacity={capacity} left={left} style={styles.meter} />
       ) : null}
+      </PressableScale>
 
       <View style={styles.footer}>
+        <PublicShareButton {...eventShareContent(e)} label="Share event" />
         {!banner ? (
           <Text style={[styles.price, free && { color: PALETTE.greenDark }]} numberOfLines={1}>{priceLabel(e)}</Text>
         ) : <View style={{ flex: 1 }} />}
+        <PressableScale onPress={onPress} accessibilityRole="button" accessibilityLabel={`${action}: ${e?.title || 'Untitled event'}`} style={{ maxWidth: '64%' }}>
         {ok ? (
           <View style={[styles.action, { backgroundColor: PALETTE.greenSoft }]}>
             <Text style={[styles.actionText, { color: PALETTE.greenDark }]} numberOfLines={1} maxFontSizeMultiplier={1.3}>{action}</Text>
@@ -137,6 +140,7 @@ function EventCard({ e, seat, onPress }: { e: any; seat?: SeatInfo | null; onPre
             <Icon name="arrow-forward" size={SIZE.iconSm} color={PALETTE.white} />
           </LinearGradient>
         )}
+        </PressableScale>
       </View>
     </SurfaceCard>
   );
@@ -278,11 +282,11 @@ const styles = StyleSheet.create({
   ref: { fontWeight: '800', color: PALETTE.blueDark, letterSpacing: 0.4 },
   meter: { marginHorizontal: SPACE.lg, marginTop: -SPACE.xs, marginBottom: SPACE.md },
   footer: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.md, paddingHorizontal: SPACE.lg,
+    flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.md, paddingHorizontal: SPACE.lg,
     paddingVertical: SPACE.md, borderTopWidth: 1, borderTopColor: PALETTE.divider, backgroundColor: PALETTE.blueTint,
   },
   price: { fontSize: 17, lineHeight: 22, fontWeight: '800', color: BRAND.navy, flexShrink: 1, minWidth: 0, fontVariant: ['tabular-nums'] },
-  action: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs, paddingHorizontal: SPACE.md + 2, minHeight: 38, borderRadius: 999, flexShrink: 0, maxWidth: '64%' },
+  action: { flexDirection: 'row', alignItems: 'center', gap: SPACE.xs, paddingHorizontal: SPACE.md + 2, minHeight: 44, borderRadius: 999, flexShrink: 0 },
   actionText: { fontSize: 13, lineHeight: 18, fontWeight: '700', color: PALETTE.white, flexShrink: 1 },
 });
 
