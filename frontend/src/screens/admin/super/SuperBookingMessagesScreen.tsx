@@ -61,7 +61,6 @@ export default function SuperBookingMessagesScreen() {
   const historyCleanup = useMemo(() => {
     const items: DeliveryLogRow[] = Array.isArray(data?.rows) ? data.rows : [];
     return {
-      ids: items.filter(row => row?._id && stateOf(row) !== 'queued').map(row => String(row._id)),
       pending: items.filter(row => stateOf(row) === 'queued').length,
     };
   }, [data?.rows]);
@@ -133,8 +132,8 @@ export default function SuperBookingMessagesScreen() {
       {!loading && !error && rows.length ? <View style={s.sumRow}>{summary}</View> : null}
       {!!rows.length && <View style={s.note}>
         {!!historyCleanup.pending && <Text style={s.sub}>{historyCleanup.pending} messages waiting to send will stay in this history.</Text>}
-        <HistoryDeleteControl label="Clear matching logs"
-          selection={{ view: 'logs', ids: historyCleanup.ids }} disabled={loading || !!error || !historyCleanup.ids.length}
+        <HistoryDeleteControl label="Clear logs"
+          selection={{ view: 'logs', all: true, filters: { bookingRef } }} disabled={loading || !!error || !bookingRef}
           onDone={() => { setOpenId(''); void load('quiet'); }} />
       </View>}
       {error ? <ConsoleState kind="error" title="Could not load the messages" message={error} action="Try again" onAction={() => load('first')} /> : null}

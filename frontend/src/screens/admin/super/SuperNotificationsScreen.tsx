@@ -391,7 +391,7 @@ const SuperNotificationsScreen: React.FC = () => {
           onChange={(label) => setEvent(label ? eventFromLabel(label) : '')} />
       </View>
       <View style={s.select}><HistoryDeleteControl
-        selection={{ view: 'logs', filters: { status, channel, event, search: search.trim().length >= 2 ? search.trim() : '' } }}
+        selection={{ view: 'logs', all: true, filters: { status, channel, event, search: search.trim().length >= 2 ? search.trim() : '' } }}
         disabled={loading} onDone={() => void load(1)} /></View>
       {loading && !logs.length ? <ConsoleSkeleton rows={3} /> : null}
       {error && logs.length ? <ConsoleNote style={s.banner} kind="red" icon="error-outline" text={error} /> : null}

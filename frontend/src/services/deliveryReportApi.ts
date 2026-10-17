@@ -140,6 +140,9 @@ export const CHANNEL_LABELS: Record<ReportChannel, string> = {
 export const notificationReason = (value: unknown): string => {
   if (typeof value !== 'string') return '';
   const text = value.trim();
+  if (/^(?:Media upload error:|WhatsApp could not deliver:).*WebP image uploads are not currently supported/i.test(text)) {
+    return 'WhatsApp could not use this WebP image. Use a JPG or PNG image, then try Resend.';
+  }
   // Only a known WhatsApp wrapper or an explicit provider-code prefix is a code.
   // Email diagnostics and arbitrary identifiers containing these digits stay intact.
   const whatsappCode = /^WhatsApp could not deliver:.*\(code\s*(131048|131049|131053)\)\s*$/i.exec(text)?.[1]

@@ -251,7 +251,7 @@ export function AutomationPane({ header, refreshKey = 0 }: { header?: React.Reac
     <>
       {header || null}
       <View style={s.selects}><HistoryDeleteControl
-        selection={{ view: 'logs', filters: { group: 'automation', eventId, channel, delivery, event: type, from, to,
+        selection={{ view: 'logs', all: true, filters: { group: 'automation', eventId, channel, delivery, event: type, from, to,
           search: search.trim().length >= 2 ? search.trim() : '' } }} disabled={loading}
         onDone={() => { setOpenId(''); if (page !== 1) setPage(1); else void load('quiet'); }} /></View>
       {health?.email?.ok === false ? (

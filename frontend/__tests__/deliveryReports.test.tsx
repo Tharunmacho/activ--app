@@ -192,7 +192,7 @@ it('report Delete reviews one exact row without resending or changing its status
   expect(target.status).toBe('read');
 });
 
-it('Clear matching logs keeps report filters and resets page after confirmed removal', async () => {
+it('Clear logs reviews the entire report scope and resets page after confirmed removal', async () => {
   await mount();
   await press(channel('Email').props.onPress);
   await press(() => outcome().props.onChange('accepted_any'));
@@ -201,8 +201,8 @@ it('Clear matching logs keeps report filters and resets page after confirmed rem
   await press(next.props.onPress);
   expect(filters().page).toBe(2);
   const before = { ...filters() };
-  await press(button('Clear matching logs').props.onPress);
-  expect(previewHistoryDelete).toHaveBeenCalledWith({ view: 'reports', filters: before });
+  await press(button('Clear logs').props.onPress);
+  expect(previewHistoryDelete).toHaveBeenCalledWith({ view: 'reports', all: true, filters: before });
   await press(button('Confirm delete (1)').props.onPress);
   expect(confirmHistoryDelete).toHaveBeenCalledWith({ ids: ['row-0'], token: 'delete-review' });
   expect(filters()).toEqual(expect.objectContaining({ channel: 'email', status: 'accepted_any', from: before.from, page: 1 }));
@@ -233,6 +233,8 @@ it('reviews current automation filters, confirms frozen IDs once and refreshes d
   await act(async () => { complete({ attempted: 1, sent: 0, queued: 1, failed: 0, skipped: 1, reasons: [{ reason: 'Already retried', count: 1 }] }); });
   await settle();
   expect(text()).toContain('1 attempted · 0 sent · 1 waiting to send · 0 failed · 1 not sent');
+  expect(text()).toContain('Resend submission');
+  expect(text()).toContain('Delivery can fail later. Refresh the report for the current result.');
   expect(text()).toContain('Already retried');
   expect((getDeliveryReport as jest.Mock).mock.calls.length).toBeGreaterThan(readsBefore);
 });
@@ -294,6 +296,15 @@ it.each([
   expect(notificationReason(raw)).toContain(explanation);
   expect(notificationReason(`Email could not deliver: Provider message (code ${code})`)).toBe(`Email could not deliver: Provider message (code ${code})`);
   expect(notificationReason(`Job identifier ${code}`)).toBe(`Job identifier ${code}`);
+});
+
+it('explains the unsupported WebP media failure and preserves unrelated diagnostic text', () => {
+  const raw = 'Media upload error: WebP image uploads are not currently supported. (code131053)';
+  expect(notificationReason(raw)).toBe('WhatsApp could not use this WebP image. Use a JPG or PNG image, then try Resend.');
+  expect(notificationReason('WhatsApp could not deliver: WebP image uploads are not currently supported. (code 131053)'))
+    .toBe('WhatsApp could not use this WebP image. Use a JPG or PNG image, then try Resend.');
+  const unrelated = 'Email attachment: WebP image uploads are not currently supported. (code131053)';
+  expect(notificationReason(unrelated)).toBe(unrelated);
 });
 
 it('keeps sent, delivered and seen distinct and preserves in-app availability', () => {

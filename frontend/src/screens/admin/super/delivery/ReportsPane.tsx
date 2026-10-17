@@ -587,7 +587,7 @@ export function ReportsPane({
         value={filters.status || ''}
         onChange={status => change({ status })}
       />
-      <View style={s.card}><HistoryDeleteControl selection={{ view: 'reports', filters: { ...filters } }}
+      <View style={s.card}><HistoryDeleteControl selection={{ view: 'reports', all: true, filters: { ...filters } }}
         disabled={busy || !!retryBusy} onDone={historyChanged} /></View>
       <ConsoleNote
         kind="indigo"
@@ -616,9 +616,9 @@ export function ReportsPane({
         </View>
       </ConsoleCard>}
       {retryResult && <ConsoleCard style={s.card}>
-        <Text style={s.title} accessibilityRole="header">Resend result</Text>
+        <Text style={s.title} accessibilityRole="header">Resend submission</Text>
         {retryResult.processing ? <Text style={s.body} accessibilityLiveRegion="polite">This resend is already processing. Refresh the report to see delivery progress.</Text> : <Text style={s.body} accessibilityLiveRegion="polite">{fmt(retryResult.attempted)} attempted · {fmt(retryResult.sent)} sent · {fmt(retryResult.queued)} waiting to send · {fmt(retryResult.failed)} failed · {fmt(retryResult.skipped)} not sent</Text>}
-        <Text style={s.caption}>Sent means the message was passed to the sending service. It does not confirm arrival. In-app updates are saved in the account. Waiting includes messages waiting or still being sent.</Text>
+        <Text style={s.caption}>These counts show the initial resend submission. Delivery can fail later. Refresh the report for the current result. In-app updates are saved in the account. Waiting includes messages waiting or still being sent.</Text>
         {(retryResult.reasons || []).map((reason, index) => <Text key={index} style={s.caption}>{fmt(reason.count)} messages: {notificationReason(reason.reason)}</Text>)}
       </ConsoleCard>}
     </>
