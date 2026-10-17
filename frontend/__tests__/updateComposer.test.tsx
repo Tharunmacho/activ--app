@@ -38,6 +38,12 @@ const settle = async () => { await act(async () => { await new Promise<void>(res
 const chooseAudience = async (label: string) => {
   await act(async () => { screen.root.findAllByType(PremiumSelect).find(node => node.props.label === 'Members')!.props.onChange(label); });
 };
+const channel = (label: string) => {
+  const node = screen.root.findAllByType(TouchableOpacity).find(item => item.props.accessibilityRole === 'checkbox' && item.props.accessibilityLabel === label);
+  if (!node) throw new Error(`Delivery checkbox missing: ${label}`);
+  return node;
+};
+const toggleChannel = async (label: string) => { await act(async () => { channel(label).props.onPress(); }); };
 
 beforeEach(() => {
   jest.clearAllMocks(); mockParams = {};
@@ -186,4 +192,62 @@ it('requires a region in restricted mode and only enables visitors for unrestric
   await chooseAudience('Paid members excluding students');
   await press('Publish update');
   expect(createAnnouncement).toHaveBeenCalledWith(expect.objectContaining({ includeVisitors: false, targets: [], body: 'Dear {Name},' }));
+});
+
+const deliveryCombinations = Array.from({ length: 8 }, (_, mask) => ({ email: !!(mask & 1), whatsapp: !!(mask & 2), push: !!(mask & 4) }));
+it.each(deliveryCombinations)('saves and publishes exactly the selected channels %j', async deliveryChannels => {
+  await mount(); await fill('Title', 'Channel selection'); await fill('Message', 'Association update.');
+  for (const [key, label] of [['email', 'Email'], ['whatsapp', 'WhatsApp'], ['push', 'Push notifications']] as const) {
+    expect(channel(label).props.accessibilityState.checked).toBe(false);
+    if (deliveryChannels[key]) await toggleChannel(label);
+  }
+  const content = JSON.stringify(screen.toJSON());
+  const selected = [['email', 'Email'], ['whatsapp', 'WhatsApp'], ['push', 'Push notifications']].filter(([key]) => deliveryChannels[key as keyof typeof deliveryChannels]).map(([, label]) => label);
+  expect(content).toContain(selected.length ? `Selected channels: ${selected.join(', ')}` : 'Feed only: no email, WhatsApp or push notifications.');
+  await press('Save draft');
+  expect(createAnnouncement).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'draft', deliveryChannels }));
+  await press('Publish update');
+  expect(createAnnouncement).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'published', deliveryChannels }));
+});
+
+it('retains legacy all-channel behavior and allows an existing published update to become feed-only', async () => {
+  mockParams = { announcement: { id: 'legacy', title: 'Existing update', body: 'Legacy message', status: 'published' } };
+  await mount();
+  for (const label of ['Email', 'WhatsApp', 'Push notifications']) expect(channel(label).props.accessibilityState.checked).toBe(true);
+  await press('Save & publish');
+  expect(updateAnnouncement).toHaveBeenLastCalledWith('legacy', expect.objectContaining({ deliveryChannels: { email: true, whatsapp: true, push: true } }));
+  for (const label of ['Email', 'WhatsApp', 'Push notifications']) await toggleChannel(label);
+  await press('Move to draft');
+  expect(updateAnnouncement).toHaveBeenLastCalledWith('legacy', expect.objectContaining({ status: 'draft', deliveryChannels: { email: false, whatsapp: false, push: false } }));
+});
+
+it('keeps saved WhatsApp-only settings on edit, including after a failed save', async () => {
+  const deliveryChannels = { email: false, whatsapp: true, push: false };
+  mockParams = { announcement: { id: 'whatsapp-only', title: 'Existing update', body: 'Saved message', status: 'draft', deliveryChannels } };
+  (updateAnnouncement as jest.Mock).mockRejectedValueOnce(new Error('Connection lost'));
+  await mount();
+  expect(channel('Email').props.accessibilityState.checked).toBe(false);
+  expect(channel('WhatsApp').props.accessibilityState.checked).toBe(true);
+  expect(channel('Push notifications').props.accessibilityState.checked).toBe(false);
+  await press('Publish update');
+  expect(mockGoBack).not.toHaveBeenCalled();
+  expect(JSON.stringify(screen.toJSON())).toContain('Connection lost');
+  expect(JSON.stringify(screen.toJSON())).toContain('Selected channels: WhatsApp');
+  await press('Publish update');
+  expect(updateAnnouncement).toHaveBeenNthCalledWith(2, 'whatsapp-only', expect.objectContaining({ status: 'published', deliveryChannels }));
+  expect(mockGoBack).toHaveBeenCalledTimes(1);
+  expect(mockParams.announcement.deliveryChannels).toEqual(deliveryChannels);
+});
+
+it('holds channel selection while saving and blocks duplicate publish requests', async () => {
+  let finishSave: ((value: unknown) => void) | undefined;
+  (createAnnouncement as jest.Mock).mockReturnValue(new Promise(resolve => { finishSave = resolve; }));
+  await mount(); await fill('Title', 'Only email'); await fill('Message', 'Message'); await toggleChannel('Email');
+  await act(async () => { void button('Publish update').props.onPress(); });
+  expect(channel('Email').props.disabled).toBe(true);
+  await toggleChannel('Push notifications'); await press('Publish update');
+  expect(channel('Push notifications').props.accessibilityState.checked).toBe(false);
+  expect(createAnnouncement).toHaveBeenCalledTimes(1);
+  expect(createAnnouncement).toHaveBeenCalledWith(expect.objectContaining({ deliveryChannels: { email: true, whatsapp: false, push: false } }));
+  await act(async () => { finishSave?.({ id: 'new' }); });
 });

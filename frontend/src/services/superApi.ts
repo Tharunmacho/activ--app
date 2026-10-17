@@ -1,5 +1,6 @@
 import { fetchSpreadsheet } from './spreadsheetDownload';
 import api from './api';
+import type { UpdateDeliveryChannels } from '../utils/updateDeliveryChannels';
 
 /**
  * ============================================================================
@@ -240,11 +241,13 @@ export const addStandardEventCategories = async () =>
 
 /* ================================================================= UPDATES */
 export type UpdateCategory = 'general' | 'notice' | 'policy' | 'scheme' | 'achievement' | 'urgent';
+export type AdminAnnouncement = Record<string, any> & { deliveryChannels?: UpdateDeliveryChannels };
+export type AnnouncementUpdate = Record<string, unknown> & { deliveryChannels?: UpdateDeliveryChannels };
 export const listAnnouncementsAdmin = async () =>
-  unwrap<{ announcements: any[]; total: number }>(await api.get('/announcements/admin'), { announcements: [], total: 0 });
-export const createAnnouncement = async (payload: Record<string, any>) =>
+  unwrap<{ announcements: AdminAnnouncement[]; total: number }>(await api.get('/announcements/admin'), { announcements: [], total: 0 });
+export const createAnnouncement = async (payload: AnnouncementUpdate & { deliveryChannels: UpdateDeliveryChannels }) =>
   unwrap<any>(await api.post('/announcements', payload), {});
-export const updateAnnouncement = async (id: string, payload: Record<string, any>) =>
+export const updateAnnouncement = async (id: string, payload: AnnouncementUpdate) =>
   unwrap<any>(await api.put(`/announcements/${enc(id)}`, payload), {});
 export const setAnnouncementStatus = async (id: string, status: 'draft' | 'published') =>
   unwrap<any>(await api.patch(`/announcements/${enc(id)}/status`, { status }), {});

@@ -1,4 +1,5 @@
 import { updateAudienceLabel } from '../../../utils/memberAudience';
+import { resolveUpdateDeliveryChannels, updateDeliverySummary } from '../../../utils/updateDeliveryChannels';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Alert, RefreshControl } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -56,6 +57,7 @@ function UpdateCard({ a, onEdit, onToggle, onDelete }: { a: any; onEdit: () => v
         <ConsoleChip icon={a?.targetLabel ? 'my-location' : 'public'} label={a?.targetLabel || 'All regions'} kind={a?.targetLabel ? 'info' : 'neutral'} />
         <ConsoleChip icon={String(a?.audience) === 'paid' ? 'lock' : 'groups'} label={updateAudienceLabel(a?.audience)} kind="neutral" />
       </View>
+      <Text style={s.summary}>{updateDeliverySummary(resolveUpdateDeliveryChannels(a?.deliveryChannels, true))}</Text>
       {a?.summary ? <Text style={s.summary} numberOfLines={3} maxFontSizeMultiplier={1.3}>{a.summary}</Text> : null}
       <Text style={s.date} maxFontSizeMultiplier={1.3}>
         {published ? `Published ${shortDate(a?.publishedAt) || ''}` : `Created ${shortDate(a?.createdAt) || ''}`}{a?.expiresAt ? ` · until ${shortDate(a.expiresAt)}` : ''}

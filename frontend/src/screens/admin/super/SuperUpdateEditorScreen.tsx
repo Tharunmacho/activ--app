@@ -6,6 +6,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { resolveMediaUrl } from '../../../config/api.config';
 import { pickEventDocument } from '../../../services/eventDocuments';
 import { UPDATE_AUDIENCES, type UpdateAudience } from '../../../utils/memberAudience';
+import { UPDATE_DELIVERY_CHANNELS, resolveUpdateDeliveryChannels, updateDeliverySummary } from '../../../utils/updateDeliveryChannels';
 import {
   PALETTE, SPACE, ConsoleScroll, ConsoleHeader, ConsoleCard, ConsoleButton,
   GlassIconButton, PremiumInput, PremiumSelect, BottomActionBar, FitImage,
@@ -41,6 +42,7 @@ const SuperUpdateEditorScreen: React.FC = () => {
   const [targets, setTargets] = useState<UpdateRegion[]>(a?.targets?.length ? a.targets : a?.state ? [{ state: a.state, district: a.district || '', block: a.block || '' }] : []);
   const [regional, setRegional] = useState(!!(a?.targets?.length || a?.state));
   const [includeVisitors, setIncludeVisitors] = useState(!!a?.includeVisitors);
+  const [deliveryChannels, setDeliveryChannels] = useState(() => resolveUpdateDeliveryChannels(a?.deliveryChannels, editing));
   const [recipientMode, setRecipientMode] = useState<'audience' | 'selected'>(a?.recipientMode === 'selected' ? 'selected' : 'audience');
   const [memberIds, setMemberIds] = useState<string[]>(Array.isArray(a?.memberIds) ? [...a.memberIds] : []);
   const [variables, setVariables] = useState<UpdateVariable[]>(Array.isArray(a?.variables) ? a.variables.map((row: UpdateVariable) => ({ ...row, overrides: (row.overrides || []).map(entry => ({ ...entry })) })) : []);
@@ -138,7 +140,7 @@ const SuperUpdateEditorScreen: React.FC = () => {
     if (status === 'published' && expiry && expiry.getTime() < Date.now()) return fail('Choose today or a future expiry date to publish this update.');
     const payload = {
       title: title.trim(), summary: summary.trim(), body: body.trim(), category,
-      targets: regional ? targets : [], includeVisitors: publicUpdate, ...personalization,
+      targets: regional ? targets : [], includeVisitors: publicUpdate, ...personalization, deliveryChannels: { ...deliveryChannels },
       audience, planKeys: audience === 'plans' ? planKeys : [], pinned, status,
       bannerUrl: bannerUrl.trim(), bannerAlt: bannerUrl ? bannerAlt.trim() : '',
       attachmentUrl: attachmentUrl.trim(), attachmentLabel: attachmentUrl ? attachmentLabel.trim() : '', expiresAt: expiry ? expiry.toISOString() : '',
@@ -217,7 +219,18 @@ const SuperUpdateEditorScreen: React.FC = () => {
       </View> : null}
       <ToggleRow label="Limit to selected regions" value={regional} onChange={setRegional} last />
       {regional ? <UpdateRegionPicker value={targets} onChange={setTargets} disabled={busy} /> : <Text style={s.small}>Reaches the selected members in every region.</Text>}
-      {audience === 'all' && !regional && recipientMode !== 'selected' ? <><ToggleRow label="Also show to visitors" value={includeVisitors} onChange={setIncludeVisitors} last /><Text style={s.small}>Makes this update public and notifies visitors who enabled app notifications.</Text></> : <Text style={s.small}>Visitor updates are available only for all eligible members in all regions.</Text>}
+      {audience === 'all' && !regional && recipientMode !== 'selected' ? <><ToggleRow label="Also show to visitors" value={includeVisitors} onChange={setIncludeVisitors} last /><Text style={s.small}>Makes this update public. Visitors can receive notifications only when push is selected below and they have enabled notifications.</Text></> : <Text style={s.small}>Visitor updates are available only for all eligible members in all regions.</Text>}
+    </ConsoleCard>
+    <ConsoleCard style={s.card}>
+      <Text style={s.title}>Choose delivery channels</Text>
+      <Text style={s.hint}>Choose any combination for this update. Leave every channel off to publish only in the feed.</Text>
+      {UPDATE_DELIVERY_CHANNELS.map(channel => <TouchableOpacity key={channel.key} accessibilityRole="checkbox" accessibilityLabel={channel.label}
+        accessibilityState={{ checked: deliveryChannels[channel.key], disabled: busy }} disabled={busy} style={s.channel}
+        onPress={() => { if (!pending.current) setDeliveryChannels(current => ({ ...current, [channel.key]: !current[channel.key] })); }}>
+        <Icon name={deliveryChannels[channel.key] ? 'check-box' : 'check-box-outline-blank'} size={26} color={PALETTE.indigo} />
+        <View style={s.action}><Text style={s.planName}>{channel.label}</Text><Text style={s.small}>{channel.detail}</Text></View>
+      </TouchableOpacity>)}
+      <Text style={s.hint}>Selected channels still follow each recipient's preferences, consent and notification permissions.</Text>
     </ConsoleCard>
     <ConsoleCard style={s.card}>
       <Text style={s.title}>Personalise your update</Text>
@@ -241,7 +254,8 @@ const SuperUpdateEditorScreen: React.FC = () => {
     <ConsoleCard style={s.card}>
       <Text style={s.title}>Review before publishing</Text>
       <Text style={s.review}>{recipientMode === 'selected' ? `${memberIds.length} specific members · ${reach}` : reach}</Text><Text style={s.hint}>{region}{expiresAt ? ` · Until ${expiresAt}` : ''}</Text>
-      <Text style={s.hint}>Publishing makes this update available to matching members. Notifications follow their delivery preferences. A draft stays private.</Text>
+      <Text accessibilityLiveRegion="polite" style={s.review}>{updateDeliverySummary(deliveryChannels)}</Text>
+      <Text style={s.hint}>Publishing makes this update available to matching members. Only the selected channels may send notifications, subject to each recipient's preferences and eligibility. A draft stays private and sends nothing.</Text>
       {wasPublished ? <Text style={s.hint}>Moving to draft removes this update from members’ feeds.</Text> : null}
       <ConsoleButton kind="soft" icon="visibility" label={preview ? 'Hide preview' : 'Preview update'} onPress={() => setPreview(value => !value)} />
       {preview ? <View style={s.preview}>
@@ -267,6 +281,7 @@ const s = StyleSheet.create({
   documentText: { flex: 1, color: PALETTE.indigo, fontSize: 18, lineHeight: 27, fontWeight: '500' },
   planList: { marginBottom: SPACE.md },
   plan: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, paddingVertical: SPACE.md, borderBottomWidth: 1, borderBottomColor: PALETTE.divider },
+  channel: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, minHeight: 56, paddingVertical: SPACE.md, borderBottomWidth: 1, borderBottomColor: PALETTE.divider, marginBottom: SPACE.sm },
   planName: { fontSize: 18, lineHeight: 27, color: PALETTE.text, fontWeight: '500' }, regionFields: { marginTop: SPACE.md },
   disclosure: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.sm, marginBottom: SPACE.sm },
   review: { color: PALETTE.text, fontSize: 18, lineHeight: 27, fontWeight: '500', marginBottom: SPACE.xs },
