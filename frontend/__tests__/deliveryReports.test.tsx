@@ -6,6 +6,9 @@ import { ConsoleButton, ConsoleStatTile, ConsoleSearch } from '../src/ui';
 import { ChipRow } from '../src/screens/admin/super/superKit';
 import {
   getDeliveryReport,
+  previewDeliveryRetry,
+  retryDeliveryReport,
+  getDeliveryRetryStatus,
   type ReportFilters,
   type ReportRow,
 } from '../src/services/deliveryReportApi';
@@ -13,6 +16,9 @@ import {
 jest.mock('../src/services/deliveryReportApi', () => ({
   ...jest.requireActual('../src/services/deliveryReportApi'),
   getDeliveryReport: jest.fn(),
+  previewDeliveryRetry: jest.fn(),
+  retryDeliveryReport: jest.fn(),
+  getDeliveryRetryStatus: jest.fn(),
 }));
 jest.mock('../src/services/superApi', () => ({
   errorText: (error: Error) => error.message,
@@ -143,6 +149,15 @@ const outcome = () =>
     )!;
 const listRows = () =>
   screen.root.findByType(FlatList).props.data as ReportRow[];
+const button = (label: string) => {
+  const found = screen.root.findAllByType(ConsoleButton).find(node => node.props.label === label);
+  if (!found) throw new Error(`Button not found: ${label}`);
+  return found;
+};
+const preview = {
+  matched: 2, eligible: 1, skipped: 1, ids: ['row-5'], token: 'review-fixture', truncated: false,
+  reasons: [{ reason: 'Device registration expired', count: 1 }],
+};
 beforeEach(() => {
   jest.useFakeTimers();
   jest.clearAllMocks();
@@ -152,6 +167,101 @@ beforeEach(() => {
   (getDeliveryReport as jest.Mock).mockImplementation(
     async (input: ReportFilters) => report(input),
   );
+  (previewDeliveryRetry as jest.Mock).mockResolvedValue(preview);
+  (retryDeliveryReport as jest.Mock).mockResolvedValue({ attempted: 1, sent: 1, queued: 0, failed: 0, skipped: 0, reasons: [] });
+  (getDeliveryRetryStatus as jest.Mock).mockResolvedValue({ found: false, processing: false });
+});
+
+it('reviews current automation filters, confirms frozen IDs once and refreshes delivery results', async () => {
+  await mount();
+  const activity = screen.root.findAllByType(ChipRow).find(node => node.props.options.some((option: { value: string }) => option.value === 'automation'));
+  if (!activity) throw new Error('Activity filter not found');
+  await press(() => activity.props.onChange('automation'));
+  await press(channel('Email').props.onPress);
+  await press(() => screen.root.findByType(ConsoleSearch).props.onChangeText('Email member'));
+  await press(button('Review failed deliveries').props.onPress);
+  expect(previewDeliveryRetry).toHaveBeenCalledWith({ filters: expect.objectContaining({ group: 'automation', channel: 'email', search: 'Email member', status: 'failed', from: filters().from }) });
+  expect(retryDeliveryReport).not.toHaveBeenCalled();
+  expect(text()).toContain('2 matched · 1 eligible · 1 skipped');
+  expect(text()).toContain('Device registration expired');
+  const confirm = button('Confirm resend (1)').props.onPress;
+  let complete: (value: unknown) => void = () => {};
+  (retryDeliveryReport as jest.Mock).mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }));
+  const readsBefore = (getDeliveryReport as jest.Mock).mock.calls.length;
+  await act(async () => { confirm(); confirm(); });
+  expect(retryDeliveryReport).toHaveBeenCalledTimes(1);
+  expect(retryDeliveryReport).toHaveBeenCalledWith({ ids: preview.ids, token: preview.token });
+  expect(button('Resending…').props.disabled).toBe(true);
+  await act(async () => { complete({ attempted: 1, sent: 0, queued: 1, failed: 0, skipped: 1, reasons: [{ reason: 'Already retried', count: 1 }] }); });
+  await settle();
+  expect(text()).toContain('1 attempted · 0 sent · 1 queued · 0 failed · 1 skipped');
+  expect(text()).toContain('Already retried');
+  expect((getDeliveryReport as jest.Mock).mock.calls.length).toBeGreaterThan(readsBefore);
+});
+
+it('reviews one failed record by ID and cancelling performs no resend', async () => {
+  await mount();
+  await press(tile('Failed').props.onPress);
+  const recipient = screen.root.findAllByType(TouchableOpacity).find(node => node.props.accessibilityLabel?.startsWith('Long member name'));
+  if (!recipient) throw new Error('Failed recipient missing');
+  await press(recipient.props.onPress);
+  await press(button('Review resend').props.onPress);
+  expect(previewDeliveryRetry).toHaveBeenCalledWith({ ids: ['row-4'] });
+  expect(text()).toContain('Long member name for a narrow screen · Push notifications');
+  await press(button('Cancel resend').props.onPress);
+  expect(retryDeliveryReport).not.toHaveBeenCalled();
+  expect(screen.root.findAllByType(ConsoleButton).some(node => node.props.label === 'Confirm resend (1)')).toBe(false);
+});
+
+it('blocks ineligible retries and discards previews after filters change', async () => {
+  await mount();
+  (previewDeliveryRetry as jest.Mock).mockResolvedValueOnce({ ...preview, eligible: 0, ids: [], skipped: 2 });
+  await press(button('Review failed deliveries').props.onPress);
+  expect(button('Confirm resend (0)').props.disabled).toBe(true);
+  await press(button('Confirm resend (0)').props.onPress);
+  expect(retryDeliveryReport).not.toHaveBeenCalled();
+  await press(channel('Email').props.onPress);
+  expect(screen.root.findAllByType(ConsoleButton).some(node => String(node.props.label).startsWith('Confirm resend'))).toBe(false);
+  let complete: (value: unknown) => void = () => {};
+  (previewDeliveryRetry as jest.Mock).mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }));
+  await act(async () => { button('Review failed deliveries').props.onPress(); });
+  expect(button('Reviewing failures…').props.disabled).toBe(true);
+  await press(channel('Email').props.onPress);
+  await act(async () => { complete(preview); });
+  expect(screen.root.findAllByType(ConsoleButton).some(node => String(node.props.label).startsWith('Confirm resend'))).toBe(false);
+});
+
+it('shows retry errors and reloads the report without automatically sending again', async () => {
+  await mount();
+  (previewDeliveryRetry as jest.Mock).mockRejectedValueOnce(new Error('Review unavailable'));
+  await press(button('Review failed deliveries').props.onPress);
+  expect(text()).toContain('Review unavailable');
+  expect(retryDeliveryReport).not.toHaveBeenCalled();
+  await press(button('Review failed deliveries').props.onPress);
+  (retryDeliveryReport as jest.Mock).mockRejectedValueOnce(new Error('Confirmation expired; review again'));
+  const readsBefore = (getDeliveryReport as jest.Mock).mock.calls.length;
+  await press(button('Confirm resend (1)').props.onPress);
+  expect(text()).toContain('Confirmation expired; review again');
+  expect(retryDeliveryReport).toHaveBeenCalledTimes(1);
+  expect((getDeliveryReport as jest.Mock).mock.calls.length).toBeGreaterThan(readsBefore);
+});
+
+it('recovers a timed-out confirmation through bounded status reads without another send', async () => {
+  await mount();
+  await press(button('Review failed deliveries').props.onPress);
+  (retryDeliveryReport as jest.Mock).mockRejectedValueOnce(new Error('Network timeout'));
+  (getDeliveryRetryStatus as jest.Mock)
+    .mockResolvedValueOnce({ found: true, processing: true, attempted: 0, sent: 0, queued: 0, failed: 0, skipped: 0, reasons: [] })
+    .mockResolvedValueOnce({ found: true, processing: false, attempted: 1, sent: 1, queued: 0, failed: 0, skipped: 0, reasons: [] });
+  await press(button('Confirm resend (1)').props.onPress);
+  expect(retryDeliveryReport).toHaveBeenCalledTimes(1);
+  expect(getDeliveryRetryStatus).toHaveBeenCalledWith('review-fixture');
+  await act(async () => { jest.advanceTimersByTime(2000); });
+  await settle();
+  expect(getDeliveryRetryStatus).toHaveBeenCalledTimes(2);
+  expect(retryDeliveryReport).toHaveBeenCalledTimes(1);
+  expect(text()).toContain('1 attempted · 1 sent · 0 queued · 0 failed · 0 skipped');
+  expect(text()).not.toContain('Network timeout');
 });
 afterEach(async () => {
   if (screen)

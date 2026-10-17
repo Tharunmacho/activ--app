@@ -68,6 +68,56 @@ export interface DeliveryReport {
   campaignPagination: { page: number; total: number; pages: number };
   generatedAt: string;
 }
+export interface DeliveryRetrySelection {
+  filters?: ReportFilters;
+  ids?: string[];
+}
+export interface DeliveryRetryReason {
+  reason: string;
+  count: number;
+}
+export interface DeliveryRetryPreview {
+  matched: number;
+  reviewed?: number;
+  remaining?: number;
+  eligible: number;
+  skipped: number;
+  reasons: DeliveryRetryReason[];
+  ids: string[];
+  token: string;
+  truncated: boolean;
+}
+export interface DeliveryRetryResult {
+  alreadySubmitted?: boolean;
+  processing?: boolean;
+  attempted: number;
+  sent: number;
+  queued: number;
+  failed: number;
+  skipped: number;
+  reasons: DeliveryRetryReason[];
+}
+export interface DeliveryRetryStatus extends DeliveryRetryResult {
+  found: boolean;
+}
+export const getDeliveryRetryStatus = async (token: string): Promise<DeliveryRetryStatus> => {
+  const response = await api.get('/notifications/reports/retry-status', {
+    headers: { 'X-Delivery-Retry-Token': token }, timeout: 30000,
+  });
+  return response.data?.data ?? response.data;
+};
+export const previewDeliveryRetry = async (
+  selection: DeliveryRetrySelection,
+): Promise<DeliveryRetryPreview> => {
+  const response = await api.post('/notifications/reports/retry-preview', selection, { timeout: 120000 });
+  return response.data?.data ?? response.data;
+};
+export const retryDeliveryReport = async (
+  confirmation: Pick<DeliveryRetryPreview, 'ids' | 'token'>,
+): Promise<DeliveryRetryResult> => {
+  const response = await api.post('/notifications/reports/retry', confirmation, { timeout: 120000 });
+  return response.data?.data ?? response.data;
+};
 export const getDeliveryReport = async (
   filters: ReportFilters,
 ): Promise<DeliveryReport> => {

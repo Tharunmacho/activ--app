@@ -177,14 +177,14 @@ export function UpdateRecipientPreview({ payload, members }: { payload: Record<s
 
 const s = StyleSheet.create({
   stack: { gap: SPACE.md }, flex: { flex: 1, minWidth: 0 },
-  heading: { fontSize: 18, lineHeight: 26, color: PALETTE.text, fontWeight: '600' },
-  input: { fontSize: 16, lineHeight: 24 }, hint: { fontSize: 15, lineHeight: 22, color: PALETTE.textMuted },
+  heading: { fontSize: 20, lineHeight: 28, color: PALETTE.text, fontWeight: '600' },
+  input: { fontSize: 18, lineHeight: 27 }, hint: { fontSize: 16, lineHeight: 24, color: PALETTE.textMuted },
   member: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.sm, paddingVertical: SPACE.sm },
-  memberName: { fontSize: 16, lineHeight: 24, color: PALETTE.text, fontWeight: '600' },
+  memberName: { fontSize: 18, lineHeight: 27, color: PALETTE.text, fontWeight: '600' },
   selectedRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm },
   divider: { height: 1, backgroundColor: PALETTE.divider, marginVertical: SPACE.sm },
   override: { gap: SPACE.sm, borderWidth: 1, borderColor: PALETTE.divider, borderRadius: 14, padding: SPACE.md },
-  error: { color: PALETTE.red, fontSize: 15, lineHeight: 22 },
-  previewTitle: { fontSize: 20, lineHeight: 28, fontWeight: '600', color: PALETTE.text },
-  body: { fontSize: 16, lineHeight: 25, color: PALETTE.textSoft },
+  error: { color: PALETTE.red, fontSize: 16, lineHeight: 24 },
+  previewTitle: { fontSize: 22, lineHeight: 30, fontWeight: '600', color: PALETTE.text },
+  body: { fontSize: 18, lineHeight: 27, color: PALETTE.textSoft },
 });

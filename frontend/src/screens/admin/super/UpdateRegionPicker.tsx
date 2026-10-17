@@ -54,9 +54,9 @@ export default function UpdateRegionPicker({ value, onChange, disabled }: { valu
   </View>;
 }
 const s = StyleSheet.create({
-  wrap: { gap: SPACE.sm }, hint: { fontSize: 14, lineHeight: 21, color: PALETTE.textMuted },
+  wrap: { gap: SPACE.sm }, hint: { fontSize: 16, lineHeight: 24, color: PALETTE.textMuted },
   branch: { borderWidth: 1, borderColor: PALETTE.border, borderRadius: 12, padding: SPACE.xs },
   row: { flexDirection: 'row', alignItems: 'center', minHeight: 44 }, pick: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, minHeight: 44 },
-  name: { flex: 1, fontSize: 15, lineHeight: 22, color: PALETTE.text }, expand: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  name: { flex: 1, fontSize: 16, lineHeight: 24, color: PALETTE.text }, expand: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   children: { marginLeft: SPACE.md }, selection: { flexDirection: 'row', alignItems: 'center', backgroundColor: PALETTE.blueSoft, borderRadius: 12, paddingLeft: SPACE.md },
 });

@@ -29,11 +29,16 @@ import {
 import { ChipRow } from '../superKit';
 import {
   getDeliveryReport,
+  previewDeliveryRetry,
+  retryDeliveryReport,
+  getDeliveryRetryStatus,
   CHANNEL_LABELS,
   statusLabel,
   type DeliveryReport,
   type ReportFilters,
   type ReportRow,
+  type DeliveryRetryPreview,
+  type DeliveryRetryResult,
 } from '../../../../services/deliveryReportApi';
 import { errorText } from '../../../../services/superApi';
 
@@ -99,6 +104,15 @@ export function ReportsPane({
     [error, setError] = useState('');
   const [expanded, setExpanded] = useState(''),
     [dates, setDates] = useState(false);
+  const [retryPreview, setRetryPreview] = useState<DeliveryRetryPreview | null>(null);
+  const [retryResult, setRetryResult] = useState<DeliveryRetryResult | null>(null);
+  const [retryBusy, setRetryBusy] = useState<'review' | 'send' | null>(null);
+  const [retryError, setRetryError] = useState('');
+  const [retryLabel, setRetryLabel] = useState('');
+  const [retryRefresh, setRetryRefresh] = useState(0);
+  const retryLock = useRef(false);
+  const retrySeq = useRef(0);
+  const mounted = useRef(true);
   const seq = useRef(0);
   const list = useRef<FlatList<ReportRow>>(null);
   const recipientsAnchor = useRef<View>(null);
@@ -159,7 +173,75 @@ export function ReportsPane({
       clearTimeout(timer);
       seq.current++;
     };
-  }, [load, refreshKey]);
+  }, [load, refreshKey, retryRefresh]);
+  useEffect(() => {
+    retrySeq.current++;
+    setRetryPreview(null);
+    setRetryError('');
+  }, [filters]);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; retrySeq.current++; };
+  }, []);
+  const reviewRetry = async (item?: ReportRow) => {
+    if (retryLock.current || busy) return;
+    retryLock.current = true;
+    const request = ++retrySeq.current;
+    setRetryBusy('review');
+    setRetryPreview(null);
+    setRetryResult(null);
+    setRetryError('');
+    setRetryLabel(item ? `${item.recipientName || 'This recipient'} · ${CHANNEL_LABELS[item.channel]}` : 'Failed deliveries for the current activity, channel, date and search filters');
+    revealRecipients();
+    try {
+      const preview = await previewDeliveryRetry(item
+        ? { ids: [item._id] }
+        : { filters: { ...filters, status: 'failed' } });
+      if (mounted.current && request === retrySeq.current) setRetryPreview(preview);
+    } catch (err) {
+      if (mounted.current && request === retrySeq.current) setRetryError(errorText(err));
+    } finally {
+      retryLock.current = false;
+      if (mounted.current) setRetryBusy(null);
+    }
+  };
+  const confirmRetry = async () => {
+    if (retryLock.current || !retryPreview?.eligible || !retryPreview.token || !retryPreview.ids?.length) return;
+    retryLock.current = true;
+    setRetryBusy('send');
+    setRetryError('');
+    const token = retryPreview.token;
+    const recover = async () => {
+      let status = await getDeliveryRetryStatus(token);
+      for (let attempt = 1; status?.processing && attempt < 5 && mounted.current; attempt++) {
+        await new Promise<void>(resolve => setTimeout(resolve, 2000));
+        if (!mounted.current) break;
+        status = await getDeliveryRetryStatus(token);
+      }
+      return status;
+    };
+    try {
+      const result = await retryDeliveryReport({ ids: retryPreview.ids, token: retryPreview.token });
+      const finalResult = result?.processing && mounted.current ? await recover().catch(() => result) : result;
+      if (mounted.current) setRetryResult(finalResult);
+    } catch (err) {
+      let recovered = false;
+      if (!(err as { response?: unknown })?.response && mounted.current) {
+        try {
+          const status = await recover();
+          if (mounted.current && status?.found) { setRetryResult(status); recovered = true; }
+        } catch { /* Keep the original request error when status is unavailable. */ }
+      }
+      if (mounted.current && !recovered) setRetryError(errorText(err));
+    } finally {
+      retryLock.current = false;
+      if (mounted.current) {
+        setRetryPreview(null);
+        setRetryBusy(null);
+        setRetryRefresh(value => value + 1);
+      }
+    }
+  };
   useEffect(() => {
     if (!busy && pendingReveal.current) {
       pendingReveal.current = false;
@@ -495,9 +577,33 @@ export function ReportsPane({
       />
       <ConsoleNote
         kind="indigo"
-        text="Review follow-up candidates here. Existing Automation controls handle eligible retries. Viewing a report never sends a message."
+        text="Review failed messages and automations before resending. Only eligible failed deliveries are included; a missing open confirmation does not mean delivery failed."
         style={s.card}
       />
+      <ConsoleButton label={retryBusy === 'review' ? 'Reviewing failures…' : 'Review failed deliveries'}
+        disabled={busy || !!retryBusy || !summary?.failed} onPress={() => void reviewRetry()} />
+      {retryBusy === 'send' && <ConsoleNote kind="indigo" text="Resending the reviewed deliveries…" style={s.card} />}
+      {!!retryError && <ConsoleNote kind="red" text={retryError} style={s.card} />}
+      {retryPreview && <ConsoleCard style={s.card}>
+        <Text style={s.title} accessibilityRole="header">Confirm resend</Text>
+        <Text style={s.body}>{retryLabel}</Text>
+        <Text style={s.body}>{fmt(retryPreview.matched)} matched · {fmt(retryPreview.eligible)} eligible · {fmt(retryPreview.skipped)} skipped</Text>
+        {(retryPreview.reasons || []).map((reason, index) => <Text key={index} style={s.caption}>{fmt(reason.count)} skipped: {reason.reason}</Text>)}
+        {retryPreview.truncated && <Text style={s.body}>{fmt(retryPreview.reviewed ?? (retryPreview.eligible + retryPreview.skipped))} reviewed, {fmt(retryPreview.remaining ?? Math.max(0, retryPreview.matched - retryPreview.eligible - retryPreview.skipped))} still to review. Each batch reviews up to 100 deliveries. Review the remaining failures after this batch finishes.</Text>}
+        <Text style={s.caption}>Confirmation resends only this reviewed selection. Delivery eligibility is checked again before sending.</Text>
+        <View style={s.retryActions}>
+          <ConsoleButton label={retryBusy === 'send' ? 'Resending…' : `Confirm resend (${fmt(retryPreview.eligible)})`}
+            disabled={!!retryBusy || !retryPreview.eligible || !retryPreview.ids?.length || !retryPreview.token}
+            onPress={() => void confirmRetry()} />
+          <ConsoleButton label="Cancel resend" kind="soft" disabled={!!retryBusy} onPress={() => setRetryPreview(null)} />
+        </View>
+      </ConsoleCard>}
+      {retryResult && <ConsoleCard style={s.card}>
+        <Text style={s.title} accessibilityRole="header">Resend result</Text>
+        {retryResult.processing ? <Text style={s.body} accessibilityLiveRegion="polite">This resend is already processing. Refresh the report to see delivery progress.</Text> : <Text style={s.body} accessibilityLiveRegion="polite">{fmt(retryResult.attempted)} attempted · {fmt(retryResult.sent)} sent · {fmt(retryResult.queued)} queued · {fmt(retryResult.failed)} failed · {fmt(retryResult.skipped)} skipped</Text>}
+        <Text style={s.caption}>Sent means the provider accepted the request. Queued deliveries are waiting for processing.</Text>
+        {(retryResult.reasons || []).map((reason, index) => <Text key={index} style={s.caption}>{fmt(reason.count)} records: {reason.reason}</Text>)}
+      </ConsoleCard>}
     </>
   );
   const row = ({ item }: { item: ReportRow }) => (
@@ -589,6 +695,9 @@ export function ReportsPane({
             Email opens are not measured. Firebase acceptance is separate from a
             recorded notification tap.
           </Text>
+          {item.status === 'failed' && <ConsoleButton label="Review resend"
+            accessibilityLabel={`Review resend for ${item.recipientName || 'recipient'}`}
+            disabled={busy || !!retryBusy} onPress={() => void reviewRetry(item)} />}
         </View>
       )}
     </ConsoleCard>
@@ -655,6 +764,7 @@ export function ReportsPane({
 }
 const s = StyleSheet.create({
   card: { marginBottom: SPACE.md },
+  retryActions: { gap: SPACE.sm, marginTop: SPACE.sm },
   title: {
     ...TYPE.body,
     fontWeight: '700',

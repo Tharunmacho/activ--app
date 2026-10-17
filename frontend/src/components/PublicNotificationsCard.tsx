@@ -99,7 +99,7 @@ export default function PublicNotificationsCard({ visible, noticeId, onClose, na
       <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityRole="button" accessibilityLabel="Dismiss notifications" />
       <View accessibilityViewIsModal style={[s.card, { width: Math.min(width - 24, 420), maxHeight: Math.max(180, height - insets.top - insets.bottom - 88) }]}>
         <View style={s.header}>
-          {selected ? iconButton('Back to notifications', 'arrow-back', () => { setSelected(null); setError(''); }) : <Icon name="notifications-active" size={23} color={BRAND.blue} />}
+          {selected && iconButton('Back to notifications', 'arrow-back', () => { setSelected(null); setError(''); })}
           <Text accessibilityRole="header" style={s.heading}>Notifications</Text>
           {iconButton('Close notifications', 'close', close)}
         </View>
@@ -113,14 +113,13 @@ export default function PublicNotificationsCard({ visible, noticeId, onClose, na
                 {selected.kind === 'event' && <PressableScale accessibilityRole="button" accessibilityLabel="View event" onPress={() => { close(); navigation.navigate('PublicEventDetail', { id: selected.sourceId }); }} contentStyle={s.action}><Text style={s.actionText}>View event</Text><Icon name="chevron-right" size={20} color={BRAND.blue} /></PressableScale>}
               </View>
                 : items.length ? items.map(item => <PressableScale key={item.id} accessibilityRole="button" accessibilityLabel={item.title} onPress={() => void open(item)} contentStyle={s.row}>
-                  <View style={s.glyph}><Icon name="notifications-none" size={20} color={BRAND.blue} /></View>
                   <View style={s.rowText}><Text style={s.title} numberOfLines={2}>{item.title}</Text><Text style={s.summary} numberOfLines={2}>{item.summary}</Text><Text style={s.date}>{date(item.createdAt)}</Text></View>
                   <Icon name="chevron-right" size={20} color={PALETTE.textMuted} />
-                </PressableScale>) : <><Icon name="notifications-none" size={30} color={PALETTE.textMuted} /><Text style={s.title}>You're all caught up</Text><Text style={s.copy}>New public events and updates will appear here.</Text></>}
+                </PressableScale>) : <><Text style={s.title}>You're all caught up</Text><Text style={s.copy}>New public events and updates will appear here.</Text></>}
         </ScrollView>
         {firebaseReady() && <View style={s.footer}>
           <PressableScale disabled={busy} accessibilityRole="button" accessibilityLabel={signedIn ? 'Manage notifications' : enabled ? 'Turn off notifications' : 'Enable notifications'} onPress={() => void toggle()} contentStyle={s.action}>
-            <Icon name={enabled ? 'notifications-off' : 'notifications-active'} size={18} color={BRAND.blue} /><Text style={s.actionText}>{busy ? 'Updating...' : signedIn ? 'Manage notifications' : enabled ? 'Notifications on · Turn off' : 'Enable notifications'}</Text>
+            <Text style={s.actionText}>{busy ? 'Updating...' : signedIn ? 'Manage notifications' : enabled ? 'Notifications on · Turn off' : 'Enable notifications'}</Text>
           </PressableScale>
           {!!pushError && <Text accessibilityRole="alert" style={s.pushError}>{pushError}</Text>}
           {blocked && <PressableScale accessibilityRole="button" accessibilityLabel="Open phone notification settings" onPress={() => { void Linking.openSettings(); }} contentStyle={s.action}><Text style={s.actionText}>Open phone settings</Text></PressableScale>}
@@ -137,9 +136,8 @@ const s = StyleSheet.create({
   heading: { ...TYPE.bodyStrong, flex: 1, color: PALETTE.text, fontSize: 17 }, iconButton: { width: 44, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   scroll: { flexShrink: 1 }, empty: { alignItems: 'center', gap: SPACE.sm, padding: SPACE.xl }, copy: { ...TYPE.caption, color: PALETTE.textMuted, textAlign: 'center' },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.sm, padding: SPACE.md, borderBottomWidth: 1, borderBottomColor: PALETTE.divider },
-  glyph: { width: 36, height: 36, borderRadius: 12, backgroundColor: PALETTE.blueSoft, alignItems: 'center', justifyContent: 'center' },
-  rowText: { flex: 1, minWidth: 0 }, title: { ...TYPE.bodyStrong, fontSize: 15, lineHeight: 21, color: PALETTE.text }, summary: { ...TYPE.caption, color: PALETTE.textMuted, marginTop: 3 },
-  date: { ...TYPE.caption, fontSize: 11, color: PALETTE.textMuted, marginTop: 5 }, detail: { padding: SPACE.md, gap: SPACE.sm }, detailTitle: { ...TYPE.bodyStrong, fontSize: 18, lineHeight: 25, color: PALETTE.text }, body: { ...TYPE.body, color: PALETTE.textMuted },
+  rowText: { flex: 1, minWidth: 0 }, title: { ...TYPE.bodyStrong, fontSize: 17, lineHeight: 24, color: PALETTE.text }, summary: { ...TYPE.caption, fontSize: 16, lineHeight: 24, color: PALETTE.textMuted, marginTop: 3 },
+  date: { ...TYPE.caption, fontSize: 14, lineHeight: 21, color: PALETTE.textMuted, marginTop: 5 }, detail: { padding: SPACE.md, gap: SPACE.sm }, detailTitle: { ...TYPE.bodyStrong, fontSize: 18, lineHeight: 25, color: PALETTE.text }, body: { ...TYPE.body, color: PALETTE.textMuted },
   footer: { borderTopWidth: 1, borderTopColor: PALETTE.divider, backgroundColor: PALETTE.blueTint, paddingHorizontal: SPACE.md, paddingVertical: SPACE.xs },
-  action: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: SPACE.xs }, actionText: { ...TYPE.caption, fontWeight: '700', color: BRAND.blue }, pushError: { ...TYPE.caption, color: PALETTE.textMuted, marginBottom: SPACE.xs },
+  action: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: SPACE.xs }, actionText: { ...TYPE.caption, fontSize: 16, lineHeight: 24, fontWeight: '700', color: BRAND.blue }, pushError: { ...TYPE.caption, color: PALETTE.textMuted, marginBottom: SPACE.xs },
 });
