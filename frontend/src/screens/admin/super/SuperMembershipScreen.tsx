@@ -274,7 +274,7 @@ function CandidateRow({ m, onGrant }: { m: any; onGrant: () => void }) {
       </View>
       {!isPlat && m?.blockedReason ? <Text style={[s.desc, s.warnText]} maxFontSizeMultiplier={1.3}>{m.blockedReason}</Text> : null}
       {isPlat ? <MiniAction icon="edit" label="Edit account" onPress={onGrant} /> : null}
-      {!isPlat && (!m?.blockedReason || m?.canAdmitManually) ? (
+      {!isPlat && !m?.blockedReason ? (
         <View style={s.actions}>
           <MiniAction icon="diamond" label="Make Lifetime" onPress={onGrant} />
         </View>
@@ -370,7 +370,7 @@ function PlatinumTab({ navigation, nonce }: { navigation: any; nonce: number }) 
       />
 
       <View style={s.pad}><ConsoleButton icon="person-add" label="Create an office member account" onPress={() => navigation?.navigate?.('SuperOfficeAccount')} /></View>
-      <ConsoleSectionTitle title="Make a member Lifetime" subtitle="Search a registered member. Direct office admission requires a recorded reason." icon="person-search" style={s.section} />
+      <ConsoleSectionTitle title="Make a member Lifetime" subtitle="Search an approved applicant or existing member. New members must complete and submit all required forms." icon="person-search" style={s.section} />
       <ConsoleSearch value={q} onChangeText={setQ} placeholder="Start typing a name, email or number…" style={s.searchGap} />
       {searching ? (
         <View style={s.searching}><ActivityIndicator color={PALETTE.indigo} /><Text style={s.meta} maxFontSizeMultiplier={1.3}>Searching…</Text></View>
@@ -439,7 +439,7 @@ function RequestsTab({ navigation, nonce }: { navigation: any; nonce: number }) 
       ...(price ? { price } : {}),
     });
   };
-  const openDetail = (r: any) => navigation?.navigate?.('SuperPlatinumRequest', { id: String(r?.id || ''), blockedReason: r?.blockedReason || '', canAdmitManually: !!r?.canAdmitManually });
+  const openDetail = (r: any) => navigation?.navigate?.('SuperPlatinumRequest', { id: String(r?.id || ''), blockedReason: r?.blockedReason || '' });
 
   const counts = data?.counts || {};
   const rows: any[] = Array.isArray(data?.requests) ? data?.requests || [] : [];
@@ -497,7 +497,7 @@ function RequestsTab({ navigation, nonce }: { navigation: any; nonce: number }) 
             {open ? (
               <View style={s.actions}>
                 {r?.status === 'new' ? <MiniAction icon="done" label={busy === rid ? 'Saving…' : 'Mark contacted'} onPress={() => markContacted(r)} disabled={!!busy} /> : null}
-                <MiniAction icon="diamond" label="Grant Lifetime" color={PALETTE.indigoDark} onPress={() => grant(r)} disabled={!!r?.blockedReason && !r?.canAdmitManually} />
+                <MiniAction icon="diamond" label="Grant Lifetime" color={PALETTE.indigoDark} onPress={() => grant(r)} disabled={!!r?.blockedReason} />
                 <MiniAction icon="close" label="Decline" color={PALETTE.textMuted} onPress={() => openDetail(r)} />
               </View>
             ) : null}

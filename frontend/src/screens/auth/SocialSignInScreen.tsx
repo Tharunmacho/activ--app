@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Text, View, ActivityIndicator, StyleSheet, Linking } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
@@ -11,6 +11,7 @@ import { errorText } from '../../ui/data';
 import { authStyles as a } from './authStyles';
 import { PremiumAuthScreen, StatusPanel } from './authKit';
 import { takePublicAction } from '../../services/publicNavigation';
+import SocialEmailVerification from './SocialEmailVerification';
 
 /**
  * ============================================================================
@@ -23,11 +24,11 @@ import { takePublicAction } from '../../services/publicNavigation';
  *
  *   code        -> POST /auth/oauth/exchange { code } -> the normal sign-in
  *                  response, stored exactly as the password sign-in stores it
- *   no_account  -> "create an account", registration prefilled with the
- *                  provider's verified email and name
+ *   first link  -> email verification when the provider cannot prove email
+ *                  ownership, then the same member session/dashboard
  *   anything else -> the website's sentence for that reason
  *
- * The code is single-use and lives 60 seconds, so it is exchanged once.
+ * The code is single-use and lives 10 minutes, including email verification.
  *
  * Premium: the brand header with linked-accounts art; the provider's real
  * mark beside the verdict. Like the website's toast, a successful sign-in
@@ -63,10 +64,48 @@ const SocialSignInScreen: React.FC<Props> = ({ navigation, route }) => {
   const [error, setError] = useState('');
   const [welcome, setWelcome] = useState('');
   const [retrying, setRetrying] = useState(false);
+  const [verification, setVerification] = useState<{ email: string; attempt: number } | null>(null);
   const exchanged = useRef('');
+  const handledRoute = useRef('');
+  const mounted = useRef(true);
+  const attemptId = useRef(0);
+  const navigationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { login } = useAuthStore();
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; if (navigationTimer.current) clearTimeout(navigationTimer.current); };
+  }, []);
+
+  const openDashboard = useCallback(async (payload: any, attempt = attemptId.current) => {
+    if (!mounted.current || attempt !== attemptId.current) return;
+    const token = String(payload?.token || '');
+    const role = String(payload?.role || payload?.user?.role || 'member');
+    if (!token) throw new Error(REASONS.failed);
+    if (isAdminRole(role)) { await clearSession(); throw new Error(REASONS.admin); }
+    await login(sanitizeUser(payload?.user || {}), token, role as any);
+    if (!mounted.current || attempt !== attemptId.current) return;
+    const home = await homeForRole(role, payload?.memberDetails);
+    if (!mounted.current || attempt !== attemptId.current) return;
+    if (!home) { await clearSession(); throw new Error(UNSUPPORTED_ACCOUNT_MESSAGE); }
+    setVerification(null);
+    setWelcome(String(payload?.user?.fullName || payload?.user?.name || '').trim() || 'back');
+    if (navigationTimer.current) clearTimeout(navigationTimer.current);
+    navigationTimer.current = setTimeout(() => {
+      if (!mounted.current || attempt !== attemptId.current) return;
+      try {
+        const resume = takePublicAction();
+        navigation.reset(resume ? { index: 1, routes: [{ name: home }, resume] } : { index: 0, routes: [{ name: home }] });
+      } catch (cause) { console.warn('Navigation safely caught:', cause); }
+    }, 900);
+  }, [login, navigation]);
 
   useEffect(() => {
+    const routeKey = JSON.stringify([code, reason, provider]);
+    if (handledRoute.current === routeKey) return;
+    handledRoute.current = routeKey;
+    const attempt = ++attemptId.current;
+    if (navigationTimer.current) clearTimeout(navigationTimer.current);
+    setVerification(null); setWelcome(''); setError('');
     if (reason === 'no_account') return;
     if (!code) {
       const message = provider === 'facebook' && reason === 'no_email'
@@ -77,44 +116,27 @@ const SocialSignInScreen: React.FC<Props> = ({ navigation, route }) => {
     }
     if (exchanged.current === code) return;
     exchanged.current = code;
-    setError('');
 
     (async () => {
       try {
         await clearSession();
         const res = await api.post('/auth/oauth/exchange', { code });
         const payload = res?.data?.data || res?.data || {};
-        const token: string = payload?.token || '';
-        const role = String(payload?.role || payload?.user?.role || 'member');
-        if (!token) throw new Error(res?.data?.message || REASONS.failed);
-        if (isAdminRole(role)) {
-          await clearSession();
-          setError(REASONS.admin);
-          return;
-        }
-        await login(sanitizeUser(payload?.user || {}), token, role as any);
-        const home = await homeForRole(role, payload?.memberDetails);
-        if (!home) {
-          await clearSession();
-          setError(UNSUPPORTED_ACCOUNT_MESSAGE);
-          return;
-        }
-        // Website parity: "Welcome {fullName}!" before the home screen.
-        const who = String(payload?.user?.fullName || payload?.user?.name || '').trim();
-        setWelcome(who || 'back');
-        setTimeout(() => {
-          try {
-            const resume = takePublicAction();
-            navigation.reset(resume ? { index: 1, routes: [{ name: home }, resume] } : { index: 0, routes: [{ name: home }] });
-          } catch (e) { console.warn('Navigation safely caught:', e); }
-        }, 900);
+        if (!mounted.current || attempt !== attemptId.current) return;
+        if (payload.requiresEmailVerification === true) { setVerification({ email: String(payload.email || ''), attempt }); return; }
+        await openDashboard(payload, attempt);
       } catch (err: any) {
+        if (!mounted.current || attempt !== attemptId.current) return;
         setError(err?.response ? errorText(err, REASONS.failed) : String(err?.message || REASONS.failed));
       }
     })();
-  }, [code, reason, provider, login, navigation]);
+  }, [code, reason, provider, login, navigation, openDashboard]);
 
-  const backToLogin = () => navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+  const backToLogin = () => {
+    attemptId.current += 1;
+    if (navigationTimer.current) clearTimeout(navigationTimer.current);
+    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+  };
   const facebookRecovery = provider === 'facebook' && ['no_email', 'email_permission', 'facebook_no_email', 'cancelled', 'expired'].includes(reason);
   const retryFacebook = async () => {
     setRetrying(true);
@@ -136,6 +158,11 @@ const SocialSignInScreen: React.FC<Props> = ({ navigation, route }) => {
       <Text style={s.providerText} numberOfLines={1}>{providerName}{email ? ` · ${email}` : ''}</Text>
     </View>
   ) : null;
+
+  if (verification) return <PremiumAuthScreen {...shell} title="Confirm your email" subtitle="Keep your existing ACTIV account and social sign-in connected.">
+    <SocialEmailVerification code={code} initialEmail={verification.email} onComplete={payload => openDashboard(payload, verification.attempt)} />
+    <GradientButton variant="outline" label="Back to sign in" onPress={backToLogin} style={{ marginTop: SPACE.lg }} />
+  </PremiumAuthScreen>;
 
   if (reason === 'no_account') {
     return (
@@ -169,7 +196,7 @@ const SocialSignInScreen: React.FC<Props> = ({ navigation, route }) => {
 
   if (error) {
     return (
-      <PremiumAuthScreen {...shell} title="Could not sign in" subtitle="Nothing was changed on your account.">
+      <PremiumAuthScreen {...shell} title="Could not sign in" subtitle="Try again to continue to your dashboard.">
         <StatusPanel
           icon="error-outline"
           kind="warning"

@@ -125,7 +125,7 @@ export const getPlatinumOverview = async () =>
 export const searchPlatinumCandidates = async (q: string) =>
   unwrap<any[]>(await api.get(`${PBASE}/search`, { params: { q } }), []);
 export const grantPlatinum = async (memberId: string, body: {
-  amount: number; paymentMode: PlatinumPaymentMode; receiptNumber?: string; receivedOn?: string; note?: string; manualAdmission?: boolean;
+  amount: number; paymentMode: PlatinumPaymentMode; receiptNumber?: string; receivedOn?: string; note?: string;
 }) => unwrap<any>(await api.post(`${PBASE}/${enc(memberId)}`, body), null);
 export const createPlatinumAccount = async (body: { fullName: string; email: string; password: string; phoneNumber: string; whatsappNumber: string; state: string; district: string; block: string }) =>
   unwrap<any>(await api.post(`${PBASE}/accounts`, body), null);
@@ -135,7 +135,7 @@ export const updatePlatinumAccount = async (id: string, body: { email: string; p
 const MBASE = '/admin/super/membership/registrations';
 export const getMembershipRegistrations = async () => unwrap<any>(await api.get(MBASE), null);
 export const getMembershipRegistration = async (id: string) => unwrap<any>(await api.get(`${MBASE}/${enc(id)}`), null);
-export const confirmMembershipRegistration = async (id: string, body: { planId: string; mode: string; amount: number; note: string; receiptNumber: string; membershipNumber?: string; commencementYear?: string; manualAdmission?: boolean }) =>
+export const confirmMembershipRegistration = async (id: string, body: { planId: string; mode: string; amount: number; note: string; receiptNumber: string; membershipNumber?: string; commencementYear?: string }) =>
   unwrap<any>(await api.post(`${MBASE}/${enc(id)}/confirm`, body), null);
 export const revokePlatinum = async (memberId: string) =>
   unwrap<any>(await api.delete(`${PBASE}/${enc(memberId)}`), null);

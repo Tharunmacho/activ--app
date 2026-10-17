@@ -1,6 +1,6 @@
 import React from 'react';
 import Renderer, { act } from 'react-test-renderer';
-import { Alert, Linking } from 'react-native';
+import { Alert, Linking, TextInput } from 'react-native';
 import api from '../src/services/api';
 import { clearSession, homeForRole } from '../src/services/session';
 import { useAuthStore } from '../src/stores/exampleStore';
@@ -87,6 +87,84 @@ test('a pending member returns to their unpaid dashboard', async () => {
   expect(homeForRole).toHaveBeenCalledWith('member', { membershipStatus: 'pending' });
   await act(async () => { jest.advanceTimersByTime(950); });
   expect(nav.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'MemberMain' }] });
+});
+
+test.each(providers)('%s confirms email before linking and opens the same existing dashboard', async provider => {
+  const nav = navigation();
+  (homeForRole as jest.Mock).mockResolvedValue('MemberMain');
+  (api.post as jest.Mock).mockImplementation(async (url, body) => {
+    if (url === '/auth/oauth/verify-email') return { data: { data: { sent: true, email: body.email } } };
+    if (!body.verificationCode) return { data: { data: { requiresEmailVerification: true, email: 'existing@example.test', provider: provider.toLowerCase() } } };
+    return { data: { data: { token: 'same-account-session', role: 'member', user: { id: 'existing-id', fullName: 'Existing Member' }, memberDetails: { membershipStatus: 'pending', registrationIncomplete: true } } } };
+  });
+  await mount(<SocialSignInScreen navigation={nav as any} route={{ params: { code: 'verified-provider-handoff', provider: provider.toLowerCase() } } as any} />);
+  expect(text(tree)).toContain('Confirm your email');
+  expect(login).not.toHaveBeenCalled();
+  expect(api.post).toHaveBeenCalledTimes(1);
+  const button = (label: string) => tree.root.findAll(node => node.props.label === label && typeof node.props.onPress === 'function')[0];
+  expect(tree.root.findAllByType(TextInput).find(node => node.props.accessibilityLabel === 'ACTIV account email')?.props.value).toBe('existing@example.test');
+  await act(async () => { await button('Send verification code').props.onPress(); });
+  expect(api.post).toHaveBeenCalledWith('/auth/oauth/verify-email', { code: 'verified-provider-handoff', email: 'existing@example.test' });
+  expect(login).not.toHaveBeenCalled();
+  const field = tree.root.findAllByType(TextInput).find(node => node.props.accessibilityLabel === 'Verification code');
+  await act(async () => { field?.props.onChangeText('123456'); });
+  await act(async () => { await button('Verify and open dashboard').props.onPress(); });
+  expect(api.post).toHaveBeenCalledWith('/auth/oauth/exchange', { code: 'verified-provider-handoff', verificationCode: '123456' });
+  expect(login).toHaveBeenCalledWith({ id: 'existing-id', fullName: 'Existing Member' }, 'same-account-session', 'member');
+  await act(async () => { jest.advanceTimersByTime(950); });
+  expect(nav.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'MemberMain' }] });
+});
+
+test('incorrect email code keeps the verification form without creating a session', async () => {
+  (api.post as jest.Mock).mockImplementation(async (url, body) => {
+    if (url === '/auth/oauth/verify-email') return { data: { data: { sent: true, email: body.email } } };
+    if (!body.verificationCode) return { data: { data: { requiresEmailVerification: true, email: 'existing@example.test' } } };
+    throw { response: { data: { message: 'That verification code is incorrect or expired.' } } };
+  });
+  await mount(<SocialSignInScreen navigation={navigation() as any} route={{ params: { code: 'challenge-code', provider: 'facebook' } } as any} />);
+  const button = (label: string) => tree.root.findAll(node => node.props.label === label && typeof node.props.onPress === 'function')[0];
+  await act(async () => { await button('Send verification code').props.onPress(); });
+  await act(async () => { tree.root.findAllByType(TextInput).find(node => node.props.accessibilityLabel === 'Verification code')?.props.onChangeText('000000'); });
+  await act(async () => { await button('Verify and open dashboard').props.onPress(); });
+  expect(text(tree)).toContain('incorrect or expired');
+  expect(text(tree)).toContain('Verify and open dashboard');
+  expect(login).not.toHaveBeenCalled();
+});
+
+test('a completed sign-in never navigates after the screen unmounts', async () => {
+  const nav = navigation();
+  (api.post as jest.Mock).mockResolvedValue({ data: { data: { token: 'session-token', role: 'member', user: {}, memberDetails: { membershipStatus: 'pending' } } } });
+  (homeForRole as jest.Mock).mockResolvedValue('MemberMain');
+  await mount(<SocialSignInScreen navigation={nav as any} route={{ params: { code: 'delayed-navigation', provider: 'google' } } as any} />);
+  await act(async () => tree.unmount());
+  await act(async () => { jest.advanceTimersByTime(1000); });
+  expect(nav.reset).not.toHaveBeenCalled();
+});
+
+test('a late old callback cannot replace a newer account sign-in', async () => {
+  const nav = navigation();
+  let finishOld: (value: any) => void = () => {};
+  const session = (id: string) => ({ data: { data: { token: id, role: 'member', user: { id }, memberDetails: { membershipStatus: 'pending' } } } });
+  (api.post as jest.Mock).mockImplementation((_url, body) => body.code === 'old-attempt' ? new Promise(resolve => { finishOld = resolve; }) : Promise.resolve(session('new-account')));
+  (homeForRole as jest.Mock).mockResolvedValue('MemberMain');
+  await mount(<SocialSignInScreen navigation={nav as any} route={{ params: { code: 'old-attempt', provider: 'google' } } as any} />);
+  await act(async () => { tree.update(<SocialSignInScreen navigation={nav as any} route={{ params: { code: 'new-attempt', provider: 'linkedin' } } as any} />); });
+  await act(async () => { finishOld(session('old-account')); });
+  expect(login).toHaveBeenCalledTimes(1);
+  expect(login).toHaveBeenCalledWith({ id: 'new-account' }, 'new-account', 'member');
+  await act(async () => { jest.advanceTimersByTime(1000); });
+  expect(nav.reset).toHaveBeenCalledTimes(1);
+});
+
+test('a newer failed callback cancels a previous delayed dashboard navigation', async () => {
+  const nav = navigation();
+  (api.post as jest.Mock).mockResolvedValue({ data: { data: { token: 'session-token', role: 'member', user: {}, memberDetails: { membershipStatus: 'pending' } } } });
+  (homeForRole as jest.Mock).mockResolvedValue('MemberMain');
+  await mount(<SocialSignInScreen navigation={nav as any} route={{ params: { code: 'completed-attempt', provider: 'google' } } as any} />);
+  await act(async () => { tree.update(<SocialSignInScreen navigation={nav as any} route={{ params: { error: 'configuration', provider: 'linkedin' } } as any} />); });
+  expect(text(tree)).toContain('LinkedIn rejected the sign-in configuration');
+  await act(async () => { jest.advanceTimersByTime(1000); });
+  expect(nav.reset).not.toHaveBeenCalled();
 });
 
 test.each(providers)('%s errors name the right provider', async provider => {

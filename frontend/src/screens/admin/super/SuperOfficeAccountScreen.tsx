@@ -24,14 +24,18 @@ export default function SuperOfficeAccountScreen() {
       const member = await createPlatinumAccount(account);
       if (!member?.id) throw new Error('The account response is incomplete.');
       setForm(EMPTY);
-      Alert.alert(member.existingAccount ? 'Existing account selected' : 'Account created', 'Record the office payment next to activate Lifetime Membership. Existing login credentials stay the same.');
+      if (member.blockedReason) {
+        Alert.alert(member.existingAccount ? 'Application required' : 'Account created', 'The member must sign in, complete Personal, Business and Declaration, submit the application and receive approval before office payment can activate Lifetime.');
+        navigation.goBack(); return;
+      }
+      Alert.alert('Existing account selected', 'Record the office payment to upgrade this eligible member. Existing login credentials stay the same.');
       navigation.replace('SuperPlatinumGrant', { member });
     } catch (err) { setError(errorText(err)); }
     finally { setBusy(false); }
   };
   return <ConsoleScroll avoidKeyboard>
-    <ConsoleHeader compact title="Member account for Lifetime" subtitle="Reuse their login, then record payment" left={<GlassIconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => navigation.goBack()} />} />
-    <ConsoleNote style={s.card} text="Existing members keep the same email, password and mobile. Enter their email or mobile to continue. Create a new account only for someone who has not registered." />
+    <ConsoleHeader compact title="Member account for Lifetime" subtitle="Complete registration before initial membership" left={<GlassIconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => navigation.goBack()} />} />
+    <ConsoleNote style={s.card} text="Existing members keep the same email, password and mobile. Enter their email or mobile to continue. Create a new account only for someone who has not registered. New members must sign in and submit all required forms for approval." />
     <ConsoleCard style={s.card}>
       <ConsoleButton label={existing ? 'Create a new member instead' : 'Use an existing member instead'} onPress={() => { setExisting(!existing); setError(''); }} />
       {(existing ? ['email', 'phoneNumber'] as const : ['fullName', 'email', 'password', 'phoneNumber', 'whatsappNumber'] as const).map(key => <PremiumInput key={key} tone="admin" label={LABELS[key]} value={form[key]} onChangeText={value => setForm(f => ({ ...f, [key]: value }))} secureTextEntry={key === 'password'} autoCapitalize={key === 'email' || key === 'password' ? 'none' : 'words'} keyboardType={key === 'email' ? 'email-address' : key === 'phoneNumber' || key === 'whatsappNumber' ? 'phone-pad' : 'default'} />)}
@@ -41,7 +45,7 @@ export default function SuperOfficeAccountScreen() {
       <PremiumSelect tone="admin" label="District" value={region.district} options={region.districts.map(n => n.name)} onChange={region.setDistrict} placeholder="Choose district" disabled={busy || !region.state || region.refreshing} />
       <PremiumSelect tone="admin" label="Block" value={region.block} options={region.blocks.map(n => n.name)} onChange={region.setBlock} placeholder={region.district && !region.refreshing && !region.blocks.length ? 'No development blocks — district only' : 'Choose block'} disabled={busy || !region.district || region.refreshing || !region.blocks.length} />
       </>}
-      <View style={{ marginTop: SPACE.md }}><ConsoleButton label="Continue to Lifetime payment" icon="diamond" onPress={submit} loading={busy} disabled={busy} /></View>
+      <View style={{ marginTop: SPACE.md }}><ConsoleButton label="Create or select account" icon="diamond" onPress={submit} loading={busy} disabled={busy} /></View>
     </ConsoleCard>
     {error ? <ConsoleNote style={s.card} kind="red" text={error} /> : null}
   </ConsoleScroll>;

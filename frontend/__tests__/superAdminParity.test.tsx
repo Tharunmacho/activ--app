@@ -15,6 +15,7 @@ import ReactTestRenderer from 'react-test-renderer';
 /* ---- navigation: focus effects run like mount effects; params per test ---- */
 let mockParams: any = {};
 const mockNavigate = jest.fn();
+const mockReplace = jest.fn();
 jest.mock('@react-navigation/native', () => {
   const actual = jest.requireActual('@react-navigation/native');
   const ReactLib = require('react');
@@ -22,7 +23,7 @@ jest.mock('@react-navigation/native', () => {
     ...actual,
     useFocusEffect: (cb: () => any) => ReactLib.useEffect(() => cb(), [cb]),
     useNavigation: () => ({
-      navigate: mockNavigate, goBack: jest.fn(), reset: jest.fn(), replace: jest.fn(), setParams: jest.fn(),
+      navigate: mockNavigate, goBack: jest.fn(), reset: jest.fn(), replace: mockReplace, setParams: jest.fn(),
       canGoBack: () => true, setOptions: jest.fn(), addListener: jest.fn(() => () => {}),
     }),
     useRoute: () => ({ key: 'k', name: 'Test', params: mockParams }),
@@ -60,7 +61,7 @@ const BOOKING_REPORT = { ...MEMBERSHIP_REPORT, filename: 'event-bookings.xlsx' }
 
 const mockByUrl = (url: string): any => {
   if (url.endsWith('/membership/registrations/export')) return MEMBERSHIP_REPORT;
-  if (url.endsWith('/membership/platinum/accounts')) return { id: 'm1', fullName: 'Office Member', email: 'office@example.com', blockedReason: 'Application not submitted', canAdmitManually: true };
+  if (url.endsWith('/membership/platinum/accounts')) return { id: 'm1', fullName: 'Office Member', email: 'office@example.com', blockedReason: 'Application not submitted', canAdmitManually: false };
   if (/\/membership\/registrations\/[^/]+/.test(url)) return { member: { id: 'm1', name: 'Office Member', email: 'office@example.com', phone: '9000000000', applicationStatus: 'Pending', status: 'pending', canConfirm: true, collected: 0 }, payments: [], confirmation: { kind: 'student', commencementYear: '', plans: [{ id: 'student', key: 'student', name: 'Student', price: 10, audience: 'student', commencementYears: [] }] } };
   if (url.includes('/membership/registrations')) return { rows: [{ id: 'm1', name: 'Office Member', email: 'office@example.com', status: 'pending', applicationStatus: 'Pending', collected: 0 }], payments: [], plans: [{ id: 'student', name: 'Student', price: 10 }], summary: { registered: 1, submitted: 1, active: 0, collected: 0, awaiting: 0, pendingReview: 1 } };
   if (url.includes('/notifications/logs/booking/')) {
@@ -170,7 +171,7 @@ const S = (file: string) => () => require(`../src/screens/admin/super/${file}`).
 const screens: [string, () => React.ComponentType<any>, any][] = [
   ['Membership registrations', S('SuperMembershipRegistrationsScreen'), {}],
   ['Member account for Platinum', S('SuperOfficeAccountScreen'), {}],
-  ['Platinum direct office admission', S('SuperPlatinumGrantScreen'), { member: { id: 'm1', fullName: 'Office Member', blockedReason: 'Application not submitted', canAdmitManually: true }, price: 200000 }],
+  ['Lifetime grant requires a submitted application', S('SuperPlatinumGrantScreen'), { member: { id: 'm1', fullName: 'Office Member', blockedReason: 'Application not submitted', canAdmitManually: false }, price: 200000 }],
   ['Events (tab)', S('ManageEventsScreen'), {}],
   ['Event editor · new', S('SuperEventEditorScreen'), {}],
   ['Event editor · edit', S('SuperEventEditorScreen'), { event: CMS_EVENT }],
@@ -304,12 +305,12 @@ describe('super admin parity interactions', () => {
     expect(tree.root.findByType(kit.ChipRow).props.value).toBe('paid');
     await ReactTestRenderer.act(async () => { tree.unmount(); });
   });
-  test('membership office admission defaults to cash and records the checked details', async () => {
+  test('membership office payment follows the submitted application and never sends a bypass flag', async () => {
     const api = require('../src/services/api').default;
     const kit = require('../src/screens/admin/super/superKit');
     const confirmation = jest.spyOn(kit, 'confirm').mockResolvedValue(true);
     const tree = await mount(S('SuperMembershipRegistrationsScreen')(), {});
-    api.get.mockImplementationOnce(() => Promise.resolve({ data: { success: true, data: { member: { id: 'm1', name: 'Office Member', canConfirm: true, requiresManualAdmission: true, applicationStatus: 'Not submitted' }, payments: [], confirmation: { kind: 'student', commencementYear: '', plans: [{id:'student',key:'student',name:'Student',price:10,audience:'student',commencementYears:[]}] } } } }));
+    api.get.mockImplementationOnce(() => Promise.resolve({ data: { success: true, data: { member: { id: 'm1', name: 'Office Member', canConfirm: true, applicationStatus: 'Approved' }, payments: [], confirmation: { kind: 'student', commencementYear: '', plans: [{id:'student',key:'student',name:'Student',price:10,audience:'student',commencementYears:[]}] } } } }));
     await press(tree, 'Open membership Office Member');
     await press(tree, 'Confirm membership / record payment');
     const { PremiumInput, ConsoleButton } = require('../src/ui');
@@ -320,7 +321,8 @@ describe('super admin parity interactions', () => {
       tree.root.findByType(kit.ToggleRow).props.onChange(true);
     });
     await ReactTestRenderer.act(async () => { await tree.root.findAllByType(ConsoleButton).find((n: any) => n.props.label === 'Confirm membership').props.onPress(); });
-    expect(api.post).toHaveBeenCalledWith('/admin/super/membership/registrations/m1/confirm', expect.objectContaining({ mode: 'cash', amount: 10, membershipNumber: 'ACTIV-20261012-099', manualAdmission: true }));
+    expect(api.post).toHaveBeenCalledWith('/admin/super/membership/registrations/m1/confirm', expect.objectContaining({ mode: 'cash', amount: 10, membershipNumber: 'ACTIV-20261012-099' }));
+    expect(api.post.mock.calls.find((call: any[]) => call[0].endsWith('/registrations/m1/confirm'))[1]).not.toHaveProperty('manualAdmission');
     confirmation.mockRestore();
     await ReactTestRenderer.act(async () => { tree.unmount(); });
   });
@@ -330,7 +332,7 @@ describe('super admin parity interactions', () => {
     const confirmation = jest.spyOn(kit, 'confirm').mockResolvedValue(true);
     const tree = await mount(S('SuperMembershipRegistrationsScreen')(), {});
     api.get.mockImplementationOnce(() => Promise.resolve({ data: { data: {
-      member: { id: 'm1', name: 'Office Member', canConfirm: true, requiresManualAdmission: true }, payments: [],
+      member: { id: 'm1', name: 'Office Member', canConfirm: true, applicationStatus: 'Approved' }, payments: [],
       confirmation: { kind: 'business', commencementYear: '2012', plans: [{ id: 'ideal', key: 'ideal', name: 'Ideal', audience: 'business', price: 33000, commencementYears: ['2016','2015','2014','2013','2012'], commencementYearLabel: '2016 or earlier' }] }
     } } }));
     await press(tree, 'Open membership Office Member'); await press(tree, 'Confirm membership / record payment');
@@ -415,9 +417,10 @@ describe('super admin parity interactions', () => {
     expect(api.delete).not.toHaveBeenCalled();
     await ReactTestRenderer.act(async () => { tree.unmount(); });
   });
-  test('office account uses the registration endpoint then opens Lifetime receipt entry', async () => {
+  test('office account requires completed application before Lifetime receipt entry', async () => {
     const api = require('../src/services/api').default;
     api.post.mockClear();
+    mockReplace.mockClear();
     const tree = await mount(S('SuperOfficeAccountScreen')(), {});
     const { PremiumInput, PremiumSelect, ConsoleButton } = require('../src/ui');
     await ReactTestRenderer.act(async () => { tree.root.findAllByType(ConsoleButton).find((n: any) => n.props.label === 'Create a new member instead').props.onPress(); });
@@ -431,10 +434,25 @@ describe('super admin parity interactions', () => {
     await ReactTestRenderer.act(async () => { select('Block').props.onChange('Chidambaram'); });
     const password = tree.root.findAllByType(PremiumInput).find((n: any) => n.props.label === 'Password');
     expect(password.props.secureTextEntry).toBe(true);
-    await ReactTestRenderer.act(async () => { await tree.root.findAllByType(ConsoleButton).find((n: any) => n.props.label === 'Continue to Lifetime payment').props.onPress(); });
+    await ReactTestRenderer.act(async () => { await tree.root.findAllByType(ConsoleButton).find((n: any) => n.props.label === 'Create or select account').props.onPress(); });
     expect(api.post).toHaveBeenCalledWith('/admin/super/membership/platinum/accounts', expect.objectContaining({ email: 'office@example.com', state: 'Tamil Nadu' }));
+    expect(mockReplace).not.toHaveBeenCalled();
     expect(tree.root.findAllByType(PremiumInput).find((n: any) => n.props.label === 'Password').props.value).toBe('');
     await ReactTestRenderer.act(async () => { tree.unmount(); });
+  });
+
+  test('Lifetime grant cannot bypass a missing application even with a legacy manual-admission flag', async () => {
+    const api = require('../src/services/api').default;
+    api.post.mockClear();
+    const tree = await mount(S('SuperPlatinumGrantScreen')(), { member: { id: 'm1', fullName: 'Office Member', blockedReason: 'Complete and submit the application first.', canAdmitManually: true }, price: 200000 });
+    const { ConsoleButton } = require('../src/ui');
+    const kit = require('../src/screens/admin/super/superKit');
+    expect(tree.root.findAllByType(ConsoleButton).find((node: any) => node.props.label === 'Grant Lifetime').props.disabled).toBe(true);
+    expect(tree.root.findAllByType(kit.ToggleRow).some((node: any) => node.props.label === 'Admit this member directly as Super Admin')).toBe(false);
+    await ReactTestRenderer.act(async () => { await tree.root.findAllByType(ConsoleButton).find((node: any) => node.props.label === 'Grant Lifetime').props.onPress(); });
+    expect(api.post).not.toHaveBeenCalled();
+    expect(texts(tree)).toContain('Complete and submit the application first.');
+    await ReactTestRenderer.act(async () => tree.unmount());
   });
 
   test('every registered super route has a component', () => {

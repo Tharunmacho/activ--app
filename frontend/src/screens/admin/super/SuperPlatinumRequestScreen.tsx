@@ -100,7 +100,7 @@ const SuperPlatinumRequestScreen: React.FC = () => {
       member: {
         id: r.memberId, fullName: r?.name || p?.fullName, email: r?.email || p?.email, phoneNumber: r?.phone || p?.phoneNumber,
         block: p?.block, district: p?.district, state: p?.state, membershipNumber: mem?.memberNumber,
-        membershipStatus: mem?.status, membershipType: mem?.type, blockedReason, canAdmitManually: !!route?.params?.canAdmitManually,
+        membershipStatus: mem?.status, membershipType: mem?.type, blockedReason,
       },
     });
   };
@@ -237,7 +237,7 @@ const SuperPlatinumRequestScreen: React.FC = () => {
 
       {open ? (
         <View style={s.decide}>
-          <ConsoleButton icon="diamond" label="Grant Lifetime" onPress={grant} loading={busy} disabled={!!blockedReason && !route?.params?.canAdmitManually} />
+          <ConsoleButton icon="diamond" label="Grant Lifetime" onPress={grant} loading={busy} disabled={!!blockedReason} />
           {r?.status === 'new' ? <ConsoleButton kind="soft" icon="done" label="Mark contacted" onPress={() => setStatus('contacted')} disabled={busy} /> : null}
           <ConsoleButton kind="danger" icon="close" label="Decline" onPress={() => setStatus('declined')} disabled={busy} />
         </View>

@@ -13,6 +13,8 @@ import {
   SOCIAL_CATEGORIES, GENDERS, religionsFor, normalizeReligion, normalizeSocialCategory, normalizeGender,
 } from './memberFormOptions';
 import { personalDetailsErrors } from './personalDetailsValidation';
+import { validateMobile } from '../registration/phone';
+import { countryFromDial } from '../registration/countryCodes';
 
 /**
  * ============================================================================
@@ -97,8 +99,14 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [isLocked, setIsLocked] = useState(false);
-  const [isAbroad, setIsAbroad] = useState(false);
-  const [abroadCountry, setAbroadCountry] = useState('');
+  const [storedAbroad, setStoredAbroad] = useState(false);
+  const [storedCountry, setStoredCountry] = useState('');
+  const [needsFirstPhone, setNeedsFirstPhone] = useState(false);
+  const firstPhone = needsFirstPhone ? validateMobile(form.phoneNumber) : null;
+  const firstPhoneCountry = firstPhone?.ok && firstPhone.stored.startsWith('+') ? countryFromDial(firstPhone.stored) : undefined;
+  const firstPhoneAbroad = !!firstPhoneCountry && firstPhoneCountry.iso2 !== 'IN';
+  const isAbroad = storedAbroad || firstPhoneAbroad;
+  const abroadCountry = storedCountry || (firstPhoneAbroad ? firstPhoneCountry?.name || '' : '');
 
   const [states, setStates] = useState<string[]>([]);
   const [districts, setDistricts] = useState<string[]>([]);
@@ -117,6 +125,7 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
     setLoadError('');
     try {
       const profile = await getMyProfile();
+      if (!profile || (!profile.fullName && !profile.email)) throw new Error('Could not load your saved details. Please try again.');
       const seed = route?.params?.userData || {};
       setForm({
         fullName: String(profile?.fullName || seed?.fullName || ''),
@@ -133,8 +142,9 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
       });
       setIsLocked(profile?.isLocked === true && profile?.personalDetailsComplete !== false
         && Object.keys(personalDetailsErrors(profile)).length === 0);
-      setIsAbroad(profile?.isInternational === true);
-      setAbroadCountry(String(profile?.country || ''));
+      setStoredAbroad(profile?.isInternational === true);
+      setStoredCountry(String(profile?.country || ''));
+      setNeedsFirstPhone(!String(profile?.phoneNumber || '').trim());
     } catch (err) {
       setLoadError(errorText(err, 'Could not load your details.'));
     } finally {
@@ -243,6 +253,7 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
   };
 
   const handleNext = async () => {
+    if (loading || loadError || saving) return;
     // Locked by the server once submitted: nothing to save, but the member can
     // still walk on to the next step instead of meeting a dead button.
     if (isLocked) {
@@ -304,6 +315,7 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
           primaryLabel={isLocked ? (editMode ? 'Done' : 'Continue') : (editMode ? 'Save changes' : 'Save & continue')}
           onPrimary={handleNext}
           loading={saving}
+          disabled={loading || !!loadError}
         />
       )}
     >
@@ -429,9 +441,9 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
           required
           value={form.phoneNumber}
           onChangeText={(v) => setField('phoneNumber', v)}
-          placeholder="Enter phone number"
+          placeholder={needsFirstPhone ? 'Mobile number with country code' : 'Enter phone number'}
           keyboardType="phone-pad"
-          maxLength={isAbroad ? 18 : 10}
+          maxLength={20}
           error={errors.phoneNumber}
           editable={!isLocked}
           icon="phone"

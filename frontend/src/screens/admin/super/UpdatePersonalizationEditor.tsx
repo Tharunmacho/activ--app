@@ -132,7 +132,9 @@ export default function UpdatePersonalizationEditor({ mode, onMode, memberIds, o
       <PremiumInput tone="admin" label={`Individual {${key}} value for ${known[row.memberId]?.fullName || row.memberId}`} value={row.value} maxLength={1000} editable={!disabled}
         onChangeText={value => updateVariable({ overrides: (selected?.overrides || []).map(entry => entry.memberId === row.memberId ? { ...entry, value } : entry) })}
         placeholder="Leave blank to use the normal fallback" inputStyle={s.input} />
-      <ConsoleButton kind="ghost" label="Remove individual value" disabled={disabled} onPress={() => updateVariable({ overrides: selected!.overrides.filter(entry => entry.memberId !== row.memberId) })} />
+      <ConsoleButton kind="ghost" label="Remove individual value" disabled={disabled} onPress={() => {
+        if (selected) updateVariable({ overrides: selected.overrides.filter(entry => entry.memberId !== row.memberId) });
+      }} />
     </View>)}
     {selected ? <ConsoleButton kind="ghost" icon="delete-outline" label={definition ? 'Clear variable settings' : 'Remove custom variable'} disabled={disabled} onPress={() => {
       onVariables(variables.filter(row => row.key !== key)); if (!definition) setKey('name');

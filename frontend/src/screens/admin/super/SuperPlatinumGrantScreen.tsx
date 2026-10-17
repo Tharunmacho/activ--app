@@ -62,7 +62,6 @@ const SuperPlatinumGrantScreen: React.FC = () => {
   const [amount, setAmount] = useState(Number.isFinite(passedPrice) && passedPrice > 0 ? String(passedPrice) : '');
   const [mode, setMode] = useState<PlatinumPaymentMode>('cash');
   const [confirmed, setConfirmed] = useState(false);
-  const [manualAdmission, setManualAdmission] = useState(false);
   const [receipt, setReceipt] = useState('');
   const [receivedOn, setReceivedOn] = useState(todayIso());
   const [note, setNote] = useState('');
@@ -89,7 +88,7 @@ const SuperPlatinumGrantScreen: React.FC = () => {
     if (!memberId) { setError('This member record could not be identified. Go back and search again.'); return; }
     const rupees = Number(amount);
     if ((amount || '').trim() === '' || !Number.isFinite(rupees) || rupees <= 0) { setError('Enter the positive amount received'); return; }
-    if (m?.blockedReason && (!m?.canAdmitManually || !manualAdmission || !note.trim())) { setError('Confirm office admission and enter its reason.'); return; }
+    if (m?.blockedReason) { setError(m.blockedReason); return; }
     if (price !== null && rupees !== price && !note.trim()) { setError('Explain the difference from the Lifetime fee.'); return; }
     const day = (receivedOn || '').trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || Number.isNaN(new Date(day).getTime())) { setError('Received on must be a date like 2026-09-29.'); return; }
@@ -104,7 +103,6 @@ const SuperPlatinumGrantScreen: React.FC = () => {
         receiptNumber: (receipt || '').trim() || undefined,
         receivedOn: day,
         note: (note || '').trim() || undefined,
-        manualAdmission,
       });
       Alert.alert('Lifetime granted', `${m?.fullName || 'The member'} is now a Lifetime Member.`);
       navigation?.goBack?.();
@@ -122,7 +120,7 @@ const SuperPlatinumGrantScreen: React.FC = () => {
       avoidKeyboard
       footer={accountOnly ? undefined : (
         <BottomActionBar>
-          <ConsoleButton icon="diamond" label="Grant Lifetime" onPress={save} loading={saving} disabled={!confirmed} style={s.flex} />
+          <ConsoleButton icon="diamond" label="Grant Lifetime" onPress={save} loading={saving} disabled={!confirmed || !!m?.blockedReason} style={s.flex} />
         </BottomActionBar>
       )}
     >
@@ -155,7 +153,7 @@ const SuperPlatinumGrantScreen: React.FC = () => {
 
       {!accountOnly && <><ConsoleSectionTitle title="The office receipt" icon="receipt-long" style={s.section} />
       <ConsoleCard style={s.card}>
-        {m?.canAdmitManually && m?.blockedReason ? <ToggleRow label="Admit this member directly as Super Admin" hint="Record the office admission reason below. This does not mark an application approved." value={manualAdmission} onChange={setManualAdmission} /> : null}
+        {m?.blockedReason ? <ConsoleNote kind="red" text={m.blockedReason} /> : <ConsoleNote text="First-time members must complete and submit all required forms and receive approval before Lifetime can be granted." />}
         <PremiumInput tone="admin" label="Amount received (₹)" value={amount} onChangeText={(t) => setAmount((t || '').replace(/[^\d.]/g, ''))} keyboardType="numeric" icon="currency-rupee" />
         <Text style={s.label} maxFontSizeMultiplier={1.3}>Paid by</Text>
         <View style={s.bleed}>

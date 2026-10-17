@@ -91,7 +91,7 @@ export default function SuperMembershipRegistrationsScreen() {
     if (!planId || !note.trim() || !ack || (mode !== 'waived' && (!Number.isFinite(Number(amount)) || Number(amount) <= 0))) { Alert.alert('Check confirmation', 'Choose a plan, enter a reason and confirm the amount or fee waiver.'); return; }
     if (!(await confirm('Confirm membership?', mode === 'waived' ? 'Activate membership with ₹0 collected and an audited fee waiver?' : `Record ${money(Number(amount))} received and activate membership?`))) return;
     setSaving(true);
-    try { const result = await confirmMembershipRegistration(detail.member.id, { planId, mode, amount: mode === 'waived' ? 0 : Number(amount), note: note.trim(), receiptNumber: receipt.trim(), membershipNumber: membershipNumber.trim(), commencementYear: selectedPlan.audience === 'business' ? commencementYear : undefined, manualAdmission: !!detail.member.requiresManualAdmission }); setDetail(result); setAck(false); setShowConfirm(false); await load(); Alert.alert('Membership confirmed', 'The member can open their receipt, membership certificate and tax certificate from their dashboard. Confirmation delivery is available in Message delivery.'); }
+    try { const result = await confirmMembershipRegistration(detail.member.id, { planId, mode, amount: mode === 'waived' ? 0 : Number(amount), note: note.trim(), receiptNumber: receipt.trim(), membershipNumber: membershipNumber.trim(), commencementYear: selectedPlan.audience === 'business' ? commencementYear : undefined }); setDetail(result); setAck(false); setShowConfirm(false); await load(); Alert.alert('Membership confirmed', 'The member can open their receipt, membership certificate and tax certificate from their dashboard. Confirmation delivery is available in Message delivery.'); }
     catch (err) { Alert.alert('Could not confirm membership', errorText(err)); }
     finally { setSaving(false); }
   };
@@ -160,7 +160,7 @@ export default function SuperMembershipRegistrationsScreen() {
         <Text style={s.title}>Confirm membership / record payment</Text>
         <PremiumInput label="Membership ID" value={detail.member.assignedMemberNumber || membershipNumber} editable={!detail.member.assignedMemberNumber} onChangeText={value => setMembershipNumber(value.toUpperCase())} placeholder="ACTIV-BEG-20261012-001" autoCapitalize="characters" maxLength={40} />
         <Text style={s.body}>{detail.member.assignedMemberNumber ? "The member keeps this ID when renewing." : "Enter the office membership ID, or leave blank to generate one automatically."}</Text>
-        {detail.member.requiresManualAdmission ? <ConsoleNote text="Office admission: check the member details before confirming. This records an office admission without a submitted application." /> : null}
+        <ConsoleNote text="Initial membership requires complete Personal, Business and Declaration forms submitted for review. Office payment or a fee waiver does not replace the application." />
         {detail.member.applicationStatus === 'Pending' ? <ConsoleNote text="This also approves the submitted application through the Super Admin review workflow." /> : null}
         <View pointerEvents={saving ? 'none' : 'auto'}>
           <Text style={s.body}>Membership plan</Text>
@@ -173,7 +173,7 @@ export default function SuperMembershipRegistrationsScreen() {
           </> : null}
           <PremiumInput tone="admin" label={mode === 'waived' ? 'Reason for fee waiver' : 'Payment / confirmation notes'} value={note} onChangeText={setNote} maxLength={500} multiline editable={!saving} />
           <Text style={s.body}>{mode === 'waived' ? '₹0 is recorded as collected. The waived fee and your reason remain in the record.' : 'Only the amount actually received is added to Collected.'}</Text>
-          <ToggleRow label={detail.member.requiresManualAdmission ? 'I checked the details and authorise office admission with this payment or waiver' : mode === 'waived' ? 'I approve this fee waiver; ₹0 collected' : `I confirm ${money(Number(amount) || 0)} has been received`} value={ack} onChange={setAck} disabled={saving} />
+          <ToggleRow label={mode === 'waived' ? 'I approve this fee waiver; ₹0 collected' : `I confirm ${money(Number(amount) || 0)} has been received`} value={ack} onChange={setAck} disabled={saving} />
         </View>
         <ConsoleButton label="Confirm membership" icon="how-to-reg" onPress={submit} loading={saving} disabled={saving || !ack} />
         <ConsoleButton label="Back to member details" kind="ghost" onPress={() => setShowConfirm(false)} disabled={saving} />

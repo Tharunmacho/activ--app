@@ -14,6 +14,7 @@ import { ENDPOINTS } from '../../config/api.config';
 import { FormScreen, FormFooter, FormSection, FieldLabel, CheckRow } from './formKit';
 import { normaliseStatus } from '../member/dashboard/memberRules';
 import { personalDetailsErrors } from './personalDetailsValidation';
+import { businessFormError, declarationFormError } from '../../utils/applicationFormValidation';
 
 /**
  * ============================================================================
@@ -41,15 +42,12 @@ type Props = NativeStackScreenProps<RootStackParamList, 'DeclarationForm'> & {
 };
 
 /**
- * ALREADY APPLIED → save and stop (website Profile.tsx `alreadyApplied`).
- * Lodging a second application for somebody already approved or rejected puts
- * a duplicate row in every admin queue; the server only de-duplicates PENDING
- * rows. The website's tests (an application on file, an active membership),
- * except that a file which was only ever REJECTED does not count — the website's /member/forms/declaration lets
- * that applicant apply again, and so does this screen.
+ * Approved members save profile changes without a second application. Pending
+ * applicants can submit corrected forms to the same pending file; rejected
+ * applicants may submit a new complete application.
  */
 const hasApplied = (apps: any, profile: any) =>
-  (Array.isArray(apps) && apps.some((a: any) => normaliseStatus(a?.status) !== 'Rejected'))
+  (Array.isArray(apps) && apps.some((a: any) => normaliseStatus(a?.status) === 'Approved'))
   || String(profile?.membershipStatus || '').toLowerCase() === 'active';
 
 const STEPS = ['Personal', 'Business', 'Declaration'];
@@ -87,11 +85,13 @@ const DeclarationFormScreen: React.FC<Props> = ({ navigation, editMode = false }
     try {
       const [saved, business, apps, me] = await Promise.all([
         getDeclarationInfo(),
-        getBusinessInfo().catch(() => ({} as any)),
-        getMyApplications().catch(() => [] as any[]),
-        getMyProfile().catch(() => ({} as any)),
+        getBusinessInfo(),
+        getMyApplications(),
+        getMyProfile(),
       ]);
-      setIsBusinessApplicant(!isNonBusiness(business));
+      const businessError = businessFormError(business);
+      if (businessError) { setLoadError(businessError); return; }
+      setIsBusinessApplicant(business.doingBusiness === true || business.doingBusiness === 'yes');
       setAlreadyApplied(hasApplied(apps, me));
       if (saved && typeof saved === 'object') {
         const count = saved?.sisterConcerns;
@@ -126,6 +126,9 @@ const DeclarationFormScreen: React.FC<Props> = ({ navigation, editMode = false }
     });
 
   const handleSubmit = async () => {
+    if (loading || loadError || submitting) return;
+    const declarationError = declarationFormError({ sisterConcerns, companyNames: companies, agreeToDeclaration: agree }, isBusinessApplicant === true);
+    if (declarationError) { Alert.alert('Declaration needed', declarationError); return; }
     if (!agree) {
       Alert.alert('Declaration required', 'Please accept the declaration to proceed.');
       return;
@@ -149,11 +152,13 @@ const DeclarationFormScreen: React.FC<Props> = ({ navigation, editMode = false }
       }
 
       const [profile, businessInfo, financial, declaration] = await Promise.all([
-        getMyProfile().catch(() => ({} as any)),
-        getBusinessInfo().catch(() => ({} as any)),
+        getMyProfile(),
+        getBusinessInfo(),
         getFinancialInfo().catch(() => ({} as any)),
-        getDeclarationInfo().catch(() => ({} as any)),
+        getDeclarationInfo(),
       ]);
+      const sectionError = businessFormError(businessInfo) || declarationFormError(declaration, businessInfo.doingBusiness === true || businessInfo.doingBusiness === 'yes');
+      if (sectionError) { Alert.alert('Complete your forms', sectionError); return; }
 
       // The region gate refuses an application with no routable region. A
       // member outside India has none by design and routes to the head office.
@@ -256,7 +261,7 @@ const DeclarationFormScreen: React.FC<Props> = ({ navigation, editMode = false }
           primaryIcon={editMode || alreadyApplied ? 'check' : 'send'}
           onPrimary={handleSubmit}
           loading={submitting}
-          disabled={!agree}
+          disabled={!!loadError || !agree}
         />
       )}
     >
@@ -264,7 +269,7 @@ const DeclarationFormScreen: React.FC<Props> = ({ navigation, editMode = false }
         <Notice
           kind="info"
           style={s.notice}
-          text="Your application has already been submitted. Saving here updates your declaration without lodging a new application."
+          text="Your application is approved. Saving here updates your declaration without lodging a new application."
         />
       ) : null}
 
@@ -286,7 +291,7 @@ const DeclarationFormScreen: React.FC<Props> = ({ navigation, editMode = false }
           />
           {showCompanies ? (
             <View>
-              <FieldLabel label="Company names" />
+              <FieldLabel label="Company names" required />
               {(companies || []).map((value, index) => (
                 <View key={`company-${index}`} style={s.companyRow}>
                   <Field
