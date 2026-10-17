@@ -26,6 +26,7 @@ import {
 import { SkeletonList } from './components/Skeleton';
 import EmptyState from './components/EmptyState';
 import { MenuButton } from '../shared/TierMenu';
+import AppUpdateSettings from './AppUpdateSettings';
 
 type Category = 'all' | 'application' | 'admin' | 'event' | 'authentication' | 'content';
 
@@ -543,6 +544,7 @@ const SystemScreen = ({ navigation }: any) => {
         </ConsoleCard>
       </FadeInUp>
 
+      <View style={styles.gutter}><AppUpdateSettings /></View>
       {!isEditing ? (
         <FadeInUp delay={220} style={styles.logout}>
           <ConsoleButton kind="danger" icon="logout" label="Log Out" onPress={handleLogout} />

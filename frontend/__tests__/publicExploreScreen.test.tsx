@@ -1,12 +1,17 @@
 import React from 'react';
 import Renderer from 'react-test-renderer';
-import { Text, TextInput } from 'react-native';
+import { Modal, Text, TextInput } from 'react-native';
 import PublicExplore from '../src/screens/public/PublicExploreScreen';
 import { loadExploreContent } from '../src/services/publicContent';
 import { clearPublicAction } from '../src/services/publicNavigation';
 import { PremiumSelect } from '../src/ui';
 jest.mock('../src/services/publicContent', () => ({ loadExploreContent: jest.fn(), getPublicContactInfo: jest.fn().mockResolvedValue({}) }));
 jest.mock('../src/services/publicNavigation', () => ({ clearPublicAction: jest.fn() }));
+jest.mock('../src/services/visitorNotifications', () => ({
+  getPublicNotices: jest.fn().mockResolvedValue([]),
+  getPublicNotice: jest.fn(async id => ({ id, kind: 'announcement', title: 'Linked notification', body: 'Notification detail', createdAt: '2026-10-17' })),
+  visitorPushEnabled: jest.fn().mockResolvedValue(false), recordVisitorOpen: jest.fn(),
+}));
 
 const load = loadExploreContent as jest.Mock;
 const now = Date.now();
@@ -24,6 +29,25 @@ const navigation = { navigate: jest.fn() };
 const button = (label: string) => screen.root.findAll(node => (node.props.accessibilityLabel === label || node.props.accessibilityLabel?.startsWith(label + '.')) && typeof node.props.onPress === 'function')[0];
 beforeEach(() => { jest.clearAllMocks(); load.mockReset().mockResolvedValue(data); });
 afterEach(async () => { await Renderer.act(async () => screen?.unmount()); });
+
+test('public bell opens and closes its card without navigating away from the home screen', async () => {
+  await Renderer.act(async () => { screen = Renderer.create(<PublicExplore navigation={navigation} route={{ params: {} }} />); });
+  await Renderer.act(async () => button('Notifications').props.onPress());
+  expect(button('Close notifications')).toBeDefined();
+  expect(screen.root.findAllByType(Modal).some(node => node.props.visible)).toBe(true);
+  expect(navigation.navigate).not.toHaveBeenCalled();
+  await Renderer.act(async () => button('Close notifications').props.onPress());
+  expect(button('Close notifications')).toBeUndefined();
+});
+
+test('a delivered notification opens inside the public home card and consumes its route request', async () => {
+  const setParams = jest.fn();
+  await Renderer.act(async () => { screen = Renderer.create(<PublicExplore navigation={{ ...navigation, setParams }} route={{ params: { notifications: 'open', noticeId: 'notice-id' } }} />); });
+  expect(setParams).toHaveBeenCalledWith({ notifications: undefined, noticeId: undefined });
+  expect(screen.root.findAllByType(Text).some(node => node.props.children === 'Linked notification')).toBe(true);
+  expect(button('Back to notifications')).toBeDefined();
+  expect(navigation.navigate).not.toHaveBeenCalled();
+});
 
 test('guest home shows public content, excludes finished events and opens native guest details', async () => {
   await Renderer.act(async () => { screen = Renderer.create(<PublicExplore navigation={navigation} route={{ params: {} }} />); });

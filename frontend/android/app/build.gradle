@@ -102,8 +102,8 @@ android {
         applicationId "in.activ.membership"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 26
-        versionName "1.0.25"
+        versionCode 27
+        versionName "1.0.26"
     }
     signingConfigs {
         debug {
@@ -149,6 +149,9 @@ dependencies {
     // Android 15+ sheets use the current inset/protection implementation.
     // react-native-screens otherwise pulls Material 1.12.0 transitively.
     implementation("com.google.android.material:material:1.14.0")
+    // Device/account-specific availability avoids requiring a staged release
+    // before Google Play actually offers it to this installation.
+    implementation("com.google.android.play:app-update:2.1.0")
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

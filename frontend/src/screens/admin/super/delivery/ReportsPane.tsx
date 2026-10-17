@@ -1,12 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
+  AccessibilityInfo,
+  findNodeHandle,
   RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
   PALETTE,
   SPACE,
@@ -17,10 +21,10 @@ import {
   ConsoleNote,
   ConsoleSectionTitle,
   ConsoleSearch,
-  ConsoleChip,
   ConsoleButton,
   PremiumInput,
   CONSOLE_LIST,
+  useReduceMotion,
 } from '../../../../ui';
 import { ChipRow } from '../superKit';
 import {
@@ -96,6 +100,30 @@ export function ReportsPane({
   const [expanded, setExpanded] = useState(''),
     [dates, setDates] = useState(false);
   const seq = useRef(0);
+  const list = useRef<FlatList<ReportRow>>(null);
+  const recipientsAnchor = useRef<View>(null);
+  const recipientsOffset = useRef(0);
+  const pendingReveal = useRef(false);
+  const { width, fontScale } = useWindowDimensions();
+  const reduceMotion = useReduceMotion();
+  const wideRows = width >= 768 && fontScale < 1.5;
+  const revealRecipients = useCallback(() => {
+    list.current?.scrollToOffset({
+      offset: Math.max(0, recipientsOffset.current - SPACE.sm),
+      animated: !reduceMotion,
+    });
+    try {
+      const anchor = findNodeHandle(recipientsAnchor.current);
+      if (
+        anchor != null &&
+        typeof AccessibilityInfo.setAccessibilityFocus === 'function'
+      ) {
+        AccessibilityInfo.setAccessibilityFocus(anchor);
+      }
+    } catch {
+      /* Scrolling still reveals the section when native focus is unavailable. */
+    }
+  }, [reduceMotion]);
   const change = (patch: ReportFilters) => {
     setExpanded('');
     setFilters(f => ({
@@ -106,6 +134,11 @@ export function ReportsPane({
         ? { campaignPage: 1 }
         : {}),
     }));
+  };
+  const showRecipients = (patch: ReportFilters) => {
+    pendingReveal.current = true;
+    change(patch);
+    revealRecipients();
   };
   const load = useCallback(async () => {
     const request = ++seq.current;
@@ -127,6 +160,12 @@ export function ReportsPane({
       seq.current++;
     };
   }, [load, refreshKey]);
+  useEffect(() => {
+    if (!busy && pendingReveal.current) {
+      pendingReveal.current = false;
+      revealRecipients();
+    }
+  }, [busy, data, revealRecipients]);
   const summary = data?.summary;
   const selected = data?.campaigns.find(c => c._id === filters.campaignKey);
   const top = (
@@ -194,6 +233,8 @@ export function ReportsPane({
           value={fmt(summary?.recipients)}
           icon="people-outline"
           hint="Accounts and contacts"
+          selected={!filters.status}
+          onPress={() => showRecipients({ status: '' })}
         />
         <ConsoleStatTile
           label="Accepted / in inbox"
@@ -201,6 +242,8 @@ export function ReportsPane({
           icon="send"
           hint={`${fmt(summary?.records)} delivery records`}
           accent="green"
+          selected={filters.status === 'accepted_any'}
+          onPress={() => showRecipients({ status: 'accepted_any' })}
         />
         <ConsoleStatTile
           label="Confirmed opens"
@@ -208,6 +251,8 @@ export function ReportsPane({
           icon="visibility"
           hint="WhatsApp reads and taps"
           accent="sky"
+          selected={filters.status === 'read'}
+          onPress={() => showRecipients({ status: 'read' })}
         />
         <ConsoleStatTile
           label="Failed"
@@ -217,53 +262,81 @@ export function ReportsPane({
             summary?.skipped,
           )} skipped`}
           accent="red"
+          selected={filters.status === 'failed'}
+          onPress={() => showRecipients({ status: 'failed' })}
         />
       </ConsoleGrid>
       {Object.entries(CHANNEL_LABELS).map(([key, label]) => {
         const channel = data?.channels.find(c => c._id === key);
         return (
-          <ConsoleCard key={key} style={s.card}>
-            <Text style={s.title}>{label}</Text>
-            <Ratio
-              label={key === 'in_app' ? 'In inbox' : 'Accepted'}
-              value={channel?.accepted || 0}
-              total={channel?.records || 0}
-            />
-            {key === 'whatsapp' && (
+          <TouchableOpacity
+            key={key}
+            accessibilityRole="button"
+            accessibilityLabel={`Filter delivery records by ${label}`}
+            accessibilityState={{ selected: filters.channel === key }}
+            accessibilityHint={
+              filters.channel === key
+                ? 'Show all channels and view recipient details'
+                : 'View recipient details for this channel'
+            }
+            onPress={() =>
+              showRecipients({ channel: filters.channel === key ? '' : key })
+            }
+          >
+            <ConsoleCard
+              style={s.card}
+              accent={filters.channel === key ? PALETTE.indigo : undefined}
+            >
+              <Text style={s.title}>{label}</Text>
               <Ratio
-                label="Delivered"
-                value={channel?.delivered || 0}
+                label={key === 'in_app' ? 'In inbox' : 'Accepted'}
+                value={channel?.accepted || 0}
                 total={channel?.records || 0}
               />
-            )}
-            {key !== 'email' ? (
-              <Ratio
-                label={
-                  key === 'push'
-                    ? 'Tapped / accepted'
-                    : key === 'whatsapp'
-                    ? 'Opened / delivered'
-                    : 'Opened'
-                }
-                value={channel?.opened || 0}
-                total={
-                  (key === 'whatsapp'
-                    ? channel?.delivered
-                    : key === 'push'
-                    ? channel?.accepted
-                    : channel?.records) || 0
-                }
-              />
-            ) : (
+              {key === 'whatsapp' && (
+                <Ratio
+                  label="Delivered"
+                  value={channel?.delivered || 0}
+                  total={channel?.records || 0}
+                />
+              )}
+              {key !== 'email' ? (
+                <Ratio
+                  label={
+                    key === 'push'
+                      ? 'Tapped / accepted'
+                      : key === 'whatsapp'
+                      ? 'Opened / delivered'
+                      : 'Opened'
+                  }
+                  value={channel?.opened || 0}
+                  total={
+                    (key === 'whatsapp'
+                      ? channel?.delivered
+                      : key === 'push'
+                      ? channel?.accepted
+                      : channel?.records) || 0
+                  }
+                />
+              ) : (
+                <Text style={s.caption}>
+                  Email inbox delivery and opens are not measured.
+                </Text>
+              )}
               <Text style={s.caption}>
-                Email inbox delivery and opens are not measured.
+                {fmt(channel?.failed)} failed · {fmt(channel?.queued)} queued ·{' '}
+                {fmt(channel?.skipped)} skipped
               </Text>
-            )}
-            <Text style={s.caption}>
-              {fmt(channel?.failed)} failed · {fmt(channel?.queued)} queued ·{' '}
-              {fmt(channel?.skipped)} skipped
-            </Text>
-          </ConsoleCard>
+              <View style={s.between}>
+                <Text style={s.link}>
+                  {filters.channel === key
+                    ? 'Selected · Show all channels'
+                    : 'View recipient records'}
+                </Text>
+                <Icon name="arrow-forward" size={18} color={PALETTE.indigo} />
+              </View>
+            </ConsoleCard>
+          </TouchableOpacity>
         );
       })}
       <ConsoleSectionTitle
@@ -364,7 +437,40 @@ export function ReportsPane({
           )}
         </>
       )}
-      <ConsoleSectionTitle title="Recipient details" icon="people-outline" />
+      <View
+        ref={recipientsAnchor}
+        accessible
+        accessibilityRole="header"
+        accessibilityLabel="Recipient details"
+        onLayout={event => {
+          recipientsOffset.current = event.nativeEvent.layout.y;
+        }}
+      >
+        <ConsoleSectionTitle title="Recipient details" icon="people-outline" />
+      </View>
+      <ConsoleCard style={s.card}>
+        <Text style={s.body} accessibilityLiveRegion="polite">
+          {filters.channel
+            ? CHANNEL_LABELS[filters.channel as keyof typeof CHANNEL_LABELS]
+            : 'All channels'}
+          {' · '}
+          {filters.status === 'accepted_any'
+            ? 'All accepted deliveries, including delivered, opened and marked read'
+            : filters.status === 'read'
+            ? 'Confirmed opens / taps'
+            : filters.status
+            ? human(filters.status)
+            : 'Every outcome'}
+          {busy ? ' · Updating records…' : ''}
+        </Text>
+        <Text style={s.caption}>
+          {fmt(summary?.recipients)} distinct recipient identities across{' '}
+          {fmt(summary?.records)} delivery records for the current activity,
+          channel, date and search filters. Each row is a delivery record, so
+          the same recipient can appear more than once. Tap a row for its
+          timeline and provider details.
+        </Text>
+      </ConsoleCard>
       <ConsoleSearch
         value={filters.search || ''}
         onChangeText={search => change({ search })}
@@ -375,6 +481,7 @@ export function ReportsPane({
           { value: '', label: 'All outcomes' },
           { value: 'unconfirmed', label: 'No confirmed open' },
           { value: 'read', label: 'Opened / tapped' },
+          { value: 'accepted_any', label: 'All accepted deliveries' },
           { value: 'delivered', label: 'Delivered' },
           { value: 'accepted', label: 'Accepted' },
           { value: 'marked_read', label: 'Marked read' },
@@ -399,27 +506,43 @@ export function ReportsPane({
         onPress={() => setExpanded(expanded === item._id ? '' : item._id)}
         accessibilityRole="button"
         accessibilityState={{ expanded: expanded === item._id }}
+        accessibilityLabel={`${item.recipientName}, ${
+          CHANNEL_LABELS[item.channel]
+        }, ${item.title}, ${statusLabel(item)}`}
+        accessibilityHint="Show or hide delivery timeline and provider details"
       >
-        <View style={s.between}>
-          <Text style={[s.title, s.flex]}>{item.recipientName}</Text>
-          <ConsoleChip
-            label={statusLabel(item)}
-            kind={
-              item.status === 'failed'
-                ? 'rejected'
-                : ['read', 'delivered'].includes(item.status)
-                ? 'approved'
-                : 'info'
-            }
-          />
+        <View style={[s.recipientRow, wideRows && s.wideRow]}>
+          <View style={[s.recipientColumn, wideRows && s.flex]}>
+            <Text style={s.title}>{item.recipientName}</Text>
+            <Text style={s.caption}>
+              {item.recipient || 'Account inbox / device'}
+            </Text>
+          </View>
+          <View style={[s.recipientColumn, wideRows && s.flex]}>
+            <Text style={s.body}>{CHANNEL_LABELS[item.channel]}</Text>
+            <Text style={s.caption}>{item.title}</Text>
+            <Text style={s.caption}>{when(item.createdAt)}</Text>
+          </View>
+          <View style={[s.outcome, wideRows && s.wideOutcome]}>
+            <Text
+              style={[
+                s.status,
+                item.status === 'failed'
+                  ? s.failedStatus
+                  : ['read', 'delivered'].includes(item.status)
+                  ? s.readStatus
+                  : s.acceptedStatus,
+              ]}
+            >
+              {statusLabel(item)}
+            </Text>
+            <Icon
+              name={expanded === item._id ? 'expand-less' : 'expand-more'}
+              size={20}
+              color={PALETTE.textMuted}
+            />
+          </View>
         </View>
-        <Text style={s.caption}>
-          {item.recipient || 'Account inbox / device'}
-        </Text>
-        <Text style={s.body}>
-          {CHANNEL_LABELS[item.channel]} · {item.title}
-        </Text>
-        <Text style={s.caption}>{when(item.createdAt)}</Text>
       </TouchableOpacity>
       {expanded === item._id && (
         <View style={s.detail}>
@@ -472,9 +595,12 @@ export function ReportsPane({
   );
   return (
     <FlatList
+      ref={list}
       data={data?.rows || []}
       renderItem={row}
-      keyExtractor={item => item._id}
+      keyExtractor={(item, index) => String(item?._id || index)}
+      initialNumToRender={10}
+      maxToRenderPerBatch={10}
       ListHeaderComponent={top}
       contentContainerStyle={CONSOLE_LIST}
       keyboardShouldPersistTaps="handled"
@@ -498,6 +624,7 @@ export function ReportsPane({
           <View style={s.pages}>
             <ConsoleButton
               label="Previous"
+              accessibilityLabel="Previous recipients"
               disabled={busy || (data?.pagination.page || 1) <= 1}
               onPress={() =>
                 setFilters(f => ({
@@ -511,6 +638,7 @@ export function ReportsPane({
             </Text>
             <ConsoleButton
               label="Next"
+              accessibilityLabel="Next recipients"
               disabled={
                 busy ||
                 (data?.pagination.page || 1) >= (data?.pagination.pages || 1)
@@ -547,6 +675,38 @@ const s = StyleSheet.create({
   },
   error: { ...TYPE.small, color: PALETTE.redDark },
   flex: { flex: 1 },
+  recipientRow: { gap: SPACE.sm },
+  wideRow: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACE.md },
+  recipientColumn: { minWidth: 0 },
+  outcome: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: SPACE.sm,
+  },
+  wideOutcome: { width: 176 },
+  status: {
+    ...TYPE.caption,
+    fontWeight: '700',
+    flexShrink: 1,
+    textAlign: 'center',
+    paddingHorizontal: SPACE.sm,
+    paddingVertical: SPACE.xs,
+    borderRadius: SPACE.md,
+    overflow: 'hidden',
+  },
+  failedStatus: { color: PALETTE.redDark, backgroundColor: PALETTE.redSoft },
+  readStatus: { color: PALETTE.greenDark, backgroundColor: PALETTE.greenSoft },
+  acceptedStatus: {
+    color: PALETTE.indigoDark,
+    backgroundColor: PALETTE.indigoSoft,
+  },
+  link: {
+    ...TYPE.caption,
+    color: PALETTE.indigo,
+    fontWeight: '700',
+    flexShrink: 1,
+  },
   between: {
     flexDirection: 'row',
     alignItems: 'center',

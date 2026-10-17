@@ -117,6 +117,25 @@ test('FitImage auto learns its aspect ratio from the display image without fetch
   expect(getSize).not.toHaveBeenCalled();
 });
 
+test('FitImage retains its loaded image and dimensions when switching layout modes', async () => {
+  const render = (mode: 'auto' | 'frame') => <FitImage uri="/uploads/banner.jpg" mode={mode} style={{ width: 300 }} accessibilityLabel="Banner" />;
+  await Renderer.act(async () => { screen = Renderer.create(render('frame')); });
+  const frame = () => screen!.root.findAllByType(View).find(node => node.props.accessibilityLabel === 'Banner')!;
+  const foreground = () => screen!.root.findAllByType(Image).find(node => node.props.resizeMode === 'contain')!;
+  await Renderer.act(async () => foreground().props.onLoad({ nativeEvent: { source: { width: 600, height: 300 } } }));
+  const loadedSource = foreground().props.source;
+  expect(screen!.root.findAllByType(Image)).toHaveLength(2);
+  await Renderer.act(async () => screen!.update(render('auto')));
+  expect(StyleSheet.flatten(frame().props.style).aspectRatio).toBe(2);
+  expect(screen!.root.findAllByType(Image).every(node => node.props.source.uri === loadedSource.uri)).toBe(true);
+  expect(screen!.root.findAllByType(Text)).toHaveLength(0);
+  await Renderer.act(async () => screen!.update(render('frame')));
+  await Renderer.act(async () => { jest.advanceTimersByTime(8000); });
+  expect(StyleSheet.flatten(frame().props.style).aspectRatio).toBeUndefined();
+  expect(screen!.root.findAllByType(Image)).toHaveLength(2);
+  expect(screen!.root.findAllByType(Text)).toHaveLength(0);
+});
+
 test('FitImage keeps content during its original retry and recovers when its URL changes', async () => {
   const onError = jest.fn();
   const render = (uri: string) => <FitImage uri={uri} mode="auto" fallback={<Text>Unavailable</Text>} onError={onError}><Text>Caption</Text></FitImage>;
@@ -128,10 +147,29 @@ test('FitImage keeps content during its original retry and recovers when its URL
   await Renderer.act(async () => foreground().props.onError(failure));
   expect(screen!.root.findAllByType(Image)).toHaveLength(0);
   expect(onError).toHaveBeenCalledTimes(1);
-  expect(screen!.root.findAllByType(Text).map(node => node.props.children)).toEqual(['Unavailable', 'Caption']);
+  expect(screen!.root.findAllByType(Text).map(node => node.props.children)).toEqual(['Unavailable', 'Retry image', 'Caption']);
   await Renderer.act(async () => screen!.update(render('/uploads/recovered.jpg')));
   expect(foreground().props.source.uri).toContain('/uploads/recovered.jpg?w=');
-  expect(screen!.root.findAllByType(Text).map(node => node.props.children)).toEqual(['Caption']);
+  expect(screen!.root.findAllByType(Text).map(node => node.props.children)).toEqual(['Loading image...', 'Caption']);
+});
+
+test('FitImage explains stalled loading, reuses the successful original for blur, and retries a later failure', async () => {
+  await Renderer.act(async () => { screen = Renderer.create(<FitImage uri="/uploads/banner.jpg" mode="auto" />); });
+  const foreground = () => screen!.root.findAllByType(Image).find(node => node.props.resizeMode === 'contain')!;
+  expect(screen!.root.findAllByType(Image)).toHaveLength(1);
+  await Renderer.act(async () => { jest.advanceTimersByTime(8000); });
+  expect(screen!.root.findAllByType(Text).some(node => node.props.children === 'This image is taking longer to load.')).toBe(true);
+  await Renderer.act(async () => foreground().props.onError(failure));
+  await Renderer.act(async () => foreground().props.onLoad({ nativeEvent: { source: { width: 1280, height: 720 } } }));
+  expect(screen!.root.findAllByType(Image)).toHaveLength(2);
+  expect(screen!.root.findAllByType(Image).every(node => node.props.source.uri === `${API_ORIGIN}/uploads/banner.jpg`)).toBe(true);
+  expect(screen!.root.findAllByType(Text)).toHaveLength(0);
+  await Renderer.act(async () => foreground().props.onError(failure));
+  expect(screen!.root.findAllByType(Image)).toHaveLength(0);
+  expect(button('Retry image')).toBeDefined();
+  await Renderer.act(async () => button('Retry image').props.onPress());
+  expect(foreground().props.source.uri).toContain('/uploads/banner.jpg?w=');
+  expect(button('Retry image')).toBeUndefined();
 });
 
 test('Photo loads a 1024px preview and creates the original-image zoom only while open', async () => {

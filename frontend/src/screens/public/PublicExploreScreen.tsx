@@ -19,6 +19,7 @@ import { openWebsitePage } from '../../services/websiteNavigation';
 import ExploreActiv from '../member/dashboard/ExploreActiv';
 import { PublicContentCard, publicRecordKey } from './PublicExploreCards';
 import { ExploreZones } from '../../components/explore/ExploreDestinations';
+import PublicNotificationsCard from '../../components/PublicNotificationsCard';
 
 const TABS: { key: ExploreSection; label: string; icon: string; title: string; subtitle: string }[] = [
   { key: 'home', label: 'Home', icon: 'home', title: 'Connect. Empower. Grow.', subtitle: 'Your community. Your next opportunity.' },
@@ -40,9 +41,17 @@ export default function PublicExploreScreen({ navigation, route }: any) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [contactRefresh, setContactRefresh] = useState(0);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [noticeId, setNoticeId] = useState<string | undefined>();
   const now = useEventClock();
   const abort = useRef<AbortController | null>(null);
   const list = useRef<FlatList<any>>(null);
+  useEffect(() => {
+    if (route?.params?.notifications !== 'open') return;
+    setNoticeId(route.params.noticeId);
+    setNotificationsOpen(true);
+    navigation.setParams?.({ notifications: undefined, noticeId: undefined });
+  }, [navigation, route?.params?.notifications, route?.params?.noticeId]);
   useEffect(() => {
     const requested = TABS.find(tab => tab.key === route?.params?.section)?.key;
     if (!requested) return;
@@ -158,7 +167,7 @@ export default function PublicExploreScreen({ navigation, route }: any) {
         <BrandHeaderBlock waveHeight={52}>
           <View style={s.heroContent}>
             <View style={s.topbar}><BrandLogo size="sm" />
-              <PressableScale accessibilityRole="button" accessibilityLabel="Notifications" onPress={() => navigation.navigate('PublicNotifications')} contentStyle={s.signIn}>
+              <PressableScale accessibilityRole="button" accessibilityLabel="Notifications" onPress={() => { setNoticeId(undefined); setNotificationsOpen(true); }} contentStyle={s.signIn}>
                 <Icon name="notifications-none" size={23} color={PALETTE.white} />
               </PressableScale>
               <PressableScale accessibilityRole="button" accessibilityLabel="Sign in" onPress={signIn} contentStyle={s.signIn}>
@@ -202,6 +211,7 @@ export default function PublicExploreScreen({ navigation, route }: any) {
         <Text style={s.footerText}>ACTIV · Connect. Empower. Grow.</Text>
       </View> : null}
     />
+    <PublicNotificationsCard visible={notificationsOpen} noticeId={noticeId} onClose={() => setNotificationsOpen(false)} navigation={navigation} />
   </BrandFrame>;
 }
 

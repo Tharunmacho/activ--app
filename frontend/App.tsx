@@ -92,6 +92,7 @@ import {
 } from './src/screens/payment';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
+import AppUpdateGate from './src/components/AppUpdateGate';
 import NotificationPermissionPrompt from './src/components/NotificationPermissionPrompt';
 import { RootStackParamList } from './src/types';
 
@@ -125,6 +126,7 @@ function App() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
+        <AppUpdateGate>
         <NavigationContainer ref={navigationRef} onReady={() => { flushPendingDeepLink(); void flushPushNavigation(); updateNotificationEntry(); }} onStateChange={() => { void flushPushNavigation(); void trackScreen(navigationRef.getCurrentRoute()?.name); updateNotificationEntry(); }}>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
         <Stack.Navigator initialRouteName="Onboarding">
@@ -360,6 +362,7 @@ function App() {
         </Stack.Navigator>
       </NavigationContainer>
       <NotificationPermissionPrompt ready={notificationEntryReady} />
+        </AppUpdateGate>
     </SafeAreaProvider>
   </ErrorBoundary>
   );

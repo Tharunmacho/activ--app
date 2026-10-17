@@ -7,6 +7,7 @@ import { ConsoleButton, PremiumInput, PremiumSelect, FitImage } from '../src/ui'
 import { createAnnouncement, updateAnnouncement, listMembershipPlans, uploadCmsMedia, uploadEventAttachment } from '../src/services/superApi';
 import { pickEventDocument } from '../src/services/eventDocuments';
 import { ToggleRow } from '../src/screens/admin/super/superKit';
+import { findUpdateMembers, previewAssociationUpdate } from '../src/services/updatePersonalizationApi';
 
 let mockParams: any = {};
 const mockGoBack = jest.fn();
@@ -19,6 +20,7 @@ jest.mock('../src/services/superApi', () => ({
   uploadCmsMedia: jest.fn(), uploadEventAttachment: jest.fn(), errorText: (error: any) => error?.message || 'Request failed',
 }));
 jest.mock('../src/services/eventDocuments', () => ({ pickEventDocument: jest.fn() }));
+jest.mock('../src/services/updatePersonalizationApi', () => ({ findUpdateMembers: jest.fn(), previewAssociationUpdate: jest.fn() }));
 jest.mock('../src/screens/admin/super/superKit', () => ({
   ...jest.requireActual('../src/screens/admin/super/superKit'),
   useRegionTreeAll: () => [{ name: 'Tamil Nadu', districts: [{ name: 'Chennai', blocks: [{ name: 'Central' }, { name: 'North' }] }, { name: 'Coimbatore', blocks: [{ name: 'West' }] }] }, { name: 'Kerala', districts: [] }],
@@ -31,6 +33,8 @@ const button = (label: string) => screen.root.findAllByType(ConsoleButton).find(
 const field = (label: string) => screen.root.findAllByType(PremiumInput).find(node => node.props.label === label)!;
 const fill = async (label: string, value: string) => { await act(async () => { field(label).props.onChangeText(value); }); };
 const press = async (label: string) => { await act(async () => { await button(label).props.onPress(); }); };
+const choose = async (label: string, value: string) => { await act(async () => { screen.root.findAllByType(PremiumSelect).find(node => node.props.label === label)!.props.onChange(value); }); };
+const settle = async () => { await act(async () => { await new Promise<void>(resolve => setTimeout(resolve, 350)); }); };
 const chooseAudience = async (label: string) => {
   await act(async () => { screen.root.findAllByType(PremiumSelect).find(node => node.props.label === 'Members')!.props.onChange(label); });
 };
@@ -47,6 +51,11 @@ beforeEach(() => {
   ] });
   (uploadCmsMedia as jest.Mock).mockResolvedValue({ url: '/uploads/poster.jpg', type: 'image' });
   (uploadEventAttachment as jest.Mock).mockResolvedValue({ url: '/uploads/guide.pdf', name: 'Membership guide.pdf' });
+  (findUpdateMembers as jest.Mock).mockResolvedValue({ members: [
+    { id: '111111111111111111111111', fullName: 'First Member', email: 'first@example.test' },
+    { id: '222222222222222222222222', fullName: 'Second Member', email: 'second@example.test' },
+  ], variables: [{ key: 'name', label: 'Member name', detail: 'Profile name; otherwise ACTIVian.' }, { key: 'company_name', label: 'Company name', detail: 'Recorded company.' }] });
+  (previewAssociationUpdate as jest.Mock).mockResolvedValue({ announcement: { title: 'Dear ACTIVian', body: 'General preview from server' }, eligible: false, missing: [], values: { name: 'ACTIVian' }, recipient: null });
 });
 afterEach(async () => { if (screen) await act(async () => { screen.unmount(); }); });
 
@@ -115,16 +124,53 @@ it('preserves existing files on a failed replacement and explicitly clears remov
   expect(updateAnnouncement).toHaveBeenCalledWith('existing', expect.objectContaining({ bannerUrl: '', bannerAlt: '', attachmentUrl: '', attachmentLabel: '' }));
 });
 
-it('saves multiple independent regions and authored name tokens without a preview name', async () => {
+it('saves multiple independent regions and authored tokens while previewing server-rendered fallback values', async () => {
   mockParams = { announcement: { id: 'existing', title: 'Dear {Name}', body: 'Welcome {name}', audience: 'all', targets: [{ state: 'Tamil Nadu', district: 'Chennai', block: 'Central' }], status: 'draft' } };
   await mount();
   await act(async () => { screen.root.findAllByType(TouchableOpacity).find(node => node.props.accessibilityRole === 'checkbox' && node.props.accessibilityLabel === 'Kerala')!.props.onPress(); });
   await press('Preview update');
-  await fill('Example recipient name', 'A different recipient');
-  expect(JSON.stringify(screen.toJSON())).toContain('Dear A different recipient');
+  await settle();
+  expect(JSON.stringify(screen.toJSON())).toContain('General preview from server');
+  expect(previewAssociationUpdate).toHaveBeenCalledWith(expect.objectContaining({ previewMemberId: '', title: 'Dear {Name}' }));
   await press('Publish update');
   expect(updateAnnouncement).toHaveBeenCalledWith('existing', expect.objectContaining({ title: 'Dear {Name}', body: 'Welcome {name}', includeVisitors: false,
     targets: [{ state: 'Tamil Nadu', district: 'Chennai', block: 'Central' }, { state: 'Kerala', district: '', block: '' }] }));
+});
+
+it('creates custom general and individual values, selects exact members, and previews the actual recipient', async () => {
+  await mount(); await fill('Title', 'Meeting for {name}'); await fill('Message', 'Join on {meeting_date}');
+  await choose('Recipient selection', 'Specific members');
+  await fill('Find members', 'Member'); await settle();
+  await act(async () => { screen.root.findAllByType(TouchableOpacity).find(node => node.props.accessibilityLabel === 'Select First Member · first@example.test')!.props.onPress(); });
+  await fill('New custom variable', 'meeting_date'); await press('Create variable');
+  await fill('General value for {meeting_date}', 'Monday');
+  await choose('Member for individual value', 'First Member · first@example.test'); await press('Add individual value');
+  await fill('Individual {meeting_date} value for First Member', 'Tuesday');
+  (previewAssociationUpdate as jest.Mock).mockResolvedValue({ announcement: { title: 'Meeting for First Member', body: '<p>Join on Tuesday &amp; Wednesday</p>' }, eligible: true, missing: [], values: {}, recipient: { id: '111111111111111111111111', fullName: 'First Member' } });
+  await press('Preview update');
+  await choose('Preview recipient', 'First Member · first@example.test'); await settle();
+  expect(JSON.stringify(screen.toJSON())).toContain('Join on Tuesday & Wednesday');
+  expect(JSON.stringify(screen.toJSON())).not.toContain('<p>Join');
+  expect(previewAssociationUpdate).toHaveBeenLastCalledWith(expect.objectContaining({ previewMemberId: '111111111111111111111111', memberIds: ['111111111111111111111111'] }));
+  await press('Publish update');
+  expect(createAnnouncement).toHaveBeenCalledWith(expect.objectContaining({
+    recipientMode: 'selected', memberIds: ['111111111111111111111111'], includeVisitors: false,
+    variables: [{ key: 'meeting_date', defaultValue: 'Monday', overrides: [{ memberId: '111111111111111111111111', value: 'Tuesday' }] }],
+  }));
+  expect((createAnnouncement as jest.Mock).mock.calls[0][0].previewMemberId).toBeUndefined();
+});
+
+it('requires selected members, permits builtin general fallbacks, and rejects invalid custom keys', async () => {
+  await mount(); await fill('Title', 'Welcome'); await fill('Message', 'Dear {name}, from {company_name}');
+  await choose('Recipient selection', 'Specific members'); await press('Publish update');
+  expect(createAnnouncement).not.toHaveBeenCalled();
+  expect(Alert.alert).toHaveBeenCalledWith('Check your update', 'Choose at least one specific member.');
+  await fill('New custom variable', '__proto__'); await press('Create variable');
+  expect(JSON.stringify(screen.toJSON())).toContain('Start the variable name with a letter');
+  await choose('Recipient selection', 'All eligible members');
+  await choose('Variable', 'Company name'); await fill('General value for {company_name}', 'your organisation');
+  await press('Save draft');
+  expect(createAnnouncement).toHaveBeenCalledWith(expect.objectContaining({ recipientMode: 'audience', memberIds: [], variables: [{ key: 'company_name', defaultValue: 'your organisation', overrides: [] }] }));
 });
 
 it('requires a region in restricted mode and only enables visitors for unrestricted updates', async () => {

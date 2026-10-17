@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { ContentImage } from '../../ui/ContentImage';
+import { FitImage } from '../../ui/FitImage';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { BRAND, PALETTE, SPACE, PressableScale, SurfaceCard } from '../../ui';
@@ -34,12 +34,11 @@ function Fact({ icon, children }: { icon: string; children: React.ReactNode }) {
 
 /** Shared by the home preview and each public tab. No account is needed to open it. */
 export function PublicContentCard({ item, kind, openPage }: { item: any; kind: ContentKind; openPage: PublicPageOpener }) {
-  const [failedImage, setFailedImage] = useState('');
   const title = cleanText(item.title || item.caption) || (kind === 'gallery' ? 'From our community' : 'ACTIV update');
   const image = resolveMediaUrl(kind === 'events' ? item.imageUrl || item.bannerUrl || item.media?.url
     : kind === 'news' ? item.image?.url || (typeof item.image === 'string' ? item.image : item.imageUrl)
       : item.media?.type === 'video' ? item.thumbnailUrl || item.posterUrl : item.media?.url);
-  const hasImage = !!image && image !== failedImage;
+  const hasImage = !!image;
   const key = publicRecordKey(item);
   const path = kind === 'events' ? WEBSITE_PATHS.event(key) : kind === 'news' ? WEBSITE_PATHS.article(key) : WEBSITE_PATHS.galleryItem(key);
   const summary = cleanText(item.summary || item.description);
@@ -50,8 +49,7 @@ export function PublicContentCard({ item, kind, openPage }: { item: any; kind: C
 
   return <SurfaceCard padded={false} style={s.card} accessibilityLabel={title} onPress={() => openPage(path, title)}>
     {hasImage && <View style={s.imageFrame}>
-      <ContentImage uri={image} width={800} style={s.image}
-        resizeMode="contain" onError={() => setFailedImage(image)} accessibilityLabel={title} />
+      <FitImage uri={image} style={s.image} accessibilityLabel={title} />
       {kind === 'gallery' && item.media?.type === 'video' && <View style={s.play}><Icon name="play-arrow" size={28} color={PALETTE.white} /></View>}
     </View>}
     {!hasImage && <View style={s.artCover}>
