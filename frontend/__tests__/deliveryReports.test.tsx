@@ -213,6 +213,62 @@ it('reviews one failed record by ID and cancelling performs no resend', async ()
   expect(screen.root.findAllByType(ConsoleButton).some(node => node.props.label === 'Confirm resend (1)')).toBe(false);
 });
 
+it('reviews only failed IDs on the visible page and disables page review for accepted-only rows', async () => {
+  await mount();
+  await press(button('Review failures on this page').props.onPress);
+  expect(previewDeliveryRetry).toHaveBeenLastCalledWith({ ids: ['row-4', 'row-5'] });
+  expect(text()).toContain('Failed deliveries on recipient page 1');
+  await press(button('Cancel resend').props.onPress);
+  await press(tile('Accepted / in inbox').props.onPress);
+  expect(button('Review failures on this page').props.disabled).toBe(true);
+  const reviews = (previewDeliveryRetry as jest.Mock).mock.calls.length;
+  await press(button('Review failures on this page').props.onPress);
+  expect(previewDeliveryRetry).toHaveBeenCalledTimes(reviews);
+  expect(retryDeliveryReport).not.toHaveBeenCalled();
+});
+
+it('reaches later eligible failures when the newest 100 cannot be retried', async () => {
+  const failures: ReportRow[] = Array.from({ length: 105 }, (_, index) => ({
+    ...rows[5], _id: `failure-${index}`, recipientName: `Failed recipient ${index}`, status: 'failed',
+  }));
+  (getDeliveryReport as jest.Mock).mockImplementation(async (input: ReportFilters) => {
+    const page = input.page || 1, limit = input.limit || 25;
+    return { ...report(input), summary: { ...counts(failures), recipients: failures.length },
+      rows: failures.slice((page - 1) * limit, page * limit), pagination: { page, limit, total: failures.length, pages: 5 } };
+  });
+  (previewDeliveryRetry as jest.Mock).mockImplementation(async (selection: { ids?: string[] }) => {
+    const ids = selection.ids || failures.slice(0, 100).map(row => row._id);
+    const eligible = ids.filter(id => Number(id.replace('failure-', '')) >= 100);
+    return { matched: selection.ids ? ids.length : failures.length, reviewed: ids.length,
+      remaining: selection.ids ? 0 : 5, eligible: eligible.length, skipped: ids.length - eligible.length,
+      ids: eligible, token: eligible.length ? 'later-page-review' : '', truncated: !selection.ids,
+      reasons: eligible.length ? [] : [{ reason: 'Original delivery cannot be retried', count: ids.length }] };
+  });
+  await mount();
+  await press(tile('Failed').props.onPress);
+  await press(button('Review failed deliveries').props.onPress);
+  expect(button('Confirm resend (0)').props.disabled).toBe(true);
+  expect(text()).toContain('Batch review starts with the newest 100 failures.');
+  expect(text()).toContain('use the recipient pages');
+  expect(text()).toContain('5 still to review');
+  expect(retryDeliveryReport).not.toHaveBeenCalled();
+  for (let page = 2; page <= 5; page++) {
+    const next = screen.root.findAllByType(ConsoleButton).find(node => node.props.accessibilityLabel === 'Next recipients');
+    if (!next) throw new Error('Next recipients not found');
+    await press(next.props.onPress);
+  }
+  expect(filters().page).toBe(5);
+  const expectedIds = failures.slice(100).map(row => row._id);
+  await press(button('Review failures on this page').props.onPress);
+  expect(previewDeliveryRetry).toHaveBeenLastCalledWith({ ids: expectedIds });
+  expect(text()).toContain('Failed deliveries on recipient page 5');
+  (retryDeliveryReport as jest.Mock).mockResolvedValueOnce({ attempted: 5, sent: 5, queued: 0, failed: 0, skipped: 0, reasons: [] });
+  await press(button('Confirm resend (5)').props.onPress);
+  expect(retryDeliveryReport).toHaveBeenCalledTimes(1);
+  expect(retryDeliveryReport).toHaveBeenCalledWith({ ids: expectedIds, token: 'later-page-review' });
+  expect(text()).toContain('5 attempted · 5 sent');
+});
+
 it('blocks ineligible retries and discards previews after filters change', async () => {
   await mount();
   (previewDeliveryRetry as jest.Mock).mockResolvedValueOnce({ ...preview, eligible: 0, ids: [], skipped: 2 });
@@ -248,6 +304,7 @@ it('shows retry errors and reloads the report without automatically sending agai
 
 it('recovers a timed-out confirmation through bounded status reads without another send', async () => {
   await mount();
+  (previewDeliveryRetry as jest.Mock).mockResolvedValueOnce({ ...preview, statusToken: 'compact-status-fixture' });
   await press(button('Review failed deliveries').props.onPress);
   (retryDeliveryReport as jest.Mock).mockRejectedValueOnce(new Error('Network timeout'));
   (getDeliveryRetryStatus as jest.Mock)
@@ -255,7 +312,8 @@ it('recovers a timed-out confirmation through bounded status reads without anoth
     .mockResolvedValueOnce({ found: true, processing: false, attempted: 1, sent: 1, queued: 0, failed: 0, skipped: 0, reasons: [] });
   await press(button('Confirm resend (1)').props.onPress);
   expect(retryDeliveryReport).toHaveBeenCalledTimes(1);
-  expect(getDeliveryRetryStatus).toHaveBeenCalledWith('review-fixture');
+  expect(getDeliveryRetryStatus).toHaveBeenCalledWith('compact-status-fixture');
+  expect(retryDeliveryReport).toHaveBeenCalledWith({ ids: preview.ids, token: preview.token });
   await act(async () => { jest.advanceTimersByTime(2000); });
   await settle();
   expect(getDeliveryRetryStatus).toHaveBeenCalledTimes(2);

@@ -183,19 +183,24 @@ export function ReportsPane({
     mounted.current = true;
     return () => { mounted.current = false; retrySeq.current++; };
   }, []);
-  const reviewRetry = async (item?: ReportRow) => {
+  const reviewRetry = async (item?: ReportRow, pageOnly = false) => {
     if (retryLock.current || busy) return;
+    const pageIds = (data?.rows || []).filter(row => row?.status === 'failed' && row?._id).map(row => row._id);
+    if (pageOnly && !pageIds.length) return;
     retryLock.current = true;
     const request = ++retrySeq.current;
     setRetryBusy('review');
     setRetryPreview(null);
     setRetryResult(null);
     setRetryError('');
-    setRetryLabel(item ? `${item.recipientName || 'This recipient'} · ${CHANNEL_LABELS[item.channel]}` : 'Failed deliveries for the current activity, channel, date and search filters');
+    setRetryLabel(item ? `${item.recipientName || 'This recipient'} · ${CHANNEL_LABELS[item.channel]}` : pageOnly
+      ? `Failed deliveries on recipient page ${data?.pagination?.page || 1}`
+      : 'Failed deliveries for the current activity, channel, date and search filters');
     revealRecipients();
     try {
       const preview = await previewDeliveryRetry(item
         ? { ids: [item._id] }
+        : pageOnly ? { ids: pageIds }
         : { filters: { ...filters, status: 'failed' } });
       if (mounted.current && request === retrySeq.current) setRetryPreview(preview);
     } catch (err) {
@@ -210,13 +215,13 @@ export function ReportsPane({
     retryLock.current = true;
     setRetryBusy('send');
     setRetryError('');
-    const token = retryPreview.token;
+    const statusToken = retryPreview.statusToken || retryPreview.token;
     const recover = async () => {
-      let status = await getDeliveryRetryStatus(token);
+      let status = await getDeliveryRetryStatus(statusToken);
       for (let attempt = 1; status?.processing && attempt < 5 && mounted.current; attempt++) {
         await new Promise<void>(resolve => setTimeout(resolve, 2000));
         if (!mounted.current) break;
-        status = await getDeliveryRetryStatus(token);
+        status = await getDeliveryRetryStatus(statusToken);
       }
       return status;
     };
@@ -582,6 +587,9 @@ export function ReportsPane({
       />
       <ConsoleButton label={retryBusy === 'review' ? 'Reviewing failures…' : 'Review failed deliveries'}
         disabled={busy || !!retryBusy || !summary?.failed} onPress={() => void reviewRetry()} />
+      <ConsoleButton label="Review failures on this page" accessibilityLabel="Review failed deliveries on this page"
+        kind="soft" style={s.card} disabled={busy || !!retryBusy || !(data?.rows || []).some(row => row?.status === 'failed')}
+        onPress={() => void reviewRetry(undefined, true)} />
       {retryBusy === 'send' && <ConsoleNote kind="indigo" text="Resending the reviewed deliveries…" style={s.card} />}
       {!!retryError && <ConsoleNote kind="red" text={retryError} style={s.card} />}
       {retryPreview && <ConsoleCard style={s.card}>
@@ -589,7 +597,7 @@ export function ReportsPane({
         <Text style={s.body}>{retryLabel}</Text>
         <Text style={s.body}>{fmt(retryPreview.matched)} matched · {fmt(retryPreview.eligible)} eligible · {fmt(retryPreview.skipped)} skipped</Text>
         {(retryPreview.reasons || []).map((reason, index) => <Text key={index} style={s.caption}>{fmt(reason.count)} skipped: {reason.reason}</Text>)}
-        {retryPreview.truncated && <Text style={s.body}>{fmt(retryPreview.reviewed ?? (retryPreview.eligible + retryPreview.skipped))} reviewed, {fmt(retryPreview.remaining ?? Math.max(0, retryPreview.matched - retryPreview.eligible - retryPreview.skipped))} still to review. Each batch reviews up to 100 deliveries. Review the remaining failures after this batch finishes.</Text>}
+        {retryPreview.truncated && <Text style={s.body}>{fmt(retryPreview.reviewed ?? (retryPreview.eligible + retryPreview.skipped))} reviewed, {fmt(retryPreview.remaining ?? Math.max(0, retryPreview.matched - retryPreview.eligible - retryPreview.skipped))} still to review. Batch review starts with the newest 100 failures. Select Failed, use the recipient pages, then choose “Review failures on this page” for later deliveries.</Text>}
         <Text style={s.caption}>Confirmation resends only this reviewed selection. Delivery eligibility is checked again before sending.</Text>
         <View style={s.retryActions}>
           <ConsoleButton label={retryBusy === 'send' ? 'Resending…' : `Confirm resend (${fmt(retryPreview.eligible)})`}
