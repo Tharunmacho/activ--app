@@ -8,14 +8,14 @@ import {
   ConsoleSkeleton, ConsoleState, ConsoleNote, ConsoleButton, ConsoleSectionTitle, GlassIconButton, PremiumInput, CONSOLE_LIST,
 } from '../../../ui';
 import {
-  listNotificationLogs, getDeliveryStatus, retryNotification, testSendNotification, getRoutingPreview, errorText,
+  listNotificationLogs, getDeliveryStatus, testSendNotification, getRoutingPreview, errorText,
 } from '../../../services/superApi';
-import { ChipRow, MiniAction, useRegionTreeAll, useRegionNames } from './superKit';
+import { ChipRow, useRegionTreeAll, useRegionNames } from './superKit';
 import { InlineSelect } from './events/eventKit';
 import RegionInput from './components/RegionInput';
 import { AutomationPane } from './delivery/AutomationPane';
 import { ReportsPane } from './delivery/ReportsPane';
-import { canResend, channelColor, channelIcon } from './delivery/deliveryKit';
+import { ResendButton, STATE_META, stateOf, deliveryTitle, messageLabel, channelColor, channelIcon } from './delivery/deliveryKit';
 import { notificationReason } from '../../../services/deliveryReportApi';
 
 /**
@@ -74,19 +74,14 @@ const when = (value?: string) => {
   return d.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 };
 
-/** The raw log's words (website StatePill): `sent` reads "Delivered" there. */
-const PILL: Record<string, { label: string; kind: 'approved' | 'rejected' | 'neutral' | 'warning' }> = {
-  sent: { label: 'Sent', kind: 'approved' },
-  failed: { label: 'Failed', kind: 'rejected' },
-  queued: { label: 'Waiting to send', kind: 'neutral' },
-  mock: { label: 'Not sent', kind: 'warning' },
-};
-
-function LogRow({ l, busy, onRetry }: { l: any; busy: boolean; onRetry: () => void }) {
+function LogRow({ l, onChanged }: { l: any; onChanged: () => void }) {
+  const [showDetails, setShowDetails] = useState(false);
   const ch = String(l?.channel || 'in_app');
+  const rawReason = String(l?.failureReason || l?.lastError || '');
+  const reason = notificationReason(rawReason);
   // `mock` outranks `status`: the row says "sent" because nothing failed, but nothing was sent.
-  const state = l?.mock ? 'mock' : String(l?.status || 'queued');
-  const pill = PILL[state] || PILL.queued;
+  const state = stateOf(l);
+  const pill = STATE_META[state] || STATE_META.queued;
   return (
     <ConsoleCard style={s.card} accent={state === 'failed' ? PALETTE.red : undefined}>
       <View style={s.row}>
@@ -94,23 +89,25 @@ function LogRow({ l, busy, onRetry }: { l: any; busy: boolean; onRetry: () => vo
           <Icon name={channelIcon(ch)} size={18} color={channelColor(ch)} />
         </View>
         <View style={s.flexText}>
-          <Text style={s.name} maxFontSizeMultiplier={1.3}>{l?.subject || humanEvent(l?.event) || 'Notification'}</Text>
+          <Text style={s.name} maxFontSizeMultiplier={1.3}>{deliveryTitle(l)}</Text>
           <Text style={s.sub} maxFontSizeMultiplier={1.3}>
-            {humanEvent(l?.event)} · to <Text style={s.strong}>{l?.recipient || '—'}</Text>
+            {messageLabel(l?.event)} · to <Text style={s.strong}>{l?.recipient || '—'}</Text>
             {l?.replyTo ? ` · reply-to ${l.replyTo}` : ''}
           </Text>
           {/* Known historical reasons are explained; other service details stay intact. */}
-          {l?.lastError ? <Text style={s.err} maxFontSizeMultiplier={1.3}>{notificationReason(l.lastError)}</Text> : null}
+          {reason ? <Text style={s.err} maxFontSizeMultiplier={1.3}>{reason}</Text> : null}
+          {rawReason !== reason ? <>
+            <ConsoleButton kind="ghost" size="sm" label={showDetails ? 'Hide service details' : 'Service details'} onPress={() => setShowDetails(value => !value)} />
+            {showDetails && <Text style={s.sub} selectable>{rawReason}</Text>}
+          </> : null}
         </View>
       </View>
       <View style={s.foot}>
         <Text style={s.when} maxFontSizeMultiplier={1.3}>{when(l?.createdAt)}</Text>
-        <ConsoleChip label={pill.label} kind={pill.kind} />
+        <ConsoleChip label={ch === 'in_app' && state === 'accepted' ? 'In the app' : pill.label} kind={pill.kind} />
         <View style={s.flex} />
-        {state === 'failed' && ch !== 'in_app' && canResend(l) ? (
-          <MiniAction icon="replay" label={busy ? 'Sending…' : 'Send again'} onPress={onRetry} disabled={busy} />
-        ) : null}
       </View>
+      <ResendButton row={l} onDone={onChanged} />
     </ConsoleCard>
   );
 }
@@ -272,7 +269,6 @@ const SuperNotificationsScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
-  const [busyId, setBusyId] = useState('');
   const [delivery, setDelivery] = useState<any>(null);
   const [deliveryError, setDeliveryError] = useState('');
   const seq = useRef(0);
@@ -316,17 +312,6 @@ const SuperNotificationsScreen: React.FC = () => {
     loadDelivery();
     if (view === 'automation' || view === 'reports') setAutomationNonce((n) => n + 1);
     else if (view === 'log') { setRefreshing(true); load(1); }
-  };
-
-  const retry = async (l: any) => {
-    const id = String(l?._id || l?.id || '');
-    if (!id) return;
-    setBusyId(id);
-    try {
-      const row = await retryNotification(id);
-      Alert.alert(row?.status === 'sent' ? 'Sent again' : 'Still failing', row?.status === 'sent' ? 'The message was passed to the sending service.' : notificationReason(row?.lastError || 'The sending service did not provide a reason.'));
-      load(1);
-    } catch (err) { Alert.alert('Could not re-send that message', errorText(err)); } finally { setBusyId(''); }
   };
 
   const top = (
@@ -425,7 +410,7 @@ const SuperNotificationsScreen: React.FC = () => {
         ListFooterComponent={!loading && logs.length > 0 && page < pages ? (
           <ConsoleButton kind="soft" icon="expand-more" label="Load more" onPress={() => load(page + 1)} style={s.more} />
         ) : null}
-        renderItem={({ item }) => <LogRow l={item} busy={busyId === String(item?._id || item?.id)} onRetry={() => retry(item)} />}
+        renderItem={({ item }) => <LogRow l={item} onChanged={() => void load(1)} />}
       />
     </ConsoleFrame>
   );

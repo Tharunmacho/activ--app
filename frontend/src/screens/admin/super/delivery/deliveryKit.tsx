@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { notificationReason, notificationTemplatePath } from '../../../../services/deliveryReportApi';
@@ -21,7 +21,7 @@ import {
 
 export const STATE_META: Record<string, { label: string; kind: ConsoleChipKind; hint: string }> = {
   failed: { label: 'Failed', kind: 'rejected', hint: 'The message could not be sent or delivered. The reason is shown below.' },
-  read: { label: 'Opened', kind: 'approved', hint: 'WhatsApp reports the recipient opened it.' },
+  read: { label: 'Seen', kind: 'approved', hint: 'WhatsApp reports the recipient saw it.' },
   delivered: { label: 'Delivered', kind: 'approved', hint: 'WhatsApp reports it reached the phone.' },
   sent: { label: 'Sent', kind: 'info', hint: 'WhatsApp is sending the message. Arrival has not been confirmed.' },
   resent: { label: 'Tried again', kind: 'neutral', hint: 'Another send was attempted. The newer entry shows the result.' },
@@ -89,6 +89,14 @@ export const messageLabel = (event?: string) =>
   MESSAGE_LABELS[String(event || '')]
   || String(event || '').toLowerCase().replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
 
+/** Prefer a known message type over internal event/template names, keeping real subjects. */
+export const deliveryTitle = (row: { title?: string; subject?: string; event?: string; campaignKey?: string; templateId?: string } | null | undefined) => {
+  const title = String(row?.title || row?.subject || '').trim();
+  const event = String(row?.event || ((row?.campaignKey || '').startsWith('automation:') ? (row?.campaignKey || '').slice(11) : ''));
+  if (event && (!title || title === event || title === row?.templateId)) return messageLabel(event);
+  return title || 'Notification';
+};
+
 export const whenLabel = (value?: string) => {
   if (!value) return '';
   const d = new Date(value);
@@ -112,8 +120,8 @@ export const plainReason = (row: Partial<DeliveryLogRow> | null | undefined): { 
   return { text: raw, failed };
 };
 
-export const channelWord = (channel?: string) => (channel === 'whatsapp' ? 'WhatsApp' : channel === 'in_app' ? 'In-app' : 'Email');
-export const channelIcon = (channel?: string) => (channel === 'whatsapp' ? 'chat' : channel === 'in_app' ? 'notifications' : 'email');
+export const channelWord = (channel?: string) => (channel === 'whatsapp' ? 'WhatsApp' : channel === 'push' ? 'Push notification' : channel === 'in_app' ? 'In-app' : 'Email');
+export const channelIcon = (channel?: string) => (channel === 'whatsapp' ? 'chat' : channel === 'in_app' || channel === 'push' ? 'notifications' : 'email');
 export const channelColor = (channel?: string) => (channel === 'whatsapp' ? PALETTE.greenDark : channel === 'in_app' ? PALETTE.textSoft : PALETTE.blueDark);
 
 export function DeliveryBadge({ state }: { state: string }) {
@@ -130,19 +138,23 @@ export function DeliveryBadge({ state }: { state: string }) {
 export function ResendButton({ row, onDone, compact }: { row: DeliveryLogRow; onDone?: () => void; compact?: boolean }) {
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
-  // A re-sent row's newer entry carries its own Resend; one button per message.
-  if (!row?._id || row?.channel === 'in_app' || !canResend(row) || stateOf(row) === 'resent') return null;
+  const sending = useRef(false);
+  // Only confirmed failures get another attempt; the server rechecks eligibility.
+  if (!row?._id || row?.channel === 'in_app' || !canResend(row) || stateOf(row) !== 'failed') return null;
 
   const send = async () => {
+    if (sending.current) return;
+    sending.current = true;
     setBusy(true);
     try {
       const { row: next, message } = await resendNotification(row._id);
-      const failed = /still failing|fail/i.test(message) || stateOf(next) === 'failed';
-      Alert.alert(failed ? 'Still failing' : 'Re-sent', message || (failed ? 'The sending service could not send it again.' : 'The message went out again.'));
+      Alert.alert(next ? (STATE_META[stateOf(next)]?.label || 'Resend result') : 'Resend result',
+        notificationReason(message) || 'Refresh this message to check the result.');
       onDone?.();
     } catch (err: any) {
-      Alert.alert('Could not resend that message', String(err?.response?.data?.message || (err?.response ? err?.message : 'Cannot reach the server. Check your internet connection.') || ''));
+      Alert.alert('Could not resend that message', notificationReason(String(err?.response?.data?.message || (err?.response ? err?.message : 'Cannot reach the server. Check your internet connection.') || '')));
     } finally {
+      sending.current = false;
       setBusy(false);
       setAsking(false);
     }
@@ -163,7 +175,7 @@ export function ResendButton({ row, onDone, compact }: { row: DeliveryLogRow; on
       icon="replay"
       label="Resend"
       style={compact ? undefined : k.fullBtn}
-      accessibilityLabel={`Send this ${row?.channel === 'whatsapp' ? 'WhatsApp message' : 'email'} again to ${row?.recipient || 'the recipient'}`}
+      accessibilityLabel={`Resend ${channelWord(row?.channel)} to ${row?.recipientName || row?.recipient || 'this person'}`}
       onPress={() => setAsking(true)}
     />
   );
@@ -216,6 +228,7 @@ export function DeliveryDetail({ row }: { row: DeliveryLogRow }) {
         <DetailField label="Subject / template" value={row?.subject || row?.templateId} />
         <DetailField label="Template used" value={notificationTemplatePath(row?.templatePath || row?.templateId)} />
         <DetailField label="Sending service" value={providerWord(row?.provider)} />
+        <DetailField label="Service details" value={reason !== (row?.failureReason || row?.lastError || '') ? row?.failureReason || row?.lastError : ''} />
         <DetailField label="Message reference" value={row?.providerMessageId} mono />
         <DetailField label="First attempted" value={whenLabel(row?.createdAt)} />
         <DetailField label="Attempts" value={row?.attempts ? String(row.attempts) : ''} />

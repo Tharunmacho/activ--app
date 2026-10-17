@@ -42,6 +42,7 @@ import {
   type DeliveryRetryResult,
 } from '../../../../services/deliveryReportApi';
 import { errorText } from '../../../../services/superApi';
+import { deliveryTitle, messageLabel } from './deliveryKit';
 
 const fmt = (n?: number) => Number(n || 0).toLocaleString('en-IN');
 const human = (s = '') =>
@@ -186,6 +187,7 @@ export function ReportsPane({
   }, []);
   const reviewRetry = async (item?: ReportRow, pageOnly = false) => {
     if (retryLock.current || busy) return;
+    if (item && (!item._id || item.status !== 'failed' || item.channel === 'in_app')) return;
     const pageIds = (data?.rows || []).filter(row => row?.status === 'failed' && row?._id).map(row => row._id);
     if (pageOnly && !pageIds.length) return;
     retryLock.current = true;
@@ -311,7 +313,7 @@ export function ReportsPane({
       )}
       <ConsoleNote
         kind="indigo"
-        text="Each email, WhatsApp message or notification is counted separately. Sent means it was passed to the sending service; arrival is not confirmed. Delivered means arrival was confirmed. Opened means an open or tap was recorded. No recorded open does not always mean unread."
+        text="Each email, WhatsApp message or notification is counted separately. Sent means it was passed to the sending service; arrival is not confirmed. Delivered means arrival was confirmed. Seen means an open or tap was recorded. No recorded open does not always mean unread."
         style={s.card}
       />
       {error ? <ConsoleNote kind="red" text={error} style={s.card} /> : null}
@@ -334,7 +336,7 @@ export function ReportsPane({
           onPress={() => showRecipients({ status: 'accepted_any' })}
         />
         <ConsoleStatTile
-          label="Opened"
+          label="Seen"
           value={fmt(summary?.opened)}
           icon="visibility"
           hint="WhatsApp reads and taps"
@@ -392,10 +394,10 @@ export function ReportsPane({
                 <Ratio
                   label={
                     key === 'push'
-                      ? 'Opened / sent'
+                      ? 'Seen / sent'
                       : key === 'whatsapp'
-                      ? 'Opened / delivered'
-                      : 'Opened'
+                      ? 'Seen / delivered'
+                      : 'Seen'
                   }
                   value={channel?.opened || 0}
                   total={
@@ -481,11 +483,11 @@ export function ReportsPane({
                   {human(c.kind === 'automation' ? c.event : c.kind)}
                 </Text>
                 <Text style={s.title}>
-                  {c.kind === 'automation' ? human(c.event) : c.title}
+                  {c.kind === 'automation' ? messageLabel(c.event) : c.title}
                 </Text>
                 <Text style={s.caption}>{when(c.lastAt)}</Text>
                 <Text style={s.caption}>
-                  {fmt(c.records)} deliveries · {fmt(c.opened)} opened ·{' '}
+                  {fmt(c.records)} deliveries · {fmt(c.opened)} seen ·{' '}
                   {fmt(c.failed)} failed · {fmt(c.queued)} waiting to send
                 </Text>
               </ConsoleCard>
@@ -543,9 +545,9 @@ export function ReportsPane({
             : 'All channels'}
           {' · '}
           {filters.status === 'accepted_any'
-            ? 'Sent or in ACTIV, including delivered, opened and marked read'
+            ? 'Sent or in ACTIV, including delivered, seen and marked read'
             : filters.status === 'read'
-            ? 'Opened'
+            ? 'Seen'
             : filters.status
             ? statusLabel({ channel: filters.channel === 'in_app' ? 'in_app' : 'email', status: filters.status })
             : 'Every outcome'}
@@ -568,7 +570,7 @@ export function ReportsPane({
         options={[
           { value: '', label: 'All outcomes' },
           { value: 'unconfirmed', label: 'No recorded open' },
-          { value: 'read', label: 'Opened' },
+          { value: 'read', label: 'Seen' },
           { value: 'accepted_any', label: 'Sent / in ACTIV' },
           { value: 'delivered', label: 'Delivered' },
           { value: 'accepted', label: 'Sent' },
@@ -623,7 +625,7 @@ export function ReportsPane({
         accessibilityState={{ expanded: expanded === item._id }}
         accessibilityLabel={`${item.recipientName}, ${
           CHANNEL_LABELS[item.channel]
-        }, ${item.title}, ${statusLabel(item)}`}
+        }, ${deliveryTitle(item)}, ${statusLabel(item)}`}
         accessibilityHint="Show or hide message history and sending details"
       >
         <View style={[s.recipientRow, wideRows && s.wideRow]}>
@@ -635,7 +637,7 @@ export function ReportsPane({
           </View>
           <View style={[s.recipientColumn, wideRows && s.flex]}>
             <Text style={s.body}>{CHANNEL_LABELS[item.channel]}</Text>
-            <Text style={s.caption}>{item.title}</Text>
+            <Text style={s.caption}>{deliveryTitle(item)}</Text>
             <Text style={s.caption}>{when(item.createdAt)}</Text>
           </View>
           <View style={[s.outcome, wideRows && s.wideOutcome]}>
@@ -659,6 +661,14 @@ export function ReportsPane({
           </View>
         </View>
       </TouchableOpacity>
+      {item.status === 'failed' && item.channel !== 'in_app' && !!item._id && (
+        <View style={s.retryActions}>
+          {!!item.error && expanded !== item._id && <Text style={s.error}>{notificationReason(item.error)}</Text>}
+          <ConsoleButton label="Resend" icon="replay" kind="soft"
+            accessibilityLabel={`Resend ${CHANNEL_LABELS[item.channel]} to ${item.recipientName || 'this person'}`}
+            disabled={busy || !!retryBusy} onPress={() => void reviewRetry(item)} />
+        </View>
+      )}
       {expanded === item._id && (
         <View style={s.detail}>
           <Text style={s.title}>Message history</Text>
@@ -682,6 +692,9 @@ export function ReportsPane({
               {notificationReason(item.error)}
             </Text>
           )}
+          {item.error && notificationReason(item.error) !== item.error && (
+            <Text style={s.caption} selectable>Service details: {item.error}</Text>
+          )}
           {item.history?.map((event, i) => (
             <Text key={i} style={s.body}>
               {statusLabel({ channel: item.channel, status: event.status })}: {when(event.at)}
@@ -692,7 +705,7 @@ export function ReportsPane({
             <Text style={s.body}>Delivered: {when(item.deliveredAt)}</Text>
           )}
           {item.openedAt && (
-            <Text style={s.body}>Opened: {when(item.openedAt)}</Text>
+            <Text style={s.body}>Seen: {when(item.openedAt)}</Text>
           )}
           {item.readAt && (
             <Text style={s.body}>Marked read: {when(item.readAt)}</Text>
@@ -702,11 +715,8 @@ export function ReportsPane({
           )}
           <Text style={s.caption}>
             We cannot tell whether an email was opened. A sent notification is
-            counted as opened only when someone taps it.
+            counted as seen only when someone taps it.
           </Text>
-          {item.status === 'failed' && <ConsoleButton label="Review resend"
-            accessibilityLabel={`Review resend for ${item.recipientName || 'recipient'}`}
-            disabled={busy || !!retryBusy} onPress={() => void reviewRetry(item)} />}
         </View>
       )}
     </ConsoleCard>

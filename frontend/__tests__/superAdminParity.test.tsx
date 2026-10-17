@@ -487,7 +487,7 @@ describe('super admin parity interactions', () => {
     const unknownReason = 'Email marketing log 131026: subject too long';
     expect(plainReason({ ...LOG, failureReason: unknownReason })).toEqual({ text: unknownReason, failed: true });
     // Resend is confirmed inline: the first press only asks.
-    expect(await press(tree, /^Send this WhatsApp message again/)).toBe(true);
+    expect(await press(tree, /^Resend WhatsApp to/)).toBe(true);
     expect(tree.root.findAll((n: any) => n.props?.accessibilityLabel === 'Confirm resend').length).toBeGreaterThan(0);
     await ReactTestRenderer.act(async () => { tree.unmount(); });
   });
@@ -500,6 +500,47 @@ describe('super admin parity interactions', () => {
     expect(call?.[1]?.params?.group).toBe('automation');
     expect(call?.[1]?.params?.limit).toBe(25);
     await ReactTestRenderer.act(async () => { tree.unmount(); });
+  });
+
+  test('log Resend requires confirmation, allows cancel, and suppresses duplicate sends', async () => {
+    const api = require('../src/services/api').default;
+    const { ConsoleButton } = require('../src/ui');
+    const { Alert } = require('react-native');
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const tree = await mount(S('SuperNotificationsScreen')(), { view: 'log' });
+    api.post.mockClear();
+    expect(await press(tree, /^Resend WhatsApp to/)).toBe(true);
+    expect(api.post).not.toHaveBeenCalled();
+    expect(await press(tree, 'Cancel')).toBe(true);
+    expect(api.post).not.toHaveBeenCalled();
+    expect(await press(tree, /^Resend WhatsApp to/)).toBe(true);
+    const confirm = tree.root.findAllByType(ConsoleButton).find((node: any) => node.props.label === 'Confirm resend');
+    if (!confirm) throw new Error('Resend confirmation missing');
+    let finish: ((value: unknown) => void) | undefined;
+    api.post.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    await ReactTestRenderer.act(async () => { confirm.props.onPress(); confirm.props.onPress(); });
+    expect(api.post).toHaveBeenCalledTimes(1);
+    expect(api.post).toHaveBeenCalledWith('/notifications/retry/log1', {});
+    await ReactTestRenderer.act(async () => { finish?.({ data: { data: { ...LOG, status: 'sent', effectiveStatus: 'accepted' }, message: 'Passed to the sending service.' } }); });
+    expect(alert).toHaveBeenCalledWith('Sent', 'Passed to the sending service.');
+    await ReactTestRenderer.act(async () => { tree.unmount(); });
+    alert.mockRestore();
+  });
+
+  test.each(['accepted', 'sent', 'delivered', 'read', 'queued', 'mock', 'resent'])('shared resend rejects %s rows', async state => {
+    const { ResendButton } = require('../src/screens/admin/super/delivery/deliveryKit');
+    let tree: any;
+    await ReactTestRenderer.act(async () => { tree = ReactTestRenderer.create(<ResendButton row={{ ...LOG, effectiveStatus: state }} />); });
+    expect(tree.toJSON()).toBeNull();
+    await ReactTestRenderer.act(async () => tree.unmount());
+  });
+
+  test('message titles replace internal template identifiers but retain real subjects', () => {
+    const { deliveryTitle } = require('../src/screens/admin/super/delivery/deliveryKit');
+    expect(deliveryTitle({ event: 'EVENT_BOOKING_REMINDER', subject: 'event_reminder_v2', templateId: 'event_reminder_v2' })).toBe('Booking reminder');
+    expect(deliveryTitle({ campaignKey: 'automation:EVENT_BOOKING_REMINDER', title: 'EVENT_BOOKING_REMINDER' })).toBe('Booking reminder');
+    expect(deliveryTitle({ event: 'EVENT_BOOKING_REMINDER', subject: 'Your Chennai workshop starts tomorrow', templateId: 'event_reminder_v2' })).toBe('Your Chennai workshop starts tomorrow');
+    expect(deliveryTitle(null)).toBe('Notification');
   });
 
   test('booking messages screen shows both channels and each message', async () => {

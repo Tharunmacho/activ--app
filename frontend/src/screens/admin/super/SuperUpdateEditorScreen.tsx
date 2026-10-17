@@ -163,7 +163,22 @@ const SuperUpdateEditorScreen: React.FC = () => {
     <ConsoleHeader compact eyebrow="Super Admin · Updates" title={editing ? 'Edit update' : 'Create update'}
       subtitle="Write a message, choose its members and publish."
       left={<GlassIconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => navigation.goBack()} />} />
-    <ConsoleCard style={[s.card, s.first]}>
+    <View style={[s.channelPicker, s.first]}>
+      <Text style={s.sectionTitle}>Send notifications</Text>
+      <View style={s.channelChoices}>
+        {UPDATE_DELIVERY_CHANNELS.map(channel => <TouchableOpacity key={channel.key} accessibilityRole="checkbox" accessibilityLabel={channel.label}
+          accessibilityHint={channel.detail} accessibilityState={{ checked: deliveryChannels[channel.key], disabled: busy }} disabled={busy}
+          style={[s.channel, deliveryChannels[channel.key] && s.channelSelected, busy && s.channelDisabled]}
+          onPress={() => { if (!pending.current) setDeliveryChannels(current => ({ ...current, [channel.key]: !current[channel.key] })); }}>
+          <Icon name={deliveryChannels[channel.key] ? 'check-circle' : 'add-circle-outline'} size={19}
+            color={deliveryChannels[channel.key] ? PALETTE.white : PALETTE.indigo} />
+          <Text style={[s.channelLabel, deliveryChannels[channel.key] && s.channelSelectedLabel]}>{channel.key === 'push' ? 'Push' : channel.label}</Text>
+        </TouchableOpacity>)}
+      </View>
+      <Text accessibilityLiveRegion="polite" style={s.small}>{updateDeliverySummary(deliveryChannels)}</Text>
+      <Text style={s.small}>Choose any combination. Messages follow each person's settings and permissions.</Text>
+    </View>
+    <ConsoleCard style={s.card}>
       <Text style={s.title}>Write your update</Text>
       <PremiumInput tone="admin" label="Title" value={title} onChangeText={setTitle} required maxLength={200}
         placeholder="e.g. Membership renewal for this year" inputStyle={s.input} editable={!busy} />
@@ -219,18 +234,7 @@ const SuperUpdateEditorScreen: React.FC = () => {
       </View> : null}
       <ToggleRow label="Limit to selected regions" value={regional} onChange={setRegional} last />
       {regional ? <UpdateRegionPicker value={targets} onChange={setTargets} disabled={busy} /> : <Text style={s.small}>Reaches the selected members in every region.</Text>}
-      {audience === 'all' && !regional && recipientMode !== 'selected' ? <><ToggleRow label="Also show to visitors" value={includeVisitors} onChange={setIncludeVisitors} last /><Text style={s.small}>Makes this update public. Visitors can receive notifications only when push is selected below and they have enabled notifications.</Text></> : <Text style={s.small}>Visitor updates are available only when you choose all members in all regions.</Text>}
-    </ConsoleCard>
-    <ConsoleCard style={s.card}>
-      <Text style={s.title}>Choose how to notify people</Text>
-      <Text style={s.hint}>Choose any combination for this update. Leave every option off to show the update only in ACTIV.</Text>
-      {UPDATE_DELIVERY_CHANNELS.map(channel => <TouchableOpacity key={channel.key} accessibilityRole="checkbox" accessibilityLabel={channel.label}
-        accessibilityState={{ checked: deliveryChannels[channel.key], disabled: busy }} disabled={busy} style={s.channel}
-        onPress={() => { if (!pending.current) setDeliveryChannels(current => ({ ...current, [channel.key]: !current[channel.key] })); }}>
-        <Icon name={deliveryChannels[channel.key] ? 'check-box' : 'check-box-outline-blank'} size={26} color={PALETTE.indigo} />
-        <View style={s.action}><Text style={s.planName}>{channel.label}</Text><Text style={s.small}>{channel.detail}</Text></View>
-      </TouchableOpacity>)}
-      <Text style={s.hint}>Messages follow each person's choices and notification permissions.</Text>
+      {audience === 'all' && !regional && recipientMode !== 'selected' ? <><ToggleRow label="Also show to visitors" value={includeVisitors} onChange={setIncludeVisitors} last /><Text style={s.small}>Makes this update public. Visitors can receive notifications only when push is selected above and they have enabled notifications.</Text></> : <Text style={s.small}>Visitor updates are available only when you choose all members in all regions.</Text>}
     </ConsoleCard>
     <ConsoleCard style={s.card}>
       <Text style={s.title}>Personalise your update</Text>
@@ -281,7 +285,13 @@ const s = StyleSheet.create({
   documentText: { flex: 1, color: PALETTE.indigo, fontSize: 18, lineHeight: 27, fontWeight: '500' },
   planList: { marginBottom: SPACE.md },
   plan: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, paddingVertical: SPACE.md, borderBottomWidth: 1, borderBottomColor: PALETTE.divider },
-  channel: { flexDirection: 'row', alignItems: 'center', gap: SPACE.md, minHeight: 56, paddingVertical: SPACE.md, borderBottomWidth: 1, borderBottomColor: PALETTE.divider, marginBottom: SPACE.sm },
+  channelPicker: { marginHorizontal: SPACE.lg, gap: SPACE.sm },
+  channelChoices: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACE.sm },
+  channel: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: PALETTE.indigo, borderRadius: 24 },
+  channelSelected: { backgroundColor: PALETTE.indigo },
+  channelDisabled: { opacity: 0.6 },
+  channelLabel: { fontSize: 16, lineHeight: 22, fontWeight: '600', color: PALETTE.indigo },
+  channelSelectedLabel: { color: PALETTE.white },
   planName: { fontSize: 18, lineHeight: 27, color: PALETTE.text, fontWeight: '500' }, regionFields: { marginTop: SPACE.md },
   disclosure: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.sm, marginBottom: SPACE.sm },
   review: { color: PALETTE.text, fontSize: 18, lineHeight: 27, fontWeight: '500', marginBottom: SPACE.xs },

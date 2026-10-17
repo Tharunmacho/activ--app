@@ -31,6 +31,7 @@ export interface ReportRow {
   recipient?: string;
   title: string;
   campaignKey: string;
+  event?: string;
   status: string;
   error?: string;
   createdAt: string;
@@ -140,6 +141,7 @@ export const notificationReason = (value: unknown): string => {
   if (typeof value !== 'string') return '';
   const text = value.trim();
   const rules: [RegExp, string][] = [
+    [/^Media download error\b|^Media upload error:.*Downloading media from weblink failed/i, 'WhatsApp could not download the image or document. Check that the file opens, then try Resend.'],
     [/^Worker interrupted.*(?:outcome|delivery)/i, 'Sending stopped before we could confirm the result. Check the delivery history before sending again.'],
     [/^Provider (?:acceptance|outcome).*(?:uncertain|partial|unknown|could not be confirmed)/i, 'We could not confirm whether the message was sent. Check its delivery history before sending again.'],
     [/^SMTP (?:accepted only some intended email addresses|did not confirm acceptance for the intended email address)\./i, 'We could not confirm whether the message was sent to every email address. Check its delivery history before sending again.'],
@@ -182,7 +184,7 @@ export const notificationTemplatePath = (value: unknown): string => {
 export const statusLabel = (row: Pick<ReportRow, 'channel' | 'status'>) => {
   if (row.status === 'accepted')
     return row.channel === 'in_app' ? 'In the app' : 'Sent';
-  if (row.status === 'read') return 'Opened';
+  if (row.status === 'read') return 'Seen';
   return (
     (
       {

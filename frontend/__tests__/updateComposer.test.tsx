@@ -1,6 +1,6 @@
 import React from 'react';
 import Renderer, { act } from 'react-test-renderer';
-import { Alert, TouchableOpacity } from 'react-native';
+import { Alert, StyleSheet, TouchableOpacity } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import SuperUpdateEditorScreen from '../src/screens/admin/super/SuperUpdateEditorScreen';
 import { ConsoleButton, PremiumInput, PremiumSelect, FitImage } from '../src/ui';
@@ -195,6 +195,21 @@ it('requires a region in restricted mode and only enables visitors for unrestric
 });
 
 const deliveryCombinations = Array.from({ length: 8 }, (_, mask) => ({ email: !!(mask & 1), whatsapp: !!(mask & 2), push: !!(mask & 4) }));
+it('places compact independent channel choices above the update content', async () => {
+  await mount();
+  const content = JSON.stringify(screen.toJSON());
+  expect(content.indexOf('Send notifications')).toBeLessThan(content.indexOf('Write your update'));
+  for (const label of ['Email', 'WhatsApp', 'Push notifications']) {
+    const choice = channel(label);
+    expect(StyleSheet.flatten(choice.props.style).minHeight).toBeGreaterThanOrEqual(44);
+    expect(choice.props.accessibilityState.checked).toBe(false);
+  }
+  await toggleChannel('Email'); await toggleChannel('Push notifications');
+  expect(channel('Email').props.accessibilityState.checked).toBe(true);
+  expect(channel('Push notifications').props.accessibilityState.checked).toBe(true);
+  expect(channel('WhatsApp').props.accessibilityState.checked).toBe(false);
+});
+
 it.each(deliveryCombinations)('saves and publishes exactly the selected channels %j', async deliveryChannels => {
   await mount(); await fill('Title', 'Channel selection'); await fill('Message', 'Association update.');
   for (const [key, label] of [['email', 'Email'], ['whatsapp', 'WhatsApp'], ['push', 'Push notifications']] as const) {

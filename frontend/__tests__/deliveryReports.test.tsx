@@ -9,6 +9,8 @@ import {
   previewDeliveryRetry,
   retryDeliveryReport,
   getDeliveryRetryStatus,
+  notificationReason,
+  statusLabel,
   type ReportFilters,
   type ReportRow,
 } from '../src/services/deliveryReportApi';
@@ -200,18 +202,61 @@ it('reviews current automation filters, confirms frozen IDs once and refreshes d
   expect((getDeliveryReport as jest.Mock).mock.calls.length).toBeGreaterThan(readsBefore);
 });
 
-it('reviews one failed record by ID and cancelling performs no resend', async () => {
+it.each(['push', 'whatsapp', 'email'] as const)('shows %s Resend on a collapsed failed row and cancellation performs no send', async retryChannel => {
+  const target = { ...rows[4], channel: retryChannel };
+  (getDeliveryReport as jest.Mock).mockResolvedValue({ ...report({}), rows: [target] });
   await mount();
-  await press(tile('Failed').props.onPress);
   const recipient = screen.root.findAllByType(TouchableOpacity).find(node => node.props.accessibilityLabel?.startsWith('Long member name'));
   if (!recipient) throw new Error('Failed recipient missing');
-  await press(recipient.props.onPress);
-  await press(button('Review resend').props.onPress);
+  expect(recipient.props.accessibilityState.expanded).toBe(false);
+  expect(text()).not.toContain('Message history');
+  await press(button('Resend').props.onPress);
   expect(previewDeliveryRetry).toHaveBeenCalledWith({ ids: ['row-4'] });
-  expect(text()).toContain('Long member name for a narrow screen · Push notifications');
+  expect(retryDeliveryReport).not.toHaveBeenCalled();
+  expect(text()).toContain('Long member name for a narrow screen');
   await press(button('Cancel resend').props.onPress);
   expect(retryDeliveryReport).not.toHaveBeenCalled();
   expect(screen.root.findAllByType(ConsoleButton).some(node => node.props.label === 'Confirm resend (1)')).toBe(false);
+});
+
+it.each(['accepted', 'sent', 'delivered', 'read', 'queued', 'skipped', 'unconfirmed'])('does not offer Resend for %s messages', async status => {
+  (getDeliveryReport as jest.Mock).mockResolvedValue({ ...report({}), rows: [{ ...rows[4], status }] });
+  await mount();
+  expect(screen.root.findAllByType(ConsoleButton).some(node => node.props.label === 'Resend')).toBe(false);
+  expect(previewDeliveryRetry).not.toHaveBeenCalled();
+  expect(retryDeliveryReport).not.toHaveBeenCalled();
+});
+
+it('does not offer Resend for in-app records even if an old row says failed', async () => {
+  (getDeliveryReport as jest.Mock).mockResolvedValue({ ...report({}), rows: [{ ...rows[4], channel: 'in_app' }] });
+  await mount();
+  expect(screen.root.findAllByType(ConsoleButton).some(node => node.props.label === 'Resend')).toBe(false);
+});
+
+it('explains a historical media download failure without changing the record or sending', async () => {
+  const mediaFailure = 'Media upload error: Downloading media from weblink failed with http code503, status message Service Unavailable (code131053)';
+  const target = { ...rows[4], channel: 'whatsapp', error: mediaFailure };
+  (getDeliveryReport as jest.Mock).mockResolvedValue({ ...report({}), rows: [target] });
+  await mount();
+  expect(text()).toContain('WhatsApp could not download the image or document.');
+  expect(target.error).toBe(mediaFailure);
+  expect(notificationReason('Media download error: failed')).toContain('WhatsApp could not download');
+  expect(notificationReason('131053: unknown provider media response')).toBe('131053: unknown provider media response');
+  expect(notificationReason('Email attachment 131053: download took too long')).toBe('Email attachment 131053: download took too long');
+  const recipient = screen.root.findAllByType(TouchableOpacity).find(node => node.props.accessibilityLabel?.startsWith('Long member name'));
+  if (!recipient) throw new Error('Failed recipient missing');
+  await press(recipient.props.onPress);
+  expect(text()).toContain(`Service details: ${mediaFailure}`);
+  expect(retryDeliveryReport).not.toHaveBeenCalled();
+});
+
+it('keeps sent, delivered and seen distinct and preserves in-app availability', () => {
+  expect(statusLabel({ channel: 'email', status: 'accepted' })).toBe('Sent');
+  expect(statusLabel({ channel: 'whatsapp', status: 'sent' })).toBe('Sent');
+  expect(statusLabel({ channel: 'whatsapp', status: 'delivered' })).toBe('Delivered');
+  expect(statusLabel({ channel: 'push', status: 'read' })).toBe('Seen');
+  expect(statusLabel({ channel: 'push', status: 'failed' })).toBe('Failed');
+  expect(statusLabel({ channel: 'in_app', status: 'accepted' })).toBe('In the app');
 });
 
 it('reviews only failed IDs on the visible page and disables page review for accepted-only rows', async () => {
@@ -378,7 +423,7 @@ it('summary cards reveal records, reset pagination and preserve activity/date/ca
   expect(scroll).toHaveBeenCalled();
   await press(() => outcome().props.onChange('accepted'));
   expect(listRows().every(row => row.status === 'accepted')).toBe(true);
-  await press(tile('Opened').props.onPress);
+  await press(tile('Seen').props.onPress);
   expect(filters().status).toBe('read');
   expect(listRows()).toHaveLength(1);
   expect(listRows()[0].recipientName).toBe('Asha');
