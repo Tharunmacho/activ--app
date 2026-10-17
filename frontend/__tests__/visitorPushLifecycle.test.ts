@@ -50,6 +50,20 @@ test('offline first opt-in retains consent and retries automatically on foregrou
   expect(api.post).not.toHaveBeenCalled();
 });
 
+test.each([{ registered: false }, {}, null])('visitor registration requires a successful API acknowledgement: %j', async result => {
+  mock(publicApi.put).mockResolvedValueOnce({ data: { data: result } });
+  expect(await syncPushRegistration(true)).toBe('failed');
+  expect(await visitorPushEnabled()).toBe(true);
+  expect(api.post).not.toHaveBeenCalled();
+});
+
+test('visitor registration cannot claim enabled while notification delivery is unconfigured', async () => {
+  mock(publicApi.put).mockResolvedValueOnce({ data: { data: { registered: true, configured: false } } });
+  expect(await syncPushRegistration(true)).toBe('unconfigured');
+  expect(await visitorPushEnabled()).toBe(true);
+  expect(await syncPushRegistration()).toBe('enabled');
+});
+
 test('a stale installation is replaced after a confirmed 401 without losing consent', async () => {
   await AsyncStorage.setItem(IDENTITY, JSON.stringify({ id: 'old', key: 'old-key' }));
   mock(publicApi.put).mockRejectedValueOnce({ response: { status: 401 } });

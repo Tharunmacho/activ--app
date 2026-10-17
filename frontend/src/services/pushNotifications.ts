@@ -21,6 +21,7 @@ let deletingToken: Promise<void> | null = null;
 let syncAgain = false;
 let detaching = 0;
 let sessionVersion = 0;
+let enablingFromSettings = false;
 export const firebaseReady = () => getApps().length > 0;
 const accountId = (user: any) => String(user?.memberId || user?.id || user?._id || user?.userId || '');
 
@@ -135,7 +136,8 @@ async function registerDevice(explicit: boolean, attempt: RegistrationAttempt): 
   try {
     const auth = await getAuthToken();
     const user = await getUserData();
-    if (!auth || !accountId(user)) return await registerVisitor(explicit, attempt);
+    if (!auth) return await registerVisitor(explicit, attempt);
+    if (!accountId(user)) return 'signed-out';
     const allowed = await allowNotifications(explicit, attempt);
     if (detaching || version !== sessionVersion || await getAuthToken() !== auth) return 'signed-out';
     if (!allowed) {
@@ -152,8 +154,11 @@ async function registerDevice(explicit: boolean, attempt: RegistrationAttempt): 
     // accepted registration but the response was lost or arrived during logout.
     await AsyncStorage.setItem(TOKEN_KEY, token);
     if (detaching || version !== sessionVersion || await getAuthToken() !== auth) return 'signed-out';
-    await api.post('/notifications/push/devices', { token, platform: Platform.OS, enabled: true }, { timeout: 5000 });
-    return !detaching && version === sessionVersion && await getAuthToken() === auth ? 'enabled' : 'signed-out';
+    const response = await api.post('/notifications/push/devices', { token, platform: Platform.OS, enabled: true }, { timeout: 5000 });
+    if (detaching || version !== sessionVersion || await getAuthToken() !== auth) return 'signed-out';
+    const registration = response?.data?.data ?? response?.data;
+    if (registration?.registered !== true) return 'failed';
+    return registration.configured === false ? 'unconfigured' : 'enabled';
   } catch (error) {
     // Connectivity/configuration must never block login. Retry on foreground.
     return error === CANCELLED ? 'signed-out' : 'failed';
@@ -177,14 +182,15 @@ async function registerVisitor(explicit: boolean, attempt: RegistrationAttempt):
   if (deletingToken && !await waitForSdk(withinCleanupDeadline(deletingToken), attempt)) return 'failed';
   const token = await waitForSdk(getToken(getMessaging()), attempt);
   if (!await current()) return 'signed-out';
-  await registerVisitorToken(token, Platform.OS);
+  const registration = await registerVisitorToken(token, Platform.OS);
   if (!await current()) { await detachVisitorToken().catch(() => undefined); return 'signed-out'; }
-  return 'enabled';
+  if (registration?.registered !== true) return 'failed';
+  return registration.configured === false ? 'unconfigured' : 'enabled';
 }
 export async function enableVisitorNotifications() {
   const result = await syncPushRegistration(true);
   if (result === 'disabled') await Linking.openSettings();
-  else if (result === 'unconfigured') Alert.alert('Notifications are being prepared', 'Install the latest ACTIV app when notification setup is complete.');
+  else if (result === 'unconfigured') Alert.alert('Notifications are not ready', 'Notification delivery is not ready. Please try again later.');
   else if (result === 'failed') throw new Error('Visitor notification registration failed');
 }
 export async function disableVisitorNotifications() {
@@ -242,12 +248,26 @@ export async function detachPushDevice(server = true) {
   } finally { detaching -= 1; }
 }
 export async function enablePushFromSettings() {
-  if (!firebaseReady()) { Alert.alert('Notifications are being prepared', 'Push notifications will be available after ACTIV finishes notification setup and publishes the updated app.'); return; }
-  const result = await syncPushRegistration(true);
-  if (result === 'disabled') await Linking.openSettings();
-  else if (result === 'failed') Alert.alert('Could not enable notifications', 'Please check your connection and try again. If this continues, contact ACTIV support.');
-  else if (result === 'signed-out') Alert.alert('Sign in to enable notifications', 'Sign in to your ACTIV account, then try again.');
-  else if (result === 'enabled') Alert.alert('Notifications enabled', 'This phone is registered for updates available to your ACTIV account.');
+  if (enablingFromSettings) return;
+  enablingFromSettings = true;
+  try {
+    if (!firebaseReady()) { Alert.alert('Notifications are being prepared', 'Push notifications will be available after ACTIV finishes notification setup and publishes the updated app.'); return; }
+    const auth = await getAuthToken();
+    const user = await getUserData();
+    if (!auth || !accountId(user)) { Alert.alert('Sign in to enable notifications', 'Sign in to your ACTIV account, then try again.'); return; }
+    const result = await syncPushRegistration(true);
+    if (await getAuthToken() !== auth || accountId(await getUserData()) !== accountId(user)) {
+      Alert.alert('Sign in to enable notifications', 'Your account changed. Open notification settings from your current account and try again.');
+      return;
+    }
+    if (result === 'disabled') await Linking.openSettings();
+    else if (result === 'unconfigured') Alert.alert('Notifications are not ready', 'Notification delivery is not ready. Please try again later.');
+    else if (result === 'failed') Alert.alert('Could not enable notifications', 'Please check your connection and try again. If this continues, contact ACTIV support.');
+    else if (result === 'signed-out') Alert.alert('Sign in to enable notifications', 'Sign in to your ACTIV account, then try again.');
+    else if (result === 'enabled') Alert.alert('Notifications enabled', 'This phone is registered for updates available to your ACTIV account.');
+  } catch {
+    Alert.alert('Could not enable notifications', 'Please check your connection and try again.');
+  } finally { enablingFromSettings = false; }
 }
 export function registerBackgroundPush() {
   if (firebaseReady()) setBackgroundMessageHandler(getMessaging(), async () => {

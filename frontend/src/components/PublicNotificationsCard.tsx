@@ -27,15 +27,34 @@ export default function PublicNotificationsCard({ visible, noticeId, onClose, na
   const [signedIn, setSignedIn] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(false);
   const revision = useRef(0);
+  const preferenceRevision = useRef(0);
   const working = useRef(false);
 
-  const preferences = useCallback(async () => {
-    const current = revision.current;
-    const [auth, permission, optedIn] = await Promise.all([getAuthToken(), pushPermission(), visitorPushEnabled()]);
-    if (current !== revision.current) return;
-    setSignedIn(!!auth);
-    setEnabled(permission === 'enabled' && optedIn);
+  const preferences = useCallback(async (confirmed?: Awaited<ReturnType<typeof syncPushRegistration>>) => {
+    const current = ++preferenceRevision.current;
+    setChecking(true); setEnabled(false);
+    try {
+      const [auth, permission, optedIn] = await Promise.all([getAuthToken(), pushPermission(), visitorPushEnabled()]);
+      if (current !== preferenceRevision.current) return;
+      setSignedIn(!!auth);
+      if (auth) { setPushError(''); return; }
+      // Permission and consent are intent. Only a successful API registration
+      // confirms this installation is registered for notifications. Passive checks
+      // never request permission or opt a new visitor in.
+      const result = confirmed ?? (permission === 'enabled' && optedIn ? await syncPushRegistration(false) : undefined);
+      const latestAuth = await getAuthToken();
+      if (current !== preferenceRevision.current) return;
+      if (latestAuth) { setSignedIn(true); setPushError(''); return; }
+      setEnabled(result === 'enabled' && permission === 'enabled' && optedIn);
+      setBlocked(result === 'disabled');
+      setPushError(result === 'failed' ? 'This phone is not connected for notifications. Check your connection and try Enable again.'
+        : result === 'disabled' ? 'Notifications are off. You can enable them in your phone settings.'
+        : result === 'unconfigured' ? 'Notification delivery is not ready. Please try again later.' : '');
+    } catch {
+      if (current === preferenceRevision.current) setPushError('Could not check notification setup. Please try Enable again.');
+    } finally { if (current === preferenceRevision.current) setChecking(false); }
   }, []);
   const read = useCallback(async () => {
     const current = ++revision.current;
@@ -53,7 +72,7 @@ export default function PublicNotificationsCard({ visible, noticeId, onClose, na
     if (!visible) return;
     void read();
     const subscription = AppState.addEventListener('change', state => { if (state === 'active') void preferences().catch(() => undefined); });
-    return () => { revision.current += 1; subscription.remove(); };
+    return () => { revision.current += 1; preferenceRevision.current += 1; subscription.remove(); };
   }, [visible, read, preferences]);
 
   const open = async (item: PublicNotice) => {
@@ -70,28 +89,28 @@ export default function PublicNotificationsCard({ visible, noticeId, onClose, na
     } finally { if (current === revision.current) setLoading(false); }
   };
   const toggle = async () => {
-    if (working.current) return;
+    if (working.current || checking) return;
     working.current = true; setBusy(true); setPushError(''); setBlocked(false);
-    const current = revision.current;
+    preferenceRevision.current += 1;
+    const current = preferenceRevision.current;
     try {
       const auth = await getAuthToken();
-      if (current !== revision.current) return;
+      if (current !== preferenceRevision.current) return;
       if (auth) { onClose(); navigation.navigate('MemberNotifications'); return; }
-      if (enabled) await disableVisitorNotifications();
+      let result: Awaited<ReturnType<typeof syncPushRegistration>>;
+      if (enabled) { await disableVisitorNotifications(); result = 'signed-out'; }
       else {
         // The explicit Enable press is the only permission request. A denial
         // stays here; opening phone settings requires a separate user action.
-        const result = await syncPushRegistration(true);
-        if (current !== revision.current) return;
-        if (result === 'disabled') { setBlocked(true); setPushError('Notifications are off. You can enable them in your phone settings.'); }
-        else if (result === 'failed') setPushError('Could not connect notifications. Check your connection and try again.');
+        result = await syncPushRegistration(true);
+        if (current !== preferenceRevision.current) return;
       }
-      if (current === revision.current) await preferences();
+      if (current === preferenceRevision.current) await preferences(result);
     } catch {
-      if (current === revision.current) setPushError('Could not update notifications. Please try again.');
+      if (current === preferenceRevision.current) setPushError('Could not update notifications. Please try again.');
     } finally { working.current = false; setBusy(false); }
   };
-  const close = () => { revision.current += 1; onClose(); };
+  const close = () => { revision.current += 1; preferenceRevision.current += 1; onClose(); };
   const iconButton = (label: string, icon: string, action: () => void) => <PressableScale accessibilityRole="button" accessibilityLabel={label} onPress={action} contentStyle={s.iconButton}><Icon name={icon} size={23} color={BRAND.blue} /></PressableScale>;
 
   if (!visible) return null;
@@ -120,8 +139,8 @@ export default function PublicNotificationsCard({ visible, noticeId, onClose, na
                 </PressableScale>) : <><Text style={s.title}>You're all caught up</Text><Text style={s.copy}>New public events and updates will appear here.</Text></>}
         </ScrollView>
         {firebaseReady() && <View style={s.footer}>
-          <PressableScale disabled={busy} accessibilityRole="button" accessibilityLabel={signedIn ? 'Manage notifications' : enabled ? 'Turn off notifications' : 'Enable notifications'} onPress={() => void toggle()} contentStyle={s.action}>
-            <Text style={s.actionText}>{busy ? 'Updating...' : signedIn ? 'Manage notifications' : enabled ? 'Notifications on · Turn off' : 'Enable notifications'}</Text>
+          <PressableScale disabled={busy || checking} accessibilityRole="button" accessibilityLabel={signedIn ? 'Manage notifications' : enabled ? 'Turn off notifications' : 'Enable notifications'} onPress={() => void toggle()} contentStyle={s.action}>
+            <Text style={s.actionText}>{busy ? 'Updating...' : checking ? 'Checking notifications...' : signedIn ? 'Manage notifications' : enabled ? 'Notifications on · Turn off' : 'Enable notifications'}</Text>
           </PressableScale>
           {!!pushError && <Text accessibilityRole="alert" style={s.pushError}>{pushError}</Text>}
           {blocked && <PressableScale accessibilityRole="button" accessibilityLabel="Open phone notification settings" onPress={() => { void Linking.openSettings(); }} contentStyle={s.action}><Text style={s.actionText}>Open phone settings</Text></PressableScale>}

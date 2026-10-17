@@ -210,6 +210,50 @@ test('settings reports a registration failure instead of silently implying notif
   expect(Alert.alert).toHaveBeenCalledWith('Could not enable notifications', expect.any(String));
 });
 
+test.each([{ data: { registered: false } }, { data: {} }, { data: null }])('registration requires an affirmative API acknowledgement: %j', async response => {
+  mock(api.post).mockResolvedValueOnce(response);
+  expect(await syncPushRegistration(true)).toBe('failed');
+});
+
+test('wrapped registration acknowledgement works and an unconfigured service is reported honestly', async () => {
+  mock(api.post).mockResolvedValueOnce({ data: { data: { registered: true, configured: true } } });
+  expect(await syncPushRegistration(true)).toBe('enabled');
+  mock(api.post).mockResolvedValueOnce({ data: { data: { registered: true, configured: false } } });
+  await enablePushFromSettings();
+  expect(Alert.alert).toHaveBeenCalledWith('Notifications are not ready', expect.any(String));
+  expect(Alert.alert).not.toHaveBeenCalledWith('Notifications enabled', expect.any(String));
+});
+
+test.each([null, {}])('settings requires a complete member account rather than opting in as a visitor: %j', async user => {
+  currentUser = user; currentAuth = user ? 'incomplete-session' : null;
+  await enablePushFromSettings();
+  expect(Alert.alert).toHaveBeenCalledWith('Sign in to enable notifications', expect.any(String));
+  expect(getToken).not.toHaveBeenCalled();
+  expect(PermissionsAndroid.request).not.toHaveBeenCalled();
+  expect(api.post).not.toHaveBeenCalled();
+  expect(await AsyncStorage.getItem('@activ_visitor_push_enabled')).toBeNull();
+});
+
+test('an incomplete authenticated session never asks for visitor permission', async () => {
+  currentUser = null;
+  expect(await syncPushRegistration(true)).toBe('signed-out');
+  expect(PermissionsAndroid.request).not.toHaveBeenCalled();
+  expect(getToken).not.toHaveBeenCalled();
+});
+
+test('settings suppresses duplicate enable taps and cannot confirm success for a changed account', async () => {
+  const response = deferred<any>(); mock(api.post).mockReturnValueOnce(response.promise);
+  const first = enablePushFromSettings();
+  await until(() => mock(api.post).mock.calls.length === 1);
+  await enablePushFromSettings();
+  expect(api.post).toHaveBeenCalledTimes(1);
+  currentAuth = 'account-b-session'; currentUser = { memberId: 'account-b' };
+  response.resolve({ data: { registered: true } });
+  await first;
+  expect(Alert.alert).toHaveBeenCalledWith('Sign in to enable notifications', expect.stringContaining('account changed'));
+  expect(Alert.alert).not.toHaveBeenCalledWith('Notifications enabled', expect.any(String));
+});
+
 test('token refresh re-registers for the current signed-in account and stops after logout', async () => {
   startListeners();
   await syncPushRegistration();

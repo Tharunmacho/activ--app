@@ -140,6 +140,17 @@ export const CHANNEL_LABELS: Record<ReportChannel, string> = {
 export const notificationReason = (value: unknown): string => {
   if (typeof value !== 'string') return '';
   const text = value.trim();
+  // Only a known WhatsApp wrapper or an explicit provider-code prefix is a code.
+  // Email diagnostics and arbitrary identifiers containing these digits stay intact.
+  const whatsappCode = /^WhatsApp could not deliver:.*\(code\s*(131048|131049|131053)\)\s*$/i.exec(text)?.[1]
+    || /^(?:\(#?(131048|131049|131053)\)|#?(131048|131049|131053)\b)/.exec(text)?.slice(1).find(Boolean);
+  if (whatsappCode) {
+    return ({
+      '131048': 'WhatsApp has temporarily limited messages from ACTIV. Try again later.',
+      '131049': 'WhatsApp did not allow this promotional message to this number.',
+      '131053': 'WhatsApp could not use the image or document. Check that the file opens, then try Resend.',
+    } as Record<string, string>)[whatsappCode];
+  }
   const rules: [RegExp, string][] = [
     [/^Media download error\b|^Media upload error:.*Downloading media from weblink failed/i, 'WhatsApp could not download the image or document. Check that the file opens, then try Resend.'],
     [/^Worker interrupted.*(?:outcome|delivery)/i, 'Sending stopped before we could confirm the result. Check the delivery history before sending again.'],
@@ -182,20 +193,19 @@ export const notificationTemplatePath = (value: unknown): string => {
 };
 
 export const statusLabel = (row: Pick<ReportRow, 'channel' | 'status'>) => {
-  if (row.status === 'accepted')
-    return row.channel === 'in_app' ? 'In the app' : 'Sent';
+  if (row.status === 'accepted') return 'Sent';
   if (row.status === 'read') return 'Seen';
   return (
     (
       {
-        queued: 'Waiting to send',
+        queued: 'Waiting',
         unconfirmed: 'No recorded open',
         sent: 'Sent',
         delivered: 'Delivered',
         failed: 'Failed',
         skipped: 'Not sent',
         mock: 'Not sent',
-        marked_read: 'Marked as read',
+        marked_read: 'Sent',
       } as Record<string, string>
     )[row.status] || row.status
   );

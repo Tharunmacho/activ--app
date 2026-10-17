@@ -43,6 +43,7 @@ import {
 } from '../../../../services/deliveryReportApi';
 import { errorText } from '../../../../services/superApi';
 import { deliveryTitle, messageLabel } from './deliveryKit';
+import { HistoryDeleteControl } from './HistoryDeleteControl';
 
 const fmt = (n?: number) => Number(n || 0).toLocaleString('en-IN');
 const human = (s = '') =>
@@ -258,6 +259,10 @@ export function ReportsPane({
   }, [busy, data, revealRecipients]);
   const summary = data?.summary;
   const selected = data?.campaigns.find(c => c._id === filters.campaignKey);
+  const historyChanged = () => {
+    setExpanded('');
+    setFilters(value => ({ ...value, page: 1, campaignPage: 1 }));
+  };
   const top = (
     <>
       {header}
@@ -313,7 +318,7 @@ export function ReportsPane({
       )}
       <ConsoleNote
         kind="indigo"
-        text="Each email, WhatsApp message or notification is counted separately. Sent means it was passed to the sending service; arrival is not confirmed. Delivered means arrival was confirmed. Seen means an open or tap was recorded. No recorded open does not always mean unread."
+        text="Each email, WhatsApp message or notification is counted separately. Sent means it was passed to the sending service; arrival is not confirmed. Delivered means arrival was confirmed. Seen means an open or tap was recorded. For in-app updates, Sent means saved in the account; it does not confirm they were seen. No recorded open does not always mean unread."
         style={s.card}
       />
       {error ? <ConsoleNote kind="red" text={error} style={s.card} /> : null}
@@ -327,7 +332,7 @@ export function ReportsPane({
           onPress={() => showRecipients({ status: '' })}
         />
         <ConsoleStatTile
-          label="Sent / in ACTIV"
+          label="Sent"
           value={fmt(summary?.accepted)}
           icon="send"
           hint={`${fmt(summary?.records)} delivery records`}
@@ -379,7 +384,7 @@ export function ReportsPane({
             >
               <Text style={s.title}>{label}</Text>
               <Ratio
-                label={key === 'in_app' ? 'In the app' : 'Sent'}
+                label="Sent"
                 value={channel?.accepted || 0}
                 total={channel?.records || 0}
               />
@@ -545,7 +550,7 @@ export function ReportsPane({
             : 'All channels'}
           {' · '}
           {filters.status === 'accepted_any'
-            ? 'Sent or in ACTIV, including delivered, seen and marked read'
+            ? 'Sent, including delivered or seen messages'
             : filters.status === 'read'
             ? 'Seen'
             : filters.status
@@ -571,18 +576,19 @@ export function ReportsPane({
           { value: '', label: 'All outcomes' },
           { value: 'unconfirmed', label: 'No recorded open' },
           { value: 'read', label: 'Seen' },
-          { value: 'accepted_any', label: 'Sent / in ACTIV' },
+          { value: 'accepted_any', label: 'Sent' },
           { value: 'delivered', label: 'Delivered' },
-          { value: 'accepted', label: 'Sent' },
           { value: 'marked_read', label: 'Marked read' },
           { value: 'failed', label: 'Failed' },
-          { value: 'queued', label: 'Waiting to send' },
+          { value: 'queued', label: 'Waiting' },
           { value: 'skipped', label: 'Not sent' },
           { value: 'mock', label: 'Not sent — setup needed' },
         ]}
         value={filters.status || ''}
         onChange={status => change({ status })}
       />
+      <View style={s.card}><HistoryDeleteControl selection={{ view: 'reports', filters: { ...filters } }}
+        disabled={busy || !!retryBusy} onDone={historyChanged} /></View>
       <ConsoleNote
         kind="indigo"
         text="Review failed messages before sending again. Only messages that can still be sent are included. No recorded open does not mean delivery failed."
@@ -612,7 +618,7 @@ export function ReportsPane({
       {retryResult && <ConsoleCard style={s.card}>
         <Text style={s.title} accessibilityRole="header">Resend result</Text>
         {retryResult.processing ? <Text style={s.body} accessibilityLiveRegion="polite">This resend is already processing. Refresh the report to see delivery progress.</Text> : <Text style={s.body} accessibilityLiveRegion="polite">{fmt(retryResult.attempted)} attempted · {fmt(retryResult.sent)} sent · {fmt(retryResult.queued)} waiting to send · {fmt(retryResult.failed)} failed · {fmt(retryResult.skipped)} not sent</Text>}
-        <Text style={s.caption}>Sent means the message was passed to the sending service. It does not confirm arrival. Waiting to send includes messages waiting or still being sent.</Text>
+        <Text style={s.caption}>Sent means the message was passed to the sending service. It does not confirm arrival. In-app updates are saved in the account. Waiting includes messages waiting or still being sent.</Text>
         {(retryResult.reasons || []).map((reason, index) => <Text key={index} style={s.caption}>{fmt(reason.count)} messages: {notificationReason(reason.reason)}</Text>)}
       </ConsoleCard>}
     </>
@@ -669,6 +675,8 @@ export function ReportsPane({
             disabled={busy || !!retryBusy} onPress={() => void reviewRetry(item)} />
         </View>
       )}
+      {!!item._id && <View style={s.retryActions}><HistoryDeleteControl label="Delete"
+        selection={{ view: 'reports', ids: [item._id] }} disabled={busy || !!retryBusy} onDone={historyChanged} /></View>}
       {expanded === item._id && (
         <View style={s.detail}>
           <Text style={s.title}>Message history</Text>
@@ -697,7 +705,7 @@ export function ReportsPane({
           )}
           {item.history?.map((event, i) => (
             <Text key={i} style={s.body}>
-              {statusLabel({ channel: item.channel, status: event.status })}: {when(event.at)}
+              {event.status === 'marked_read' ? 'Marked read' : statusLabel({ channel: item.channel, status: event.status })}: {when(event.at)}
               {event.detail ? ` · ${notificationReason(event.detail)}` : ''}
             </Text>
           ))}

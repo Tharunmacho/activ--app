@@ -502,6 +502,62 @@ describe('super admin parity interactions', () => {
     await ReactTestRenderer.act(async () => { tree.unmount(); });
   });
 
+  test.each(['automation', 'log'])('%s history cleanup reviews only its selected log scope', async view => {
+    const api = require('../src/services/api').default;
+    const { HistoryDeleteControl } = require('../src/screens/admin/super/delivery/HistoryDeleteControl');
+    const tree = await mount(S('SuperNotificationsScreen')(), { view });
+    const controls = tree.root.findAllByType(HistoryDeleteControl);
+    const clear = controls.find((node: any) => node.props.label !== 'Delete');
+    expect(clear?.props.selection.view).toBe('logs');
+    if (view === 'automation') expect(clear?.props.selection.filters.group).toBe('automation');
+    else expect(clear?.props.selection.filters).toEqual({ status: '', channel: '', event: '', search: '' });
+    expect(controls.filter((node: any) => node.props.label === 'Delete').map((node: any) => node.props.selection.ids)).toEqual([['log1'], ['log2']]);
+    api.post.mockClear();
+    expect(await press(tree, 'Clear matching logs')).toBe(true);
+    expect(api.post.mock.calls[0][0]).toBe('/notifications/history/delete-preview');
+    expect(api.post.mock.calls.some((call: any[]) => call[0] === '/notifications/history/delete')).toBe(false);
+    await ReactTestRenderer.act(async () => tree.unmount());
+  });
+
+  test('booking history cleanup uses only displayed IDs and reloads the same booking', async () => {
+    const api = require('../src/services/api').default;
+    const { HistoryDeleteControl } = require('../src/screens/admin/super/delivery/HistoryDeleteControl');
+    const tree = await mount(S('SuperBookingMessagesScreen')(), { bookingRef: BOOKING.bookingRef });
+    const controls = tree.root.findAllByType(HistoryDeleteControl);
+    const clear = controls.find((node: any) => node.props.label === 'Clear matching logs');
+    expect(clear?.props.selection).toEqual({ view: 'logs', ids: ['log1', 'log2'] });
+    expect(controls.filter((node: any) => node.props.label === 'Delete').map((node: any) => node.props.selection.ids)).toEqual([['log1'], ['log2']]);
+    api.get.mockClear();
+    await ReactTestRenderer.act(async () => { clear?.props.onDone(); await settle(); });
+    expect(api.get).toHaveBeenCalledWith(`/notifications/logs/booking/${BOOKING.bookingRef}`);
+    await ReactTestRenderer.act(async () => tree.unmount());
+  });
+
+  test.each([true, false])('booking clear excludes501 waiting entries before the500 cap (completed entries: %s)', async includeCompleted => {
+    const api = require('../src/services/api').default;
+    const delivery = require('../src/services/notificationDeliveryApi');
+    const { HistoryDeleteControl } = require('../src/screens/admin/super/delivery/HistoryDeleteControl');
+    const { FlatList } = require('react-native');
+    const waiting = Array.from({ length: 501 }, (_, index) => ({ ...LOG, _id: `pending-${index}`, status: 'queued', effectiveStatus: 'queued' }));
+    const allRows = [...waiting, ...(includeCompleted ? [LOG, LOG2] : [])];
+    const fetch = jest.spyOn(delivery, 'getBookingDelivery').mockResolvedValueOnce({ bookingRef: BOOKING.bookingRef, rows: allRows, summary: {} });
+    const tree = await mount(S('SuperBookingMessagesScreen')(), { bookingRef: BOOKING.bookingRef });
+    try {
+      const clear = tree.root.findAllByType(HistoryDeleteControl).find((node: any) => node.props.label === 'Clear matching logs');
+      expect(clear?.props.selection.ids).toEqual(includeCompleted ? ['log1', 'log2'] : []);
+      expect(clear?.props.disabled).toBe(!includeCompleted);
+      expect(tree.root.findByType(FlatList).props.data).toHaveLength(allRows.length);
+      expect(texts(tree)).toContain('501 messages waiting to send will stay in this history.');
+      api.post.mockClear();
+      expect(await press(tree, 'Clear matching logs')).toBe(true);
+      if (includeCompleted) expect(api.post).toHaveBeenCalledWith('/notifications/history/delete-preview', { view: 'logs', ids: ['log1', 'log2'] }, { timeout: 120000 });
+      else expect(api.post).not.toHaveBeenCalled();
+    } finally {
+      await ReactTestRenderer.act(async () => tree.unmount());
+      fetch.mockRestore();
+    }
+  });
+
   test('log Resend requires confirmation, allows cancel, and suppresses duplicate sends', async () => {
     const api = require('../src/services/api').default;
     const { ConsoleButton } = require('../src/ui');

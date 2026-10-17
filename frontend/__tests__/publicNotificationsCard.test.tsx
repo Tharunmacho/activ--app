@@ -96,7 +96,69 @@ test('enabled visitor notifications can be turned off from the same card', async
   await render();
   await act(async () => button('Turn off notifications').props.onPress());
   expect(disableVisitorNotifications).toHaveBeenCalledTimes(1);
-  expect(syncPushRegistration).not.toHaveBeenCalled();
+  expect(syncPushRegistration).toHaveBeenCalledTimes(1);
+  expect(syncPushRegistration).toHaveBeenCalledWith(false);
+  expect(button('Enable notifications')).toBeDefined();
+});
+
+test('stored permission and opt-in do not show on when API registration fails', async () => {
+  mock(visitorPushEnabled).mockResolvedValue(true); mock(pushPermission).mockResolvedValue('enabled');
+  mock(syncPushRegistration).mockResolvedValue('failed');
+  await render();
+  expect(syncPushRegistration).toHaveBeenCalledWith(false);
+  expect(button('Enable notifications')).toBeDefined();
+  expect(button('Turn off notifications')).toBeUndefined();
+  expect(text()).toContain('This phone is not connected for notifications.');
+  expect(recordVisitorOpen).not.toHaveBeenCalled();
+});
+
+test('explicit failed enable preserves retry and becomes on only after successful registration', async () => {
+  await render();
+  mock(visitorPushEnabled).mockResolvedValue(true); mock(pushPermission).mockResolvedValue('enabled');
+  mock(syncPushRegistration).mockResolvedValueOnce('failed').mockResolvedValueOnce('enabled');
+  await act(async () => button('Enable notifications').props.onPress());
+  expect(button('Turn off notifications')).toBeUndefined();
+  expect(text()).toContain('This phone is not connected for notifications.');
+  expect(syncPushRegistration).toHaveBeenCalledTimes(1);
+  await act(async () => button('Enable notifications').props.onPress());
+  expect(button('Turn off notifications')).toBeDefined();
+  expect(text()).not.toContain('This phone is not connected');
+  expect(syncPushRegistration).toHaveBeenCalledTimes(2);
+  expect(mock(syncPushRegistration).mock.calls).toEqual([[true], [true]]);
+});
+
+test('registration pending or a session change cannot show a visitor success', async () => {
+  mock(visitorPushEnabled).mockResolvedValue(true); mock(pushPermission).mockResolvedValue('enabled');
+  let finish: ((value: string) => void) | undefined;
+  mock(syncPushRegistration).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+  await render();
+  expect(text()).toContain('Checking notifications...');
+  expect(button('Enable notifications').props.disabled).toBe(true);
+  expect(button('Turn off notifications')).toBeUndefined();
+  mock(getAuthToken).mockResolvedValue('member-session');
+  await act(async () => { finish?.('enabled'); });
+  expect(button('Manage notifications')).toBeDefined();
+  expect(button('Turn off notifications')).toBeUndefined();
+});
+
+test('an unconfigured sender does not claim that notifications are on', async () => {
+  mock(visitorPushEnabled).mockResolvedValue(true); mock(pushPermission).mockResolvedValue('enabled');
+  mock(syncPushRegistration).mockResolvedValue('unconfigured');
+  await render();
+  expect(text()).toContain('Notification delivery is not ready.');
+  expect(button('Turn off notifications')).toBeUndefined();
+});
+
+test('opening a notice while enabling does not discard a confirmed registration', async () => {
+  await render();
+  mock(visitorPushEnabled).mockResolvedValue(true); mock(pushPermission).mockResolvedValue('enabled');
+  let finish: ((value: string) => void) | undefined;
+  mock(syncPushRegistration).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+  await act(async () => { button('Enable notifications').props.onPress(); });
+  await act(async () => { button(event.title).props.onPress(); });
+  await act(async () => { finish?.('enabled'); });
+  expect(text()).toContain(event.body);
+  expect(button('Turn off notifications')).toBeDefined();
 });
 
 test('closing during session lookup cancels a not-yet-started permission request', async () => {

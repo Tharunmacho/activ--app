@@ -14,6 +14,7 @@ import { ChipRow, useRegionTreeAll, useRegionNames } from './superKit';
 import { InlineSelect } from './events/eventKit';
 import RegionInput from './components/RegionInput';
 import { AutomationPane } from './delivery/AutomationPane';
+import { HistoryDeleteControl } from './delivery/HistoryDeleteControl';
 import { ReportsPane } from './delivery/ReportsPane';
 import { ResendButton, STATE_META, stateOf, deliveryTitle, messageLabel, channelColor, channelIcon } from './delivery/deliveryKit';
 import { notificationReason } from '../../../services/deliveryReportApi';
@@ -104,10 +105,12 @@ function LogRow({ l, onChanged }: { l: any; onChanged: () => void }) {
       </View>
       <View style={s.foot}>
         <Text style={s.when} maxFontSizeMultiplier={1.3}>{when(l?.createdAt)}</Text>
-        <ConsoleChip label={ch === 'in_app' && state === 'accepted' ? 'In the app' : pill.label} kind={pill.kind} />
+        <ConsoleChip label={pill.label} kind={pill.kind} />
         <View style={s.flex} />
       </View>
+      {ch === 'in_app' && state === 'accepted' && <Text style={s.sub}>Saved in the account. This does not confirm it was seen.</Text>}
       <ResendButton row={l} onDone={onChanged} />
+      {!!l?._id && <HistoryDeleteControl label="Delete" selection={{ view: 'logs', ids: [String(l._id)] }} onDone={onChanged} />}
     </ConsoleCard>
   );
 }
@@ -381,12 +384,15 @@ const SuperNotificationsScreen: React.FC = () => {
       </ConsoleGrid>
       <ConsoleSectionTitle title="Filters" icon="tune" />
       <ConsoleSearch value={search} onChangeText={setSearch} placeholder="Filter by email or phone number" />
-      <ChipRow<string> options={[{ value: '', label: 'Every status' }, { value: 'sent', label: 'Sent' }, { value: 'failed', label: 'Failed' }, { value: 'queued', label: 'Waiting to send' }]} value={status} onChange={setStatus} />
+      <ChipRow<string> options={[{ value: '', label: 'Every status' }, { value: 'sent', label: 'Sent' }, { value: 'failed', label: 'Failed' }, { value: 'queued', label: 'Waiting' }]} value={status} onChange={setStatus} />
       <ChipRow<string> options={[{ value: '', label: 'Every channel' }, { value: 'email', label: 'Email' }, { value: 'whatsapp', label: 'WhatsApp' }, { value: 'in_app', label: 'In-app' }]} value={channel} onChange={setChannel} />
       <View style={s.select}>
         <InlineSelect value={event ? humanEvent(event) : ''} options={EVENT_LABELS} placeholder="Every event" emptyLabel="Every event"
           onChange={(label) => setEvent(label ? eventFromLabel(label) : '')} />
       </View>
+      <View style={s.select}><HistoryDeleteControl
+        selection={{ view: 'logs', filters: { status, channel, event, search: search.trim().length >= 2 ? search.trim() : '' } }}
+        disabled={loading} onDone={() => void load(1)} /></View>
       {loading && !logs.length ? <ConsoleSkeleton rows={3} /> : null}
       {error && logs.length ? <ConsoleNote style={s.banner} kind="red" icon="error-outline" text={error} /> : null}
     </>

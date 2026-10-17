@@ -22,13 +22,14 @@ import {
 export const STATE_META: Record<string, { label: string; kind: ConsoleChipKind; hint: string }> = {
   failed: { label: 'Failed', kind: 'rejected', hint: 'The message could not be sent or delivered. The reason is shown below.' },
   read: { label: 'Seen', kind: 'approved', hint: 'WhatsApp reports the recipient saw it.' },
+  marked_read: { label: 'Sent', kind: 'neutral', hint: 'Saved in the account and marked read. This does not confirm it was opened.' },
   delivered: { label: 'Delivered', kind: 'approved', hint: 'WhatsApp reports it reached the phone.' },
   sent: { label: 'Sent', kind: 'info', hint: 'WhatsApp is sending the message. Arrival has not been confirmed.' },
   resent: { label: 'Tried again', kind: 'neutral', hint: 'Another send was attempted. The newer entry shows the result.' },
   accepted: { label: 'Sent', kind: 'info', hint: 'The message was passed to the sending service. Arrival has not been confirmed.' },
   mock: { label: 'Not sent', kind: 'neutral', hint: 'The sending service is not set up, so no message was sent.' },
   skipped: { label: 'Not sent', kind: 'neutral', hint: 'No message was sent. The reason is shown below.' },
-  queued: { label: 'Waiting to send', kind: 'neutral', hint: 'Waiting for sending to finish. The message may be waiting or being tried again.' },
+  queued: { label: 'Waiting', kind: 'neutral', hint: 'Waiting for sending to finish. The message may be waiting or being tried again.' },
 };
 
 /** The state a badge shows — the server's `effectiveStatus`, with a safe fallback for older rows. */
@@ -206,7 +207,7 @@ export function DeliveryDetail({ row }: { row: DeliveryLogRow }) {
   const history = Array.isArray(row?.statusHistory) ? row.statusHistory : [];
   return (
     <View>
-      <Text style={k.hint} maxFontSizeMultiplier={1.3}>{(STATE_META[state] || STATE_META.queued).hint}</Text>
+      <Text style={k.hint} maxFontSizeMultiplier={1.3}>{row?.channel === 'in_app' && state === 'accepted' ? 'Saved in the account. This does not confirm it was seen.' : (STATE_META[state] || STATE_META.queued).hint}</Text>
       {row?.channel === 'email' ? (
         <Text style={k.hint} maxFontSizeMultiplier={1.3}>
           We cannot tell whether an email reached the inbox or was opened. Sent means it was passed to the email service.
@@ -246,7 +247,7 @@ export function DeliveryDetail({ row }: { row: DeliveryLogRow }) {
             <View style={[k.stepDot, { backgroundColor: dot }]} />
             <View style={k.flexText}>
               <Text style={k.stepLabel} maxFontSizeMultiplier={1.3}>
-                {(STATE_META[st] || { label: st || '—' }).label}
+                {st === 'marked_read' ? 'Marked read' : (STATE_META[st] || { label: st || '—' }).label}
                 <Text style={k.stepWhen}>  {whenLabel(h?.at)}</Text>
               </Text>
               {extra ? <Text style={k.stepExtra} maxFontSizeMultiplier={1.3}>{extra}</Text> : null}
