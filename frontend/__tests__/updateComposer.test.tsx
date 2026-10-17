@@ -145,7 +145,7 @@ it('saves multiple independent regions and authored tokens while previewing serv
 
 it('creates custom general and individual values, selects exact members, and previews the actual recipient', async () => {
   await mount(); await fill('Title', 'Meeting for {name}'); await fill('Message', 'Join on {meeting_date}');
-  await choose('Recipient selection', 'Specific members');
+  await choose('Choose members', 'Specific members');
   await fill('Find members', 'Member'); await settle();
   await act(async () => { screen.root.findAllByType(TouchableOpacity).find(node => node.props.accessibilityLabel === 'Select First Member · first@example.test')!.props.onPress(); });
   await fill('New custom variable', 'meeting_date'); await press('Create variable');
@@ -154,7 +154,7 @@ it('creates custom general and individual values, selects exact members, and pre
   await fill('Individual {meeting_date} value for First Member', 'Tuesday');
   (previewAssociationUpdate as jest.Mock).mockResolvedValue({ announcement: { title: 'Meeting for First Member', body: '<p>Join on Tuesday &amp; Wednesday</p>' }, eligible: true, missing: [], values: {}, recipient: { id: '111111111111111111111111', fullName: 'First Member' } });
   await press('Preview update');
-  await choose('Preview recipient', 'First Member · first@example.test'); await settle();
+  await choose('Preview for a member', 'First Member · first@example.test'); await settle();
   expect(JSON.stringify(screen.toJSON())).toContain('Join on Tuesday & Wednesday');
   expect(JSON.stringify(screen.toJSON())).not.toContain('<p>Join');
   expect(previewAssociationUpdate).toHaveBeenLastCalledWith(expect.objectContaining({ previewMemberId: '111111111111111111111111', memberIds: ['111111111111111111111111'] }));
@@ -168,12 +168,12 @@ it('creates custom general and individual values, selects exact members, and pre
 
 it('requires selected members, permits builtin general fallbacks, and rejects invalid custom keys', async () => {
   await mount(); await fill('Title', 'Welcome'); await fill('Message', 'Dear {name}, from {company_name}');
-  await choose('Recipient selection', 'Specific members'); await press('Publish update');
+  await choose('Choose members', 'Specific members'); await press('Publish update');
   expect(createAnnouncement).not.toHaveBeenCalled();
   expect(Alert.alert).toHaveBeenCalledWith('Check your update', 'Choose at least one specific member.');
   await fill('New custom variable', '__proto__'); await press('Create variable');
   expect(JSON.stringify(screen.toJSON())).toContain('Start the variable name with a letter');
-  await choose('Recipient selection', 'All eligible members');
+  await choose('Choose members', 'Members who match your choices');
   await choose('Variable', 'Company name'); await fill('General value for {company_name}', 'your organisation');
   await press('Save draft');
   expect(createAnnouncement).toHaveBeenCalledWith(expect.objectContaining({ recipientMode: 'audience', memberIds: [], variables: [{ key: 'company_name', defaultValue: 'your organisation', overrides: [] }] }));
@@ -203,7 +203,7 @@ it.each(deliveryCombinations)('saves and publishes exactly the selected channels
   }
   const content = JSON.stringify(screen.toJSON());
   const selected = [['email', 'Email'], ['whatsapp', 'WhatsApp'], ['push', 'Push notifications']].filter(([key]) => deliveryChannels[key as keyof typeof deliveryChannels]).map(([, label]) => label);
-  expect(content).toContain(selected.length ? `Selected channels: ${selected.join(', ')}` : 'Feed only: no email, WhatsApp or push notifications.');
+  expect(content).toContain(selected.length ? `Selected channels: ${selected.join(', ')}` : 'In ACTIV only: no email, WhatsApp or push notifications.');
   await press('Save draft');
   expect(createAnnouncement).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'draft', deliveryChannels }));
   await press('Publish update');

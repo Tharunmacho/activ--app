@@ -53,7 +53,7 @@ it('leaves existing delivery settings untouched for status-only changes', async 
 
 it.each([
   { deliveryChannels: { email: false, whatsapp: true, push: false }, summary: 'Selected channels: WhatsApp' },
-  { deliveryChannels: allOff, summary: 'Feed only: no email, WhatsApp or push notifications.' },
+  { deliveryChannels: allOff, summary: 'In ACTIV only: no email, WhatsApp or push notifications.' },
   { deliveryChannels: undefined, summary: 'Selected channels: Email, WhatsApp, Push notifications' },
 ])('shows saved delivery choices in the list and opens review without sending: $summary', async ({ deliveryChannels, summary }) => {
   const announcement = { id: 'saved', title: 'Meeting', body: 'Notice', status: 'draft', deliveryChannels };

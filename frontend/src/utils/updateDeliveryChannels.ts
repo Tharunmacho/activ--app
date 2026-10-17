@@ -1,9 +1,9 @@
 export type UpdateDeliveryChannels = { email: boolean; whatsapp: boolean; push: boolean };
 
 export const UPDATE_DELIVERY_CHANNELS: { key: keyof UpdateDeliveryChannels; label: string; detail: string }[] = [
-  { key: 'email', label: 'Email', detail: 'Send an email to eligible members.' },
-  { key: 'whatsapp', label: 'WhatsApp', detail: 'Send a WhatsApp message to eligible members.' },
-  { key: 'push', label: 'Push notifications', detail: 'Notify eligible app and browser subscribers.' },
+  { key: 'email', label: 'Email', detail: 'Send an email to members who match your choices.' },
+  { key: 'whatsapp', label: 'WhatsApp', detail: 'Send a WhatsApp message to members who match your choices.' },
+  { key: 'push', label: 'Push notifications', detail: 'Notify people who match your choices and have allowed app or browser notifications.' },
 ];
 
 /** Old saved updates predate channel controls. Only a genuinely missing field
@@ -19,5 +19,5 @@ export function resolveUpdateDeliveryChannels(value: unknown, legacy = false): U
 
 export function updateDeliverySummary(channels: UpdateDeliveryChannels): string {
   const labels = UPDATE_DELIVERY_CHANNELS.filter(channel => channels[channel.key]).map(channel => channel.label);
-  return labels.length ? `Selected channels: ${labels.join(', ')}` : 'Feed only: no email, WhatsApp or push notifications.';
+  return labels.length ? `Selected channels: ${labels.join(', ')}` : 'In ACTIV only: no email, WhatsApp or push notifications.';
 }

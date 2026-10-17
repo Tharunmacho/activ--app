@@ -16,6 +16,7 @@ import RegionInput from './components/RegionInput';
 import { AutomationPane } from './delivery/AutomationPane';
 import { ReportsPane } from './delivery/ReportsPane';
 import { canResend, channelColor, channelIcon } from './delivery/deliveryKit';
+import { notificationReason } from '../../../services/deliveryReportApi';
 
 /**
  * ============================================================================
@@ -75,9 +76,9 @@ const when = (value?: string) => {
 
 /** The raw log's words (website StatePill): `sent` reads "Delivered" there. */
 const PILL: Record<string, { label: string; kind: 'approved' | 'rejected' | 'neutral' | 'warning' }> = {
-  sent: { label: 'Provider accepted', kind: 'approved' },
+  sent: { label: 'Sent', kind: 'approved' },
   failed: { label: 'Failed', kind: 'rejected' },
-  queued: { label: 'Queued', kind: 'neutral' },
+  queued: { label: 'Waiting to send', kind: 'neutral' },
   mock: { label: 'Not sent', kind: 'warning' },
 };
 
@@ -98,8 +99,8 @@ function LogRow({ l, busy, onRetry }: { l: any; busy: boolean; onRetry: () => vo
             {humanEvent(l?.event)} · to <Text style={s.strong}>{l?.recipient || '—'}</Text>
             {l?.replyTo ? ` · reply-to ${l.replyTo}` : ''}
           </Text>
-          {/* The provider's own words — the only place the reason a message failed is visible. */}
-          {l?.lastError ? <Text style={s.err} maxFontSizeMultiplier={1.3}>{String(l.lastError)}</Text> : null}
+          {/* Known historical reasons are explained; other service details stay intact. */}
+          {l?.lastError ? <Text style={s.err} maxFontSizeMultiplier={1.3}>{notificationReason(l.lastError)}</Text> : null}
         </View>
       </View>
       <View style={s.foot}>
@@ -120,14 +121,14 @@ function ConfigBanner({ st }: { st: any }) {
   const emailOff = !st?.email?.configured;
   const waOff = !st?.whatsapp?.configured;
   if (!emailOff && !waOff) return null;
-  const head = emailOff && waOff ? 'Neither email nor WhatsApp is configured.' : emailOff ? 'Email is not configured.' : 'WhatsApp is not configured.';
-  const keys = [emailOff ? 'EMAIL_USER and EMAIL_PASS' : '', waOff ? 'BOTBEE_API_TOKEN and BOTBEE_PHONE_NUMBER_ID' : ''].filter(Boolean).join(', ');
+  const head = emailOff && waOff ? 'Email and WhatsApp are not set up.' : emailOff ? 'Email is not set up.' : 'WhatsApp is not set up.';
+
   return (
     <ConsoleNote
       kind="amber"
       icon="warning-amber"
       style={s.banner}
-      text={`${head} Messages on ${emailOff && waOff ? 'those channels' : 'that channel'} are recorded as "not sent" and nothing leaves the server. Add ${keys} to backend/.env and restart.`}
+      text={`${head} Messages on ${emailOff && waOff ? 'those channels' : 'that channel'} are marked "Not sent". Ask your technical administrator to finish the setup.`}
     />
   );
 }
@@ -151,7 +152,7 @@ function ChannelCard({ channel, title, configured, rows, note, noteIcon }: {
           <Icon name={channelIcon(channel)} size={18} color={channelColor(channel)} />
         </View>
         <Text style={s.blockTitle} numberOfLines={1} maxFontSizeMultiplier={1.3}>{title}</Text>
-        <ConsoleChip label={configured ? 'Configured' : 'Not configured'} kind={configured ? 'approved' : 'pending'} />
+        <ConsoleChip label={configured ? 'Set up' : 'Setup needed'} kind={configured ? 'approved' : 'pending'} />
       </View>
       {rows.map(([label, value], i) => <InfoLine key={label} label={label} value={value} last={i === rows.length - 1 && !note} />)}
       {note ? (
@@ -175,14 +176,14 @@ function DeliveryView({ st, error, onReload }: { st: any; error: string; onReloa
     setSending(true);
     try {
       const r = await testSendNotification(channel, target);
-      if (r?.mock) Alert.alert('Nothing was sent', 'That channel has no credentials configured.');
-      else if (r?.success) Alert.alert('Sent', 'Check the inbox or handset.');
+      if (r?.mock) Alert.alert('Nothing was sent', 'This sending service is not set up.');
+      else if (r?.success) Alert.alert('Sent', 'The message was passed to the sending service. Check the email inbox or phone to confirm it arrived.');
       else Alert.alert('Send failed', String(r?.error || 'Send failed'));
       onReload();
     } catch (err) { Alert.alert('Test send failed', errorText(err)); } finally { setSending(false); }
   };
 
-  if (error && !st) return <ConsoleState kind="error" title="Could not load the configuration" message={error} action="Try again" onAction={onReload} />;
+  if (error && !st) return <ConsoleState kind="error" title="Could not load the setup details" message={error} action="Try again" onAction={onReload} />;
   if (!st) return <ConsoleSkeleton rows={2} />;
   const em = st?.email || {};
   const wa = st?.whatsapp || {};
@@ -207,7 +208,7 @@ function DeliveryView({ st, error, onReload }: { st: any; error: string; onReloa
         note={wa?.webhookUrl ? `Register this webhook URL on BotBee: ${wa.webhookUrl}` : undefined} noteIcon="webhook" />
       <ConsoleCard style={s.card}>
         <Text style={s.blockTitle} maxFontSizeMultiplier={1.3}>Send a test message</Text>
-        <Text style={s.hint} maxFontSizeMultiplier={1.3}>The difference between "the credentials are saved" and "it arrives".</Text>
+        <Text style={s.hint} maxFontSizeMultiplier={1.3}>Send a message to check that it reaches your email inbox or phone.</Text>
         <View style={s.pullOut}>
           <ChipRow<'email' | 'whatsapp'> options={[{ value: 'email', label: 'Email' }, { value: 'whatsapp', label: 'WhatsApp' }]} value={channel} onChange={setChannel} />
         </View>
@@ -323,7 +324,7 @@ const SuperNotificationsScreen: React.FC = () => {
     setBusyId(id);
     try {
       const row = await retryNotification(id);
-      Alert.alert(row?.status === 'sent' ? 'Re-sent' : 'Still failing', row?.status === 'sent' ? 'The message went out.' : String(row?.lastError || 'unknown error'));
+      Alert.alert(row?.status === 'sent' ? 'Sent again' : 'Still failing', row?.status === 'sent' ? 'The message was passed to the sending service.' : notificationReason(row?.lastError || 'The sending service did not provide a reason.'));
       load(1);
     } catch (err) { Alert.alert('Could not re-send that message', errorText(err)); } finally { setBusyId(''); }
   };
@@ -334,7 +335,7 @@ const SuperNotificationsScreen: React.FC = () => {
         compact
         eyebrow="Super Admin · messages"
         title="Notifications"
-        subtitle="Reports and automations across email, WhatsApp, push and member inboxes"
+        subtitle="Reports for email, WhatsApp, push and ACTIV notifications"
         left={<GlassIconButton icon="arrow-back" accessibilityLabel="Back" onPress={() => navigation?.goBack?.()} />}
         right={<GlassIconButton icon="refresh" accessibilityLabel="Refresh" onPress={refreshAll} />}
       />
@@ -344,7 +345,7 @@ const SuperNotificationsScreen: React.FC = () => {
         style={s.tabs}
         options={[
           { value: 'reports', label: 'Reports' },
-          { value: 'automation', label: 'Automation' }, { value: 'log', label: 'Log' },
+          { value: 'automation', label: 'Automatic messages' }, { value: 'log', label: 'Log' },
           { value: 'delivery', label: 'Setup' }, { value: 'routing', label: 'Routing' },
         ]}
       />
@@ -385,17 +386,17 @@ const SuperNotificationsScreen: React.FC = () => {
     <>
       {top}
       <ConsoleGrid style={s.grid}>
-        <ConsoleStatTile label="Accepted" hint="accepted by the provider" value={Number(h?.sent || 0)} icon="check-circle" accent="green"
+        <ConsoleStatTile label="Sent" hint="Passed to the sending service" value={Number(h?.sent || 0)} icon="check-circle" accent="green"
           selected={status === 'sent'} onPress={() => setStatus(status === 'sent' ? '' : 'sent')} />
-        <ConsoleStatTile label="Failed" hint="the provider refused it" value={Number(h?.failed || 0)} icon="cancel" accent="red"
+        <ConsoleStatTile label="Failed" hint="Could not send or deliver" value={Number(h?.failed || 0)} icon="cancel" accent="red"
           selected={status === 'failed'} onPress={() => setStatus(status === 'failed' ? '' : 'failed')} delay={60} />
-        <ConsoleStatTile label="Not sent" hint="no credentials configured" value={Number(h?.mock || 0)} icon="warning-amber" accent="amber" delay={120} />
+        <ConsoleStatTile label="Not sent" hint="Sending service not set up" value={Number(h?.mock || 0)} icon="warning-amber" accent="amber" delay={120} />
         <ConsoleStatTile label="Total attempts" hint="however it ended" value={Number(h?.total || 0)} icon="send" accent="slate"
           onPress={() => setStatus('')} delay={180} />
       </ConsoleGrid>
       <ConsoleSectionTitle title="Filters" icon="tune" />
       <ConsoleSearch value={search} onChangeText={setSearch} placeholder="Filter by email or phone number" />
-      <ChipRow<string> options={[{ value: '', label: 'Every status' }, { value: 'sent', label: 'Accepted' }, { value: 'failed', label: 'Failed' }, { value: 'queued', label: 'Queued' }]} value={status} onChange={setStatus} />
+      <ChipRow<string> options={[{ value: '', label: 'Every status' }, { value: 'sent', label: 'Sent' }, { value: 'failed', label: 'Failed' }, { value: 'queued', label: 'Waiting to send' }]} value={status} onChange={setStatus} />
       <ChipRow<string> options={[{ value: '', label: 'Every channel' }, { value: 'email', label: 'Email' }, { value: 'whatsapp', label: 'WhatsApp' }, { value: 'in_app', label: 'In-app' }]} value={channel} onChange={setChannel} />
       <View style={s.select}>
         <InlineSelect value={event ? humanEvent(event) : ''} options={EVENT_LABELS} placeholder="Every event" emptyLabel="Every event"

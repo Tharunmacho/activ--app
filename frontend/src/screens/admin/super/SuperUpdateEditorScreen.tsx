@@ -219,18 +219,18 @@ const SuperUpdateEditorScreen: React.FC = () => {
       </View> : null}
       <ToggleRow label="Limit to selected regions" value={regional} onChange={setRegional} last />
       {regional ? <UpdateRegionPicker value={targets} onChange={setTargets} disabled={busy} /> : <Text style={s.small}>Reaches the selected members in every region.</Text>}
-      {audience === 'all' && !regional && recipientMode !== 'selected' ? <><ToggleRow label="Also show to visitors" value={includeVisitors} onChange={setIncludeVisitors} last /><Text style={s.small}>Makes this update public. Visitors can receive notifications only when push is selected below and they have enabled notifications.</Text></> : <Text style={s.small}>Visitor updates are available only for all eligible members in all regions.</Text>}
+      {audience === 'all' && !regional && recipientMode !== 'selected' ? <><ToggleRow label="Also show to visitors" value={includeVisitors} onChange={setIncludeVisitors} last /><Text style={s.small}>Makes this update public. Visitors can receive notifications only when push is selected below and they have enabled notifications.</Text></> : <Text style={s.small}>Visitor updates are available only when you choose all members in all regions.</Text>}
     </ConsoleCard>
     <ConsoleCard style={s.card}>
-      <Text style={s.title}>Choose delivery channels</Text>
-      <Text style={s.hint}>Choose any combination for this update. Leave every channel off to publish only in the feed.</Text>
+      <Text style={s.title}>Choose how to notify people</Text>
+      <Text style={s.hint}>Choose any combination for this update. Leave every option off to show the update only in ACTIV.</Text>
       {UPDATE_DELIVERY_CHANNELS.map(channel => <TouchableOpacity key={channel.key} accessibilityRole="checkbox" accessibilityLabel={channel.label}
         accessibilityState={{ checked: deliveryChannels[channel.key], disabled: busy }} disabled={busy} style={s.channel}
         onPress={() => { if (!pending.current) setDeliveryChannels(current => ({ ...current, [channel.key]: !current[channel.key] })); }}>
         <Icon name={deliveryChannels[channel.key] ? 'check-box' : 'check-box-outline-blank'} size={26} color={PALETTE.indigo} />
         <View style={s.action}><Text style={s.planName}>{channel.label}</Text><Text style={s.small}>{channel.detail}</Text></View>
       </TouchableOpacity>)}
-      <Text style={s.hint}>Selected channels still follow each recipient's preferences, consent and notification permissions.</Text>
+      <Text style={s.hint}>Messages follow each person's choices and notification permissions.</Text>
     </ConsoleCard>
     <ConsoleCard style={s.card}>
       <Text style={s.title}>Personalise your update</Text>
@@ -255,7 +255,7 @@ const SuperUpdateEditorScreen: React.FC = () => {
       <Text style={s.title}>Review before publishing</Text>
       <Text style={s.review}>{recipientMode === 'selected' ? `${memberIds.length} specific members · ${reach}` : reach}</Text><Text style={s.hint}>{region}{expiresAt ? ` · Until ${expiresAt}` : ''}</Text>
       <Text accessibilityLiveRegion="polite" style={s.review}>{updateDeliverySummary(deliveryChannels)}</Text>
-      <Text style={s.hint}>Publishing makes this update available to matching members. Only the selected channels may send notifications, subject to each recipient's preferences and eligibility. A draft stays private and sends nothing.</Text>
+      <Text style={s.hint}>Publishing shows this update to members who match your choices. Notifications use only the options you selected and follow each person's settings and permissions. A draft stays private and sends nothing.</Text>
       {wasPublished ? <Text style={s.hint}>Moving to draft removes this update from members’ feeds.</Text> : null}
       <ConsoleButton kind="soft" icon="visibility" label={preview ? 'Hide preview' : 'Preview update'} onPress={() => setPreview(value => !value)} />
       {preview ? <View style={s.preview}>

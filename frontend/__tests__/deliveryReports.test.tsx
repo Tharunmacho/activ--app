@@ -156,7 +156,7 @@ const button = (label: string) => {
 };
 const preview = {
   matched: 2, eligible: 1, skipped: 1, ids: ['row-5'], token: 'review-fixture', truncated: false,
-  reasons: [{ reason: 'Device registration expired', count: 1 }],
+  reasons: [{ reason: 'This recipient has no enabled push device.', count: 1 }],
 };
 beforeEach(() => {
   jest.useFakeTimers();
@@ -182,8 +182,9 @@ it('reviews current automation filters, confirms frozen IDs once and refreshes d
   await press(button('Review failed deliveries').props.onPress);
   expect(previewDeliveryRetry).toHaveBeenCalledWith({ filters: expect.objectContaining({ group: 'automation', channel: 'email', search: 'Email member', status: 'failed', from: filters().from }) });
   expect(retryDeliveryReport).not.toHaveBeenCalled();
-  expect(text()).toContain('2 matched · 1 eligible · 1 skipped');
-  expect(text()).toContain('Device registration expired');
+  expect(text()).toContain('2 found · 1 ready to resend · 1 not sent');
+  expect(text()).toContain('No phone or browser is currently set up to receive notifications for this person.');
+  expect(preview.reasons[0].reason).toBe('This recipient has no enabled push device.');
   const confirm = button('Confirm resend (1)').props.onPress;
   let complete: (value: unknown) => void = () => {};
   (retryDeliveryReport as jest.Mock).mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }));
@@ -194,7 +195,7 @@ it('reviews current automation filters, confirms frozen IDs once and refreshes d
   expect(button('Resending…').props.disabled).toBe(true);
   await act(async () => { complete({ attempted: 1, sent: 0, queued: 1, failed: 0, skipped: 1, reasons: [{ reason: 'Already retried', count: 1 }] }); });
   await settle();
-  expect(text()).toContain('1 attempted · 0 sent · 1 queued · 0 failed · 1 skipped');
+  expect(text()).toContain('1 attempted · 0 sent · 1 waiting to send · 0 failed · 1 not sent');
   expect(text()).toContain('Already retried');
   expect((getDeliveryReport as jest.Mock).mock.calls.length).toBeGreaterThan(readsBefore);
 });
@@ -217,9 +218,9 @@ it('reviews only failed IDs on the visible page and disables page review for acc
   await mount();
   await press(button('Review failures on this page').props.onPress);
   expect(previewDeliveryRetry).toHaveBeenLastCalledWith({ ids: ['row-4', 'row-5'] });
-  expect(text()).toContain('Failed deliveries on recipient page 1');
+  expect(text()).toContain('Failed deliveries on people page 1');
   await press(button('Cancel resend').props.onPress);
-  await press(tile('Accepted / in inbox').props.onPress);
+  await press(tile('Sent / in ACTIV').props.onPress);
   expect(button('Review failures on this page').props.disabled).toBe(true);
   const reviews = (previewDeliveryRetry as jest.Mock).mock.calls.length;
   await press(button('Review failures on this page').props.onPress);
@@ -249,19 +250,19 @@ it('reaches later eligible failures when the newest 100 cannot be retried', asyn
   await press(button('Review failed deliveries').props.onPress);
   expect(button('Confirm resend (0)').props.disabled).toBe(true);
   expect(text()).toContain('Batch review starts with the newest 100 failures.');
-  expect(text()).toContain('use the recipient pages');
+  expect(text()).toContain('use the people pages');
   expect(text()).toContain('5 still to review');
   expect(retryDeliveryReport).not.toHaveBeenCalled();
   for (let page = 2; page <= 5; page++) {
-    const next = screen.root.findAllByType(ConsoleButton).find(node => node.props.accessibilityLabel === 'Next recipients');
-    if (!next) throw new Error('Next recipients not found');
+    const next = screen.root.findAllByType(ConsoleButton).find(node => node.props.accessibilityLabel === 'Next people and contacts');
+    if (!next) throw new Error('Next people and contacts not found');
     await press(next.props.onPress);
   }
   expect(filters().page).toBe(5);
   const expectedIds = failures.slice(100).map(row => row._id);
   await press(button('Review failures on this page').props.onPress);
   expect(previewDeliveryRetry).toHaveBeenLastCalledWith({ ids: expectedIds });
-  expect(text()).toContain('Failed deliveries on recipient page 5');
+  expect(text()).toContain('Failed deliveries on people page 5');
   (retryDeliveryReport as jest.Mock).mockResolvedValueOnce({ attempted: 5, sent: 5, queued: 0, failed: 0, skipped: 0, reasons: [] });
   await press(button('Confirm resend (5)').props.onPress);
   expect(retryDeliveryReport).toHaveBeenCalledTimes(1);
@@ -318,7 +319,7 @@ it('recovers a timed-out confirmation through bounded status reads without anoth
   await settle();
   expect(getDeliveryRetryStatus).toHaveBeenCalledTimes(2);
   expect(retryDeliveryReport).toHaveBeenCalledTimes(1);
-  expect(text()).toContain('1 attempted · 1 sent · 0 queued · 0 failed · 0 skipped');
+  expect(text()).toContain('1 attempted · 1 sent · 0 waiting to send · 0 failed · 0 not sent');
   expect(text()).not.toContain('Network timeout');
 });
 afterEach(async () => {
@@ -351,11 +352,11 @@ it('summary cards reveal records, reset pagination and preserve activity/date/ca
   await press(
     screen.root
       .findAllByType(ConsoleButton)
-      .find(node => node.props.accessibilityLabel === 'Next recipients')!.props
+      .find(node => node.props.accessibilityLabel === 'Next people and contacts')!.props
       .onPress,
   );
   expect(filters().page).toBe(2);
-  await press(tile('Accepted / in inbox').props.onPress);
+  await press(tile('Sent / in ACTIV').props.onPress);
   expect(filters()).toEqual(
     expect.objectContaining({
       status: 'accepted_any',
@@ -373,11 +374,11 @@ it('summary cards reveal records, reset pagination and preserve activity/date/ca
       'marked_read',
     ]),
   );
-  expect(tile('Accepted / in inbox').props.selected).toBe(true);
+  expect(tile('Sent / in ACTIV').props.selected).toBe(true);
   expect(scroll).toHaveBeenCalled();
   await press(() => outcome().props.onChange('accepted'));
   expect(listRows().every(row => row.status === 'accepted')).toBe(true);
-  await press(tile('Confirmed opens').props.onPress);
+  await press(tile('Opened').props.onPress);
   expect(filters().status).toBe('read');
   expect(listRows()).toHaveLength(1);
   expect(listRows()[0].recipientName).toBe('Asha');
@@ -393,12 +394,12 @@ it('channel cards combine with outcomes and identity cards explain repeated deli
   );
   expect(channel('Email').props.accessibilityState.selected).toBe(true);
   expect(listRows()).toHaveLength(1);
-  await press(tile('Recipient identities').props.onPress);
+  await press(tile('People and contacts').props.onPress);
   expect(filters()).toEqual(
     expect.objectContaining({ channel: 'email', status: '' }),
   );
   expect(listRows()).toHaveLength(25);
-  expect(text()).toContain('the same recipient can appear more than once');
+  expect(text()).toContain('the same account or contact can appear more than once');
   await press(channel('Email').props.onPress);
   expect(filters().channel).toBe('');
   expect(channel('Email').props.accessibilityState.selected).toBe(false);
@@ -415,7 +416,7 @@ it('channel cards combine with outcomes and identity cards explain repeated deli
     .find(
       node =>
         node.props.accessibilityHint ===
-        'Show or hide delivery timeline and provider details',
+        'Show or hide message history and sending details',
     )!;
   await press(recipient.props.onPress);
   expect(recipient.props.accessibilityState.expanded).toBe(true);
@@ -423,6 +424,6 @@ it('channel cards combine with outcomes and identity cards explain repeated deli
   expect(
     screen.root
       .findAllByType(Text)
-      .some(node => node.props.children === 'Recorded timeline'),
+      .some(node => node.props.children === 'Message history'),
   ).toBe(true);
 });

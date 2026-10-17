@@ -34,6 +34,7 @@ import {
   getDeliveryRetryStatus,
   CHANNEL_LABELS,
   statusLabel,
+  notificationReason,
   type DeliveryReport,
   type ReportFilters,
   type ReportRow,
@@ -193,8 +194,8 @@ export function ReportsPane({
     setRetryPreview(null);
     setRetryResult(null);
     setRetryError('');
-    setRetryLabel(item ? `${item.recipientName || 'This recipient'} · ${CHANNEL_LABELS[item.channel]}` : pageOnly
-      ? `Failed deliveries on recipient page ${data?.pagination?.page || 1}`
+    setRetryLabel(item ? `${item.recipientName || 'This person'} · ${CHANNEL_LABELS[item.channel]}` : pageOnly
+      ? `Failed deliveries on people page ${data?.pagination?.page || 1}`
       : 'Failed deliveries for the current activity, channel, date and search filters');
     revealRecipients();
     try {
@@ -260,14 +261,14 @@ export function ReportsPane({
       {header}
       <ConsoleSectionTitle
         title="Delivery reports"
-        subtitle="Publications, updates and automated messages"
+        subtitle="Updates and automatic messages"
         icon="insights"
       />
       <ChipRow<string>
         options={[
           { value: '', label: 'All activity' },
-          { value: 'publication', label: 'Publications' },
-          { value: 'automation', label: 'Automations' },
+          { value: 'publication', label: 'Published updates' },
+          { value: 'automation', label: 'Automatic messages' },
         ]}
         value={filters.group || ''}
         onChange={group => change({ group, campaignKey: '' })}
@@ -310,21 +311,21 @@ export function ReportsPane({
       )}
       <ConsoleNote
         kind="indigo"
-        text="Counts are recipient-channel deliveries. One member may receive several channels. No confirmed open does not necessarily mean unread."
+        text="Each email, WhatsApp message or notification is counted separately. Sent means it was passed to the sending service; arrival is not confirmed. Delivered means arrival was confirmed. Opened means an open or tap was recorded. No recorded open does not always mean unread."
         style={s.card}
       />
       {error ? <ConsoleNote kind="red" text={error} style={s.card} /> : null}
       <ConsoleGrid style={s.card}>
         <ConsoleStatTile
-          label="Recipient identities"
+          label="People and contacts"
           value={fmt(summary?.recipients)}
           icon="people-outline"
-          hint="Accounts and contacts"
+          hint="Counted by account, email or phone"
           selected={!filters.status}
           onPress={() => showRecipients({ status: '' })}
         />
         <ConsoleStatTile
-          label="Accepted / in inbox"
+          label="Sent / in ACTIV"
           value={fmt(summary?.accepted)}
           icon="send"
           hint={`${fmt(summary?.records)} delivery records`}
@@ -333,7 +334,7 @@ export function ReportsPane({
           onPress={() => showRecipients({ status: 'accepted_any' })}
         />
         <ConsoleStatTile
-          label="Confirmed opens"
+          label="Opened"
           value={fmt(summary?.opened)}
           icon="visibility"
           hint="WhatsApp reads and taps"
@@ -345,9 +346,9 @@ export function ReportsPane({
           label="Failed"
           value={fmt(summary?.failed)}
           icon="error-outline"
-          hint={`${fmt(summary?.queued)} queued · ${fmt(
+          hint={`${fmt(summary?.queued)} waiting to send · ${fmt(
             summary?.skipped,
-          )} skipped`}
+          )} not sent`}
           accent="red"
           selected={filters.status === 'failed'}
           onPress={() => showRecipients({ status: 'failed' })}
@@ -363,8 +364,8 @@ export function ReportsPane({
             accessibilityState={{ selected: filters.channel === key }}
             accessibilityHint={
               filters.channel === key
-                ? 'Show all channels and view recipient details'
-                : 'View recipient details for this channel'
+                ? 'Show all channels and view people and messages'
+                : 'View people and messages for this channel'
             }
             onPress={() =>
               showRecipients({ channel: filters.channel === key ? '' : key })
@@ -376,7 +377,7 @@ export function ReportsPane({
             >
               <Text style={s.title}>{label}</Text>
               <Ratio
-                label={key === 'in_app' ? 'In inbox' : 'Accepted'}
+                label={key === 'in_app' ? 'In the app' : 'Sent'}
                 value={channel?.accepted || 0}
                 total={channel?.records || 0}
               />
@@ -391,7 +392,7 @@ export function ReportsPane({
                 <Ratio
                   label={
                     key === 'push'
-                      ? 'Tapped / accepted'
+                      ? 'Opened / sent'
                       : key === 'whatsapp'
                       ? 'Opened / delivered'
                       : 'Opened'
@@ -407,18 +408,18 @@ export function ReportsPane({
                 />
               ) : (
                 <Text style={s.caption}>
-                  Email inbox delivery and opens are not measured.
+                  We cannot tell whether an email reached the inbox or was opened.
                 </Text>
               )}
               <Text style={s.caption}>
-                {fmt(channel?.failed)} failed · {fmt(channel?.queued)} queued ·{' '}
-                {fmt(channel?.skipped)} skipped
+                {fmt(channel?.failed)} failed · {fmt(channel?.queued)} waiting to send ·{' '}
+                {fmt(channel?.skipped)} not sent
               </Text>
               <View style={s.between}>
                 <Text style={s.link}>
                   {filters.channel === key
                     ? 'Selected · Show all channels'
-                    : 'View recipient records'}
+                    : 'View people and messages'}
                 </Text>
                 <Icon name="arrow-forward" size={18} color={PALETTE.indigo} />
               </View>
@@ -428,7 +429,7 @@ export function ReportsPane({
       })}
       <ConsoleSectionTitle
         title={
-          filters.campaignKey ? 'Selected report' : 'Publications & automations'
+          filters.campaignKey ? 'Selected report' : 'Updates & automatic messages'
         }
         icon="campaign"
       />
@@ -445,17 +446,17 @@ export function ReportsPane({
           )}
           {selected?.publicationStatuses?.some(state => state !== 'done') && (
             <Text style={s.caption}>
-              Recipient preparation:{' '}
+              Preparing messages:{' '}
               {selected.publicationStatuses
                 .filter(Boolean)
-                .map(human)
+                .map(state => state === 'queued' ? 'Waiting to send' : human(state))
                 .join(', ')}
-              . Counts grow as eligible recipients are processed.
+              . Counts grow as messages are prepared for people who match your choices.
             </Text>
           )}
           {selected?.publicationErrors?.filter(Boolean).map((reason, i) => (
             <Text key={i} style={s.error}>
-              {reason}
+              {notificationReason(reason)}
             </Text>
           ))}
           <ConsoleButton
@@ -485,7 +486,7 @@ export function ReportsPane({
                 <Text style={s.caption}>{when(c.lastAt)}</Text>
                 <Text style={s.caption}>
                   {fmt(c.records)} deliveries · {fmt(c.opened)} opened ·{' '}
-                  {fmt(c.failed)} failed · {fmt(c.queued)} queued
+                  {fmt(c.failed)} failed · {fmt(c.queued)} waiting to send
                 </Text>
               </ConsoleCard>
             </TouchableOpacity>
@@ -528,12 +529,12 @@ export function ReportsPane({
         ref={recipientsAnchor}
         accessible
         accessibilityRole="header"
-        accessibilityLabel="Recipient details"
+        accessibilityLabel="People and messages"
         onLayout={event => {
           recipientsOffset.current = event.nativeEvent.layout.y;
         }}
       >
-        <ConsoleSectionTitle title="Recipient details" icon="people-outline" />
+        <ConsoleSectionTitle title="People and messages" icon="people-outline" />
       </View>
       <ConsoleCard style={s.card}>
         <Text style={s.body} accessibilityLiveRegion="polite">
@@ -542,20 +543,20 @@ export function ReportsPane({
             : 'All channels'}
           {' · '}
           {filters.status === 'accepted_any'
-            ? 'All accepted deliveries, including delivered, opened and marked read'
+            ? 'Sent or in ACTIV, including delivered, opened and marked read'
             : filters.status === 'read'
-            ? 'Confirmed opens / taps'
+            ? 'Opened'
             : filters.status
-            ? human(filters.status)
+            ? statusLabel({ channel: filters.channel === 'in_app' ? 'in_app' : 'email', status: filters.status })
             : 'Every outcome'}
           {busy ? ' · Updating records…' : ''}
         </Text>
         <Text style={s.caption}>
-          {fmt(summary?.recipients)} distinct recipient identities across{' '}
-          {fmt(summary?.records)} delivery records for the current activity,
-          channel, date and search filters. Each row is a delivery record, so
-          the same recipient can appear more than once. Tap a row for its
-          timeline and provider details.
+          {fmt(summary?.recipients)} people and contacts across{' '}
+          {fmt(summary?.records)} messages for the current activity,
+          channel, date and search filters. Each row is one message, so
+          the same account or contact can appear more than once. Tap a row for its
+          history and sending details.
         </Text>
       </ConsoleCard>
       <ConsoleSearch
@@ -566,23 +567,23 @@ export function ReportsPane({
       <ChipRow<string>
         options={[
           { value: '', label: 'All outcomes' },
-          { value: 'unconfirmed', label: 'No confirmed open' },
-          { value: 'read', label: 'Opened / tapped' },
-          { value: 'accepted_any', label: 'All accepted deliveries' },
+          { value: 'unconfirmed', label: 'No recorded open' },
+          { value: 'read', label: 'Opened' },
+          { value: 'accepted_any', label: 'Sent / in ACTIV' },
           { value: 'delivered', label: 'Delivered' },
-          { value: 'accepted', label: 'Accepted' },
+          { value: 'accepted', label: 'Sent' },
           { value: 'marked_read', label: 'Marked read' },
           { value: 'failed', label: 'Failed' },
-          { value: 'queued', label: 'Queued' },
-          { value: 'skipped', label: 'Skipped' },
-          { value: 'mock', label: 'Not sent' },
+          { value: 'queued', label: 'Waiting to send' },
+          { value: 'skipped', label: 'Not sent' },
+          { value: 'mock', label: 'Not sent — setup needed' },
         ]}
         value={filters.status || ''}
         onChange={status => change({ status })}
       />
       <ConsoleNote
         kind="indigo"
-        text="Review failed messages and automations before resending. Only eligible failed deliveries are included; a missing open confirmation does not mean delivery failed."
+        text="Review failed messages before sending again. Only messages that can still be sent are included. No recorded open does not mean delivery failed."
         style={s.card}
       />
       <ConsoleButton label={retryBusy === 'review' ? 'Reviewing failures…' : 'Review failed deliveries'}
@@ -591,14 +592,14 @@ export function ReportsPane({
         kind="soft" style={s.card} disabled={busy || !!retryBusy || !(data?.rows || []).some(row => row?.status === 'failed')}
         onPress={() => void reviewRetry(undefined, true)} />
       {retryBusy === 'send' && <ConsoleNote kind="indigo" text="Resending the reviewed deliveries…" style={s.card} />}
-      {!!retryError && <ConsoleNote kind="red" text={retryError} style={s.card} />}
+      {!!retryError && <ConsoleNote kind="red" text={notificationReason(retryError)} style={s.card} />}
       {retryPreview && <ConsoleCard style={s.card}>
         <Text style={s.title} accessibilityRole="header">Confirm resend</Text>
         <Text style={s.body}>{retryLabel}</Text>
-        <Text style={s.body}>{fmt(retryPreview.matched)} matched · {fmt(retryPreview.eligible)} eligible · {fmt(retryPreview.skipped)} skipped</Text>
-        {(retryPreview.reasons || []).map((reason, index) => <Text key={index} style={s.caption}>{fmt(reason.count)} skipped: {reason.reason}</Text>)}
-        {retryPreview.truncated && <Text style={s.body}>{fmt(retryPreview.reviewed ?? (retryPreview.eligible + retryPreview.skipped))} reviewed, {fmt(retryPreview.remaining ?? Math.max(0, retryPreview.matched - retryPreview.eligible - retryPreview.skipped))} still to review. Batch review starts with the newest 100 failures. Select Failed, use the recipient pages, then choose “Review failures on this page” for later deliveries.</Text>}
-        <Text style={s.caption}>Confirmation resends only this reviewed selection. Delivery eligibility is checked again before sending.</Text>
+        <Text style={s.body}>{fmt(retryPreview.matched)} found · {fmt(retryPreview.eligible)} ready to resend · {fmt(retryPreview.skipped)} not sent</Text>
+        {(retryPreview.reasons || []).map((reason, index) => <Text key={index} style={s.caption}>{fmt(reason.count)} not sent: {notificationReason(reason.reason)}</Text>)}
+        {retryPreview.truncated && <Text style={s.body}>{fmt(retryPreview.reviewed ?? (retryPreview.eligible + retryPreview.skipped))} reviewed, {fmt(retryPreview.remaining ?? Math.max(0, retryPreview.matched - retryPreview.eligible - retryPreview.skipped))} still to review. Batch review starts with the newest 100 failures. Select Failed, use the people pages, then choose “Review failures on this page” for later deliveries.</Text>}
+        <Text style={s.caption}>Only these reviewed messages will be sent again. We check again that each message can still be sent.</Text>
         <View style={s.retryActions}>
           <ConsoleButton label={retryBusy === 'send' ? 'Resending…' : `Confirm resend (${fmt(retryPreview.eligible)})`}
             disabled={!!retryBusy || !retryPreview.eligible || !retryPreview.ids?.length || !retryPreview.token}
@@ -608,9 +609,9 @@ export function ReportsPane({
       </ConsoleCard>}
       {retryResult && <ConsoleCard style={s.card}>
         <Text style={s.title} accessibilityRole="header">Resend result</Text>
-        {retryResult.processing ? <Text style={s.body} accessibilityLiveRegion="polite">This resend is already processing. Refresh the report to see delivery progress.</Text> : <Text style={s.body} accessibilityLiveRegion="polite">{fmt(retryResult.attempted)} attempted · {fmt(retryResult.sent)} sent · {fmt(retryResult.queued)} queued · {fmt(retryResult.failed)} failed · {fmt(retryResult.skipped)} skipped</Text>}
-        <Text style={s.caption}>Sent means the provider accepted the request. Queued deliveries are waiting for processing.</Text>
-        {(retryResult.reasons || []).map((reason, index) => <Text key={index} style={s.caption}>{fmt(reason.count)} records: {reason.reason}</Text>)}
+        {retryResult.processing ? <Text style={s.body} accessibilityLiveRegion="polite">This resend is already processing. Refresh the report to see delivery progress.</Text> : <Text style={s.body} accessibilityLiveRegion="polite">{fmt(retryResult.attempted)} attempted · {fmt(retryResult.sent)} sent · {fmt(retryResult.queued)} waiting to send · {fmt(retryResult.failed)} failed · {fmt(retryResult.skipped)} not sent</Text>}
+        <Text style={s.caption}>Sent means the message was passed to the sending service. It does not confirm arrival. Waiting to send includes messages waiting or still being sent.</Text>
+        {(retryResult.reasons || []).map((reason, index) => <Text key={index} style={s.caption}>{fmt(reason.count)} messages: {notificationReason(reason.reason)}</Text>)}
       </ConsoleCard>}
     </>
   );
@@ -623,13 +624,13 @@ export function ReportsPane({
         accessibilityLabel={`${item.recipientName}, ${
           CHANNEL_LABELS[item.channel]
         }, ${item.title}, ${statusLabel(item)}`}
-        accessibilityHint="Show or hide delivery timeline and provider details"
+        accessibilityHint="Show or hide message history and sending details"
       >
         <View style={[s.recipientRow, wideRows && s.wideRow]}>
           <View style={[s.recipientColumn, wideRows && s.flex]}>
             <Text style={s.title}>{item.recipientName}</Text>
             <Text style={s.caption}>
-              {item.recipient || 'Account inbox / device'}
+              {item.recipient || 'ACTIV account / device'}
             </Text>
           </View>
           <View style={[s.recipientColumn, wideRows && s.flex]}>
@@ -660,14 +661,14 @@ export function ReportsPane({
       </TouchableOpacity>
       {expanded === item._id && (
         <View style={s.detail}>
-          <Text style={s.title}>Recorded timeline</Text>
+          <Text style={s.title}>Message history</Text>
           <Text style={s.caption}>
             {[item.region?.state, item.region?.district, item.region?.block]
               .filter(Boolean)
               .join(' / ') || 'Region not recorded'}
           </Text>
           <Text style={s.body}>
-            Provider: {item.provider || 'Not recorded'} · Attempts:{' '}
+            Sending service: {item.provider || 'Not recorded'} · Attempts:{' '}
             {fmt(item.attempts)}
           </Text>
           {item.templateId && (
@@ -678,20 +679,20 @@ export function ReportsPane({
           )}
           {item.error && (
             <Text style={item.status === 'failed' ? s.error : s.body}>
-              {item.error}
+              {notificationReason(item.error)}
             </Text>
           )}
           {item.history?.map((event, i) => (
             <Text key={i} style={s.body}>
-              {human(event.status)}: {when(event.at)}
-              {event.detail ? ` · ${event.detail}` : ''}
+              {statusLabel({ channel: item.channel, status: event.status })}: {when(event.at)}
+              {event.detail ? ` · ${notificationReason(event.detail)}` : ''}
             </Text>
           ))}
           {item.deliveredAt && (
             <Text style={s.body}>Delivered: {when(item.deliveredAt)}</Text>
           )}
           {item.openedAt && (
-            <Text style={s.body}>Opened / tapped: {when(item.openedAt)}</Text>
+            <Text style={s.body}>Opened: {when(item.openedAt)}</Text>
           )}
           {item.readAt && (
             <Text style={s.body}>Marked read: {when(item.readAt)}</Text>
@@ -700,8 +701,8 @@ export function ReportsPane({
             <Text style={s.body}>Next attempt: {when(item.nextAttemptAt)}</Text>
           )}
           <Text style={s.caption}>
-            Email opens are not measured. Firebase acceptance is separate from a
-            recorded notification tap.
+            We cannot tell whether an email was opened. A sent notification is
+            counted as opened only when someone taps it.
           </Text>
           {item.status === 'failed' && <ConsoleButton label="Review resend"
             accessibilityLabel={`Review resend for ${item.recipientName || 'recipient'}`}
@@ -730,7 +731,7 @@ export function ReportsPane({
       }
       ListEmptyComponent={
         !busy ? (
-          <Text style={s.empty}>No recipients match these filters.</Text>
+          <Text style={s.empty}>No people or contacts match these filters.</Text>
         ) : null
       }
       ListFooterComponent={
@@ -741,7 +742,7 @@ export function ReportsPane({
           <View style={s.pages}>
             <ConsoleButton
               label="Previous"
-              accessibilityLabel="Previous recipients"
+              accessibilityLabel="Previous people and contacts"
               disabled={busy || (data?.pagination.page || 1) <= 1}
               onPress={() =>
                 setFilters(f => ({
@@ -755,7 +756,7 @@ export function ReportsPane({
             </Text>
             <ConsoleButton
               label="Next"
-              accessibilityLabel="Next recipients"
+              accessibilityLabel="Next people and contacts"
               disabled={
                 busy ||
                 (data?.pagination.page || 1) >= (data?.pagination.pages || 1)

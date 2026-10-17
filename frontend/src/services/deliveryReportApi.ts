@@ -134,23 +134,64 @@ export const CHANNEL_LABELS: Record<ReportChannel, string> = {
   push: 'Push notifications',
   in_app: 'In-app notifications',
 };
+
+/** Display known historical delivery explanations without changing stored data. */
+export const notificationReason = (value: unknown): string => {
+  if (typeof value !== 'string') return '';
+  const text = value.trim();
+  const rules: [RegExp, string][] = [
+    [/^Worker interrupted.*(?:outcome|delivery)/i, 'Sending stopped before we could confirm the result. Check the delivery history before sending again.'],
+    [/^Provider (?:acceptance|outcome).*(?:uncertain|partial|unknown|could not be confirmed)/i, 'We could not confirm whether the message was sent. Check its delivery history before sending again.'],
+    [/^SMTP (?:accepted only some intended email addresses|did not confirm acceptance for the intended email address)\./i, 'We could not confirm whether the message was sent to every email address. Check its delivery history before sending again.'],
+    [/^Current delivery or recipient eligibility could not be verified\.?$/i, 'We could not check whether this message can be sent again. Please try again.'],
+    [/^This message contains an expired or one-time credential\./i, 'This password message cannot be sent again. Use Forgot password, or set a new admin password in Manage Admins.'],
+    [/^This recipient has no enabled push device\.?$/i, 'No phone or browser is currently set up to receive notifications for this person.'],
+    [/^Another worker owns this delivery\.?$/i, 'This message is already being sent.'],
+    [/^This delivery changed or another retry already claimed it\.?$/i, 'This message changed or is already being sent again. Refresh the report before trying again.'],
+    [/^This delivery changed or was already queued\.?$/i, 'This message changed or is already waiting to send. Refresh the report before trying again.'],
+    [/^This (?:delivery|update) is (?:already )?queued, (?:already )?retried, or unavailable\.?$/i, 'This message is waiting to send, was already sent again, or is no longer available.'],
+    [/^This delivery is already accepted, delivered, read, replaced, or has no confirmed failure\.?$/i, 'This message was already sent, delivered, opened or replaced, or has no confirmed failure.'],
+    [/^A retry is running or its outcome needs review\.?$/i, 'This message is being sent again, or its last sending result needs review.'],
+    [/^The retry outcome needs review;/i, 'Check the result of the last send. This message will not be sent again automatically.'],
+    [/^The provider did not accept this retry\.?$/i, 'The sending service did not accept this message.'],
+    [/^This delivery has no external failed message to retry\.?$/i, 'There is no failed message available to send again.'],
+    [/^This delivery is older than the 30-day retry window\.?$/i, 'Messages more than 30 days old cannot be sent again.'],
+    [/^No usable recipient address is available\.?$/i, 'No valid email address or phone number is available.'],
+    [/^no_enabled_devices$/i, 'No phone or browser is currently set up to receive notifications for this person.'],
+    [/^(?:push_unconfigured|push\/unavailable)$/i, 'The push notification service is not ready. Please try again later.'],
+    [/^messaging\/(?:invalid-registration-token|registration-token-not-registered)\b/i, 'This phone or browser needs to turn on notifications again.'],
+    [/^messaging\/(?:quota-exceeded|message-rate-exceeded)\b/i, 'The sending service is busy. This message can be tried again later.'],
+    [/^messaging\/(?:authentication-error|mismatched-credential|third-party-auth-error)\b/i, 'The push notification service needs its settings checked.'],
+    [/^(?:\(#?132005\)|#?132005\b)/i, 'The message was too long for WhatsApp.'],
+    [/^(?:\(#?132001\)|#?132001\b)/i, 'The WhatsApp message format could not be found.'],
+    [/^(?:\(#?131026\)|#?131026\b)/i, 'This number could not receive the WhatsApp message.'],
+    [/^(?:\(#?131049\)|#?131049\b)/i, 'WhatsApp blocked this promotional message for this number.'],
+    [/^(?:\(#?131047\)|#?131047\b)/i, 'WhatsApp requires an approved message format because the person has not replied recently.'],
+    [/^(?:SMTP[ :]+)?535(?:[ -]|$)|^Invalid login:\s*535\b/i, 'The email service could not sign in. Its settings need checking.'],
+    [/^(?:ETIMEDOUT|ECONNREFUSED)\b/i, 'The sending service did not respond. Check the message history before sending again.'],
+  ];
+  const rule = rules.find(([pattern]) => pattern.test(text));
+  return rule ? rule[1] : text.replace(/\btemplate skipped\s*:/gi, 'template not used:');
+};
+
+export const notificationTemplatePath = (value: unknown): string => {
+  if (typeof value !== 'string') return '';
+  return value.replace(/(^| \| )([^|]+?) skipped:/g, '$1$2 not used:');
+};
+
 export const statusLabel = (row: Pick<ReportRow, 'channel' | 'status'>) => {
   if (row.status === 'accepted')
-    return row.channel === 'in_app' ? 'In member inbox' : 'Provider accepted';
-  if (row.status === 'read')
-    return row.channel === 'push'
-      ? 'Notification tapped'
-      : row.channel === 'whatsapp'
-      ? 'Read on WhatsApp'
-      : 'Opened';
+    return row.channel === 'in_app' ? 'In the app' : 'Sent';
+  if (row.status === 'read') return 'Opened';
   return (
     (
       {
-        queued: 'Queued',
-        sent: 'Sent to handset',
+        queued: 'Waiting to send',
+        unconfirmed: 'No recorded open',
+        sent: 'Sent',
         delivered: 'Delivered',
         failed: 'Failed',
-        skipped: 'Skipped',
+        skipped: 'Not sent',
         mock: 'Not sent',
         marked_read: 'Marked as read',
       } as Record<string, string>

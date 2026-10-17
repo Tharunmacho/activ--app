@@ -79,8 +79,8 @@ export default function UpdatePersonalizationEditor({ mode, onMode, memberIds, o
   };
   const overrideChoices = Object.values(known).filter(member => !selected?.overrides.some(row => row.memberId === member.id));
   return <View style={s.stack}>
-    <PremiumSelect tone="admin" label="Recipient selection" value={mode === 'selected' ? 'Specific members' : 'All eligible members'}
-      options={['All eligible members', 'Specific members']} disabled={disabled}
+    <PremiumSelect tone="admin" label="Choose members" value={mode === 'selected' ? 'Specific members' : 'Members who match your choices'}
+      options={['Members who match your choices', 'Specific members']} disabled={disabled}
       onChange={value => onMode(value === 'Specific members' ? 'selected' : 'audience')} />
     <Text style={s.hint}>Membership and region filters also apply to specific members. A member-specific value does not add that member to the audience.</Text>
     <PremiumInput tone="admin" label="Find members" value={search} onChangeText={setSearch} editable={!disabled}
@@ -158,14 +158,14 @@ export function UpdateRecipientPreview({ payload, members }: { payload: Record<s
     return () => { active = false; clearTimeout(timer); };
   }, [serialized, memberId, revision]);
   return <View style={s.stack}>
-    <PremiumSelect tone="admin" label="Preview recipient" value={memberId ? label(members.find(member => member.id === memberId) || { id: memberId, fullName: 'Member' }) : 'General / ACTIVian'}
+    <PremiumSelect tone="admin" label="Preview for a member" value={memberId ? label(members.find(member => member.id === memberId) || { id: memberId, fullName: 'Member' }) : 'General / ACTIVian'}
       options={['General / ACTIVian', ...members.map(label)]} onChange={value => setMemberId(members.find(member => label(member) === value)?.id || '')} />
     <Text style={s.hint}>Search or select a member above to preview their actual values. This preview sends no notification.</Text>
     <Text style={s.hint}>{'{date}'} previews today until publication. An existing published update keeps its original publication date.</Text>
     {error ? <><Text accessibilityRole="alert" style={s.error}>{error}</Text><ConsoleButton kind="soft" label="Retry preview" onPress={() => setRevision(value => value + 1)} /></>
       : !data ? <Text accessibilityLiveRegion="polite" style={s.hint}>Preparing preview…</Text>
       : <>
-        <Text style={s.hint}>{memberId ? data.eligible ? 'This member matches the current audience.' : 'This member will not receive this update under the current audience filters.' : 'General fallback preview. Individual member values are private.'}</Text>
+        <Text style={s.hint}>{memberId ? data.eligible ? 'This member matches your choices.' : 'This member will not receive this update with your current choices.' : 'General preview. Personal member details are private.'}</Text>
         {data.missing.length ? <Text style={s.error}>Missing values: {data.missing.map(value => `{${value}}`).join(', ')}. Add general or individual values above.</Text> : null}
         <Text style={s.previewTitle}>{data.announcement.title || 'Your update title'}</Text>
         {data.announcement.summary ? <Text style={s.body}>{data.announcement.summary}</Text> : null}

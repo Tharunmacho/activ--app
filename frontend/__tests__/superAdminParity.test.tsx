@@ -43,6 +43,7 @@ const LOG = {
   _id: 'log1', event: 'EVENT_BOOKING_CONFIRMED', channel: 'whatsapp', recipient: '9092317264', recipientName: 'Tharun V',
   status: 'failed', effectiveStatus: 'failed', failureReason: 'Recipient phone number not in allowed list', failureCode: 131030,
   bookingRef: BOOKING.bookingRef, eventId: EVENT_ID, eventTitle: 'Entrepreneurship Awareness Programme', provider: 'meta', attempts: 2,
+  templatePath: 'event_reminder skipped: meeting_url not on the event | sent on "booking_notice"',
   statusHistory: [{ status: 'accepted', at: '2026-09-30T12:31:39.066Z' }, { status: 'failed', at: '2026-09-30T12:31:45.000Z', code: 131030, title: 'Not allowed' }],
   createdAt: '2026-09-30T12:31:39.069Z',
 };
@@ -479,7 +480,12 @@ describe('super admin parity interactions', () => {
     expect(await press(tree, /^Booking confirmation to Tharun V, WhatsApp, Failed$/)).toBe(true);
     const opened = texts(tree);
     expect(opened).toContain('TIMELINE');
-    expect(opened).toContain('Meta WhatsApp Cloud API');
+    expect(opened).toContain('WhatsApp (Meta)');
+    expect(opened).toContain('event_reminder not used: meeting_url not on the event | sent on "booking_notice"');
+    expect(LOG.templatePath).toBe('event_reminder skipped: meeting_url not on the event | sent on "booking_notice"');
+    const { plainReason } = require('../src/screens/admin/super/delivery/deliveryKit');
+    const unknownReason = 'Email marketing log 131026: subject too long';
+    expect(plainReason({ ...LOG, failureReason: unknownReason })).toEqual({ text: unknownReason, failed: true });
     // Resend is confirmed inline: the first press only asks.
     expect(await press(tree, /^Send this WhatsApp message again/)).toBe(true);
     expect(tree.root.findAll((n: any) => n.props?.accessibilityLabel === 'Confirm resend').length).toBeGreaterThan(0);

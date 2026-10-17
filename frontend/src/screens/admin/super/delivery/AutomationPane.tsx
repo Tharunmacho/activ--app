@@ -268,8 +268,8 @@ export function AutomationPane({ header, refreshKey = 0 }: { header?: React.Reac
         <ConsoleCard style={s.card}>
           <Text style={s.retryText} maxFontSizeMultiplier={1.3}>
             {retryResult
-              ? `Retried ${retryResult.retried}: ${retryResult.sent} sent${retryResult.stillFailed ? `, ${retryResult.stillFailed} still failing` : ''}${retryResult.permanent ? `, ${retryResult.permanent} cannot be fixed by retrying (wrong number or address)` : ''}${retryResult.waitingForEmail ? `, ${retryResult.waitingForEmail} waiting for the email server` : ''}.`
-              : 'Send every failed message from the last 7 days again — those a retry can fix.'}
+              ? `Tried again: ${retryResult.retried}: ${retryResult.sent} sent${retryResult.stillFailed ? `, ${retryResult.stillFailed} still failing` : ''}${retryResult.permanent ? `, ${retryResult.permanent} not sent because the number or address needs attention` : ''}${retryResult.waitingForEmail ? `, ${retryResult.waitingForEmail} waiting for the email server` : ''}.`
+              : 'Send failed messages from the last 7 days again, where another attempt may work.'}
           </Text>
           {retryAsk ? (
             <View style={s.retryRow}>
@@ -279,7 +279,7 @@ export function AutomationPane({ header, refreshKey = 0 }: { header?: React.Reac
             </View>
           ) : (
             <View style={s.retryRow}>
-              <ConsoleButton size="sm" kind="soft" icon="refresh" label="Retry all failed" onPress={() => setRetryAsk(true)} />
+              <ConsoleButton size="sm" kind="soft" icon="refresh" label="Send failed messages again" onPress={() => setRetryAsk(true)} />
             </View>
           )}
         </ConsoleCard>
