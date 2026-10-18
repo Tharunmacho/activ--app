@@ -1,11 +1,11 @@
 import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert, PermissionsAndroid, Platform } from 'react-native';
+import { Alert, DeviceEventEmitter, NativeModules, PermissionsAndroid, Platform } from 'react-native';
 import { getApps } from '@react-native-firebase/app';
-import { deleteToken, getToken, onMessage, onNotificationOpenedApp, onTokenRefresh, requestPermission, hasPermission } from '@react-native-firebase/messaging';
+import { deleteToken, getToken, onMessage, onNotificationOpenedApp, onTokenRefresh, requestPermission, hasPermission, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
 import api, { getAuthToken, getUserData } from '../src/services/api';
 import { navigationRef } from '../src/navigation/navigationRef';
-import { detachPushDevice, enablePushFromSettings, flushPushNavigation, syncPushRegistration, usePushNotifications } from '../src/services/pushNotifications';
+import { detachPushDevice, enablePushFromSettings, flushPushNavigation, pushPermission, registerBackgroundPush, syncPushRegistration, usePushNotifications } from '../src/services/pushNotifications';
 
 jest.mock('../src/services/api', () => ({
   __esModule: true, default: { post: jest.fn(), delete: jest.fn() },
@@ -31,6 +31,7 @@ let currentAuth: string | null;
 let currentUser: any;
 beforeEach(async () => {
   jest.clearAllMocks();
+  NativeModules.ActivNotifications = undefined;
   await AsyncStorage.clear();
   currentAuth = 'account-a-session';
   currentUser = { memberId: 'account-a', role: 'member' };
@@ -224,6 +225,15 @@ test('wrapped registration acknowledgement works and an unconfigured service is 
   expect(Alert.alert).not.toHaveBeenCalledWith('Notifications enabled', expect.any(String));
 });
 
+test('a persisted device with failed provider readiness remains registered without claiming delivery is enabled', async () => {
+  mock(api.post).mockResolvedValueOnce({ data: { data: { registered: true, configured: true, ready: false } } });
+  await enablePushFromSettings();
+  expect(Alert.alert).toHaveBeenCalledWith('Notifications are not ready', expect.any(String));
+  expect(Alert.alert).not.toHaveBeenCalledWith('Notifications enabled', expect.any(String));
+  expect(await AsyncStorage.getItem(TOKEN_KEY)).toBe('firebase-token-for-account-a');
+  expect(api.delete).not.toHaveBeenCalled();
+});
+
 test.each([null, {}])('settings requires a complete member account rather than opting in as a visitor: %j', async user => {
   currentUser = user; currentAuth = user ? 'incomplete-session' : null;
   await enablePushFromSettings();
@@ -324,4 +334,64 @@ test('concurrent navigation callbacks open a pending notification only once', as
   user.resolve(currentUser);
   await Promise.all([first, second]);
   expect(navigationRef.navigate).toHaveBeenCalledTimes(1);
+});
+
+function installAndroidTray() {
+  const native = { areNotificationsEnabled: jest.fn(async () => true), show: jest.fn(async () => true),
+    openSettings: jest.fn(async () => true), getInitialOpen: jest.fn(async (): Promise<any> => null),
+    addListener: jest.fn(), removeListeners: jest.fn() };
+  NativeModules.ActivNotifications = native;
+  return native;
+}
+
+test.each([32, 34])('blocked Android app/channel is disabled on API %i despite granted runtime permission', async version => {
+  Object.defineProperty(Platform, 'Version', { configurable: true, get: () => version });
+  const native = installAndroidTray();
+  native.areNotificationsEnabled.mockResolvedValue(false);
+  expect(await pushPermission()).toBe('disabled');
+  expect(await syncPushRegistration()).toBe('disabled');
+  expect(api.post).not.toHaveBeenCalled();
+  expect(PermissionsAndroid.request).not.toHaveBeenCalled();
+  await enablePushFromSettings();
+  expect(native.openSettings).toHaveBeenCalledTimes(1);
+  expect(Alert.alert).not.toHaveBeenCalledWith('Notifications enabled', expect.any(String));
+  expect(api.post).not.toHaveBeenCalled();
+});
+
+test('foreground Android messages create a private tray entry and native taps use account-checked routing', async () => {
+  const native = installAndroidTray(); startListeners(); await syncPushRegistration();
+  const receive = mock(onMessage).mock.calls[0][1];
+  const data = { userId: 'account-a', kind: 'announcement', sourceId: 'notice' };
+  await receive({ messageId: 'message-one', notification: { title: 'Private title', body: 'Private details' }, data });
+  expect(native.show).toHaveBeenCalledWith('message-one', 'Private title', 'Private details', data);
+  expect(Alert.alert).not.toHaveBeenCalled();
+  expect(navigationRef.navigate).not.toHaveBeenCalled();
+  DeviceEventEmitter.emit('activ:notification-opened', data);
+  await until(() => mock(navigationRef.navigate).mock.calls.length === 1);
+  expect(navigationRef.navigate).toHaveBeenCalledWith('UpdateDetail', { id: 'notice' });
+  mock(navigationRef.navigate).mockClear(); native.show.mockClear();
+  await receive({ data: { ...data, userId: 'account-b' } });
+  DeviceEventEmitter.emit('activ:notification-opened', { ...data, userId: 'account-b' });
+  await Promise.resolve(); await Promise.resolve();
+  expect(native.show).not.toHaveBeenCalled(); expect(navigationRef.navigate).not.toHaveBeenCalled();
+});
+
+test('a cold local tray tap waits for restored identity/navigation before opening its destination', async () => {
+  const native = installAndroidTray();
+  native.getInitialOpen.mockResolvedValue({ userId: 'account-a', kind: 'announcement', sourceId: 'notice' });
+  mock(navigationRef.getCurrentRoute).mockReturnValue({ name: 'Login' });
+  startListeners(); await syncPushRegistration();
+  expect(navigationRef.navigate).not.toHaveBeenCalled();
+  mock(navigationRef.getCurrentRoute).mockReturnValue({ name: 'PaidDashboard' });
+  await flushPushNavigation();
+  expect(navigationRef.navigate).toHaveBeenCalledWith('UpdateDetail', { id: 'notice' });
+  await flushPushNavigation();
+  expect(navigationRef.navigate).toHaveBeenCalledTimes(1);
+});
+
+test('background notification payloads rely on FCM display and never post a duplicate local entry', async () => {
+  const native = installAndroidTray(); registerBackgroundPush();
+  const background = mock(setBackgroundMessageHandler).mock.calls[0][1];
+  await background({ notification: { title: 'ACTIV update', body: 'New update' }, data: { userId: 'account-a' } });
+  expect(native.show).not.toHaveBeenCalled(); expect(Alert.alert).not.toHaveBeenCalled();
 });

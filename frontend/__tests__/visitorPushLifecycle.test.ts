@@ -1,6 +1,6 @@
 import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert, PermissionsAndroid, Platform } from 'react-native';
+import { Alert, DeviceEventEmitter, NativeModules, PermissionsAndroid, Platform } from 'react-native';
 import { getApps } from '@react-native-firebase/app';
 import { deleteToken, getToken, onMessage, onNotificationOpenedApp } from '@react-native-firebase/messaging';
 import api, { getAuthToken, getUserData } from '../src/services/api';
@@ -13,6 +13,7 @@ jest.mock('../src/services/api', () => ({ __esModule: true, default: { post: jes
 jest.mock('../src/services/publicApi', () => ({ __esModule: true, default: { post: jest.fn(), put: jest.fn(), delete: jest.fn(), patch: jest.fn() } }));
 jest.mock('../src/navigation/navigationRef', () => ({ navigationRef: { isReady: jest.fn(() => true), getCurrentRoute: jest.fn(() => ({ name: 'PublicExplore' })), navigate: jest.fn() } }));
 const mock = (value: any) => value as jest.Mock;
+const storageRead = mock(AsyncStorage.getItem).getMockImplementation()!;
 const PREFERENCE = '@activ_visitor_push_enabled';
 const IDENTITY = '@activ_visitor_push_identity';
 const DETACH = '@activ_visitor_push_detach_pending';
@@ -23,6 +24,8 @@ const until = async (condition: () => boolean) => { for (let i = 0; i < 200 && !
 let currentAuth: string | null, currentUser: any, cleanup: (() => void) | undefined;
 beforeEach(async () => {
   jest.clearAllMocks(); await AsyncStorage.clear(); currentAuth = null; currentUser = null;
+  mock(AsyncStorage.getItem).mockImplementation(storageRead);
+  NativeModules.ActivNotifications = undefined;
   mock(getAuthToken).mockImplementation(async () => currentAuth); mock(getUserData).mockImplementation(async () => currentUser);
   mock(getApps).mockReturnValue([{}]); mock(getToken).mockResolvedValue('visitor-firebase-token-123456'); mock(deleteToken).mockResolvedValue(undefined);
   mock(publicApi.post).mockResolvedValue({ data: { data: identity } }); mock(publicApi.put).mockResolvedValue({ data: { data: { registered: true } } });
@@ -62,6 +65,13 @@ test('visitor registration cannot claim enabled while notification delivery is u
   expect(await syncPushRegistration(true)).toBe('unconfigured');
   expect(await visitorPushEnabled()).toBe(true);
   expect(await syncPushRegistration()).toBe('enabled');
+});
+
+test('visitor registration retains consent when the provider is configured but not ready', async () => {
+  mock(publicApi.put).mockResolvedValueOnce({ data: { data: { registered: true, configured: true, ready: false } } });
+  expect(await syncPushRegistration(true)).toBe('unconfigured');
+  expect(await visitorPushEnabled()).toBe(true);
+  expect(publicApi.delete).not.toHaveBeenCalled();
 });
 
 test('a stale installation is replaced after a confirmed 401 without losing consent', async () => {
@@ -137,4 +147,24 @@ test('turning off alerts cancels an enable action still retrying an earlier revo
   await disableVisitorNotifications();
   retry.resolve({ data: { data: { removed: true } } });
   expect(await enabling).toBe('signed-out'); expect(publicApi.put).not.toHaveBeenCalled(); expect(await visitorPushEnabled()).toBe(false);
+});
+
+test('Android visitor tray alerts and native taps require the current opted-in installation', async () => {
+  const native = { areNotificationsEnabled: jest.fn(async () => true), show: jest.fn(async () => true),
+    getInitialOpen: jest.fn(async () => null), addListener: jest.fn(), removeListeners: jest.fn() };
+  NativeModules.ActivNotifications = native;
+  await syncPushRegistration(true); startListeners(); await syncPushRegistration();
+  const receive = mock(onMessage).mock.calls[0][1];
+  const data = { audience: 'visitor', visitorId: identity.id, publicNotificationId: noticeId, title: 'Community meeting', body: 'Join us at 10 AM on Sunday.' };
+  await receive({ data });
+  expect(native.show).toHaveBeenCalledWith(noticeId, data.title, data.body, data);
+  expect(Alert.alert).not.toHaveBeenCalled();
+  DeviceEventEmitter.emit('activ:notification-opened', data);
+  await until(() => mock(navigationRef.navigate).mock.calls.length > 0);
+  expect(navigationRef.navigate).toHaveBeenCalledWith('PublicNotifications', { id: noticeId });
+  native.show.mockClear(); mock(navigationRef.navigate).mockClear();
+  await disableVisitorNotifications();
+  await receive({ data }); DeviceEventEmitter.emit('activ:notification-opened', data);
+  await Promise.resolve(); await Promise.resolve();
+  expect(native.show).not.toHaveBeenCalled(); expect(navigationRef.navigate).not.toHaveBeenCalled();
 });

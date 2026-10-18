@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Alert, AppState, DeviceEventEmitter, Linking, PermissionsAndroid, Platform } from 'react-native';
+import { Alert, AppState, DeviceEventEmitter, Linking, NativeEventEmitter, NativeModules, PermissionsAndroid, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApps } from '@react-native-firebase/app';
 import { getMessaging, getToken, deleteToken, requestPermission, hasPermission, AuthorizationStatus,
@@ -109,10 +109,21 @@ export async function flushPushNavigation() {
 async function receiveOpen(message: any) {
   if (message?.data) { pending = message.data; await flushPushNavigation(); }
 }
+async function androidNotificationsEnabled() {
+  const native = NativeModules.ActivNotifications;
+  return typeof native?.areNotificationsEnabled === 'function' ? await native.areNotificationsEnabled() === true : true;
+}
+export async function openPushSettings() {
+  if (Platform.OS === 'android' && NativeModules.ActivNotifications?.openSettings) {
+    await NativeModules.ActivNotifications.openSettings();
+  } else await Linking.openSettings();
+}
 export async function pushPermission() {
   if (!firebaseReady()) return 'unconfigured';
-  if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
-    return await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS) ? 'enabled' : 'disabled';
+  if (Platform.OS === 'android') {
+    if (Number(Platform.Version) >= 33 && !await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS)) return 'disabled';
+    if (!await androidNotificationsEnabled()) return 'disabled';
+    if (Number(Platform.Version) >= 33) return 'enabled';
   }
   const status = await hasPermission(getMessaging());
   return (status === AuthorizationStatus.AUTHORIZED || status === AuthorizationStatus.PROVISIONAL) ? 'enabled' : 'disabled';
@@ -126,8 +137,10 @@ async function allowNotifications(explicit: boolean, attempt: RegistrationAttemp
   await AsyncStorage.setItem(ASKED_KEY, 'true');
   if (detaching || attempt.version !== sessionVersion) throw CANCELLED;
   if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
-    return (await waitForSdk(PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS), attempt)) === PermissionsAndroid.RESULTS.GRANTED;
+    const granted = (await waitForSdk(PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS), attempt)) === PermissionsAndroid.RESULTS.GRANTED;
+    return granted && await waitForSdk(androidNotificationsEnabled(), attempt);
   }
+  if (Platform.OS === 'android') return await waitForSdk(androidNotificationsEnabled(), attempt);
   const permission = await waitForSdk(requestPermission(getMessaging()), attempt);
   return (permission === AuthorizationStatus.AUTHORIZED || permission === AuthorizationStatus.PROVISIONAL);
 }
@@ -158,7 +171,7 @@ async function registerDevice(explicit: boolean, attempt: RegistrationAttempt): 
     if (detaching || version !== sessionVersion || await getAuthToken() !== auth) return 'signed-out';
     const registration = response?.data?.data ?? response?.data;
     if (registration?.registered !== true) return 'failed';
-    return registration.configured === false ? 'unconfigured' : 'enabled';
+    return registration.configured === false || registration.ready === false ? 'unconfigured' : 'enabled';
   } catch (error) {
     // Connectivity/configuration must never block login. Retry on foreground.
     return error === CANCELLED ? 'signed-out' : 'failed';
@@ -185,11 +198,11 @@ async function registerVisitor(explicit: boolean, attempt: RegistrationAttempt):
   const registration = await registerVisitorToken(token, Platform.OS);
   if (!await current()) { await detachVisitorToken().catch(() => undefined); return 'signed-out'; }
   if (registration?.registered !== true) return 'failed';
-  return registration.configured === false ? 'unconfigured' : 'enabled';
+  return registration.configured === false || registration.ready === false ? 'unconfigured' : 'enabled';
 }
 export async function enableVisitorNotifications() {
   const result = await syncPushRegistration(true);
-  if (result === 'disabled') await Linking.openSettings();
+  if (result === 'disabled') await openPushSettings();
   else if (result === 'unconfigured') Alert.alert('Notifications are not ready', 'Notification delivery is not ready. Please try again later.');
   else if (result === 'failed') throw new Error('Visitor notification registration failed');
 }
@@ -260,7 +273,7 @@ export async function enablePushFromSettings() {
       Alert.alert('Sign in to enable notifications', 'Your account changed. Open notification settings from your current account and try again.');
       return;
     }
-    if (result === 'disabled') await Linking.openSettings();
+    if (result === 'disabled') await openPushSettings();
     else if (result === 'unconfigured') Alert.alert('Notifications are not ready', 'Notification delivery is not ready. Please try again later.');
     else if (result === 'failed') Alert.alert('Could not enable notifications', 'Please check your connection and try again. If this continues, contact ACTIV support.');
     else if (result === 'signed-out') Alert.alert('Sign in to enable notifications', 'Sign in to your ACTIV account, then try again.');
@@ -271,8 +284,22 @@ export async function enablePushFromSettings() {
 }
 export function registerBackgroundPush() {
   if (firebaseReady()) setBackgroundMessageHandler(getMessaging(), async () => {
-    // FCM/APNs displays the notification payload. Content is fetched only after authenticated navigation.
+    // FCM/APNs displays the server-rendered title/body. Do not post a duplicate.
   });
+}
+async function showForegroundNotification(message: any, visitor = false) {
+  const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
+  const title = text(message.data?.title) || text(message.notification?.title) || 'ACTIV update';
+  const body = text(message.data?.body) || text(message.notification?.body)
+    || (visitor ? 'Dear ACTIVian, there is a new public update for you.' : 'Dear member, you have a new notification.');
+  if (Platform.OS === 'android' && NativeModules.ActivNotifications?.show) {
+    // FCM displays background messages itself. Only foreground delivery is
+    // posted here, through the existing channel and its current user settings.
+    const id = String(message.data?.notificationId || message.data?.publicNotificationId || message.messageId || Date.now());
+    await NativeModules.ActivNotifications.show(id, title, body, message.data || {}).catch(() => undefined);
+    return;
+  }
+  Alert.alert(title, body, [{ text: 'Later', style: 'cancel' }, { text: 'View', onPress: () => void receiveOpen(message) }]);
 }
 export function usePushNotifications() {
   useEffect(() => {
@@ -287,20 +314,23 @@ export function usePushNotifications() {
         const visitor = await visitorIdentity();
         const enabled = await visitorPushEnabled();
         if (auth || await getAuthToken() || detaching || version !== sessionVersion || !enabled || visitor?.id !== message.data.visitorId) return;
-        Alert.alert('ACTIV update', 'Dear ACTIVian, there is a new public update for you.', [{ text: 'Later', style: 'cancel' }, { text: 'View', onPress: () => void receiveOpen(message) }]);
+        await showForegroundNotification(message, true);
         return;
       }
       if (!auth || detaching || version !== sessionVersion || !accountId(user) || !message.data?.userId || message.data.userId !== accountId(user)) return;
       const latestUser = await getUserData();
       if (await getAuthToken() !== auth || accountId(latestUser) !== accountId(user) || detaching || version !== sessionVersion) return;
       DeviceEventEmitter.emit('activ:notification');
-      Alert.alert('ACTIV update', 'Dear member, you have a new notification.', [{ text: 'Later', style: 'cancel' }, { text: 'View', onPress: () => void receiveOpen(message) }]);
+      await showForegroundNotification(message);
     });
     const refresh = onTokenRefresh(messaging, () => { void syncPushRegistration(); });
     const opened = onNotificationOpenedApp(messaging, receiveOpen);
     void getInitialNotification(messaging).then(receiveOpen).catch(() => undefined);
+    const native = Platform.OS === 'android' ? NativeModules.ActivNotifications : null;
+    const localOpened = native ? new NativeEventEmitter(native).addListener('activ:notification-opened', data => { void receiveOpen({ data }); }) : null;
+    if (native?.getInitialOpen) void native.getInitialOpen().then((data: any) => receiveOpen({ data })).catch(() => undefined);
     const session = DeviceEventEmitter.addListener(SESSION_CHANGED, () => { void syncPushRegistration(); });
     const appState = AppState.addEventListener('change', state => { if (state === 'active') void syncPushRegistration(); });
-    return () => { foreground(); refresh(); opened(); session.remove(); appState.remove(); };
+    return () => { foreground(); refresh(); opened(); localOpened?.remove(); session.remove(); appState.remove(); };
   }, []);
 }
