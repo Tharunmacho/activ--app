@@ -275,7 +275,7 @@ export function AutomationPane({ header, refreshKey = 0 }: { header?: React.Reac
         <ConsoleCard style={s.card}>
           <Text style={s.retryText} maxFontSizeMultiplier={1.3}>
             {retryResult
-              ? `Tried again: ${retryResult.retried}: ${retryResult.sent} sent${retryResult.stillFailed ? `, ${retryResult.stillFailed} still failing` : ''}${retryResult.permanent ? `, ${retryResult.permanent} not sent because the number or address needs attention` : ''}${retryResult.waitingForEmail ? `, ${retryResult.waitingForEmail} waiting for the email server` : ''}.`
+              ? `Tried again: ${retryResult.retried}: ${retryResult.sent} sent${retryResult.stillFailed ? `, ${retryResult.stillFailed} still failing` : ''}${retryResult.permanent ? `, ${retryResult.permanent} require recipient or sending service review before retrying` : ''}${retryResult.waitingForEmail ? `, ${retryResult.waitingForEmail} waiting for the email server` : ''}.`
               : 'Send failed messages from the last 7 days again, where another attempt may work.'}
           </Text>
           {retryAsk ? (

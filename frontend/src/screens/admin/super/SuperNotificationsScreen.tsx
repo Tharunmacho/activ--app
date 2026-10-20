@@ -187,25 +187,26 @@ function DeliveryView({ st, error, onReload }: { st: any; error: string; onReloa
   if (!st) return <ConsoleSkeleton rows={2} />;
   const em = st?.email || {};
   const wa = st?.whatsapp || {};
+  const eventEmail = em.accounts?.find((account: any) => account.category === 'events');
+  const membershipEmail = em.accounts?.find((account: any) => account.category === 'membership');
   return (
     <View>
       <ChannelCard channel="email" title="Email" configured={!!em?.configured}
         rows={[
-          ['Host', String(em?.host || '—')],
-          ['Account', String(em?.user || '—')],
-          ['From address', String(em?.from || '—')],
-          ['Regional From', em?.regionalFrom ? 'On' : 'Off — region is in the display name'],
-          ['Fallback Reply-To', String(em?.supportAddress || '—')],
+          ['Events sender', String(eventEmail?.from || 'events@activ.org.in')],
+          ['Events delivery service', String(eventEmail ? (eventEmail.configured ? eventEmail.host : 'Not configured') : em.host || '—')],
+          ['Membership sender', String(membershipEmail?.from || 'member@activ.org.in')],
+          ['Membership delivery service', String(membershipEmail ? (membershipEmail.configured ? membershipEmail.host : 'Not configured') : 'Reload after updating the server')],
         ]}
-        note="Application emails are sent from the verified address with the applicant's region in the display name, and Reply-To set to their own Block, District or State admin's registered address." />
-      <ChannelCard channel="whatsapp" title="WhatsApp (BotBee)" configured={!!wa?.configured}
+        note="Your two addresses identify the sender and receive replies. The delivery service sends automated emails on their behalf; both addresses can share one service. Configured means setup is present, not confirmed inbox delivery." />
+      <ChannelCard channel="whatsapp" title={wa.providerLabel || 'WhatsApp'} configured={!!wa?.configured}
         rows={[
           ['Base URL', String(wa?.baseUrl || '—')],
           ['Template endpoint', String(wa?.templateEndpoint || '—')],
           ['Auth style', String(wa?.authStyle || '—')],
           ['Webhook secret', wa?.webhookConfigured ? 'Set' : 'Not set — inbound bot disabled'],
         ]}
-        note={wa?.webhookUrl ? `Register this webhook URL on BotBee: ${wa.webhookUrl}` : undefined} noteIcon="webhook" />
+        note={wa?.webhookUrl ? `Delivery and reply webhook: ${wa.webhookUrl}` : undefined} noteIcon="webhook" />
       <ConsoleCard style={s.card}>
         <Text style={s.blockTitle} maxFontSizeMultiplier={1.3}>Send a test message</Text>
         <Text style={s.hint} maxFontSizeMultiplier={1.3}>Send a message to check that it reaches your email inbox or phone.</Text>
