@@ -3,9 +3,9 @@ import Renderer, { act } from 'react-test-renderer';
 import PersonalDetailsFormScreen from '../src/screens/profile/PersonalDetailsFormScreen';
 import { PremiumInput, Notice } from '../src/ui';
 import { FormFooter, SelectField } from '../src/screens/profile/formKit';
-import { getMyProfile, updateProfile } from '../src/services/memberApi';
+import { getMyProfile, updateProfile, setFirstPassword } from '../src/services/memberApi';
 
-jest.mock('../src/services/memberApi', () => ({ getMyProfile: jest.fn(), updateProfile: jest.fn() }));
+jest.mock('../src/services/memberApi', () => ({ getMyProfile: jest.fn(), updateProfile: jest.fn(), setFirstPassword: jest.fn() }));
 jest.mock('../src/services/regions', () => ({
   getStates: jest.fn().mockResolvedValue([]), getDistricts: jest.fn().mockResolvedValue([]),
   getBlocks: jest.fn().mockResolvedValue([]), fetchRegionTree: jest.fn().mockResolvedValue([]),
@@ -25,6 +25,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   (getMyProfile as jest.Mock).mockResolvedValue(profile);
   (updateProfile as jest.Mock).mockResolvedValue({});
+  (setFirstPassword as jest.Mock).mockResolvedValue({ hasPassword: true, passwordStatus: 'set' });
 });
 afterEach(async () => { if (screen) await act(async () => { screen.unmount(); }); });
 
@@ -64,4 +65,38 @@ it('preserves an existing overseas member location policy when editing the conta
   (getMyProfile as jest.Mock).mockResolvedValue({ ...profile, phoneNumber: '+447911123456', isInternational: true, country: 'United Kingdom', place: 'London' });
   await mount(); await fill('Phone number', '9123456780');
   expect(input('Place').props.value).toBe('London');
+});
+
+const socialProfile = { ...profile, phoneNumber: '+447911123456', isInternational: true, country: 'United Kingdom', place: 'London',
+  hasPassword: false, passwordStatus: 'not_set', linkedProviders: ['google'] };
+it('sets the first social-account password separately while completing the profile', async () => {
+  (getMyProfile as jest.Mock).mockResolvedValue(socialProfile);
+  await mount();
+  expect(input('New password').props.secureTextEntry).toBe(true);
+  await fill('New password', 'Fixture-password-123');
+  await fill('Confirm password', 'Fixture-password-123');
+  await act(async () => { await screen.root.findByType(FormFooter).props.onPrimary(); });
+  expect(setFirstPassword).toHaveBeenCalledWith('Fixture-password-123', 'Fixture-password-123');
+  expect(updateProfile).toHaveBeenCalledTimes(1);
+  expect(JSON.stringify((updateProfile as jest.Mock).mock.calls)).not.toContain('Fixture-password-123');
+  expect(JSON.stringify(navigation.navigate.mock.calls)).not.toContain('Fixture-password-123');
+});
+it('rejects mismatched passwords without saving or leaving the form', async () => {
+  (getMyProfile as jest.Mock).mockResolvedValue(socialProfile);
+  await mount(); await fill('New password', 'Fixture-password-123'); await fill('Confirm password', 'Different-password');
+  await act(async () => { await screen.root.findByType(FormFooter).props.onPrimary(); });
+  expect(input('Confirm password').props.error).toContain('do not match');
+  expect(setFirstPassword).not.toHaveBeenCalled(); expect(updateProfile).not.toHaveBeenCalled();
+});
+it('leaves social-only login available when both optional password fields are blank', async () => {
+  (getMyProfile as jest.Mock).mockResolvedValue(socialProfile);
+  await mount(); await act(async () => { await screen.root.findByType(FormFooter).props.onPrimary(); });
+  expect(setFirstPassword).not.toHaveBeenCalled(); expect(updateProfile).toHaveBeenCalledTimes(1);
+});
+it('does not save the profile if first-password setup fails', async () => {
+  (getMyProfile as jest.Mock).mockResolvedValue(socialProfile);
+  (setFirstPassword as jest.Mock).mockRejectedValueOnce(new Error('Sign in again'));
+  await mount(); await fill('New password', 'Fixture-password-123'); await fill('Confirm password', 'Fixture-password-123');
+  await act(async () => { await screen.root.findByType(FormFooter).props.onPrimary(); });
+  expect(updateProfile).not.toHaveBeenCalled(); expect(navigation.navigate).not.toHaveBeenCalled();
 });

@@ -40,6 +40,9 @@ export const uploadProfilePhoto = async (uri: string, type = 'image/jpeg', name 
 export const changePassword = async (oldPassword: string, newPassword: string) =>
   unwrap<any>(await api.post('/auth/change-password', { oldPassword, newPassword }), {});
 
+export const setFirstPassword = async (newPassword: string, confirmPassword: string) =>
+  unwrap<any>(await api.post('/auth/set-password', { newPassword, confirmPassword }), {});
+
 export const logoutOnServer = async () => {
   try { await api.post('/auth/logout'); } catch { /* signing out locally is what matters */ }
 };

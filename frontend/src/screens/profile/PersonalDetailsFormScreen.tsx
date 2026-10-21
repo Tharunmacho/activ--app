@@ -4,7 +4,8 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
 import { PremiumInput as Field, Loading, Notice, SPACE, ProfileForm3D } from '../../ui';
 import { errorText } from '../../ui/data';
-import { getMyProfile, updateProfile } from '../../services/memberApi';
+import { getMyProfile, updateProfile, setFirstPassword } from '../../services/memberApi';
+import { accountPasswordStatus } from '../../utils/authCapabilities';
 import { getStates, getDistricts, getBlocks, fetchRegionTree, RegionNode } from '../../services/regions';
 import {
   FormScreen, FormFooter, FormSection, SelectField, FieldLabel, FieldMessage, ChoicePills,
@@ -27,9 +28,8 @@ import { countryFromDial } from '../registration/countryCodes';
  *                               block, city, place, socialCategory, religion,
  *                               gender }  — the website's exact body
  *
- * NO PASSWORD FIELDS. Sending `password`/`confirmPassword` here is what makes
- * the server take its password-change branch; changing a password lives in
- * Account Settings, as on the website.
+ * Social accounts can choose their first password through /auth/set-password.
+ * Credentials stay out of the profile payload and navigation state.
  *
  * A member outside India (decided by the SERVER from their number) gives a
  * place instead of a state/district/block; the region is not sent at all.
@@ -97,6 +97,10 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [canSetPassword, setCanSetPassword] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [isLocked, setIsLocked] = useState(false);
   const [storedAbroad, setStoredAbroad] = useState(false);
@@ -145,6 +149,8 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
       setStoredAbroad(profile?.isInternational === true);
       setStoredCountry(String(profile?.country || ''));
       setNeedsFirstPhone(!String(profile?.phoneNumber || '').trim());
+      setCanSetPassword(accountPasswordStatus(profile) === 'not_set');
+      setPassword(''); setConfirmPassword(''); setPasswordError('');
     } catch (err) {
       setLoadError(errorText(err, 'Could not load your details.'));
     } finally {
@@ -264,9 +270,18 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
       Alert.alert('Missing details', 'Please fill in all required fields.');
       return;
     }
+    setPasswordError('');
+    if (canSetPassword && (password || confirmPassword)) {
+      if (password.length < 8) { setPasswordError('Use at least 8 characters for your password.'); return; }
+      if (password !== confirmPassword) { setPasswordError('New password and confirm password do not match.'); return; }
+    }
 
     setSaving(true);
     try {
+      if (canSetPassword && password) {
+        await setFirstPassword(password, confirmPassword);
+        setCanSetPassword(false); setPassword(''); setConfirmPassword('');
+      }
       const place = (form.place || '').trim();
       await updateProfile(
         isAbroad
@@ -463,6 +478,16 @@ const PersonalDetailsFormScreen: React.FC<Props> = ({ navigation, route, editMod
           style={{ marginBottom: 0 }}
         />
       </FormSection>
+
+      {canSetPassword && !isLocked && <FormSection icon="lock-outline" title="Set your ACTIV password"
+        subtitle="Use your email and this password next time. Social sign-in will keep working. Leave both blank to use social sign-in only.">
+        <Field label="New password" value={password} onChangeText={setPassword} secureTextEntry
+          autoCapitalize="none" autoCorrect={false} textContentType="newPassword" autoComplete="new-password"
+          editable={!saving} placeholder="At least 8 characters" icon="lock-outline" />
+        <Field label="Confirm password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry
+          autoCapitalize="none" autoCorrect={false} textContentType="newPassword" autoComplete="new-password"
+          editable={!saving} placeholder="Enter the same password again" error={passwordError} icon="lock-outline" />
+      </FormSection>}
 
       <FormSection icon="groups" title="Personal background" subtitle="All three answers are required for your application">
         <SelectField
