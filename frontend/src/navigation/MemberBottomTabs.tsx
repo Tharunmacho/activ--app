@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../ui/legacyAppearance';
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MemberBottomTabParamList } from '../types';
@@ -54,6 +55,9 @@ const ProfileIcon = ({ color, size, focused }: { color: string; size: number; fo
 );
 
 const MemberBottomTabs = () => {
+  const BRAND = useLegacyAppearance(legacyAppearance_BRAND);
+  const PALETTE = useLegacyAppearance(legacyAppearance_PALETTE);
+  const TAB_BAR = useLegacyAppearance(legacyAppearance_TAB_BAR);
   return (
     <Tab.Navigator
       screenOptions={{
@@ -105,3 +109,8 @@ const MemberBottomTabs = () => {
 };
 
 export default MemberBottomTabs;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_BRAND = BRAND;
+const legacyAppearance_PALETTE = PALETTE;
+const legacyAppearance_TAB_BAR = TAB_BAR;

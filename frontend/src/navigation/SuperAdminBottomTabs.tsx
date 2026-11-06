@@ -1,3 +1,4 @@
+import { useAppTheme } from '../ui/AppTheme';
 import React from 'react';
 import { View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -41,6 +42,7 @@ const SettingsIcon = makeAdminTabIcon('settings');
 const MoreIcon = makeAdminTabIcon('apps');
 
 function Tabs({ navigation }: { navigation: any }) {
+  const { palette } = useAppTheme();
   // Without this the bar sits under Android's gesture pill and iOS's home
   // indicator: labels get clipped and the last rows of a list scroll behind it.
   const insets = useSafeAreaInsets();

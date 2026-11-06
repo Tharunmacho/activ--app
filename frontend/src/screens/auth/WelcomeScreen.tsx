@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import {
@@ -12,6 +13,7 @@ import {
  * art), and the association's full name on the sheet below.
  */
 const WelcomeScreen = () => {
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   return (
     <PremiumScreen
       minHeaderHeight={260}
@@ -52,3 +54,6 @@ const styles = StyleSheet.create({
 });
 
 export default WelcomeScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;

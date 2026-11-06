@@ -1,3 +1,5 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
+import { useAppTheme } from '../../ui/AppTheme';
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -46,6 +48,8 @@ export interface LockedPerk { icon: string; title: string; detail: string }
 export function MembershipLocked({ icon = 'lock-outline', title, message, perks = [], onJoin, footnote, style }: {
   icon?: string; title: string; message: string; perks?: LockedPerk[]; onJoin: () => void; footnote?: string; style?: ViewStyle;
 }) {
+  const { palette: PALETTE, premiumTone } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const p = premiumTone('business');
   return (
     <FadeInUp distance={14} style={[s.wrap, style]}>
@@ -100,3 +104,6 @@ const s = StyleSheet.create({
   cta: { marginTop: SPACE.xl, alignSelf: 'stretch' },
   footnote: { ...TYPE.small, textAlign: 'center', marginTop: SPACE.md },
 });
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_s = s;

@@ -1,3 +1,5 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
+import { useAppTheme } from '../../ui/AppTheme';
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -32,6 +34,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'ViewCompany'>;
 interface Stats { total: number; active: number; featured: number; views: number; trustedBy: number }
 
 const ViewCompanyScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { palette: PALETTE, premiumTone } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const companyId = route?.params?.companyId || '';
   const activeId = useActiveCompanyStore((s) => s.activeCompanyId);
   const setActive = useActiveCompanyStore((s) => s.setActiveCompany);
@@ -231,3 +235,6 @@ const styles = StyleSheet.create({
 });
 
 export default ViewCompanyScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;

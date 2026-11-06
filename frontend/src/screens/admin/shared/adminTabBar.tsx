@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../../../ui/legacyAppearance';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Platform, View, StyleSheet } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -48,6 +49,9 @@ export const adminTabScreenOptions = (bottomInset: number) => {
 };
 
 function TabGlyph({ name, color, focused }: { name: string; color: string; focused: boolean }) {
+  const styles = useLegacyAppearance(legacyAppearance_styles);
+  const ADMIN = useLegacyAppearance(legacyAppearance_ADMIN);
+  const PALETTE = useLegacyAppearance(legacyAppearance_PALETTE);
   const scale = useRef(new Animated.Value(focused ? 1 : 0.9)).current;
   useEffect(() => {
     if (prefersReducedMotion()) { scale.setValue(focused ? 1 : 0.9); return; }
@@ -89,3 +93,8 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 });
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;
+const legacyAppearance_ADMIN = ADMIN;
+const legacyAppearance_PALETTE = PALETTE;

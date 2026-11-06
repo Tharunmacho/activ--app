@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../ui/legacyAppearance';
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { COLORS, SPACING } from '../theme/theme';
@@ -15,6 +16,7 @@ const Card: React.FC<CardProps> = ({
   padding = 'md',
   elevation = 3,
 }) => {
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   return (
     <View
       style={[
@@ -41,3 +43,6 @@ const styles = StyleSheet.create({
 });
 
 export default Card;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;

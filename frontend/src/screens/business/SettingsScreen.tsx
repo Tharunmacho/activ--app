@@ -1,3 +1,5 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
+import { useAppTheme } from '../../ui/AppTheme';
 // Business Settings — premium (business tone, violet).
 //
 // Everything here maps to a real capability of a business account:
@@ -45,6 +47,8 @@ const STATUS_TONES: Record<string, StatusTone> = {
 };
 
 const SettingsScreen: React.FC<Props> = ({ navigation }) => {
+  const { palette: PALETTE } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const { logout } = useAuthStore();
   const activeCompany = useActiveCompany();
   const companies = useActiveCompanyStore((state) => state.companies);
@@ -376,3 +380,6 @@ const styles = StyleSheet.create({
 });
 
 export default SettingsScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;

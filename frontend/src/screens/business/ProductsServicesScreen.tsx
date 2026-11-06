@@ -1,3 +1,5 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
+import { useAppTheme } from '../../ui/AppTheme';
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, Text, FlatList, StyleSheet, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -39,6 +41,8 @@ interface Product {
 }
 
 const ProductsServicesScreen: React.FC<Props> = ({ navigation }) => {
+  const { palette: PALETTE, type: TYPE } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const route = useRoute<ProductsServicesScreenRouteProp>();
   const { companyId: routeCompanyId } = route.params || {};
 
@@ -285,6 +289,8 @@ function stockTone(stock: number, min: number) {
 
 /** One catalogue line: photo, name + category, status, then price and stock chips. */
 function ProductCard({ product, onOpen, onDelete }: { product: Product; onOpen: () => void; onDelete: () => void }) {
+  const { palette: PALETTE, type: TYPE, premiumTone } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const p = premiumTone('business');
   const hidden = (product as any)?.isActive === false;
   const img = product?.imageUrl ? resolveMediaUrl(product.imageUrl) : '';
@@ -363,3 +369,6 @@ const styles = StyleSheet.create({
 });
 
 export default ProductsServicesScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;

@@ -1,3 +1,5 @@
+import { useLegacyAppearance } from '../../../ui/legacyAppearance';
+import { useAppTheme } from '../../../ui/AppTheme';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Animated, BackHandler, Easing, Linking, Platform, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -53,6 +55,10 @@ const hostOf = (url: string) => {
 };
 
 const WebsiteViewerScreen = ({ navigation, route }: any) => {
+  const { isDark } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
+  const BRAND = useLegacyAppearance(legacyAppearance_BRAND);
+  const PALETTE = useLegacyAppearance(legacyAppearance_PALETTE);
   const insets = useSafeAreaInsets();
   const params = route?.params || {};
   const publicMode = params.publicAccess === true;
@@ -295,3 +301,8 @@ export default function WebsiteOrArticleScreen(props: any) {
     : destination?.name === 'PublicExplore' ? PublicExploreScreen : destination?.name === 'PublicEventDetail' ? PublicEventDetailScreen : null;
   return Screen ? <Screen {...props} route={{ ...props.route, params: destination?.params }} /> : <WebsiteViewerScreen {...props} />;
 }
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_s = s;
+const legacyAppearance_BRAND = BRAND;
+const legacyAppearance_PALETTE = PALETTE;

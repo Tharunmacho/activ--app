@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import api, { getAuthToken, getUserRole } from '../../services/api';
 import { View, Text, StyleSheet, Linking, Alert, BackHandler } from 'react-native';
@@ -53,6 +54,7 @@ try {
 type Phase = 'preparing' | 'confirm' | 'webview' | 'browser' | 'paying' | 'error' | 'bookingDone';
 
 const PaymentCheckoutScreen: React.FC<any> = ({ navigation, route }) => {
+  const s = useLegacyAppearance(legacyAppearance_s);
   const params = route?.params || {};
   const orderType: 'membership' | 'event_booking' | 'company_listing' = params?.orderType === 'company_listing' ? 'company_listing' : params?.orderType === 'event_booking' ? 'event_booking' : 'membership';
   const companyId = String(params?.companyId || '');
@@ -444,3 +446,6 @@ const s = StyleSheet.create({
 });
 
 export default PaymentCheckoutScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_s = s;

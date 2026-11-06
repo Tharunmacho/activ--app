@@ -1,3 +1,5 @@
+import { useLegacyAppearance } from '../../../ui/legacyAppearance';
+import { useAppTheme } from '../../../ui/AppTheme';
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -66,6 +68,8 @@ export const pickImage = (maxBytes: number, label: string, onPicked: (img: Picke
 /* ------------------------------------------------------------------ labels */
 
 export function Label({ text, required, hint }: { text: string; required?: boolean; hint?: string }) {
+  const { palette: PALETTE } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   return (
     <View style={s.labelWrap}>
       <Text style={s.label} maxFontSizeMultiplier={1.3}>{text}{required ? <Text style={{ color: PALETTE.red }}> *</Text> : null}</Text>
@@ -75,6 +79,7 @@ export function Label({ text, required, hint }: { text: string; required?: boole
 }
 
 export function SubHeading({ title, hint }: { title: string; hint?: string }) {
+  const s = useLegacyAppearance(legacyAppearance_s);
   return (
     <View style={s.sub}>
       <View style={s.subRow}>
@@ -92,6 +97,8 @@ export function SubHeading({ title, hint }: { title: string; hint?: string }) {
 function Pill({ label, on, onPress, role, icon, style }: {
   label: string; on: boolean; onPress: () => void; role: 'radio' | 'checkbox'; icon?: string; style?: any;
 }) {
+  const { palette: PALETTE } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const inner = (
     <>
       {on ? <Icon name="check" size={15} color={PALETTE.white} /> : icon ? <Icon name={icon} size={16} color={PALETTE.textMuted} /> : null}
@@ -122,6 +129,8 @@ const PILL_ON = ['#4C1D95', '#7C3AED'];
 export function ChipChoice({ options, value, onChange, required, error }: {
   options: readonly string[]; value: string; onChange: (v: string) => void; required?: boolean; error?: string;
 }) {
+  const { palette: PALETTE } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   return (
     <View style={{ marginBottom: SPACE.lg }}>
       <View style={s.chips} accessibilityRole="radiogroup">
@@ -144,6 +153,7 @@ export function ChipChoice({ options, value, onChange, required, error }: {
 export function ChipMulti({ options, values, onToggle }: {
   options: readonly string[]; values: string[]; onToggle: (v: string) => void;
 }) {
+  const s = useLegacyAppearance(legacyAppearance_s);
   const set = new Set(values || []);
   return (
     <View style={[s.chips, { marginBottom: SPACE.lg }]}>
@@ -154,6 +164,8 @@ export function ChipMulti({ options, values, onToggle }: {
 
 /** Yes / No, and neither is allowed — nothing here is required. */
 export function YesNo({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { palette: PALETTE } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   return (
     <View style={[s.yesNo, { marginBottom: SPACE.lg }]} accessibilityRole="radiogroup">
       {(['yes', 'no'] as const).map((v) => {
@@ -191,6 +203,8 @@ export function YesNo({ value, onChange }: { value: string; onChange: (v: string
 export function CheckTile({ label, description, checked, onPress, lockedNote }: {
   label: string; description?: string; checked: boolean; onPress: () => void; lockedNote?: string;
 }) {
+  const { palette: PALETTE } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   return (
     <PressableScale
       onPress={lockedNote ? undefined : onPress}
@@ -226,6 +240,8 @@ export function CheckTile({ label, description, checked, onPress, lockedNote }: 
 
 /** The website's FinancialYearsInput: tick three financial years, told what is missing. */
 export function YearsPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { palette: PALETTE } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const options = useMemo(() => financialYears(), []);
   const chosen = useMemo(() => parseYears(value), [value]);
   const carried = chosen.filter((y) => !options.includes(y));
@@ -265,6 +281,8 @@ export function YearsPicker({ value, onChange }: { value: string; onChange: (v: 
  * ten, or add a category NIC does not list (stored with an empty code).
  */
 export function CategoryPicker({ value, onChange }: { value: ProductCategory[]; onChange: (next: ProductCategory[]) => void }) {
+  const { palette: PALETTE } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const [query, setQuery] = useState('');
   const [catalogue, setCatalogue] = useState<NicCategory[] | null>(null);
   const list = value || [];
@@ -379,6 +397,8 @@ export function CategoryPicker({ value, onChange }: { value: ProductCategory[]; 
 
 /** The website's ExportCouncilInput: searchable DGFT list, still accepts a body it lacks. */
 export function CouncilPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { palette: PALETTE } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const [query, setQuery] = useState('');
   const [browsing, setBrowsing] = useState(false);
   const trimmed = query.trim();
@@ -519,3 +539,6 @@ const s = StyleSheet.create({
   typeS: { backgroundColor: PALETTE.violetSoft },
   typePillText: { fontSize: 10, lineHeight: 13, fontWeight: '700' },
 });
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_s = s;

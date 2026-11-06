@@ -1,3 +1,5 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
+import { AppearanceToggle } from '../../ui/AppearanceToggle';
 import EventFilters from '../../components/EventFilters';
 import { EMPTY_EVENT_FILTERS, matchesEventFilters } from '../../utils/eventFilters';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -31,6 +33,9 @@ const TABS: { key: ExploreSection; label: string; icon: string; title: string; s
 const EMPTY: ExploreContent = { events: [], news: [], gallery: [], zones: [] };
 
 export default function PublicExploreScreen({ navigation, route }: any) {
+  const s = useLegacyAppearance(legacyAppearance_s);
+  const BRAND = useLegacyAppearance(legacyAppearance_BRAND);
+  const PALETTE = useLegacyAppearance(legacyAppearance_PALETTE);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [section, setSection] = useState<ExploreSection>(() => TABS.find(tab => tab.key === route?.params?.section)?.key || 'home');
@@ -114,6 +119,7 @@ export default function PublicExploreScreen({ navigation, route }: any) {
   }, [section, data, query, now, eventFilters]);
   const tab = TABS.find(item => item.key === section) || TABS[0];
   const compact = width < 360;
+  const compactHeader = width < 380;
   const ready = !loading && !error;
   const home = <View style={s.homeContent}>
     {loading && <View style={s.gutter}><CardSkeletons rows={2} variant="media" /></View>}
@@ -168,11 +174,12 @@ export default function PublicExploreScreen({ navigation, route }: any) {
           <View style={s.heroContent}>
             <View style={s.topbar}><BrandLogo size="sm" />
               <View style={s.headerActions}>
+              <AppearanceToggle glass />
               <PressableScale accessibilityRole="button" accessibilityLabel="Notifications" onPress={() => { setNoticeId(undefined); setNotificationsOpen(true); }} contentStyle={[s.signIn, s.notificationButton]}>
                 <Icon name="notifications-none" size={23} color={PALETTE.white} />
               </PressableScale>
-              <PressableScale accessibilityRole="button" accessibilityLabel="Sign in" onPress={signIn} contentStyle={s.signIn}>
-                <Icon name="login" size={17} color={PALETTE.white} /><Text style={s.signInText}>Sign in</Text>
+              <PressableScale accessibilityRole="button" accessibilityLabel="Sign in" onPress={signIn} contentStyle={[s.signIn, compactHeader && s.notificationButton]}>
+                <Icon name="login" size={compactHeader ? 22 : 17} color={PALETTE.white} />{!compactHeader && <Text style={s.signInText} maxFontSizeMultiplier={1.2}>Sign in</Text>}
               </PressableScale>
               </View>
             </View>
@@ -218,12 +225,12 @@ export default function PublicExploreScreen({ navigation, route }: any) {
 }
 
 const s = StyleSheet.create({
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', flexShrink: 0, gap: 8 },
   notificationButton: { width: 44, height: 44, paddingHorizontal: 0, justifyContent: 'center', borderRadius: 22 },
   flex: { flex: 1, minWidth: 0 }, body: { flexGrow: 1, backgroundColor: PALETTE.canvas, paddingBottom: SPACE.sm },
   contentRow: { paddingHorizontal: SPACE.lg, gap: SPACE.md, paddingBottom: SPACE.md, alignItems: 'stretch' },
   gutter: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: SPACE.lg },
-  heroContent: { width: '100%', maxWidth: 680, alignSelf: 'center' }, topbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.md },
+  heroContent: { width: '100%', maxWidth: 680, alignSelf: 'center' }, topbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.sm },
   signIn: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 44, paddingHorizontal: 15, borderRadius: 16, backgroundColor: BRAND.glass, borderWidth: 1, borderColor: BRAND.glassBorder },
   signInText: { color: PALETTE.white, fontSize: 13, fontWeight: '700' },
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: SPACE.sm, marginTop: SPACE.lg }, heroText: { flex: 1, minWidth: 0 },
@@ -257,3 +264,8 @@ const s = StyleSheet.create({
   tabIconSelected: { backgroundColor: '#FFFFFF15' },
   tabText: { fontSize: 11, lineHeight: 15, color: '#C7D8F7', fontWeight: '600' }, tabTextSelected: { color: PALETTE.white, fontWeight: '800' },
 });
+
+// Theme-aware aliases preserve the original styles for non-React helpers.
+const legacyAppearance_s = s;
+const legacyAppearance_BRAND = BRAND;
+const legacyAppearance_PALETTE = PALETTE;

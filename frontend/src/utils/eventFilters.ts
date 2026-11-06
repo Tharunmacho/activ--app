@@ -1,5 +1,7 @@
-export type EventFilters = { q: string; category: string; language: string; area: string; mode: string; from: string; to: string };
-export const EMPTY_EVENT_FILTERS: EventFilters = { q: '', category: '', language: '', area: '', mode: '', from: '', to: '' };
+import { feeFor } from './eventPricing';
+
+export type EventFilters = { q: string; category: string; language: string; area: string; mode: string; price: string; from: string; to: string };
+export const EMPTY_EVENT_FILTERS: EventFilters = { q: '', category: '', language: '', area: '', mode: '', price: '', from: '', to: '' };
 const norm = (value: unknown) => String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 export const eventLanguages = (event: any): string[] => String(event?.language || '').split(/[,/;&+]|\band\b/i).map(s => s.trim()).filter(Boolean);
 const regions = (event: any) => Array.isArray(event?.targets) && event.targets.length ? event.targets : [event || {}];
@@ -27,6 +29,7 @@ export function matchesEventFilters(event: any, f: EventFilters) {
   if (f.category && norm(event?.category) !== norm(f.category)) return false;
   if (f.language && !eventLanguages(event).some(l => norm(l) === norm(f.language))) return false;
   if (f.mode && (event?.mode || 'offline') !== f.mode) return false;
+  if (f.price && (feeFor(event) > 0 ? 'paid' : 'free') !== f.price) return false;
   if (f.area && !eventAreas(event).some(a => norm(a).includes(norm(f.area)))) return false;
   if (!eventInPeriod(event, f.from, f.to)) return false;
   return !f.q || norm([event?.title, event?.summary, event?.description, event?.category, event?.language,

@@ -1,3 +1,5 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
+import { useAppTheme } from '../../ui/AppTheme';
 // Manage Companies — every company under the membership, the ONE place a
 // company switch is made from a list. Premium (business tone, violet).
 import React, { useState, useCallback } from 'react';
@@ -40,6 +42,8 @@ interface Company {
 }
 
 const ManageCompaniesScreen: React.FC<Props> = ({ navigation }) => {
+  const { palette: PALETTE } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const companies = useActiveCompanyStore((state) => state.companies) as Company[];
   const activeCompanyId = useActiveCompanyStore((state) => state.activeCompanyId);
   const setActiveCompany = useActiveCompanyStore((state) => state.setActiveCompany);
@@ -210,6 +214,8 @@ function CompanyCard({ company, active, onUse, onPreview, onView, onEdit, onProd
   company: Company; active: boolean;
   onUse: () => void; onPreview: () => void; onView: () => void; onEdit: () => void; onProducts: () => void; onDelete: () => void;
 }) {
+  const { palette: PALETTE, premiumTone } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const p = premiumTone('business');
   const logo = company?.logo ? resolveMediaUrl(company.logo) : '';
   const label = statusLabel(company?.status);
@@ -309,3 +315,6 @@ const styles = StyleSheet.create({
 });
 
 export default ManageCompaniesScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;

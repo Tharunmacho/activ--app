@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../ui/legacyAppearance';
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { COLORS, FONTS, SPACING } from '../theme/theme';
@@ -20,6 +21,8 @@ const Badge: React.FC<BadgeProps> = ({
   style,
   textStyle,
 }) => {
+  const COLORS = useLegacyAppearance(legacyAppearance_COLORS);
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const getVariantStyles = (): ViewStyle => {
     switch (variant) {
       case 'success':
@@ -130,3 +133,7 @@ const styles = StyleSheet.create({
 });
 
 export default Badge;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_COLORS = COLORS;
+const legacyAppearance_styles = styles;

@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../../../ui/legacyAppearance';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -30,6 +31,8 @@ const messageFor = (error: any) => error?.response || error?.request ? errorText
 
 /** Write, add optional files, choose recipients and review before publishing. */
 const SuperUpdateEditorScreen: React.FC = () => {
+  const s = useLegacyAppearance(legacyAppearance_s);
+  const PALETTE = useLegacyAppearance(legacyAppearance_PALETTE);
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const a = route?.params?.announcement || null;
@@ -302,3 +305,7 @@ const s = StyleSheet.create({
   error: { color: PALETTE.red, fontSize: 16, lineHeight: 24, marginVertical: SPACE.md },
 });
 export default SuperUpdateEditorScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_s = s;
+const legacyAppearance_PALETTE = PALETTE;

@@ -167,6 +167,26 @@ test('language, area and attendance selections use the visible filter controls t
   expect(shownIds()).toHaveLength(5);
 });
 
+test('Paid and Free use the member price, combine with other filters, and can return to all prices', async () => {
+  (listMemberEvents as jest.Mock).mockResolvedValue({ events: [
+    ...events,
+    { id: 'member-free', title: 'Member benefit', category: 'Training', startAt: '2026-10-24T04:30:00Z', registrationFee: 500, yourPrice: 0 },
+  ] });
+  await render();
+  await openFilters();
+  await select('Ticket price', 'All prices', 'Paid');
+  expect(shownIds()).toEqual(['summit']);
+  await select('Ticket price', 'Paid', 'Free');
+  expect(shownIds()).toEqual(['live', 'workshop', 'payment', 'cancelled', 'member-free']);
+  await select('Category', 'All categories', 'Training');
+  expect(shownIds()).toEqual(['live', 'workshop', 'member-free']);
+  await select('Ticket price', 'Free', 'All prices');
+  expect(shownIds()).toEqual(['live', 'workshop', 'member-free']);
+  await pressText('Clear all');
+  expect(shownIds()).toHaveLength(6);
+  expect(root().findAll(node => node.props.accessibilityLabel === 'Ticket price: All prices').length).toBeGreaterThan(0);
+});
+
 test('invalid and reversed date ranges show actionable feedback and can be cleared', async () => {
   await render();
   await openFilters();

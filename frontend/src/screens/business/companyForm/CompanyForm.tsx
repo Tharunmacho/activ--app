@@ -1,3 +1,5 @@
+import { useLegacyAppearance } from '../../../ui/legacyAppearance';
+import { useAppTheme } from '../../../ui/AppTheme';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Alert, ScrollView, Pressable } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -172,6 +174,8 @@ export interface CompanyFormProps {
 }
 
 export default function CompanyForm({ companyId, title, subtitle, createLabel = 'Create company', prefill, onBack, onSaved }: CompanyFormProps) {
+  const { palette: PALETTE } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const isEdit = !!companyId;
   const loadCompanies = useActiveCompanyStore((st) => st.loadCompanies);
 
@@ -568,6 +572,8 @@ const STEP_TITLES = ['Identity & contact', 'Business details', 'Financial inform
 
 /** A round previous / next control beside the sticky save. */
 function StepNav({ icon, label, onPress, disabled }: { icon: string; label: string; onPress: () => void; disabled?: boolean }) {
+  const { palette: PALETTE, premiumTone } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const p = premiumTone('business');
   return (
     <PressableScale
@@ -608,3 +614,6 @@ const styles = StyleSheet.create({
   nextEyebrow: { ...TYPE.eyebrow, color: PALETTE.violet },
   nextTitle: { ...TYPE.heading, marginTop: 2 },
 });
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;

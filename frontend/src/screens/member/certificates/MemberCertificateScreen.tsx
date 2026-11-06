@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../../../ui/legacyAppearance';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Share, Alert } from 'react-native';
 import {
@@ -59,6 +60,7 @@ const shareText = (kind: Kind, cert: any): string => {
 };
 
 const MemberCertificateScreen = ({ navigation, route }: any) => {
+  const s = useLegacyAppearance(legacyAppearance_s);
   const initial: Kind = route?.params?.kind === 'tax-exemption' ? 'tax-exemption' : 'membership';
   const [kind, setKind] = useState<Kind>(initial);
   const [cert, setCert] = useState<any>(null);
@@ -259,3 +261,6 @@ const s = StyleSheet.create({
 });
 
 export default MemberCertificateScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_s = s;

@@ -1,3 +1,5 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
+import { useAppTheme } from '../../ui/AppTheme';
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -47,6 +49,8 @@ const normalizeCategory = (value?: string | null) => {
 type PickedImage = { uri: string; type?: string; name?: string } | null;
 
 const EditProductScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { palette: PALETTE } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const productId = route?.params?.productId || '';
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -317,3 +321,6 @@ const styles = StyleSheet.create({
 });
 
 export default EditProductScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;

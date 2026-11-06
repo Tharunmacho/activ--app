@@ -1,3 +1,5 @@
+import { useAppTheme } from '../AppTheme';
+import { useLegacyAppearance } from '../legacyAppearance';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -115,6 +117,7 @@ const StatColumns = React.createContext<2 | 3>(2);
 export function MetricGrid({ children, columns = 2, style }: {
   children: React.ReactNode; columns?: 2 | 3; style?: StyleProp<ViewStyle>;
 }) {
+  const s = useLegacyAppearance(legacyAppearance_s);
   return (
     <StatColumns.Provider value={columns}>
       <View style={[s.grid, style]}>{children}</View>
@@ -141,6 +144,8 @@ export function MetricTile({
   tone?: Tone;
   delay?: number;
 }) {
+  const { palette: PALETTE, premiumTone } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const cols = React.useContext(StatColumns);
   const p = premiumTone(tone);
   const chip = colors && colors.length > 1 ? colors : p.button;
@@ -195,6 +200,7 @@ export function GrowBar({ progress, colors, trackColor = PALETTE.divider, height
   delay?: number;
   style?: StyleProp<ViewStyle>;
 }) {
+  const { palette: PALETTE } = useAppTheme();
   const target = Math.max(0, Math.min(1, finite(progress)));
   const [width, setWidth] = useState(0);
   const v = useRef(new Animated.Value(prefersReducedMotion() ? target : 0)).current;
@@ -248,6 +254,8 @@ export function RingGauge({ progress, size = 112, stroke = 12, colors, label, va
   trackColor?: string;
   delay?: number;
 }) {
+  const { palette: PALETTE } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const idRef = useRef(`ring${(ringSeq += 1)}`);
   const target = Math.max(0, Math.min(1, finite(progress)));
   const r = (size - stroke) / 2;
@@ -324,3 +332,6 @@ const s = StyleSheet.create({
   ringValue: { ...TYPE.number, fontSize: 22, lineHeight: 28, maxWidth: '70%', textAlign: 'center' },
   ringLabel: { ...TYPE.caption, fontSize: 11, lineHeight: 14, maxWidth: '72%', textAlign: 'center' },
 });
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_s = s;

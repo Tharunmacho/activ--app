@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { getPublicNewsArticle } from '../../services/publicContent';
@@ -34,6 +35,7 @@ export function NewsMediaItem({ media, navigation }: { media: NewsMedia; navigat
 }
 
 export function NewsResourceLinks({ article, navigation }: { article: any; navigation: any }) {
+  const s = useLegacyAppearance(legacyAppearance_s);
   const documents = newsAttachments(article), links = newsLinks(article);
   return <>
     {documents.length > 0 && <View><Heading>Documents</Heading>{documents.map(document => <ActionLink key={document.url} navigation={navigation} href={document.url} label={document.label} filename={document.filename} download />)}</View>}
@@ -42,6 +44,7 @@ export function NewsResourceLinks({ article, navigation }: { article: any; navig
 }
 
 export function NewsArticleContent({ article, navigation }: { article: any; navigation: any }) {
+  const s = useLegacyAppearance(legacyAppearance_s);
   if (!article) return null;
   const [cover, ...photos] = newsMedia(article);
   return <>
@@ -57,3 +60,6 @@ export function NewsArticleContent({ article, navigation }: { article: any; navi
   </>;
 }
 const s = StyleSheet.create({ summary: { paddingLeft: 16, borderLeftWidth: 3, borderLeftColor: BRAND.blue } });
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_s = s;

@@ -1,3 +1,5 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
+import { useAppTheme } from '../../ui/AppTheme';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert, Linking, ScrollView } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -96,6 +98,8 @@ const listOf = (res: any): any[] => {
 function RegionPill({ level, value, disabled, open, onPress }: {
   level: Level; value: string; disabled: boolean; open: boolean; onPress: () => void;
 }) {
+  const { palette: PALETTE, premiumTone } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const p = premiumTone('business');
   const set = !!value;
   const inner = (
@@ -127,6 +131,8 @@ function RegionPill({ level, value, disabled, open, onPress }: {
 function RegionPanel({ level, options, value, onPick }: {
   level: Level; options: string[]; value: string; onPick: (v: string) => void;
 }) {
+  const { palette: PALETTE } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const [q, setQ] = useState('');
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -166,6 +172,8 @@ function CompanyCard({ item, ordered, highlightIds, matchedOnly, own, trusted, b
   own: boolean; trusted: boolean; busy: boolean; onOpen: () => void; onTrust: () => void;
   onViewProduct?: (id: string) => void;
 }) {
+  const { palette: PALETTE, premiumTone } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const p = premiumTone('business');
   const logo = item?.logo ? resolveMediaUrl(item.logo) : '';
   const trustedBy = Number(item?.trustedBy || 0);
@@ -296,6 +304,8 @@ function CompanyCard({ item, ordered, highlightIds, matchedOnly, own, trusted, b
  * the catalogue, write-up and trust count, so a screen holds many at once.
  */
 function CompanyRow({ item, onOpen }: { item: CompanyItem; onOpen: () => void }) {
+  const { palette: PALETTE, premiumTone } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const p = premiumTone('business');
   const logo = item?.logo ? resolveMediaUrl(item.logo) : '';
   const phone = String(item?.mobileNumber || '');
@@ -334,6 +344,8 @@ function CompanyRow({ item, onOpen }: { item: CompanyItem; onOpen: () => void })
 function CountOnly({ companies, products, term, regionLabel, onJoin }: {
   companies: number; products: number; term: string; regionLabel: string; onJoin: () => void;
 }) {
+  const { palette: PALETTE } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const title = `${companies} ${companies === 1 ? 'company' : 'companies'}${products > 0 ? ` · ${products} ${products === 1 ? 'product' : 'products'}` : ''}`;
   return (
     <LiftCard tone="business" style={s.gutter}>
@@ -355,6 +367,8 @@ function CountOnly({ companies, products, term, regionLabel, onJoin }: {
 /* ------------------------------------------------------------------ screen */
 
 const DiscoverScreen: React.FC<Props> = ({ navigation }) => {
+  const { palette: PALETTE } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const paid = useMembershipPaid();
 
   // A product tapped in a result card feeds the seller's catalogue analytics —
@@ -806,3 +820,6 @@ const s = StyleSheet.create({
 });
 
 export default DiscoverScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_s = s;

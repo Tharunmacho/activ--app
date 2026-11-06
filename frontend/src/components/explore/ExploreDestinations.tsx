@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -32,6 +33,8 @@ const regionGradient = (slug: string, index = 0) => {
 };
 
 export function ExploreQuickLinks({ openPage }: { openPage: OpenPage }) {
+  const s = useLegacyAppearance(legacyAppearance_s);
+  const BRAND = useLegacyAppearance(legacyAppearance_BRAND);
   return <View style={s.links}>
     {LINKS.map(link => <PressableScale key={link.path} style={s.link} contentStyle={s.linkInner}
       accessibilityRole="button" accessibilityLabel={link.label} onPress={() => openPage(link.path, link.label)}>
@@ -42,6 +45,9 @@ export function ExploreQuickLinks({ openPage }: { openPage: OpenPage }) {
 }
 
 export function ExploreSchemes({ openPage }: { openPage: OpenPage }) {
+  const s = useLegacyAppearance(legacyAppearance_s);
+  const PALETTE = useLegacyAppearance(legacyAppearance_PALETTE);
+  const BRAND = useLegacyAppearance(legacyAppearance_BRAND);
   const { width, fontScale } = useWindowDimensions();
   const stacked = width < 360 || fontScale > 1.2;
   return <View style={s.section}>
@@ -59,6 +65,9 @@ export function ExploreSchemes({ openPage }: { openPage: OpenPage }) {
 }
 
 export function ExploreZones({ zones, openPage, onSeeAll }: { zones: any[]; openPage: OpenPage; onSeeAll?: () => void }) {
+  const s = useLegacyAppearance(legacyAppearance_s);
+  const PALETTE = useLegacyAppearance(legacyAppearance_PALETTE);
+  const BRAND = useLegacyAppearance(legacyAppearance_BRAND);
   const { width, fontScale } = useWindowDimensions();
   const cardWidth = exploreCardWidth(width, fontScale);
   const published = useMemo(() => publishedExploreZones(zones), [zones]);
@@ -156,3 +165,8 @@ const s = StyleSheet.create({
   filterSummaryText: { flex: 1, color: BRAND.navyDeep, fontSize: 14, lineHeight: 21, fontWeight: '600' },
   resetFilters: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 4 },
 });
+
+// Theme-aware aliases preserve the original styles for non-React helpers.
+const legacyAppearance_s = s;
+const legacyAppearance_BRAND = BRAND;
+const legacyAppearance_PALETTE = PALETTE;

@@ -1,3 +1,5 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
+import { useAppTheme } from '../../ui/AppTheme';
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Alert, Linking, TextInput } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -38,6 +40,8 @@ function TrustRow({ item, onOpen, onRemove, removing, onSaveNote }: {
   item: Company; onOpen: () => void; onRemove: () => void; removing: boolean;
   onSaveNote: (note: string) => Promise<boolean>;
 }) {
+  const { palette: PALETTE } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const logo = item?.logo ? resolveMediaUrl(item.logo) : '';
   const place = [item?.area, item?.location].filter(Boolean).join(', ');
   const phone = String(item?.mobileNumber || '').replace(/[^\d+]/g, '');
@@ -151,6 +155,7 @@ function TrustRow({ item, onOpen, onRemove, removing, onSaveNote }: {
 }
 
 const TrustListScreen: React.FC<Props> = ({ navigation }) => {
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const [rows, setRows] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -346,3 +351,6 @@ const styles = StyleSheet.create({
 });
 
 export default TrustListScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;

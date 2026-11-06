@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../../../ui/legacyAppearance';
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -33,6 +34,9 @@ const publishedTime = (u: any) => {
 };
 
 function UpdateCard({ u, index, onPress }: { u: any; index: number; onPress: () => void }) {
+  const styles = useLegacyAppearance(legacyAppearance_styles);
+  const PALETTE = useLegacyAppearance(legacyAppearance_PALETTE);
+  const BRAND = useLegacyAppearance(legacyAppearance_BRAND);
   const style = categoryStyle(u?.category);
   const glyph = categoryGlyph(u?.category);
   const banner = u?.bannerUrl ? resolveMediaUrl(u.bannerUrl) : '';
@@ -92,6 +96,9 @@ function UpdateCard({ u, index, onPress }: { u: any; index: number; onPress: () 
 }
 
 const AssociationUpdatesScreen = ({ navigation }: any) => {
+  const styles = useLegacyAppearance(legacyAppearance_styles);
+  const BRAND = useLegacyAppearance(legacyAppearance_BRAND);
+  const PALETTE = useLegacyAppearance(legacyAppearance_PALETTE);
   const { data, loading, error, reload, refreshing, refresh } = useLoad<any>(() => listAnnouncements(), [], { announcements: [] });
   const updates = useMemo(() => asArray<any>(data?.announcements), [data]);
   const [category, setCategory] = useState('all');
@@ -263,3 +270,8 @@ const styles = StyleSheet.create({
 });
 
 export default AssociationUpdatesScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;
+const legacyAppearance_PALETTE = PALETTE;
+const legacyAppearance_BRAND = BRAND;

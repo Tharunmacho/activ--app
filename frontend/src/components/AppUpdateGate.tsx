@@ -1,3 +1,5 @@
+import { useLegacyAppearance } from '../ui/legacyAppearance';
+import { useAppTheme } from '../ui/AppTheme';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -21,6 +23,8 @@ export default function AppUpdateGate({
 }: {
   children: React.ReactNode;
 }) {
+  const { palette, isDark, premiumTone } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const [decision, setDecision] = useState<AppUpdateDecision | null>(null);
   const [checking, setChecking] = useState(true),
     [opening, setOpening] = useState(false),
@@ -129,3 +133,6 @@ const s = StyleSheet.create({
   caption: { ...TYPE.small, color: PALETTE.textMuted, textAlign: 'center' },
   error: { ...TYPE.small, color: PALETTE.redDark, textAlign: 'center' },
 });
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_s = s;

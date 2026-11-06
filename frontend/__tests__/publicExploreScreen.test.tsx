@@ -114,6 +114,28 @@ test('returning from event details opens the native Events tab and consumes its 
   expect(button('Events').props.accessibilityState.selected).toBe(true);
 });
 
+test('public events filter Paid and Free using the public registration fee and reset to all prices', async () => {
+  load.mockResolvedValue({ ...data, events: [
+    { ...data.events[0], registrationFee: 300 },
+    { ...data.events[0], id: 'free', slug: 'free-workshop', title: 'Free workshop', registrationFee: 0 },
+    { ...data.events[1], registrationFee: 300 },
+  ] });
+  await Renderer.act(async () => { screen = Renderer.create(<PublicExplore navigation={navigation} route={{ params: { section: 'events' } }} />); });
+  const filters = screen.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityState?.expanded === false && typeof node.props.onPress === 'function')[0];
+  await Renderer.act(async () => filters.props.onPress());
+  const picker = () => screen.root.findAllByType(PremiumSelect).find(node => node.props.label === 'Ticket price')!;
+  await Renderer.act(async () => picker().props.onChange('Paid'));
+  expect(button('Future conference')).toBeDefined();
+  expect(button('Free workshop')).toBeUndefined();
+  expect(button('Finished conference')).toBeUndefined();
+  await Renderer.act(async () => picker().props.onChange('Free'));
+  expect(button('Future conference')).toBeUndefined();
+  expect(button('Free workshop')).toBeDefined();
+  await Renderer.act(async () => picker().props.onChange('All prices'));
+  expect(button('Future conference')).toBeDefined();
+  expect(button('Free workshop')).toBeDefined();
+});
+
 test('the Zones tab selects a published state and opens its native state page', async () => {
   await Renderer.act(async () => { screen = Renderer.create(<PublicExplore navigation={navigation} route={{ params: { section: 'zones' } }} />); });
   const picker = screen.root.findAllByType(PremiumSelect).find(node => node.props.label === 'Find your state');

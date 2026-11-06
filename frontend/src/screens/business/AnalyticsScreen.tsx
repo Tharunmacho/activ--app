@@ -1,3 +1,5 @@
+import { useAppTheme } from '../../ui/AppTheme';
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
 // Analytics — scoped strictly to the ACTIVE company (premium, member tone).
 // There is no company switcher here on purpose: switching happens once, on the
 // Business dashboard / Manage Companies.
@@ -36,6 +38,7 @@ const EMPTY_STATS = {
 };
 
 const AnalyticsScreen: React.FC<Props> = ({ navigation }) => {
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const activeCompany = useActiveCompany();
   const loadCompanies = useActiveCompanyStore((state) => state.loadCompanies);
 
@@ -251,6 +254,7 @@ const AnalyticsScreen: React.FC<Props> = ({ navigation }) => {
 
 /** Placeholder shaped like a MetricTile. */
 function SkeletonTile() {
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   return (
     <View style={styles.skeletonTile}>
       <Skeleton width={40} height={40} radius={13} />
@@ -262,6 +266,8 @@ function SkeletonTile() {
 
 /** One labelled figure — gradient chip, label wraps, a counted number on the right. */
 function MetricRow({ icon, label, value, colors, last }: { icon: string; label: string; value: number; colors: string[]; last?: boolean }) {
+  const { palette: PALETTE } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   return (
     <View style={[styles.metricRow, !last && styles.metricDivider]}>
       <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.metricIcon}>
@@ -275,6 +281,8 @@ function MetricRow({ icon, label, value, colors, last }: { icon: string; label: 
 
 /** A ranked horizontal bar: rank, name + value on one line, a growing gradient bar below. */
 function BarRow({ rank, label, value, max, delay }: { rank: number; label: string; value: number; max: number; delay: number }) {
+  const { palette: PALETTE } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const share = Math.max(0.04, Number(value || 0) / Math.max(1, Number(max || 1)));
   return (
     <View accessible accessibilityLabel={`${label}: ${value} views`}>
@@ -329,3 +337,6 @@ const styles = StyleSheet.create({
 });
 
 export default AnalyticsScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;

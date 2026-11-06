@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -16,6 +17,9 @@ import PublicRegionContent from './PublicRegionContent';
 import { NewsArticleContent, newsMetadata } from './PublicNewsArticleScreen';
 
 export default function PublicContentScreen({ navigation, route }: any) {
+  const x = useLegacyAppearance(legacyAppearance_x);
+  const PALETTE = useLegacyAppearance(legacyAppearance_PALETTE);
+  const BRAND = useLegacyAppearance(legacyAppearance_BRAND);
   const path = String(route?.params?.path || '');
   const [query, setQuery] = useState(''), [offset, setOffset] = useState(0), [category, setCategory] = useState(''), [district, setDistrict] = useState('');
   useEffect(() => { setQuery(''); setOffset(0); setCategory(''); setDistrict(''); }, [path]);
@@ -52,6 +56,8 @@ export default function PublicContentScreen({ navigation, route }: any) {
 }
 
 function SchemePreview({ item, onPress }: { item: any; onPress: () => void }) {
+  const x = useLegacyAppearance(legacyAppearance_x);
+  const BRAND = useLegacyAppearance(legacyAppearance_BRAND);
   const uri = resolveMediaUrl(item.image?.url || '');
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [uri]);
@@ -69,6 +75,7 @@ function SchemePreview({ item, onPress }: { item: any; onPress: () => void }) {
 }
 
 function FilterChips({ label, allLabel, values, value, onChange }: { label: string; allLabel: string; values: string[]; value: string; onChange: (value: string) => void }) {
+  const x = useLegacyAppearance(legacyAppearance_x);
   return <View style={x.filters}><Text style={x.filterLabel}>{label}</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={x.chips}>
     {['', ...values].map(option => <PressableScale key={option} accessibilityRole="button" accessibilityLabel={option || allLabel} accessibilityState={{ selected: value === option }} onPress={() => onChange(option)} contentStyle={[x.chip, value === option && x.chipSelected]}>
       <Text style={[x.chipText, value === option && x.chipTextSelected]}>{option || allLabel}</Text>
@@ -78,6 +85,8 @@ function FilterChips({ label, allLabel, values, value, onChange }: { label: stri
 
 const dateLabel = (value: any) => value && Number.isFinite(new Date(value).getTime()) ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 function AlbumThumbnail({ photo, index, singleColumn, onPress, cover = false, album = false }: { photo: any; index: number; singleColumn: boolean; onPress: () => void; cover?: boolean; album?: boolean }) {
+  const x = useLegacyAppearance(legacyAppearance_x);
+  const BRAND = useLegacyAppearance(legacyAppearance_BRAND);
   const poster = galleryMediaUrl(photo.thumbnailUrl) || galleryMediaUrl(photo.posterUrl);
   const uri = resolveMediaUrl(poster || (photo.type !== 'video' ? galleryMediaUrl(photo.url) : ''));
   const [failed, setFailed] = useState(false);
@@ -90,6 +99,8 @@ function AlbumThumbnail({ photo, index, singleColumn, onPress, cover = false, al
 }
 
 function Album({ page, navigation, overview }: { page: PublicPageData; navigation: any; overview: boolean }) {
+  const x = useLegacyAppearance(legacyAppearance_x);
+  const BRAND = useLegacyAppearance(legacyAppearance_BRAND);
   const { width, fontScale } = useWindowDimensions();
   const singleColumn = width < 320 || fontScale >= 1.4;
   const item = page.item || {};
@@ -149,6 +160,8 @@ function Article({ item, navigation, path }: { item: any; navigation: any; path:
   return <NewsArticleContent article={item} navigation={navigation} />;
 }
 function Scheme({ item, navigation }: { item: any; navigation: any }) {
+  const x = useLegacyAppearance(legacyAppearance_x);
+  const BRAND = useLegacyAppearance(legacyAppearance_BRAND);
   return <>
     <Photo url={item.image?.url} alt={item.title} /><Body value={item.summary} navigation={navigation} />
     <View style={x.schemeFacts}><Text style={x.filterLabel}>{[item.tier === 'national' ? 'Central scheme' : item.state, item.district, item.category].filter(Boolean).join(' · ')}</Text>
@@ -183,3 +196,8 @@ const x = StyleSheet.create({
   schemeCard: { backgroundColor: PALETTE.white, borderWidth: 1, borderColor: PALETTE.border, borderRadius: 18, overflow: 'hidden' }, schemeImage: { width: '100%', aspectRatio: 16 / 9, backgroundColor: PALETTE.blueSoft }, schemeCopy: { padding: 18, gap: 8 }, schemeFooter: { borderTopWidth: 1, borderTopColor: PALETTE.border, paddingTop: 14, marginTop: 6, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, schemeFacts: { backgroundColor: PALETTE.white, borderWidth: 1, borderColor: PALETTE.border, padding: 18, borderRadius: 18, gap: 14 }, schemeFact: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   readingSection: { borderBottomWidth: 1, borderBottomColor: PALETTE.border, paddingTop: 8, paddingBottom: 8 },
 });
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_x = x;
+const legacyAppearance_PALETTE = PALETTE;
+const legacyAppearance_BRAND = BRAND;

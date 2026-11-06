@@ -1,3 +1,5 @@
+import { useAppTheme } from '../../../ui/AppTheme';
+import { useLegacyAppearance } from '../../../ui/legacyAppearance';
 import React, { useEffect, useRef } from 'react';
 import {
   View,
@@ -53,6 +55,9 @@ export function SuperMenuDrawer({ rootNavigation }: { rootNavigation: any }) {
 }
 
 function DrawerPanel({ rootNavigation }: { rootNavigation: any }) {
+  const ADMIN = useLegacyAppearance(legacyAppearance_ADMIN);
+  const { palette: PALETTE } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const insets = useSafeAreaInsets();
   const { close, active } = useTierMenu();
   const { logout } = useAuthStore();
@@ -217,3 +222,7 @@ const s = StyleSheet.create({
   itemHint: { ...TYPE.caption, marginTop: 1 },
   rule: { height: StyleSheet.hairlineWidth * 2, backgroundColor: PALETTE.divider, marginVertical: SPACE.md, marginHorizontal: SPACE.sm },
 });
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_ADMIN = ADMIN;
+const legacyAppearance_s = s;

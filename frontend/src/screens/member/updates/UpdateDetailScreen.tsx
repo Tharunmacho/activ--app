@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../../../ui/legacyAppearance';
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -21,6 +22,8 @@ import { sharePublicPage } from '../../../services/contentShare';
  * the text IS the content.
  */
 const UpdateDetailScreen = ({ navigation, route }: any) => {
+  const styles = useLegacyAppearance(legacyAppearance_styles);
+  const PALETTE = useLegacyAppearance(legacyAppearance_PALETTE);
   const id = String(route?.params?.id || '');
   const { data: update, loading, error, reload, refreshing, refresh } = useLoad<any>(() => (id ? getAnnouncement(id) : Promise.resolve(null)), [id], null);
 
@@ -146,3 +149,7 @@ const styles = StyleSheet.create({
 });
 
 export default UpdateDetailScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;
+const legacyAppearance_PALETTE = PALETTE;

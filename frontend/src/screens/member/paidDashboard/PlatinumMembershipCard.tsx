@@ -1,3 +1,5 @@
+import { useAppTheme } from '../../../ui/AppTheme';
+import { useLegacyAppearance } from '../../../ui/legacyAppearance';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, View, Text, StyleSheet } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -8,6 +10,7 @@ type Props = { name: string; memberId: string; since: string; active: boolean; o
 
 /** Lifetime Membership in the same warm gold palette as the website. */
 export default function PlatinumMembershipCard({ name, memberId, since, active, onPress }: Props) {
+  const s = useLegacyAppearance(legacyAppearance_s);
   const reduceMotion = useReduceMotion();
   const shine = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -33,6 +36,8 @@ export default function PlatinumMembershipCard({ name, memberId, since, active, 
 }
 
 export function PlatinumMemberShortcuts({ onBusiness, onDocuments, onReceipt }: { onBusiness: () => void; onDocuments: () => void; onReceipt: () => void }) {
+  const { palette, isDark } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   return <View style={s.shortcuts}><Text style={s.sectionLabel}>YOUR MEMBER SPACE</Text><View style={s.shortcutRow}>{[
     { label: 'Business', icon: 'business-center', onPress: onBusiness },
     { label: 'Documents', icon: 'description', onPress: onDocuments },
@@ -73,3 +78,6 @@ const s = StyleSheet.create({
   shortcutText: { ...TYPE.caption, fontSize: 11, fontWeight: '500', color: '#3b3020', marginTop: 12 },
   shortcutArrow: { alignSelf: 'flex-end', marginTop: 8 },
 });
+
+// Theme-aware aliases preserve the original styles for non-React helpers.
+const legacyAppearance_s = s;

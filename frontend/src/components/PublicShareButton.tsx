@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../ui/legacyAppearance';
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -6,6 +7,7 @@ import { publicShareUrl, sharePublicPage } from '../services/contentShare';
 export function PublicShareButton({ path, title, label = 'Share', compact = true, style }: {
   path: string; title: string; label?: string; compact?: boolean; style?: StyleProp<ViewStyle>;
 }) {
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const [busy, setBusy] = useState(false);
   const mounted = useRef(true), working = useRef(false);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -35,3 +37,6 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.65 },
   label: { fontSize: 16, lineHeight: 22, fontWeight: '600', color: '#1955CF', flexShrink: 1 },
 });
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;

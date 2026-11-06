@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../../../ui/legacyAppearance';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
@@ -36,6 +37,7 @@ interface AdminRow {
   id: string;
   fullName: string;
   email: string;
+  notificationEmail?: string;
   phoneNumber: string;
   role: string;
   roleLabel: string;
@@ -112,6 +114,7 @@ const EMPTY_FORM = {
   role: 'block_admin' as string,
   fullName: '',
   email: '',
+  notificationEmail: '',
   phoneNumber: '',
   password: '',
   confirmPassword: '',
@@ -159,6 +162,8 @@ interface StaffDraft {
  * current one.
  */
 const StaffAccountCard = ({ item, index, onSaved }: { item: StaffAccount; index: number; onSaved: () => void }) => {
+  const styles = useLegacyAppearance(legacyAppearance_styles);
+  const PALETTE = useLegacyAppearance(legacyAppearance_PALETTE);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<StaffDraft | null>(null);
   const [reveal, setReveal] = useState<{ [k: string]: boolean }>({});
@@ -321,6 +326,10 @@ const SEARCH_DEBOUNCE_MS = 350;
  * edit and hard delete.
  */
 const ManageAdminsScreen = ({ route }: any) => {
+  const PALETTE = useLegacyAppearance(legacyAppearance_PALETTE);
+  const styles = useLegacyAppearance(legacyAppearance_styles);
+  const CONSOLE_ACCENTS = useLegacyAppearance(legacyAppearance_CONSOLE_ACCENTS);
+  const CONSOLE_LIST = useLegacyAppearance(legacyAppearance_CONSOLE_LIST);
   const [admins, setAdmins] = useState<AdminRow[]>([]);
   /** CMS / events staff, from their own endpoint (credentials maintained here). */
   const [staff, setStaff] = useState<StaffAccount[]>([]);
@@ -344,6 +353,7 @@ const ManageAdminsScreen = ({ route }: any) => {
   const [mode, setMode] = useState<'idle' | 'create' | 'edit'>('idle');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [originalNotificationEmail, setOriginalNotificationEmail] = useState('');
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -629,6 +639,7 @@ const ManageAdminsScreen = ({ route }: any) => {
 
   const openCreate = () => {
     setEditingId(null);
+    setOriginalNotificationEmail('');
     setForm({ ...EMPTY_FORM, role: roleFilter !== 'all' ? roleFilter : 'block_admin' });
     setAdded(EMPTY_ADDED);
     setRevealedFields({});
@@ -638,10 +649,12 @@ const ManageAdminsScreen = ({ route }: any) => {
 
   const openEdit = (admin: AdminRow) => {
     setEditingId(admin?.id || null);
+    setOriginalNotificationEmail(String(admin?.notificationEmail || '').trim().toLowerCase());
     setForm({
       role: String(admin?.role || 'block_admin'),
       fullName: admin?.fullName || '',
       email: admin?.email || '',
+      notificationEmail: admin?.notificationEmail || '',
       phoneNumber: admin?.phoneNumber || '',
       password: '',
       confirmPassword: '',
@@ -671,6 +684,10 @@ const ManageAdminsScreen = ({ route }: any) => {
       phoneNumber: (form.phoneNumber || '').trim(),
       role: form.role,
     };
+    const notificationEmail = form.notificationEmail.trim().toLowerCase();
+    if (isTierRole(form.role) && (mode === 'create' || notificationEmail !== originalNotificationEmail)) {
+      payload.notificationEmail = notificationEmail;
+    }
     needs.forEach((k) => { payload[k] = String((form as any)?.[k] || '').trim(); });
     if (form.password) payload.password = form.password;
     if (mode === 'edit' && isTierRole(form.role) && form.active !== originalActive) payload.active = !!form.active;
@@ -678,6 +695,9 @@ const ManageAdminsScreen = ({ route }: any) => {
     // Checked here as well as on the server so the problem shows immediately.
     if (!payload.fullName) return Alert.alert('Missing field', 'Full name is required.');
     if (!payload.email) return Alert.alert('Missing field', 'Email is required.');
+    if (isTierRole(form.role) && notificationEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(notificationEmail)) {
+      return Alert.alert('Invalid email', 'Enter a valid notification email, or leave it blank to use the account email.');
+    }
     if (mode === 'create' && (form.password || '').length < 8) {
       return Alert.alert('Weak password', 'Use at least 8 characters.');
     }
@@ -847,6 +867,9 @@ const ManageAdminsScreen = ({ route }: any) => {
             <View style={styles.flexText}>
               <Text style={styles.adminName} numberOfLines={1}>{item?.fullName || 'Unnamed admin'}</Text>
               <Text style={styles.adminEmail} numberOfLines={1}>{item?.email || 'No email'}</Text>
+              {item.notificationEmail && item.notificationEmail !== item.email ? (
+                <Text style={styles.adminEmail} numberOfLines={1}>Notifications: {item.notificationEmail}</Text>
+              ) : null}
               <View style={styles.chipRow}>
                 <ConsoleChip label={item?.roleLabel || item?.role || 'Admin'} kind={meta?.chip || 'neutral'} icon={meta?.icon || 'manage-accounts'} />
                 {inactive ? <ConsoleChip label="Deactivated" kind="warning" icon="pause-circle-outline" /> : null}
@@ -1086,6 +1109,12 @@ const ManageAdminsScreen = ({ route }: any) => {
           {renderInput('Email Address', form.email, v => setField('email', v), 'name@activ.com', {
             keyboard: 'email-address', capitalize: 'none', icon: 'mail-outline',
           })}
+          {isTierRole(form.role) ? <>
+            {renderInput('Notification email (optional)', form.notificationEmail, v => setField('notificationEmail', v), 'Use the account email', {
+              keyboard: 'email-address', capitalize: 'none', icon: 'forward-to-inbox',
+            })}
+            <ConsoleNote text="Application alerts and password resets go here. Leave blank to use the account email. Enter an existing mailbox." />
+          </> : null}
           {renderInput('Phone (optional)', form.phoneNumber, v => setField('phoneNumber', v), '9876543210', {
             keyboard: 'phone-pad', icon: 'phone',
           })}
@@ -1341,3 +1370,9 @@ const styles = StyleSheet.create({
 });
 
 export default ManageAdminsScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;
+const legacyAppearance_PALETTE = PALETTE;
+const legacyAppearance_CONSOLE_ACCENTS = CONSOLE_ACCENTS;
+const legacyAppearance_CONSOLE_LIST = CONSOLE_LIST;

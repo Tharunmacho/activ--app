@@ -1,3 +1,5 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
+import { useAppTheme } from '../../ui/AppTheme';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,6 +31,8 @@ export function BusinessTabBar({ active, onPress }: {
   /** Called for every tab except the active one. */
   onPress: (key: BusinessTabKey) => void;
 }) {
+  const { palette: PALETTE, premiumTone } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const insets = useSafeAreaInsets();
   const p = premiumTone('business');
   const bottom = Math.max(Number(insets?.bottom || 0), SPACE.sm);
@@ -87,3 +91,6 @@ const styles = StyleSheet.create({
 });
 
 export default BusinessTabBar;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;

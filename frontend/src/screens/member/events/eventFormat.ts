@@ -1,6 +1,8 @@
 import { eventPhase, isPastEvent } from '../../../utils/eventLifecycle';
 export { eventPhase, isPastEvent } from '../../../utils/eventLifecycle';
 import { money } from '../../../ui';
+import { feeFor } from '../../../utils/eventPricing';
+export { feeFor } from '../../../utils/eventPricing';
 
 /** Shared event formatting for the member event screens (website eventFormat.ts). */
 
@@ -19,9 +21,6 @@ export const dateParts = (iso?: string | null) => {
     time: `${((h + 11) % 12) + 1}:${String(d.getUTCMinutes()).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`,
   };
 };
-
-/** What THIS member pays — `yourPrice` (server-resolved), else the common fee. */
-export const feeFor = (e: any) => Number(e?.yourPrice ?? e?.registrationFee ?? 0);
 
 export const priceLabel = (e: any) => {
   const fee = feeFor(e);

@@ -1,3 +1,4 @@
+import { useAppTheme } from '../../../ui/AppTheme';
 import React from 'react';
 import { View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -47,6 +48,7 @@ interface Props {
 }
 
 function Inner({ tier, stackRoute, rootNavigation, identity, screens }: Props) {
+  const { palette } = useAppTheme();
   const insets = useSafeAreaInsets();
   const menu = useTierMenu();
   return (

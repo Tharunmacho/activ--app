@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../../../ui/legacyAppearance';
 import StudentNetworkingGate from '../StudentNetworkingGate';
 import { isStudentMembership } from '../../../utils/memberAudience';
 import React, { useEffect, useState } from 'react';
@@ -39,6 +40,7 @@ const yearOf = (v?: string | null) => {
 };
 
 function Fact({ icon, label, value, tone }: { icon: string; label: string; value: string; tone?: 'blue' | 'teal' }) {
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   return (
     <View style={styles.fact}>
       <GradientGlyph icon={icon} tone={tone || 'blue'} size={38} />
@@ -51,6 +53,8 @@ function Fact({ icon, label, value, tone }: { icon: string; label: string; value
 }
 
 const DirectoryProfileScreen = ({ navigation, route }: any) => {
+  const styles = useLegacyAppearance(legacyAppearance_styles);
+  const PALETTE = useLegacyAppearance(legacyAppearance_PALETTE);
   const id = String(route?.params?.id || '');
   const { data: m, loading, error, reload, refreshing, refresh } = useLoad<any>(() => getDirectoryEntry(id), [id], null);
   const { paid, profile } = useMemberAccess();
@@ -291,3 +295,7 @@ const styles = StyleSheet.create({
 });
 
 export default DirectoryProfileScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;
+const legacyAppearance_PALETTE = PALETTE;

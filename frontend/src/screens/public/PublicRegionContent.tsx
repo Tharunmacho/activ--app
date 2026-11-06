@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { ContentImage } from '../../ui/ContentImage';
@@ -17,6 +18,9 @@ const sectionIcon: Record<string, string> = { about: 'info-outline', gallery: 'p
 export default function PublicRegionContent({ page, path, navigation, offset, onOffset }: {
   page: PublicPageData; path: string; navigation: any; offset: number; onOffset: (offset: number) => void;
 }) {
+  const x = useLegacyAppearance(legacyAppearance_x);
+  const PALETTE = useLegacyAppearance(legacyAppearance_PALETTE);
+  const BRAND = useLegacyAppearance(legacyAppearance_BRAND);
   const { width, fontScale } = useWindowDimensions();
   const singleColumn = width < 360 || fontScale >= 1.4;
   const record = useMemo(() => page.page || {}, [page.page]);
@@ -69,6 +73,8 @@ export default function PublicRegionContent({ page, path, navigation, offset, on
   </>;
 }
 function Leader({ person, onPress }: { person: any; onPress: () => void }) {
+  const x = useLegacyAppearance(legacyAppearance_x);
+  const BRAND = useLegacyAppearance(legacyAppearance_BRAND);
   const uri = resolveMediaUrl(person.photoUrl || '');
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [uri]);
@@ -80,6 +86,7 @@ function Leader({ person, onPress }: { person: any; onPress: () => void }) {
   </SurfaceCard>;
 }
 function Contact({ contact, navigation }: { contact: any; navigation: any }) {
+  const x = useLegacyAppearance(legacyAppearance_x);
   if (!hasContact(contact)) return null;
   return <View style={x.contact}>
     {!!(contact.name || contact.personName) && <Heading>{contact.name || contact.personName}</Heading>}
@@ -90,6 +97,7 @@ function Contact({ contact, navigation }: { contact: any; navigation: any }) {
   </View>;
 }
 function FeedCard({ item, navigation }: { item: any; navigation: any }) {
+  const x = useLegacyAppearance(legacyAppearance_x);
   const [cover, ...photos] = newsMedia(item);
   return <SurfaceCard style={x.leaderCard}>{!!cover && <NewsMediaItem media={cover} navigation={navigation} />}<Text style={s.meta}>{[item.date, item.location, item.category].filter(Boolean).join(' · ')}</Text><Heading>{item.title}</Heading>
     <Body value={item.summary} navigation={navigation} /><Body value={item.body} navigation={navigation} />
@@ -98,6 +106,7 @@ function FeedCard({ item, navigation }: { item: any; navigation: any }) {
   </SurfaceCard>;
 }
 function LeaderProfile({ person, context, path, navigation, onClose }: { person: any; context: any; path: string; navigation: any; onClose: () => void }) {
+  const x = useLegacyAppearance(legacyAppearance_x);
   const inFlight = useRef(false);
   const [purposes, setPurposes] = useState<any[] | null>(null), [form, setForm] = useState(false), [loading, setLoading] = useState(false), [sending, setSending] = useState(false), [sent, setSent] = useState(false), [error, setError] = useState('');
   const [values, setValues] = useState({ name: '', phone: '', email: '', organisation: '', district: '', purpose: '', note: '' });
@@ -147,3 +156,8 @@ const x = StyleSheet.create({
   sectionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 10 }, sectionTileWrap: { width: '47%', flexGrow: 1, maxWidth: '49%' }, singleColumn: { width: '100%', maxWidth: '100%' }, sectionTile: { flexGrow: 1, gap: 12, backgroundColor: PALETTE.white, borderRadius: 16, borderWidth: 1, borderColor: PALETTE.border, padding: 16, minHeight: 130 }, sectionRow: { flexDirection: 'row', alignItems: 'center', minHeight: 68 }, sectionTitle: { flex: 1, color: BRAND.navyDeep, fontSize: 16, lineHeight: 23, fontWeight: '600' },
   board: { borderTopWidth: 1, borderTopColor: PALETTE.border, paddingTop: 20, marginTop: 4 }, leaderCard: { shadowOpacity: 0.04, shadowRadius: 5, elevation: 1, marginBottom: 12 }, contact: { borderWidth: 1, borderColor: PALETTE.border, borderRadius: 16, padding: 16, backgroundColor: PALETTE.white, marginBottom: 12 },
 });
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_x = x;
+const legacyAppearance_PALETTE = PALETTE;
+const legacyAppearance_BRAND = BRAND;

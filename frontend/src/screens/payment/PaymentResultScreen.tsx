@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import {
@@ -36,6 +37,7 @@ const MAX_TRIES = 25;
 type Outcome = 'checking' | 'paid' | 'failed' | 'unconfirmed';
 
 const PaymentResultScreen: React.FC<any> = ({ navigation, route }) => {
+  const s = useLegacyAppearance(legacyAppearance_s);
   const p = route?.params || {};
   const orderId: string = String(p?.orderId || '');
   const paymentId: string = String(p?.paymentId || '');
@@ -282,3 +284,6 @@ const s = StyleSheet.create({
 });
 
 export default PaymentResultScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_s = s;

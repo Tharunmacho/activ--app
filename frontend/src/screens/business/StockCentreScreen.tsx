@@ -1,3 +1,5 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
+import { useAppTheme } from '../../ui/AppTheme';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Alert } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -69,6 +71,8 @@ const STATE_BADGE = {
 };
 
 function MoveRow({ m, last }: { m: StockMovement; last?: boolean }) {
+  const { palette: PALETTE } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const up = Number(m?.delta) > 0;
   return (
     <View style={[styles.move, !last && styles.moveDivider]}>
@@ -89,6 +93,7 @@ function MoveRow({ m, last }: { m: StockMovement; last?: boolean }) {
 }
 
 function AdjustPanel({ product, history, onDone }: { product: Product; history: StockMovement[]; onDone: (p: Product) => void }) {
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const [mode, setMode] = useState<'delta' | 'setTo'>('delta');
   // Website Stock.tsx keeps the low-stock threshold and the publish switch on
   // the line itself — they are stock decisions, made while reviewing stock.
@@ -232,6 +237,8 @@ function AdjustPanel({ product, history, onDone }: { product: Product; history: 
 function ProductStockRow({ item, open, onToggle, onChanged, scale, history }: {
   item: Product; open: boolean; onToggle: () => void; onChanged: (p: Product) => void; scale: number; history: StockMovement[];
 }) {
+  const { palette: PALETTE, premiumTone } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const p = premiumTone('business');
   const st = STATE_BADGE[stateOf(item)];
   const img = item?.imageUrl ? resolveMediaUrl(item.imageUrl) : '';
@@ -273,6 +280,8 @@ function ProductStockRow({ item, open, onToggle, onChanged, scale, history }: {
 }
 
 const StockCentreScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { palette: PALETTE } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const company = useActiveCompany();
   const loadCompanies = useActiveCompanyStore((s) => s.loadCompanies);
   const companyId = company?._id || '';
@@ -497,6 +506,7 @@ const StockCentreScreen: React.FC<Props> = ({ navigation, route }) => {
 };
 
 function LegendRow({ color, label, value, onPress }: { color: string; label: string; value: number; onPress: () => void }) {
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   return (
     <PressableScale onPress={onPress} contentStyle={styles.legendRow} accessibilityRole="button" accessibilityLabel={`Show ${label}: ${value}`}>
       <View style={[styles.legendDot, { backgroundColor: color }]} />
@@ -548,3 +558,6 @@ const styles = StyleSheet.create({
 });
 
 export default StockCentreScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;

@@ -1,3 +1,5 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
+import { useAppTheme } from '../../ui/AppTheme';
 // Business Dashboard — the member's business COMMAND CENTRE (premium, business tone: violet).
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Alert, ScrollView } from 'react-native';
@@ -47,6 +49,8 @@ type BusinessDashboardProps = {
 type BusinessProfile = ActiveCompany;
 
 const BusinessDashboardScreen: React.FC<BusinessDashboardProps> = ({ navigation }) => {
+  const { palette: PALETTE } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   // Companies + the active selection live in the shared store, so every other
   // business screen shows this exact company until the user switches here.
   const companies = useActiveCompanyStore((state) => state.companies);
@@ -476,6 +480,7 @@ const BusinessDashboardScreen: React.FC<BusinessDashboardProps> = ({ navigation 
 
 /** First-load placeholder shaped like the body: action card, 2×2 stats, tools. */
 function DashboardSkeleton() {
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   return (
     <View style={[styles.skeleton, styles.overlap]} accessibilityLabel="Loading">
       <View style={styles.skCard}>
@@ -532,3 +537,6 @@ const styles = StyleSheet.create({
 });
 
 export default BusinessDashboardScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;

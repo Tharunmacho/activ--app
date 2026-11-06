@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../ui/legacyAppearance';
 import React from 'react';
 import {
   View,
@@ -74,6 +75,7 @@ const AdminSidebarDrawer: React.FC<AdminSidebarDrawerProps> = ({
   blockName = '',
   onLogout,
 }) => {
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const insets = useSafeAreaInsets();
 
   if (!isOpen) return null;
@@ -560,3 +562,6 @@ const styles = StyleSheet.create({
 });
 
 export default AdminSidebarDrawer;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;

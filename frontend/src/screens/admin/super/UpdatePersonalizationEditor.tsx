@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../../../ui/legacyAppearance';
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -17,6 +18,8 @@ const message = (error: any) => error?.response ? errorText(error) : error?.mess
 const variableKey = (value: string) => value.trim().toLowerCase();
 
 export default function UpdatePersonalizationEditor({ mode, onMode, memberIds, onMembers, variables, onVariables, onInsert, onKnownMembers, disabled }: Props) {
+  const s = useLegacyAppearance(legacyAppearance_s);
+  const PALETTE = useLegacyAppearance(legacyAppearance_PALETTE);
   const [search, setSearch] = useState('');
   const [results, setResults] = useState<UpdateMember[]>([]);
   const [known, setKnown] = useState<Record<string, UpdateMember>>({});
@@ -144,6 +147,7 @@ export default function UpdatePersonalizationEditor({ mode, onMode, memberIds, o
 }
 
 export function UpdateRecipientPreview({ payload, members }: { payload: Record<string, unknown>; members: UpdateMember[] }) {
+  const s = useLegacyAppearance(legacyAppearance_s);
   const [memberId, setMemberId] = useState('');
   const [data, setData] = useState<UpdatePreview | null>(null);
   const [error, setError] = useState('');
@@ -188,3 +192,7 @@ const s = StyleSheet.create({
   previewTitle: { fontSize: 22, lineHeight: 30, fontWeight: '600', color: PALETTE.text },
   body: { fontSize: 18, lineHeight: 27, color: PALETTE.textSoft },
 });
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_s = s;
+const legacyAppearance_PALETTE = PALETTE;

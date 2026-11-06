@@ -1,3 +1,4 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, Alert, Platform } from 'react-native';
@@ -42,6 +43,8 @@ type Item = {
 };
 
 function MenuGroup({ title, items, paid, delay }: { title: string; items: Item[]; paid: boolean; delay: number }) {
+  const styles = useLegacyAppearance(legacyAppearance_styles);
+  const PALETTE = useLegacyAppearance(legacyAppearance_PALETTE);
   const shown = items.filter((i) => !(i.onlyUnpaid && paid));
   if (!shown.length) return null;
   return (
@@ -79,6 +82,8 @@ function MenuGroup({ title, items, paid, delay }: { title: string; items: Item[]
 }
 
 const MemberMenuScreen = ({ navigation }: any) => {
+  const styles = useLegacyAppearance(legacyAppearance_styles);
+  const PALETTE = useLegacyAppearance(legacyAppearance_PALETTE);
   const { profile, paid, loading } = useMemberAccess();
   const { logout } = useAuthStore();
   const [submitted, setSubmitted] = useState<boolean | null>(null);
@@ -238,3 +243,7 @@ const styles = StyleSheet.create({
 });
 
 export default MemberMenuScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;
+const legacyAppearance_PALETTE = PALETTE;

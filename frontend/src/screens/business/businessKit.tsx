@@ -1,3 +1,5 @@
+import { useAppTheme } from '../../ui/AppTheme';
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
 import React from 'react';
 import { View, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -43,6 +45,7 @@ export function companyStatus(status?: string | null) {
 
 /** A status pill for the gradient header. */
 export function GlassStatus({ status, style }: { status?: string | null; style?: StyleProp<ViewStyle> }) {
+  const s = useLegacyAppearance(legacyAppearance_s);
   const st = companyStatus(status);
   return (
     <View style={[s.glassStatus, style]} accessibilityLabel={`Status: ${st.label}`}>
@@ -54,6 +57,8 @@ export function GlassStatus({ status, style }: { status?: string | null; style?:
 
 /** A translucent pill on the gradient ("12 products", "Listed"). */
 export function GlassTag({ icon, label, style }: { icon?: string; label: string; style?: StyleProp<ViewStyle> }) {
+  const { palette: PALETTE } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   return (
     <View style={[s.glassStatus, style]}>
       {icon ? <Icon name={icon} size={13} color={PALETTE.white} /> : null}
@@ -75,6 +80,8 @@ export function CompanyGlassCard({ name, type, logo, status, facts, right, style
   right?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
+  const { brand: BRAND } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const list = (facts || []).filter((f) => f && f.text);
   return (
     <View style={[s.glassCard, style]}>
@@ -117,6 +124,8 @@ export function CoverHero({ banner, logo, name, subtitle, badges, onPickBanner, 
   onPickLogo?: () => void;
   pickHint?: string;
 }) {
+  const { palette: PALETTE } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const [failed, setFailed] = React.useState(false);
   const src = typeof banner === 'string' ? banner.trim() : '';
   React.useEffect(() => { setFailed(false); }, [src]);
@@ -182,6 +191,8 @@ export function CoverHero({ banner, logo, name, subtitle, badges, onPickBanner, 
 
 /** A 4:3 product photo well — the picked/real photo, or an inviting empty state. */
 export function PhotoWell({ uri, onPress, hint = 'JPG or PNG, up to 5 MB' }: { uri?: string; onPress: () => void; hint?: string }) {
+  const { palette: PALETTE, premiumTone } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const p = premiumTone('business');
   const [failed, setFailed] = React.useState(false);
   const src = typeof uri === 'string' ? uri.trim() : '';
@@ -216,6 +227,8 @@ export function PhotoWell({ uri, onPress, hint = 'JPG or PNG, up to 5 MB' }: { u
 export function ToolTile({ icon, label, colors, onPress, badge }: {
   icon: string; label: string; colors: string[]; onPress: () => void; badge?: string;
 }) {
+  const { palette: PALETTE, premiumTone } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const p = premiumTone('business');
   return (
     <View style={s.toolCell}>
@@ -232,6 +245,7 @@ export function ToolTile({ icon, label, colors, onPress, badge }: {
 }
 
 export function ToolGrid({ children }: { children: React.ReactNode }) {
+  const s = useLegacyAppearance(legacyAppearance_s);
   return <View style={s.toolGrid}>{children}</View>;
 }
 
@@ -240,6 +254,8 @@ export function SoftAction({ icon, label, onPress, danger, primary, style, acces
   icon: string; label: string; onPress: () => void; danger?: boolean; primary?: boolean;
   style?: StyleProp<ViewStyle>; accessibilityLabel?: string; disabled?: boolean;
 }) {
+  const { palette: PALETTE, premiumTone } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const p = premiumTone('business');
   const fg = danger ? PALETTE.redDark : primary ? PALETTE.white : p.accentDark;
   const inner = (
@@ -270,6 +286,8 @@ export function SoftAction({ icon, label, onPress, danger, primary, style, acces
 export function BizSectionTitle({ title, caption, action, onAction, style }: {
   title: string; caption?: string; action?: string; onAction?: () => void; style?: StyleProp<ViewStyle>;
 }) {
+  const { palette: PALETTE } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   return (
     <View style={[s.secRow, style]}>
       <View style={{ flex: 1, minWidth: 0 }}>
@@ -333,6 +351,7 @@ export function BizStatePage({ title, eyebrow, onBack, error, onRetry, footer, r
 
 /** Skeleton shaped like a list of white cards (under an overlapping header). */
 export function CardSkeletons({ rows = 3, tall }: { rows?: number; tall?: boolean }) {
+  const s = useLegacyAppearance(legacyAppearance_s);
   const n = Math.max(1, Math.min(Number(rows || 3), 8));
   return (
     <View style={s.skWrap} accessibilityLabel="Loading">
@@ -442,3 +461,6 @@ const s = StyleSheet.create({
   skWrap: { paddingHorizontal: SPACE.lg, gap: SPACE.md },
   skCard: { padding: SPACE.lg, borderRadius: 20, backgroundColor: PALETTE.white, borderWidth: 1, borderColor: PALETTE.border },
 });
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_s = s;

@@ -1,3 +1,5 @@
+import { useLegacyAppearance } from '../../ui/legacyAppearance';
+import { useAppTheme } from '../../ui/AppTheme';
 import React, { useCallback, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Linking, Alert, FlatList } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -49,6 +51,8 @@ const monthYear = (value?: string | null) => {
 };
 
 function ProductCard({ item }: { item: PublicProduct }) {
+  const { palette: PALETTE, premiumTone } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const p = premiumTone('business');
   const img = item?.imageUrl ? resolveMediaUrl(item.imageUrl) : '';
   const stock = Number(item?.stock || 0);
@@ -81,6 +85,8 @@ function ProductCard({ item }: { item: PublicProduct }) {
 
 /** One figure in the at-a-glance strip. */
 function Fact({ icon, value, label, count }: { icon: string; value?: string; label: string; count?: number }) {
+  const { premiumTone } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const p = premiumTone('business');
   return (
     <View style={styles.fact} accessible accessibilityLabel={`${label}: ${typeof count === 'number' ? count : value}`}>
@@ -96,6 +102,8 @@ function Fact({ icon, value, label, count }: { icon: string; value?: string; lab
 }
 
 const CompanyPublicScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { palette: PALETTE, type: TYPE } = useAppTheme();
+  const styles = useLegacyAppearance(legacyAppearance_styles);
   const companyId = route?.params?.companyId || '';
   const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
@@ -404,3 +412,6 @@ const styles = StyleSheet.create({
 });
 
 export default CompanyPublicScreen;
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_styles = styles;

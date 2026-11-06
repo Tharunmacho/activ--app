@@ -1,3 +1,5 @@
+import { useLegacyAppearance } from '../legacyAppearance';
+import { useAppTheme } from '../AppTheme';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -57,6 +59,8 @@ export function CompanyLogoTile({ uri, name, size = 56, tone = 'member', ring = 
   ring?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
+  const { palette: PALETTE, premiumTone } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const p = premiumTone(tone);
   const [failed, setFailed] = useState(false);
   const src = typeof uri === 'string' ? uri.trim() : '';
@@ -105,6 +109,8 @@ export function CompanyLogoTile({ uri, name, size = 56, tone = 'member', ring = 
 export function CompanyChip({ name, logo, active, onPress, tone = 'member' }: {
   name: string; logo?: string; active?: boolean; onPress: () => void; tone?: Tone;
 }) {
+  const { palette: PALETTE, premiumTone } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const p = premiumTone(tone);
   const body = (
     <>
@@ -140,6 +146,8 @@ export function LiftCard({ children, style, onPress, accessibilityLabel, tone = 
   tone?: Tone;
   padded?: boolean;
 }) {
+  const { premiumTone } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const p = premiumTone(tone);
   const box = [s.card, padded && s.cardPad, { shadowColor: p.shadow }];
   if (onPress) {
@@ -156,6 +164,8 @@ export function LiftCard({ children, style, onPress, accessibilityLabel, tone = 
 export function GlassFigure({ icon, value, label, style }: {
   icon?: string; value: string; label: string; style?: StyleProp<ViewStyle>;
 }) {
+  const { brand: BRAND } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   return (
     <View style={[s.glassStat, style]} accessible accessibilityLabel={`${label}: ${value}`}>
       {icon ? <Icon name={icon} size={16} color={BRAND.onBrandSoft} /> : null}
@@ -181,6 +191,8 @@ export function TrustStar({ trusted, busy, disabled, onPress, size = SIZE.touch,
   size?: number;
   accessibilityLabel?: string;
 }) {
+  const { palette: PALETTE } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const pop = useRef(new Animated.Value(1)).current;
   const burst = useRef(new Animated.Value(0)).current;
   const prev = useRef(trusted);
@@ -244,6 +256,7 @@ export function ContactMark({ kind, size = 24 }: { kind: ContactKind; size?: num
 export function ContactAction({ kind, onPress, label, detail, style }: {
   kind: ContactKind; onPress: () => void; label?: string; detail?: string; style?: StyleProp<ViewStyle>;
 }) {
+  const s = useLegacyAppearance(legacyAppearance_s);
   const text = label || CONTACT_LABEL[kind];
   return (
     <PressableScale
@@ -265,6 +278,8 @@ export function ContactAction({ kind, onPress, label, detail, style }: {
 export interface ActivityItem { key: string; icon?: string; title: string; subtitle?: string; meta?: string }
 
 export function ActivityTimeline({ items, tone = 'member' }: { items: ActivityItem[]; tone?: Tone }) {
+  const { palette: PALETTE, premiumTone } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const p = premiumTone(tone);
   const list = (items || []).filter(Boolean);
   return (
@@ -314,6 +329,8 @@ export function ArtEmptyState({ art, icon = 'inbox', title, message, action, act
   style?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
 }) {
+  const { palette: PALETTE, premiumTone } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const p = premiumTone(tone);
   const medal = compact ? 96 : 120;
   return (
@@ -345,6 +362,8 @@ export function LiftSearchBar({ value, onChangeText, placeholder = 'Search', ton
   style?: StyleProp<ViewStyle>;
   autoFocus?: boolean;
 }) {
+  const { palette: PALETTE, premiumTone, isDark } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const p = premiumTone(tone);
   const [focused, setFocused] = useState(false);
   return (
@@ -482,3 +501,6 @@ const s = StyleSheet.create({
   searchInput: { flex: 1, minWidth: 0, fontSize: 15, color: PALETTE.text, paddingVertical: Platform.OS === 'ios' ? 14 : 10 },
   searchClear: { width: SIZE.touch, height: SIZE.touch, alignItems: 'center', justifyContent: 'center' },
 });
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_s = s;

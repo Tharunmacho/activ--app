@@ -1,3 +1,5 @@
+import { useAppTheme } from '../../../ui/AppTheme';
+import { useLegacyAppearance } from '../../../ui/legacyAppearance';
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
@@ -128,6 +130,9 @@ function DrawerPanel({
   tier: AdminTier; adminName: string; roleTitle: string; region: string; photo?: string | null;
   rootNavigation: any; stackRoute: string;
 }) {
+  const ADMIN = useLegacyAppearance(legacyAppearance_ADMIN);
+  const { palette: PALETTE } = useAppTheme();
+  const s = useLegacyAppearance(legacyAppearance_s);
   const insets = useSafeAreaInsets();
   const { close, active } = useTierMenu();
   const slide = useRef(new Animated.Value(prefersReducedMotion() ? 1 : 0)).current;
@@ -269,3 +274,7 @@ const s = StyleSheet.create({
   itemHint: { ...TYPE.caption, marginTop: 1 },
   rule: { height: StyleSheet.hairlineWidth * 2, backgroundColor: PALETTE.divider, marginVertical: SPACE.md, marginHorizontal: SPACE.sm },
 });
+
+// Theme-only adapters retain the remote styles and behavior.
+const legacyAppearance_ADMIN = ADMIN;
+const legacyAppearance_s = s;
