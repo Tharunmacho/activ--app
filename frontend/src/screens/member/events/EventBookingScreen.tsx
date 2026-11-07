@@ -261,6 +261,7 @@ const EventBookingScreen = ({ navigation, route }: any) => {
   const now = useEventClock();
   const scroll = useRef<ScrollView>(null);
   const busy = useRef(false);
+  const loadGeneration = useRef(0);
   const [step, setStep] = useState<'choice' | 'form' | 'review'>('choice');
   const [signedIn, setSignedIn] = useState(false);
   const [answers, setAnswers] = useState<RegistrationAnswers>({});
@@ -283,20 +284,26 @@ const EventBookingScreen = ({ navigation, route }: any) => {
   const [errors, setErrors] = useState<Errors>({});
 
   const load = async () => {
+    const generation = ++loadGeneration.current;
+    const current = () => generation === loadGeneration.current;
     setLoading(true);
     setError('');
     try {
       // Opened by reference alone (a payment result that lost the event id):
       // the booking names its event.
       const byRef = initialRef ? await getEventBooking(initialRef) : null;
+      if (!current()) return;
       if (initialRef && !byRef?.bookingRef) throw new Error('This booking could not be found. Check your reference and try again.');
-      const id = eventId || String(byRef?.eventId || '');
+      // A ticket reference owns its event context, even if the URL slug differs.
+      const id = String(byRef?.eventId || eventId || '');
       const [token, role] = await Promise.all([getAuthToken(), getUserRole()]);
+      if (!current()) return;
       const memberSession = !!token && role === 'member';
       const [ev, prof] = await Promise.all([
         getBookableEvent(id, !memberSession).catch((err) => { if (byRef) return { id, title: byRef.eventTitle, startAt: byRef.eventStartAt, endAt: byRef.eventEndAt, days: byRef.eventDays, venue: byRef.eventVenue, mode: byRef.mode, closed: true }; throw err; }),
         memberSession ? getMyProfile().catch(() => ({})) : Promise.resolve({}),
       ]);
+      if (!current()) return;
       const existing = byRef;
       setEvent(ev);
       setBooking(existing);
@@ -305,16 +312,16 @@ const EventBookingScreen = ({ navigation, route }: any) => {
       if (memberSession) setMe({ name: String(prof?.fullName || ''), email: String(prof?.email || ''), phone: String(prof?.phoneNumber || '') });
       else if (byRef?.bookedBy) setMe({ name: String(byRef.bookedBy.name || ''), email: String(byRef.bookedBy.email || ''), phone: String(byRef.bookedBy.phone || '') });
     } catch (err) {
-      setError(errorText(err));
+      if (current()) setError(errorText(err));
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
   };
-  useEffect(() => { load(); }, [eventId, initialRef]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void load(); return () => { loadGeneration.current += 1; }; }, [eventId, initialRef]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const enterForm = () => { setStep('form'); setFormError(''); scroll.current?.scrollTo({ y: 0, animated: false }); };
   const memberSignIn = async () => {
-    const fresh = await getBookableEvent(eventId || String(event?.id || ''), false);
+    const fresh = await getBookableEvent(String(event?.id || eventId || ''), false);
     if (!fresh) throw new Error('The event could not be refreshed. Please try again.');
     setEvent(fresh); setSignedIn(true); clearPublicAction(); enterForm();
   };
@@ -334,10 +341,12 @@ const EventBookingScreen = ({ navigation, route }: any) => {
   useFocusEffect(useCallback(() => {
     if (!focused.current) { focused.current = true; return; }
     if (!bookingRef) return;
-    getEventBooking(bookingRef).then((fresh) => { if (fresh?.bookingRef) { setBooking(fresh); setStatusError(''); } }).catch(() => setStatusError('Could not refresh your booking. Check the status before paying again.'));
+    const generation = loadGeneration.current;
+    getEventBooking(bookingRef).then((fresh) => { if (generation === loadGeneration.current && fresh?.bookingRef) { setBooking(fresh); setStatusError(''); } })
+      .catch(() => { if (generation === loadGeneration.current) setStatusError('Could not refresh your booking. Check the status before paying again.'); });
   }, [bookingRef]));
 
-  const effectiveId = eventId || String(event?.id || booking?.eventId || '');
+  const effectiveId = String(booking?.eventId || event?.id || eventId || '');
   const capacity = Number(event?.capacity || 0);
   const left = typeof event?.seatsLeft === 'number' && capacity > 0 ? Math.max(0, Number(event.seatsLeft)) : null;
   const full = left !== null && left <= 0;
@@ -421,7 +430,7 @@ const EventBookingScreen = ({ navigation, route }: any) => {
       const state = bookingState(freshBooking);
       if (state.settled || state.payable || state.status === 'waitlist') { setStatusError('Your booking status has changed. Review this ticket before taking another action.'); return; }
       const fresh = await getBookableEvent(effectiveId, !signedIn); setEvent(fresh); checkAvailability(fresh);
-      setBooking(null); setStep('form'); setErrors({}); setFormError(''); navigation.setParams({ ref: undefined });
+      setBooking(null); setStep('form'); setErrors({}); setFormError(''); navigation.setParams({ eventId: effectiveId, ref: undefined });
     } catch (err) { setStatusError(errorText(err)); }
     finally { busy.current = false; setChecking(false); }
   };
@@ -435,7 +444,7 @@ const EventBookingScreen = ({ navigation, route }: any) => {
       if (Number(fresh.capacity) > 0 && Number(fresh.seatsLeft) <= 0) throw new Error('This event is fully booked. Please contact the organiser.');
       setEvent(fresh); setBooking(null); setCount(1); setParticipants([{ name: '', email: '', phone: '' }]); setFirstUsesBooker(false);
       setAnswers({}); setNote(''); setErrors({}); setFormError(''); setStep('form');
-      navigation.setParams({ ref: undefined, forOthers: true });
+      navigation.setParams({ eventId: effectiveId, ref: undefined, forOthers: true });
       scroll.current?.scrollTo({ y: 0, animated: false });
     } catch (err) { setStatusError(errorText(err)); }
     finally { busy.current = false; setChecking(false); }

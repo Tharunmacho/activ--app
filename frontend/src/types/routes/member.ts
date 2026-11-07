@@ -32,5 +32,5 @@ export type MemberRoutes = {
   /** Donate CTA + the 80G receipts of gifts made from this phone. */
   MemberDonations: undefined;
   /** A page of the public website (https://activ.org.in) in the in-app viewer — Explore ACTIV. */
-  WebsiteViewer: { url?: string; path?: string; title?: string; publicAccess?: boolean };
+  WebsiteViewer: { url?: string; path?: string; title?: string; publicAccess?: boolean; appLinkFallback?: boolean };
 };

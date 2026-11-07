@@ -42,6 +42,62 @@
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="activ" />
         </intent-filter>
+        <!-- Explicit native-supported ACTIV pages; gateway/auth/admin/token
+             paths remain in the browser. Website association verifies signing. -->
+        <intent-filter android:autoVerify="true">
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" android:host="activ.org.in" />
+            <data android:scheme="http" />
+            <data android:path="/" />
+            <data android:path="/onboarding" />
+            <data android:path="/notifications" />
+            <data android:path="/login" />
+            <data android:path="/register" />
+            <data android:path="/about" />
+            <data android:path="/membership" />
+            <data android:path="/contact" />
+            <data android:path="/donate" />
+            <data android:path="/privacy-policy" />
+            <data android:path="/terms-and-conditions" />
+            <data android:path="/refund-policy" />
+            <data android:path="/cancellation-policy" />
+            <data android:path="/delete-account" />
+            <data android:pathPrefix="/legal/" />
+            <data android:path="/events" />
+            <data android:pathPrefix="/events/" />
+            <data android:path="/news" />
+            <data android:pathPrefix="/news/" />
+            <data android:path="/gallery" />
+            <data android:pathPrefix="/gallery/" />
+            <data android:path="/schemes" />
+            <data android:pathPrefix="/schemes/" />
+            <data android:path="/zones" />
+            <data android:path="/regions" />
+            <data android:pathPrefix="/regions/" />
+            <data android:path="/states" />
+            <data android:pathPrefix="/states/" />
+            <data android:path="/member/forms/personal" />
+            <data android:path="/member/forms/business" />
+            <data android:path="/member/forms/financial" />
+            <data android:path="/member/forms/declaration" />
+            <data android:path="/member/application-status" />
+            <data android:path="/member/profile" />
+            <data android:path="/member/profile-view" />
+            <data android:path="/member/settings" />
+            <data android:path="/member/documents" />
+            <data android:path="/member/plan" />
+            <data android:path="/member/certificate/membership" />
+            <data android:path="/member/certificate/tax-exemption" />
+            <data android:path="/member/payment-success" />
+            <data android:path="/payment/membership-plans" />
+            <data android:path="/payment/member-dashboard" />
+            <data android:path="/member/events" />
+            <data android:pathPrefix="/member/events/" />
+            <data android:path="/member/updates" />
+            <data android:pathPrefix="/member/updates/" />
+        </intent-filter>
       </activity>
     </application>
 </manifest>

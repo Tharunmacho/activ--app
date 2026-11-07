@@ -3,13 +3,18 @@ import { homeForRole } from './session';
 import { getPublicEvent } from './publicContent';
 import type { PublicAction } from '../utils/publicBrowse';
 import type { RootStackParamList } from '../types';
+import type { MemberAppLinkDestination } from '../navigation/appLinks';
 
 type Destination = { name: 'EventBooking'; params: RootStackParamList['EventBooking'] }
   | { name: 'MemberEventDetail'; params: RootStackParamList['MemberEventDetail'] }
   | { name: 'UpdateDetail'; params: RootStackParamList['UpdateDetail'] }
-  | { name: 'MembershipPlans' | 'MemberDonations' };
+  | { name: 'MembershipPlans' | 'MemberDonations' }
+  | MemberAppLinkDestination;
 let pending: { destination: Destination; at: number } | null = null;
 export const clearPublicAction = () => { pending = null; };
+export const rememberMemberDestination = (destination: MemberAppLinkDestination) => {
+  pending = { destination, at: Date.now() };
+};
 export const rememberEventBooking = (eventId: string) => {
   pending = { destination: { name: 'EventBooking', params: { eventId } }, at: Date.now() };
 };

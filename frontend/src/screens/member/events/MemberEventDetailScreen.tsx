@@ -158,7 +158,7 @@ const MemberEventDetailScreen = ({ navigation, route, publicAccess = false }: an
         ) : (
           <FadeInUp style={styles.overlap}>
             <SurfaceCard>
-              {/active membership/i.test(error || '') ? (
+              {!publicAccess && /active membership/i.test(error || '') ? (
                 <StateView
                   compact
                   art={<EventTicket3D size={64} />}
@@ -179,6 +179,8 @@ const MemberEventDetailScreen = ({ navigation, route, publicAccess = false }: an
                 message={error || 'It may have been withdrawn, or it is for a different membership.'}
                 action={error ? 'Try again' : 'Back to events'}
                 onAction={() => (error ? reload() : allEvents())}
+                secondary={publicAccess ? 'Sign in to view event' : undefined}
+                onSecondary={publicAccess ? () => continueAsMember({ kind: 'member-event', id }) : undefined}
               />
               )}
             </SurfaceCard>

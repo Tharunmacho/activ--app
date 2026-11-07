@@ -62,6 +62,7 @@ const WebsiteViewerScreen = ({ navigation, route }: any) => {
   const insets = useSafeAreaInsets();
   const params = route?.params || {};
   const publicMode = params.publicAccess === true;
+  const appLinkFallback = params.appLinkFallback === true;
   const startUrl = useMemo(() => {
     const raw = String(params?.url || params?.path || '').trim();
     const base = websiteUrl(raw || '/');
@@ -100,11 +101,13 @@ const WebsiteViewerScreen = ({ navigation, route }: any) => {
 
   const openInBrowser = useCallback(async (url?: string) => {
     try {
+      // Opening the same verified URL via Linking would immediately reopen us.
+      if (appLinkFallback && isWebsiteUrl(url || currentUrl || startUrl)) return;
       if (typeof Linking?.openURL === 'function') await Linking.openURL(url || currentUrl || startUrl);
     } catch (err) {
       console.warn('Open in browser safely caught:', err);
     }
-  }, [currentUrl, startUrl]);
+  }, [appLinkFallback, currentUrl, startUrl]);
 
   const close = useCallback(() => {
     try {
@@ -189,7 +192,7 @@ const WebsiteViewerScreen = ({ navigation, route }: any) => {
         </View>
       </View>
       <GlassIconButton icon="refresh" onPress={reload} accessibilityLabel="Reload page" />
-      <GlassIconButton icon="open-in-new" onPress={() => openInBrowser()} accessibilityLabel="Open in browser" style={{ marginLeft: SPACE.sm }} />
+      {!appLinkFallback && <GlassIconButton icon="open-in-new" onPress={() => openInBrowser()} accessibilityLabel="Open in browser" style={{ marginLeft: SPACE.sm }} />}
     </LinearGradient>
   );
 
@@ -215,10 +218,10 @@ const WebsiteViewerScreen = ({ navigation, route }: any) => {
       <FadeInUp delay={80}>
         <Text style={s.errorTitle} maxFontSizeMultiplier={1.3}>This page did not load</Text>
         <Text style={s.errorText} maxFontSizeMultiplier={1.3}>
-          Check your connection and try again, or open it in your browser.
+          {appLinkFallback ? 'Check your connection and try again.' : 'Check your connection and try again, or open it in your browser.'}
         </Text>
         <GradientButton label="Try again" icon="refresh" onPress={reload} style={{ marginTop: SPACE.xl }} />
-        <GradientButton label="Open in browser" icon="open-in-new" variant="outline" onPress={() => openInBrowser()} style={{ marginTop: SPACE.sm }} />
+        {!appLinkFallback && <GradientButton label="Open in browser" icon="open-in-new" variant="outline" onPress={() => openInBrowser()} style={{ marginTop: SPACE.sm }} />}
       </FadeInUp>
     </View>
   );
@@ -296,6 +299,7 @@ const s = StyleSheet.create({
 });
 
 export default function WebsiteOrArticleScreen(props: any) {
+  if (props.route?.params?.appLinkFallback === true) return <WebsiteViewerScreen {...props} />;
   const destination = nativeContentRoute(String(props.route?.params?.path || props.route?.params?.url || '/'), props.route?.params?.title);
   const Screen = destination?.name === 'PublicContent' ? PublicContentScreen : destination?.name === 'PublicInfo' ? PublicInfoScreen
     : destination?.name === 'PublicExplore' ? PublicExploreScreen : destination?.name === 'PublicEventDetail' ? PublicEventDetailScreen : null;

@@ -48,6 +48,20 @@ test('public programme shares the canonical event page without booking details',
   } finally { share.mockRestore(); }
 });
 
+test.each(['unavailable', 'membership-required'])('an %s public event keeps its selected member detail through sign-in', async unavailable => {
+  if (unavailable === 'membership-required') (getPublicEventDetail as jest.Mock).mockRejectedValueOnce(new Error('This event requires an active membership'));
+  else (getPublicEventDetail as jest.Mock).mockResolvedValue(null);
+  await render();
+  expect(getMemberEvent).not.toHaveBeenCalled();
+  const signIn = screen.root.findAll(node => node.props.accessibilityRole === 'button' && typeof node.props.onPress === 'function'
+    && node.findAllByType(Text).some(label => label.props.children === 'Sign in to view event'))[0];
+  expect(signIn).toBeDefined();
+  await Renderer.act(async () => signIn.props.onPress());
+  expect(navigation.navigate).toHaveBeenLastCalledWith('Login');
+  expect(takePublicAction()).toEqual({ name: 'MemberEventDetail', params: { id: 'public-slug' } });
+  expect(getMemberEvent).not.toHaveBeenCalled();
+});
+
 test.each(['closed', 'full', 'deleted'])('guest cannot start booking when the event is %s', async state => {
   (getPublicEventDetail as jest.Mock).mockResolvedValue(state === 'deleted' ? null : { ...event,
     publicAvailability: { ...event.publicAvailability, closed: state === 'closed', seatsLeft: state === 'full' ? 0 : 30 } });

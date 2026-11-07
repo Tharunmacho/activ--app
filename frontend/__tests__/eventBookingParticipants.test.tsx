@@ -1,10 +1,12 @@
 import React from 'react';
 import Renderer, { act } from 'react-test-renderer';
 import { BackHandler, Text, TextInput } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import EventBookingScreen from '../src/screens/member/events/EventBookingScreen';
 import { createEventBooking, checkEventBooking, getBookableEvent, getMyProfile, getEventBooking } from '../src/services/memberApi';
 import api, { getAuthToken, getUserRole } from '../src/services/api';
 import { clearPublicAction, takePublicAction } from '../src/services/publicNavigation';
+import { parseEventLink } from '../src/navigation/eventLinks';
 
 const mockLogin = jest.fn().mockResolvedValue(undefined);
 jest.mock('../src/stores/exampleStore', () => ({ useAuthStore: (select: any) => select({ login: mockLogin }) }));
@@ -58,6 +60,70 @@ beforeEach(() => {
 });
 afterEach(async () => { if (tree) await act(async () => tree.unmount()); });
 
+test('an HTTPS reminder opens its existing guest ticket without another booking or sign-in', async () => {
+  (getAuthToken as jest.Mock).mockResolvedValue(null);
+  (getUserRole as jest.Mock).mockResolvedValue(null);
+  (getEventBooking as jest.Mock).mockResolvedValueOnce({
+    bookingRef: 'ACTIV-EVT-REMINDER', eventId: '507f1f77bcf86cd799439011', status: 'active',
+    eventTitle: 'Conference', payment: { status: 'not_required' }, totalAmount: 0,
+    bookedBy: { name: 'Guest Booker', email: 'guest@example.test', phone: '9000000001' },
+    participants: [{ name: 'Guest Booker', email: 'guest@example.test', phone: '9000000001' }],
+  });
+  const target = parseEventLink('https://activ.org.in/events/conference-2026-11-08/book?ref=ACTIV-EVT-REMINDER');
+  expect(target?.name).toBe('EventBooking');
+  await render(target?.params);
+  expect(getEventBooking).toHaveBeenCalledWith('ACTIV-EVT-REMINDER');
+  expect(getBookableEvent).toHaveBeenCalledWith('507f1f77bcf86cd799439011', true);
+  expect(screenText()).toContain('ACTIV-EVT-REMINDER');
+  expect(getMyProfile).not.toHaveBeenCalled();
+  expect(api.post).not.toHaveBeenCalled();
+  expect(createEventBooking).not.toHaveBeenCalled();
+  expect(navigation.navigate).not.toHaveBeenCalled();
+});
+
+test('a ticket keeps its canonical event when the URL names another event and a further booking is chosen', async () => {
+  (getEventBooking as jest.Mock).mockResolvedValueOnce({ bookingRef: 'RIGHT-TICKET', eventId: '507f1f77bcf86cd799439011',
+    status: 'active', payment: { status: 'not_required' }, totalAmount: 0 });
+  (getBookableEvent as jest.Mock).mockResolvedValue({ id: '507f1f77bcf86cd799439011', title: 'Ticket event', amount: 0,
+    capacity: 100, seatsLeft: 100, maxPerBooking: 10 });
+  await render({ eventId: 'different-event-slug', ref: 'RIGHT-TICKET' });
+  expect(getBookableEvent).toHaveBeenLastCalledWith('507f1f77bcf86cd799439011', false);
+  await press('Book for someone else');
+  expect(getBookableEvent).toHaveBeenLastCalledWith('507f1f77bcf86cd799439011', false);
+  expect(navigation.setParams).toHaveBeenCalledWith({ eventId: '507f1f77bcf86cd799439011', ref: undefined, forOthers: true });
+  expect(createEventBooking).not.toHaveBeenCalled();
+});
+
+test('a delayed earlier reminder cannot overwrite the newly selected ticket', async () => {
+  let finishOld!: (value: any) => void;
+  (getEventBooking as jest.Mock).mockReturnValueOnce(new Promise(resolve => { finishOld = resolve; }))
+    .mockResolvedValueOnce({ bookingRef: 'NEW-TICKET', eventId: 'new-event', status: 'active', payment: { status: 'not_required' }, totalAmount: 0 });
+  await render({ eventId: 'old-event', ref: 'OLD-TICKET' });
+  await act(async () => { tree.update(<EventBookingScreen navigation={navigation} route={{ params: { eventId: 'new-event', ref: 'NEW-TICKET' } }} />); });
+  expect(screenText()).toContain('NEW-TICKET');
+  await act(async () => { finishOld({ bookingRef: 'OLD-TICKET', eventId: 'old-event', status: 'active', payment: { status: 'not_required' } }); });
+  expect(screenText()).toContain('NEW-TICKET');
+  expect(screenText()).not.toContain('OLD-TICKET');
+  expect(getBookableEvent).not.toHaveBeenCalledWith('old-event', expect.anything());
+  expect(createEventBooking).not.toHaveBeenCalled();
+});
+
+test('a background refresh from an earlier ticket cannot replace a new reminder', async () => {
+  let finishRefresh!: (value: any) => void;
+  const old = { bookingRef: 'OLD-TICKET', eventId: 'old-event', status: 'active', payment: { status: 'not_required' }, totalAmount: 0 };
+  (getEventBooking as jest.Mock).mockResolvedValueOnce(old)
+    .mockReturnValueOnce(new Promise(resolve => { finishRefresh = resolve; }))
+    .mockResolvedValueOnce({ ...old, bookingRef: 'NEW-TICKET', eventId: 'new-event' });
+  await render({ eventId: 'old-event', ref: 'OLD-TICKET' });
+  const focus = (useFocusEffect as jest.Mock).mock.calls[(useFocusEffect as jest.Mock).mock.calls.length - 1][0];
+  await act(async () => { focus(); focus(); });
+  await act(async () => { tree.update(<EventBookingScreen navigation={navigation} route={{ params: { eventId: 'new-event', ref: 'NEW-TICKET' } }} />); });
+  expect(screenText()).toContain('NEW-TICKET');
+  await act(async () => { finishRefresh(old); });
+  expect(screenText()).toContain('NEW-TICKET');
+  expect(screenText()).not.toContain('OLD-TICKET');
+});
+
 test('one seat visibly fills Participant 1 and follows changes to the booking contact', async () => {
   await render();
   expect(JSON.stringify(tree.toJSON())).toContain('Participant 1');
@@ -93,7 +159,7 @@ test('confirmed receipt starts another booking with fresh availability and an em
   await press('Book for someone else');
   expect(getBookableEvent).toHaveBeenLastCalledWith('conference', false);
   expect(inputs()[0].props.value).toBe('Booker'); expect(inputs()[3].props.value).toBe('');
-  expect(navigation.setParams).toHaveBeenCalledWith({ ref: undefined, forOthers: true });
+  expect(navigation.setParams).toHaveBeenCalledWith({ eventId: 'conference', ref: undefined, forOthers: true });
   await press('Review booking'); expect(createEventBooking).not.toHaveBeenCalled(); expect(inputs()[4].props.error).toBeTruthy();
 });
 

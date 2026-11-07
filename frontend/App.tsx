@@ -36,7 +36,7 @@ import PublicExploreScreen from './src/screens/public/PublicExploreScreen';
 import PublicNotificationsScreen from './src/screens/public/PublicNotificationsScreen';
 import PublicEventDetailScreen from './src/screens/public/PublicEventDetailScreen';
 import SocialSignInScreen from './src/screens/auth/SocialSignInScreen';
-import { useDeepLinks, flushPendingDeepLink } from './src/navigation/deepLinks';
+import { useDeepLinks, flushPendingDeepLink, flushPendingAppLink } from './src/navigation/deepLinks';
 
 // Registration Screens
 import RegistrationStep1Screen from './src/screens/registration/RegistrationStep1Screen';
@@ -125,7 +125,7 @@ function AppContent() {
     const home = state?.routes[state.index || 0]?.name;
     setNotificationEntryReady(!!home && ['PublicExplore', 'MemberMain', 'PaidDashboard', 'BlockDashboard', 'DistrictDashboard', 'StateDashboard', 'SuperAdminDashboard', 'EventsAdminHome'].includes(home));
   };
-  // activ:// links: social sign-in hand-off and password-reset tokens.
+  // Verified ACTIV website links plus activ:// auth/payment hand-offs.
   useDeepLinks();
   usePushNotifications();
   useEffect(() => { void initAnalytics(); }, []);
@@ -134,7 +134,7 @@ function AppContent() {
     <ErrorBoundary>
       <SafeAreaProvider>
         <AppUpdateGate>
-        <NavigationContainer theme={navigationTheme} ref={navigationRef} onReady={() => { flushPendingDeepLink(); void flushPushNavigation(); updateNotificationEntry(); }} onStateChange={() => { void flushPushNavigation(); void trackScreen(navigationRef.getCurrentRoute()?.name); updateNotificationEntry(); }}>
+        <NavigationContainer theme={navigationTheme} ref={navigationRef} onReady={() => { flushPendingDeepLink(); void flushPendingAppLink(); void flushPushNavigation(); updateNotificationEntry(); }} onStateChange={() => { void flushPendingAppLink(); void flushPushNavigation(); void trackScreen(navigationRef.getCurrentRoute()?.name); updateNotificationEntry(); }}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
         <Stack.Navigator initialRouteName="Onboarding">
           <Stack.Screen name="PublicExplore" component={PublicExploreScreen} options={{ headerShown: false }} />

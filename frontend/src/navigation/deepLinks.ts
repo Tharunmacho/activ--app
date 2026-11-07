@@ -1,8 +1,14 @@
 import { useEffect } from 'react';
-import { Linking } from 'react-native';
+import { Alert, Linking } from 'react-native';
+import { StackActions } from '@react-navigation/native';
 import { navigationRef } from './navigationRef';
 import { RootStackParamList } from '../types';
 import { resolvePaymentLink, type PaymentLinkTarget } from './paymentLinks';
+import { eventLinkDestination } from './eventLinks';
+import { parseAppLink, appLinkFallback, type AppLinkTarget, type MemberAppLinkDestination } from './appLinks';
+import { getAuthToken, getUserRole } from '../services/api';
+import { homeForRole } from '../services/session';
+import { clearPublicAction, rememberMemberDestination } from '../services/publicNavigation';
 
 /**
  * ============================================================================
@@ -15,9 +21,8 @@ import { resolvePaymentLink, type PaymentLinkTarget } from './paymentLinks';
  *   activ://reset-password?token=…              member password reset
  *   activ://admin/reset-password?token=…        admin password reset
  *
- * The emailed reset link stays the website's https URL — unchanged. The app
- * does not claim that domain (that needs a file hosted on the website), so the
- * member can still paste the link or code into the Reset Password screen.
+ * Verified activ.org.in links open only the supported routes in appLinks.ts.
+ * Gateway callbacks, reset tokens and admin pages keep their existing handling.
  *
  * Links that arrive before the navigator is ready are held and delivered from
  * `flushPendingDeepLink()`, which App.tsx calls in NavigationContainer.onReady.
@@ -113,9 +118,74 @@ export const flushPendingDeepLink = () => {
 };
 
 let linkGeneration = 0;
+let pendingApp: AppLinkTarget | null = null;
+
+/** Session restoration chooses the landing screen before an event link opens.
+ * Re-check the queued link after async storage reads so a newer tap wins.
+ */
+export const flushPendingAppLink = async () => {
+  if (!pendingApp || !navigationRef.isReady() || navigationRef.getCurrentRoute()?.name === 'Onboarding') return;
+  const target = pendingApp;
+  const generation = linkGeneration;
+  const current = () => pendingApp === target && generation === linkGeneration && navigationRef.isReady()
+    && navigationRef.getCurrentRoute()?.name !== 'Onboarding';
+  try {
+    const [token, role] = await Promise.all([getAuthToken(), getUserRole()]);
+    if (!current()) return;
+    if (target.kind === 'website-fallback') {
+      clearPublicAction(); pendingApp = null;
+      Alert.alert('Open this page on the website', 'This link is not supported by this app version. You can continue on the ACTIV website.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Open website', onPress: () => {
+          if (generation !== linkGeneration || !navigationRef.isReady()) return;
+          navigationRef.navigate('WebsiteViewer', { url: target.url, title: 'ACTIV website', appLinkFallback: true });
+        } },
+      ]);
+      return;
+    }
+    const member = !!token && role === 'member';
+    let destination: { name: keyof RootStackParamList; params?: any };
+    let resume: MemberAppLinkDestination | undefined;
+    if (target.kind === 'event') destination = eventLinkDestination(target.destination, member);
+    else if (target.kind === 'public') destination = target.destination;
+    else if (target.kind === 'member') {
+      destination = member ? target.destination : { name: 'Login' };
+      if (!member) resume = target.destination;
+    } else {
+      const canOpenHome = !!token && !!role && (target.action !== 'member-home' || member);
+      const home = canOpenHome ? await homeForRole(role!) : null;
+      destination = home ? { name: home } : { name: target.action === 'register' ? 'RegistrationStep1' : 'Login' };
+    }
+    if (!current()) return;
+    // A newly selected app page replaces any older sign-in continuation.
+    // Custom activ:// OAuth callbacks never enter this branch, preserving it.
+    clearPublicAction();
+    if (resume) rememberMemberDestination(resume);
+    pendingApp = null;
+    const shown = navigationRef.getCurrentRoute();
+    if (shown?.name === destination.name && JSON.stringify(shown.params) !== JSON.stringify(destination.params)) {
+      // Different detail IDs get a fresh screen, so an old in-flight request
+      // cannot paint the newly selected page with the previous item's data.
+      navigationRef.dispatch(StackActions.push(destination.name, destination.params));
+    } else (navigationRef as any).navigate(destination.name, destination.params);
+  } catch (err) {
+    console.warn('App link safely caught:', err);
+  }
+};
+
+/** Kept for event callers; all supported website links share the same queue. */
+export const flushPendingEventLink = flushPendingAppLink;
+
 /** Resolve account-scoped payment returns before delivering them to navigation. */
 export const handleDeepLink = async (url?: string | null) => {
+  if (!url) return;
   const generation = ++linkGeneration;
+  pendingApp = parseAppLink(url) || appLinkFallback(url);
+  if (pendingApp) {
+    pending = null;
+    await flushPendingAppLink();
+    return;
+  }
   const target = parseDeepLink(url) || await resolvePaymentLink(url);
   if (generation === linkGeneration) deliver(target);
 };
@@ -124,14 +194,16 @@ export const handleDeepLink = async (url?: string | null) => {
 export const useDeepLinks = () => {
   useEffect(() => {
     let sub: { remove: () => void } | null = null;
+    let receivedWhileRunning = false;
     try {
       if (typeof Linking?.getInitialURL === 'function') {
         Linking.getInitialURL()
-          .then(handleDeepLink)
+          .then(url => { if (!receivedWhileRunning) return handleDeepLink(url); })
           .catch((err) => console.warn('Initial URL safely caught:', err));
       }
       if (typeof Linking?.addEventListener === 'function') {
         sub = Linking.addEventListener('url', (event) => {
+          receivedWhileRunning = true;
           void handleDeepLink(event?.url).catch(() => {});
         });
       }

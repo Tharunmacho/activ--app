@@ -67,6 +67,24 @@ test('existing saved WebsiteViewer links show native content without loading an 
   expect(getAuthToken).not.toHaveBeenCalled();
   expect(submitPublicCms).not.toHaveBeenCalled();
 });
+
+test('explicit unsupported-link fallback keeps the website in its isolated viewer without an app-link loop', async () => {
+  const external = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+  try {
+    await Renderer.act(async () => { screen = Renderer.create(<WebsiteViewer navigation={navigation} route={{ params: {
+      url: 'https://activ.org.in/states/tamil-nadu/section-scholarships', appLinkFallback: true, title: 'ACTIV website',
+    } }} />); });
+    const web = screen.root.findAll(node => typeof node.props.onShouldStartLoadWithRequest === 'function')[0];
+    expect(web).toBeDefined();
+    expect(web.props.source.uri).toContain('/states/tamil-nadu/section-scholarships');
+    expect(web.props.source.headers?.Authorization).toBeUndefined();
+    expect(web.props.injectedJavaScriptBeforeContentLoaded).toBeUndefined();
+    expect(web.props.onShouldStartLoadWithRequest({ url: 'https://activ.org.in/states/tamil-nadu/section-scholarships', isTopFrame: true })).toBe(true);
+    expect(screen.root.findAll(node => node.props.accessibilityLabel === 'Open in browser')).toHaveLength(0);
+    expect(external).not.toHaveBeenCalled();
+    expect(getAuthToken).not.toHaveBeenCalled();
+  } finally { external.mockRestore(); }
+});
 test('contact links and official portals open their own services; internal source links stay native', async () => {
   const external = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
   try {
