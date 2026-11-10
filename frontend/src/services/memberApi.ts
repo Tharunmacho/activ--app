@@ -1,4 +1,4 @@
-import { isPastEvent } from '../utils/eventLifecycle';
+import { isPastEvent, isRegistrationClosed } from '../utils/eventLifecycle';
 import { withEventAgenda } from '../utils/eventAgenda';
 import api from './api';
 import publicApi from './publicApi';
@@ -228,8 +228,7 @@ export const getEventBooking = async (ref: string) =>
 export const registrationGate = (event: any): { open: boolean; reason: string } => {
   if (!event?.registrationEnabled) return { open: false, reason: 'Registration is not open for this event' };
   if (event?.archivedAt || isPastEvent(event)) return { open: false, reason: 'This event has finished' };
-  const closes = event?.registrationClosesAt ? new Date(event.registrationClosesAt) : null;
-  if (closes && !Number.isNaN(closes.getTime()) && closes.getTime() <= Date.now()) {
+  if (isRegistrationClosed(event)) {
     return { open: false, reason: 'Registration has closed' };
   }
   return { open: true, reason: '' };

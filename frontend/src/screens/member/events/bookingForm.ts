@@ -1,4 +1,4 @@
-import { isPastEvent } from '../../../utils/eventLifecycle';
+import { isRegistrationClosed } from '../../../utils/eventLifecycle';
 
 export type BookingPerson = { name: string; email: string; phone: string };
 export type RegistrationField = { key: string; label: string; type?: string; required?: boolean; placeholder?: string; helpText?: string; options?: string[] };
@@ -69,8 +69,7 @@ export const mapBookingErrors = (error: any): Record<string, string> => {
   }));
 };
 
-export const bookingClosed = (event: any, now = Date.now()): boolean => !!(event?.closed || event?.archivedAt || isPastEvent(event, now)
-  || (event?.registrationClosesAt && Number.isFinite(Date.parse(event.registrationClosesAt)) && Date.parse(event.registrationClosesAt) <= now));
+export const bookingClosed = (event: any, now = Date.now()): boolean => !!(event?.closed || (event && isRegistrationClosed(event, now)));
 
 export function bookingState(booking: any, now = Date.now()) {
   const status = String(booking?.status || 'active');

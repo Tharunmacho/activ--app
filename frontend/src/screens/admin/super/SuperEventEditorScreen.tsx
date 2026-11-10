@@ -6,6 +6,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { resolveMediaUrl } from '../../../config/api.config';
 import { pickEventDocument } from '../../../services/eventDocuments';
+import { eventRegistrationClosesAt } from '../../../utils/eventLifecycle';
 import {
   PALETTE, SPACE, RADIUS, BRAND,
   ConsoleScroll, ConsoleHeader, ConsoleCard, ConsoleButton, GlassIconButton, PremiumInput, BottomActionBar, FitImage } from '../../../ui';
@@ -367,6 +368,12 @@ const SuperEventEditorScreen: React.FC = () => {
   const set = (p: Partial<Form>) => setForm((f) => ({ ...f, ...p }));
   const setDetail = (p: Partial<Detail>) => setForm((f) => ({ ...f, detail: { ...f.detail, ...p } }));
   const d = form.detail;
+  const automaticClose = eventRegistrationClosesAt({
+    startAt: toInstant(form.date, form.time),
+    endAt: (form.endDate || form.endTime) ? toInstant(form.endDate || form.date, form.endTime || '23:59') : null,
+    days: form.days,
+  });
+  const suggestedClosingTime = automaticClose === null ? '00:00' : toLocalDateTime(new Date(automaticClose).toISOString()).slice(11, 16);
   const multiDay = !!form.endDate && form.endDate !== form.date;
   const dayDates = useMemo(() => datesBetween(form.date, form.endDate), [form.date, form.endDate]);
 
@@ -756,7 +763,8 @@ const SuperEventEditorScreen: React.FC = () => {
             <View style={s.divider} />
             <SubHead title="Registration" />
             <CheckCard checked={d.registrationEnabled} onChange={(registrationEnabled) => setDetail({ registrationEnabled })} icon="how-to-reg"
-              title="Members can register for this event" />
+              title="Accept registrations"
+              detail="Turn off and save to close immediately. Turn on and set a future closing time to reopen before the event ends, online or in person." />
             {d.registrationEnabled ? (
               <View style={{ marginTop: SPACE.md }}>
                 <PremiumInput tone="admin" label="Capacity" value={d.capacity} onChangeText={(capacity) => setDetail({ capacity: capacity.replace(/[^\d]/g, '') })}
@@ -766,9 +774,11 @@ const SuperEventEditorScreen: React.FC = () => {
                 <PremiumInput tone="admin" label="Member price (₹)" value={d.memberFee} onChangeText={(memberFee) => setDetail({ memberFee: memberFee.replace(/[^\d]/g, '') })}
                   keyboardType="number-pad" placeholder="Same as the price above" style={{ marginBottom: 4 }} />
                 <Text style={[s.priceHint, { color: hint.color }]}>{hint.text}</Text>
-                <DateField label="Registration closes" value={(d.registrationDeadline || '').slice(0, 10)}
-                  onChange={(v) => setDetail({ registrationDeadline: v ? `${v}T23:59` : '' })}
-                  hint="Registration stays open to the end of that day." />
+                <DateField label="Registration closing date" value={(d.registrationDeadline || '').slice(0, 10)}
+                  onChange={(v) => setDetail({ registrationDeadline: v ? `${v}T${d.registrationDeadline.slice(11, 16) || suggestedClosingTime}` : '' })}
+                  hint="Leave blank for 3 hours after the start, capped at the event end. Set a date and time to close earlier or extend during the event." />
+                {d.registrationDeadline ? <TimeField label="Registration closing time" value={d.registrationDeadline.slice(11, 16)}
+                  onChange={(v) => setDetail({ registrationDeadline: `${d.registrationDeadline.slice(0, 10)}T${v}` })} /> : null}
               </View>
             ) : (
               <Text style={[k.hint, { marginTop: SPACE.sm }]}>

@@ -381,6 +381,21 @@ describe('super admin parity interactions', () => {
     expect(api.put).toHaveBeenCalledWith(`/cms/events/${EVENT_ID}`, expect.objectContaining({ attachments: expect.stringContaining('/uploads/agenda.pdf') }));
     await ReactTestRenderer.act(async () => { tree.unmount(); });
   });
+  test('event registration cutoff preserves the selected time and can close immediately', async () => {
+    const api = require('../src/services/api').default;
+    const { ConsoleButton } = require('../src/ui');
+    const { TimeField, CheckCard } = require('../src/screens/admin/super/events/eventKit');
+    const tree = await mount(S('SuperEventEditorScreen')(), { event: { ...CMS_EVENT, registrationDeadline: '2026-10-10T12:45:00.000Z' } });
+    const time = tree.root.findAllByType(TimeField).find((n: any) => n.props.label === 'Registration closing time');
+    expect(time).toBeTruthy();
+    await ReactTestRenderer.act(async () => { time.props.onChange('17:35'); });
+    await ReactTestRenderer.act(async () => { await tree.root.findAllByType(ConsoleButton).find((n: any) => /Save/.test(n.props.label)).props.onPress(); });
+    expect(api.put).toHaveBeenCalledWith(`/cms/events/${EVENT_ID}`, expect.objectContaining({ registrationDeadline: new Date('2026-10-10T17:35').toISOString() }));
+    await ReactTestRenderer.act(async () => { tree.root.findAllByType(CheckCard).find((n: any) => n.props.title === 'Accept registrations').props.onChange(false); });
+    await ReactTestRenderer.act(async () => { await tree.root.findAllByType(ConsoleButton).find((n: any) => /Save/.test(n.props.label)).props.onPress(); });
+    expect(api.put).toHaveBeenLastCalledWith(`/cms/events/${EVENT_ID}`, expect.objectContaining({ registrationEnabled: false }));
+    await ReactTestRenderer.act(async () => { tree.unmount(); });
+  });
   test('membership deletion calls the archive endpoint after confirmation', async () => {
     const kit = require('../src/screens/admin/super/superKit');
     const confirmation = jest.spyOn(kit, 'confirm').mockResolvedValue(true);

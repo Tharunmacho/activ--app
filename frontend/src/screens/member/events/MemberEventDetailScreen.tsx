@@ -23,7 +23,7 @@ import { QrCode } from '../../admin/super/events/qr';
 import { useLoad } from '../useLoad';
 import { useEventSeat, seatsLeftOf, isFillingFast, toSeatInfo } from './eventSeats';
 import {
-  feeFor, myActiveRegistration, isPastEvent, formatWhen, longDate, eventPhase, countdownLabel,
+  feeFor, myActiveRegistration, isPastEvent, formatWhen, longDate, clockTime, eventPhase, countdownLabel,
   formatReminders, googleCalendarUrl, directionsUrl, eventShareContent, programmeTime,
 } from './eventFormat';
 
@@ -505,7 +505,7 @@ const MemberEventDetailScreen = ({ navigation, route, publicAccess = false }: an
                   <Text style={[styles.sub, { marginTop: SPACE.md, fontWeight: '700', color: PALETTE.amberDark }]}>This event is fully booked. Contact the organiser for availability.</Text>
                 ) : <SeatMeter capacity={capacity} left={left} style={{ marginTop: SPACE.md }} />
               ) : null}
-              {e?.registrationDeadline ? <Text style={[styles.sub, { marginTop: SPACE.sm }]}>Registration closes {longDate(e?.registrationClosesAt)}.</Text> : null}
+              {e?.registrationClosesAt ? <Text style={[styles.sub, { marginTop: SPACE.sm }]}>Registration closes {longDate(e?.registrationClosesAt)} at {clockTime(e?.registrationClosesAt)} IST.</Text> : null}
               {publicAccess && <Text style={[styles.sub, { marginTop: SPACE.md }]}>Sign in when you’re ready to book. Your event will be kept ready for you.</Text>}
             </View>
           )}
